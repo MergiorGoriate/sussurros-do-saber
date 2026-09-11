@@ -10,20 +10,21 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}">
 </head>
 <body>
+  <a class="admin-skip-link" href="#admin-content">Saltar para o conteúdo</a>
   <aside class="admin-sidebar">
     <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
       <img src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Logotipo do Sussurros do Saber">
       <span>Sussurros<br>do Saber</span>
     </a>
     <nav aria-label="Administração">
-      <a href="{{ url_for('admin.dashboard') }}">Visão geral</a>
-      <a href="{{ url_for('admin.articles') }}">Artigos</a>
-      <a href="{{ url_for('admin.journals') }}">Revistas</a>
-      <a href="{{ url_for('admin.authors') }}">Autores</a>
-      <a href="{{ url_for('admin.categories') }}">Categorias</a>
-      <a href="{{ url_for('admin.administrators') }}">Administradores</a>
-      <a href="{{ url_for('admin.contacts') }}">Contactos</a>
-      <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>
+      <a class="{{ 'active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">Visão geral</a>
+      <a class="{{ 'active' if request.endpoint in ('admin.articles', 'admin.article_form') }}" href="{{ url_for('admin.articles') }}">Artigos</a>
+      <a class="{{ 'active' if request.endpoint in ('admin.journals', 'admin.journal_form') }}" href="{{ url_for('admin.journals') }}">Revistas</a>
+      <a class="{{ 'active' if request.endpoint == 'admin.authors' }}" href="{{ url_for('admin.authors') }}">Autores</a>
+      <a class="{{ 'active' if request.endpoint == 'admin.categories' }}" href="{{ url_for('admin.categories') }}">Categorias</a>
+      <a class="{{ 'active' if request.endpoint == 'admin.administrators' }}" href="{{ url_for('admin.administrators') }}">Administradores</a>
+      <a class="{{ 'active' if request.endpoint == 'admin.contacts' }}" href="{{ url_for('admin.contacts') }}">Contactos</a>
+      <a class="{{ 'active' if request.endpoint == 'admin.subscribers' }}" href="{{ url_for('admin.subscribers') }}">Subscritores</a>
       <a href="/" target="_blank" rel="noopener">Ver site ↗</a>
     </nav>
     <form action="{{ url_for('admin.logout') }}" method="post">
@@ -31,7 +32,7 @@
       <button>Sair</button>
     </form>
   </aside>
-  <main class="admin-main">
+  <main id="admin-content" class="admin-main">
     {% with messages=get_flashed_messages(with_categories=true) %}
       {% for category,message in messages %}<div class="alert {{ category }}" role="status">{{ message }}</div>{% endfor %}
     {% endwith %}

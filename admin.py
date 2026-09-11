@@ -8,6 +8,7 @@ from datetime import datetime
 from functools import wraps
 import requests
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
+from sqlalchemy import or_
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
@@ -112,7 +113,19 @@ def logout():
 @admin_bp.get("")
 @login_required
 def dashboard():
-    return render_template("admin/dashboard.html", article_count=Article.query.count(), draft_count=Article.query.filter_by(status="draft").count(), contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(), recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all())
+    services = {
+        "Assistente IA": bool(os.getenv("AI_WORKER_URL")),
+        "Cloudinary": all(os.getenv(key) for key in ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")),
+        "Turnstile": bool(os.getenv("TURNSTILE_SITE_KEY") and os.getenv("TURNSTILE_SECRET_KEY")),
+        "Limite distribuído": bool(os.getenv("RATELIMIT_STORAGE_URI")),
+    }
+    return render_template(
+        "admin/dashboard.html", article_count=Article.query.count(),
+        draft_count=Article.query.filter_by(status="draft").count(),
+        scheduled_count=Article.query.filter_by(status="scheduled").count(), journal_count=Journal.query.count(),
+        contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(),
+        recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all(), services=services,
+    )
 
 
 @admin_bp.route("/administradores", methods=["GET", "POST"])
@@ -150,13 +163,31 @@ def administrators():
 @admin_bp.get("/artigos")
 @login_required
 def articles():
-    return render_template("admin/articles.html", articles=Article.query.order_by(Article.updated_at.desc()).all())
+    search = request.args.get("q", "").strip()
+    status = request.args.get("status", "").strip()
+    query = Article.query.join(Author).join(Category)
+    if search:
+        like = f"%{search.lower()}%"
+        query = query.filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Author.name).like(like), db.func.lower(Category.name).like(like)))
+    if status in {"draft", "published", "scheduled"}:
+        query = query.filter(Article.status == status)
+    return render_template("admin/articles.html", articles=query.order_by(Article.updated_at.desc()).all(), search=search, selected_status=status)
 
 
 @admin_bp.get("/revistas")
 @login_required
 def journals():
-    return render_template("admin/journals.html", journals=Journal.query.order_by(Journal.updated_at.desc()).all())
+    search = request.args.get("q", "").strip()
+    visibility = request.args.get("visibility", "").strip()
+    query = Journal.query
+    if search:
+        like = f"%{search.lower()}%"
+        query = query.filter(or_(db.func.lower(Journal.title).like(like), db.func.lower(Journal.abbreviation).like(like), db.func.lower(Journal.field).like(like)))
+    if visibility == "published":
+        query = query.filter(Journal.active.is_(True))
+    elif visibility == "hidden":
+        query = query.filter(Journal.active.is_(False))
+    return render_template("admin/journals.html", journals=query.order_by(Journal.updated_at.desc()).all(), search=search, selected_visibility=visibility)
 
 
 @admin_bp.route("/revistas/nova", methods=["GET", "POST"])
@@ -175,6 +206,7 @@ def journal_form(journal_id=None):
         contact_email = request.form.get("contact_email", "").strip().lower()
         base_slug = slugify(request.form.get("slug") or title)
         duplicate_title = Journal.query.filter(db.func.lower(Journal.title) == title.lower(), Journal.id != journal.id).first()
+        duplicate_abbreviation = Journal.query.filter(db.func.lower(Journal.abbreviation) == abbreviation.lower(), Journal.id != journal.id).first()
         if not 3 <= len(title) <= 180 or not base_slug:
             flash("Informe um título válido com até 180 caracteres.", "error")
         elif not re.fullmatch(r"[A-Z0-9-]{2,20}", abbreviation):
@@ -183,8 +215,8 @@ def journal_form(journal_id=None):
             flash("Informe a área científica e uma descrição com pelo menos 20 caracteres.", "error")
         elif contact_email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", contact_email):
             flash("Informe um e-mail editorial válido.", "error")
-        elif duplicate_title:
-            flash("Já existe uma revista com esse título.", "error")
+        elif duplicate_title or duplicate_abbreviation:
+            flash("Já existe uma revista com esse título ou sigla.", "error")
         else:
             candidate, number = base_slug, 2
             while Journal.query.filter(Journal.slug == candidate, Journal.id != journal.id).first():
@@ -225,6 +257,17 @@ def delete_journal(journal_id):
     db.session.commit()
     flash("Revista eliminada.", "success")
     return redirect(url_for("admin.journals"))
+
+
+@admin_bp.post("/revistas/<int:journal_id>/visibilidade")
+@login_required
+def toggle_journal_visibility(journal_id):
+    validate_csrf()
+    journal = db.get_or_404(Journal, journal_id)
+    journal.active = not journal.active
+    db.session.commit()
+    flash(f"Revista {'publicada' if journal.active else 'ocultada'} com sucesso.", "success")
+    return redirect(request.referrer if request.referrer and request.referrer.startswith(request.host_url) else url_for("admin.journals"))
 
 
 def parse_datetime(value):

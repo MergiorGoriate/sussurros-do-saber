@@ -27,6 +27,10 @@ class PlatformTests(unittest.TestCase):
             db.engine.dispose()
         os.unlink(database_file.name)
 
+    def setUp(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+
     def test_public_routes_and_discovery_files(self):
         for path in ["/", "/artigos", "/autores", "/revistas", "/contacto", "/feed.xml", "/sitemap.xml", "/robots.txt", "/healthz"]:
             with self.subTest(path=path):
@@ -86,10 +90,24 @@ class PlatformTests(unittest.TestCase):
             self.assertIsNotNone(journal)
             journal_id, journal_slug = journal.id, journal.slug
         self.assertEqual(self.client.get(f"/revistas/{journal_slug}").status_code, 200)
+        self.assertEqual(self.client.get("/admin/revistas?q=Ciência&visibility=published").status_code, 200)
+        response = self.client.post(f"/admin/revistas/{journal_id}/visibilidade", data={"csrf_token": "journal-csrf"})
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            self.assertFalse(db.session.get(Journal, journal_id).active)
         response = self.client.post(f"/admin/revistas/{journal_id}/eliminar", data={"csrf_token": "journal-csrf"})
         self.assertEqual(response.status_code, 302)
         with app.app_context():
             self.assertIsNone(db.session.get(Journal, journal_id))
+
+    def test_admin_dashboard_and_article_filters(self):
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["csrf_token"] = "filter-csrf"
+        dashboard = self.client.get("/admin")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertIn("Serviços da plataforma".encode(), dashboard.data)
+        self.assertEqual(self.client.get("/admin/artigos?q=Biologia&status=published").status_code, 200)
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():

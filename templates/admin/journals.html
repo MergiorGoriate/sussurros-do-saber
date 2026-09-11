@@ -1,31 +1,20 @@
 {% extends 'admin/base.html' %}
 {% block title %}Revistas{% endblock %}
 {% block content %}
-<header class="admin-header">
-  <div><span>Publicações científicas</span><h1>Revistas</h1></div>
-  <a class="admin-primary" href="{{ url_for('admin.journal_form') }}">+ Nova revista</a>
-</header>
+<header class="admin-header"><div><span>Publicações científicas</span><h1>Revistas</h1></div><a class="admin-primary" href="{{ url_for('admin.journal_form') }}">+ Nova revista</a></header>
+<form method="get" class="admin-toolbar">
+  <label><span class="sr-only">Pesquisar revistas</span><input name="q" type="search" value="{{ search }}" placeholder="Pesquisar título, sigla ou área"></label>
+  <label><span class="sr-only">Filtrar por visibilidade</span><select name="visibility"><option value="">Todas</option><option value="published" {% if selected_visibility == 'published' %}selected{% endif %}>Publicadas</option><option value="hidden" {% if selected_visibility == 'hidden' %}selected{% endif %}>Ocultas</option></select></label>
+  <button class="admin-primary">Filtrar</button>{% if search or selected_visibility %}<a href="{{ url_for('admin.journals') }}">Limpar</a>{% endif %}
+</form>
 <section class="admin-panel table-wrap">
-  <table>
-    <thead><tr><th>Revista</th><th>Área</th><th>Estado</th><th>Visibilidade</th><th>Atualizada</th><th>Ações</th></tr></thead>
-    <tbody>
-      {% for journal in journals %}
-      <tr>
-        <td><strong>{{ journal.title }}</strong><small>{{ journal.abbreviation }} · /revistas/{{ journal.slug }}</small></td>
-        <td>{{ journal.field }}</td>
-        <td><span class="status {{ 'published' if journal.active else 'draft' }}">{{ journal.status }}</span></td>
-        <td>{{ 'Publicada' if journal.active else 'Oculta' }}</td>
-        <td>{{ journal.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
-        <td class="actions">
-          {% if journal.active %}<a href="{{ url_for('journal_detail', slug=journal.slug) }}" target="_blank" rel="noopener">Ver</a>{% endif %}
-          <a href="{{ url_for('admin.journal_form', journal_id=journal.id) }}">Editar</a>
-          <form method="post" action="{{ url_for('admin.delete_journal', journal_id=journal.id) }}" onsubmit="return confirm('Eliminar definitivamente esta revista?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Eliminar</button>
-          </form>
-        </td>
-      </tr>
-      {% else %}<tr><td colspan="6">Nenhuma revista cadastrada. Crie a primeira revista para iniciar o catálogo.</td></tr>{% endfor %}
-    </tbody>
-  </table>
+  <table><thead><tr><th>Revista</th><th>Área</th><th>Estado</th><th>Visibilidade</th><th>Atualizada</th><th>Ações</th></tr></thead><tbody>
+    {% for journal in journals %}<tr>
+      <td><strong>{{ journal.title }}</strong><small>{{ journal.abbreviation }} · /revistas/{{ journal.slug }}</small></td><td>{{ journal.field }}</td>
+      <td><span class="status {{ 'published' if journal.active else 'draft' }}">{{ journal.status }}</span></td><td><span class="visibility-label"><i class="service-dot {{ 'online' if journal.active }}"></i>{{ 'Publicada' if journal.active else 'Oculta' }}</span></td>
+      <td>{{ journal.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td class="actions">{% if journal.active %}<a href="{{ url_for('journal_detail', slug=journal.slug) }}" target="_blank" rel="noopener">Ver</a>{% endif %}<a href="{{ url_for('admin.journal_form', journal_id=journal.id) }}">Editar</a><form method="post" action="{{ url_for('admin.toggle_journal_visibility', journal_id=journal.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="neutral-action">{{ 'Ocultar' if journal.active else 'Publicar' }}</button></form><form method="post" action="{{ url_for('admin.delete_journal', journal_id=journal.id) }}" onsubmit="return confirm('Eliminar definitivamente esta revista?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Eliminar</button></form></td>
+    </tr>{% else %}<tr><td colspan="6"><div class="empty-admin"><strong>Nenhuma revista encontrada</strong><span>Altere os filtros ou cadastre uma nova revista.</span></div></td></tr>{% endfor %}
+  </tbody></table>
 </section>
 {% endblock %}
