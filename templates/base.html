@@ -3,8 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Sussurros do Saber — ciência, educação e investigação explicadas com clareza.">
+<meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <title>{% block title %}Sussurros do Saber{% endblock %}</title>
+<link rel="canonical" href="{% block canonical %}{{ site_url }}{{ request.path }}{% endblock %}">
+<meta property="og:type" content="{% block og_type %}website{% endblock %}">
+<meta property="og:site_name" content="Sussurros do Saber">
+<meta property="og:locale" content="pt_MZ">
+<meta property="og:title" content="{% block og_title %}Sussurros do Saber{% endblock %}">
+<meta property="og:description" content="{% block og_description %}Ciência, educação e investigação explicadas com clareza.{% endblock %}">
+<meta property="og:url" content="{{ site_url }}{{ request.path }}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{% block twitter_title %}Sussurros do Saber{% endblock %}">
+<meta name="twitter:description" content="{% block twitter_description %}Ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <script src="https://cdn.tailwindcss.com">
 </script>
 <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{ink:'#101820',science:'#087F73',signal:'#FF5A4F',paper:'#F5F7F8'},fontFamily:{sans:['Inter','sans-serif'],serif:['Georgia','serif']}}}}</script>
@@ -15,6 +25,7 @@
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css') }}">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 </head>
 <body class="bg-white text-ink antialiased dark:bg-[#081012] dark:text-slate-100">
 <div id="readingProgress">
@@ -33,9 +44,9 @@
 <picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Sussurros do Saber"></picture>
 </a>
 <div class="flex gap-2">
-<button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro">◐</button>
-<button id="searchToggle" class="icon-btn" aria-label="Abrir pesquisa">⌕</button>
-<button id="menuToggle" class="md:hidden icon-btn" aria-label="Abrir menu">☰</button>
+<button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
+<button id="searchToggle" class="icon-btn" aria-label="Abrir pesquisa" aria-expanded="false" aria-controls="searchPanel">⌕</button>
+<button id="menuToggle" class="md:hidden icon-btn" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">☰</button>
 </div>
 </div>
 <nav id="mainNav" class="hidden md:flex border-t border-black/10 dark:border-white/10 items-center gap-5 h-12 text-sm font-semibold">
@@ -51,7 +62,7 @@
 </nav>
 <form id="searchPanel" action="/artigos" class="hidden py-4 border-t border-black/10">
 <div class="flex">
-<input name="q" type="search" placeholder="Pesquisar artigos, temas ou autores..." class="flex-1 bg-transparent border border-black/25 dark:border-white/20 px-4 py-3 outline-none">
+<label for="siteSearch" class="sr-only">Pesquisar artigos, temas ou autores</label><input id="siteSearch" name="q" type="search" placeholder="Pesquisar artigos, temas ou autores..." class="flex-1 bg-transparent border border-black/25 dark:border-white/20 px-4 py-3 outline-none">
 <button class="bg-science text-white px-6 font-semibold">Pesquisar</button>
 </div>
 </form>
@@ -61,7 +72,7 @@
 <footer class="bg-ink text-white mt-20">
 <div class="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-9">
 <div>
-<a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-footer.png') }}" alt=""><span>Sussurros do Saber</span></a>
+<a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-footer.png') }}" alt="Logotipo do Sussurros do Saber"><span>Sussurros do Saber</span></a>
 <p class="text-white/65">Divulgação científica independente, com atenção à investigação em África.</p>
 </div>
 <div>

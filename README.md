@@ -18,12 +18,21 @@ A área editorial está disponível em `/admin`. Antes de publicar, configure:
 
 - `SECRET_KEY`: sequência longa e aleatória para proteger sessões.
 - `ADMIN_USERNAME`: nome do administrador.
-- `ADMIN_PASSWORD`: palavra-passe forte.
+- `ADMIN_PASSWORD_HASH`: hash seguro da palavra-passe administrativa (recomendado).
+- `ADMIN_PASSWORD`: alternativa compatível; mantenha apenas enquanto migra para o hash.
 - `DATABASE_URL`: ligação PostgreSQL fornecida pelo serviço de base de dados.
+- `SITE_URL`: endereço canónico, por exemplo `https://sussurrosdosaber.com`.
 - `ASSISTANT_SHARED_KEY`: segredo igual no Render e no Cloudflare Worker.
 - `ASSISTANT_WORKER_URL`: URL do Worker (opcional se mantiver o endereço actual).
 - `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`: protecção Cloudflare Turnstile no login (recomendado).
+- `REQUIRE_TURNSTILE=true`: impede o login quando o Turnstile não está corretamente configurado.
 - `RATELIMIT_STORAGE_URI`: URL Redis para limites partilhados entre processos; sem ela usa memória local.
+
+Para gerar o hash da palavra-passe no Prompt de Comando do Windows, execute:
+
+`python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash(input('Palavra-passe: ')))"`
+
+Copie o resultado completo para `ADMIN_PASSWORD_HASH` no Render e remova `ADMIN_PASSWORD` depois de confirmar o login.
 
 ### Upload de imagens com Cloudinary
 
@@ -41,6 +50,14 @@ As imagens são verificadas, reduzidas para até 2000 × 2000 px, convertidas em
 O código pronto e as instruções do assistente estão em `cloudflare-worker/`. Nunca coloque `ASSISTANT_SHARED_KEY` no JavaScript público.
 
 Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No Render, utilize PostgreSQL para manter artigos, contactos e subscritores após reinicializações.
+
+## Operação e recuperação
+
+- Configure o monitor de disponibilidade para `GET /healthz`.
+- Active backups automáticos da base PostgreSQL e faça um teste de restauração antes do lançamento público.
+- Use Redis em `RATELIMIT_STORAGE_URI` quando executar mais de um processo ou instância.
+- Mantenha Cloudinary, Render e Cloudflare com autenticação de dois fatores.
+- Teste localmente com `python -m unittest discover -s tests -v` antes de cada publicação.
 
 ## Funcionalidades
 

@@ -4,17 +4,28 @@
   document.head.appendChild(style);
 
   const root = document.createElement("div");
-  root.innerHTML = `<button class="assistant-launcher" aria-label="Abrir assistente">✦</button><section class="assistant-window" role="dialog" aria-label="Assistente Sussurros"><header class="assistant-head"><span class="assistant-avatar">S</span><span><strong>Assistente Sussurros</strong><small>Ciência e aprendizagem</small></span><button class="assistant-close" aria-label="Fechar">×</button></header><div class="assistant-messages"><div class="assistant-message bot">Olá! Posso ajudar com Biologia, estatística, referências APA, Python ou encontrar conteúdos no portal.</div></div><div class="assistant-suggestions"><button class="assistant-chip">O que são endófitos?</button><button class="assistant-chip">Como calcular a média?</button><button class="assistant-chip">Ajuda com APA</button></div><form class="assistant-form"><input maxlength="400" autocomplete="off" placeholder="Escreva a sua pergunta..." aria-label="Mensagem"><button aria-label="Enviar">➜</button></form></section>`;
+  root.innerHTML = `<button class="assistant-launcher" aria-label="Abrir assistente" aria-expanded="false" aria-controls="assistantWindow">✦</button><section id="assistantWindow" class="assistant-window" role="dialog" aria-modal="true" aria-label="Assistente Sussurros"><header class="assistant-head"><span class="assistant-avatar" aria-hidden="true">S</span><span><strong>Assistente Sussurros</strong><small>Ciência e aprendizagem</small></span><button class="assistant-close" aria-label="Fechar assistente">×</button></header><div class="assistant-messages" aria-live="polite"><div class="assistant-message bot">Olá! Posso ajudar com Biologia, estatística, referências APA, Python ou encontrar conteúdos no portal.</div></div><div class="assistant-suggestions"><button class="assistant-chip">O que são endófitos?</button><button class="assistant-chip">Como calcular a média?</button><button class="assistant-chip">Ajuda com APA</button></div><form class="assistant-form"><input maxlength="400" autocomplete="off" placeholder="Escreva a sua pergunta..." aria-label="Mensagem"><button aria-label="Enviar pergunta">➜</button></form></section>`;
   document.body.appendChild(root);
   const win = root.querySelector(".assistant-window"),
     messages = root.querySelector(".assistant-messages"),
     input = root.querySelector("input");
-  const toggle = () => {
-    win.classList.toggle("open");
-    if (win.classList.contains("open")) input.focus();
+  const launcher = root.querySelector(".assistant-launcher");
+  const toggle = (force) => {
+    const open = typeof force === "boolean" ? force : !win.classList.contains("open");
+    win.classList.toggle("open", open);
+    launcher.setAttribute("aria-expanded", String(open));
+    if (open) input.focus(); else launcher.focus();
   };
-  root.querySelector(".assistant-launcher").onclick = toggle;
-  root.querySelector(".assistant-close").onclick = toggle;
+  launcher.onclick = () => toggle();
+  root.querySelector(".assistant-close").onclick = () => toggle(false);
+  win.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") return toggle(false);
+    if (event.key !== "Tab") return;
+    const controls = [...win.querySelectorAll('button,input,a[href]')].filter((el) => !el.disabled);
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
   const add = (text, type) => {
     const el = document.createElement("div");
     el.className = `assistant-message ${type}`;
@@ -44,9 +55,17 @@
       if (data.links?.length) {
         const links = document.createElement("div");
         links.className = "assistant-links";
-        links.innerHTML = data.links
-          .map((l) => `<a href="${l.url}">${l.label} →</a>`)
-          .join("");
+        data.links.forEach((item) => {
+          try {
+            const url = new URL(item.url, location.origin);
+            if (!['http:', 'https:'].includes(url.protocol)) return;
+            const link = document.createElement('a');
+            link.href = url.href;
+            link.textContent = `${String(item.label || 'Consultar')} →`;
+            if (url.origin !== location.origin) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+            links.appendChild(link);
+          } catch {}
+        });
         messages.appendChild(links);
       }
     } catch {

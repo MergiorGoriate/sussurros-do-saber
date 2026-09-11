@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block title %}{{ article.title }} — Sussurros do
-Saber{% endblock %}{% block content %}<link
+Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock %}{% block canonical %}{{ site_url }}{{ url_for('article', article_id=article.id) }}{% endblock %}{% block og_type %}article{% endblock %}{% block og_title %}{{ article.title }}{% endblock %}{% block og_description %}{{ article.summary }}{% endblock %}{% block twitter_title %}{{ article.title }}{% endblock %}{% block twitter_description %}{{ article.summary }}{% endblock %}{% block content %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":article.title,"description":article.summary,"datePublished":(article.published_at or article.created_at).isoformat(),"dateModified":article.updated_at.isoformat(),"author":{"@type":"Person","name":article.author},"publisher":{"@type":"Organization","name":"Sussurros do Saber","url":site_url},"mainEntityOfPage":site_url ~ url_for('article', article_id=article.id),"image":article.image}|tojson }}</script><link
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
@@ -19,7 +19,8 @@ Saber{% endblock %}{% block content %}<link
       <button
         class="bookmark"
         data-id="{{ article.id }}"
-        aria-label="Guardar artigo"
+        aria-label="Guardar {{ article.title }}"
+        aria-pressed="false"
       >
         ♡
       </button>
@@ -27,7 +28,9 @@ Saber{% endblock %}{% block content %}<link
   </header>
   <img
     src="{{ article.image }}"
-    alt="Imagem de apoio ao artigo"
+    alt="Imagem de apoio: {{ article.title }}"
+    fetchpriority="high"
+    decoding="async"
     class="max-w-6xl mx-auto w-full aspect-[16/7] object-cover mt-8 md:rounded-3xl"
   />
   <div class="prose-article">
@@ -47,37 +50,37 @@ Saber{% endblock %}{% block content %}<link
         <a
           data-network="whatsapp"
           class="whatsapp"
-          href="#"
+          href="https://wa.me/?text={{ (article.title ~ ' ' ~ site_url ~ url_for('article', article_id=article.id))|urlencode }}"
           aria-label="Compartilhar no WhatsApp"
           ><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a
         ><a
           data-network="facebook"
           class="facebook"
-          href="#"
+          href="https://www.facebook.com/sharer/sharer.php?u={{ (site_url ~ url_for('article', article_id=article.id))|urlencode }}"
           aria-label="Compartilhar no Facebook"
           ><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a
         ><a
           data-network="x"
           class="x-twitter"
-          href="#"
+          href="https://twitter.com/intent/tweet?text={{ article.title|urlencode }}&url={{ (site_url ~ url_for('article', article_id=article.id))|urlencode }}"
           aria-label="Compartilhar no X"
           ><i class="fa-brands fa-x-twitter"></i><span>X</span></a
         ><a
           data-network="linkedin"
           class="linkedin"
-          href="#"
+          href="https://www.linkedin.com/sharing/share-offsite/?url={{ (site_url ~ url_for('article', article_id=article.id))|urlencode }}"
           aria-label="Compartilhar no LinkedIn"
           ><i class="fa-brands fa-linkedin-in"></i><span>LinkedIn</span></a
         ><a
           data-network="telegram"
           class="telegram"
-          href="#"
+          href="https://t.me/share/url?url={{ (site_url ~ url_for('article', article_id=article.id))|urlencode }}&text={{ article.title|urlencode }}"
           aria-label="Compartilhar no Telegram"
           ><i class="fa-brands fa-telegram"></i><span>Telegram</span></a
         ><a
           data-network="email"
           class="email"
-          href="#"
+          href="mailto:?subject={{ article.title|urlencode }}&body={{ (site_url ~ url_for('article', article_id=article.id))|urlencode }}"
           aria-label="Compartilhar por e-mail"
           ><i class="fa-solid fa-envelope"></i><span>E-mail</span></a
         ><button id="copyArticleLink" aria-label="Copiar ligação">
@@ -98,7 +101,9 @@ Saber{% endblock %}{% block content %}<link
       class="story-card"
       ><img
         src="{{ item.image }}"
-        alt=""
+        alt="Imagem de apoio: {{ item.title }}"
+        loading="lazy"
+        decoding="async"
         class="w-full aspect-[16/9] object-cover"
       />
       <div class="p-5">

@@ -1,11 +1,14 @@
 import hmac
+import csv
+import io
 import os
 import re
 import secrets
 from datetime import datetime
 from functools import wraps
 import requests
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash
 from extensions import limiter
 from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
 from storage import ImageUploadError, upload_article_image
@@ -49,7 +52,7 @@ def admin_context():
 def turnstile_valid():
     secret = os.getenv("TURNSTILE_SECRET_KEY")
     if not secret:
-        return True
+        return os.getenv("REQUIRE_TURNSTILE", "false").lower() != "true"
     try:
         response = requests.post(
             "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -68,11 +71,12 @@ def login():
         validate_csrf()
         configured_user = os.getenv("ADMIN_USERNAME")
         configured_password = os.getenv("ADMIN_PASSWORD")
+        configured_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
         if not turnstile_valid():
             flash("A verificação de segurança falhou. Actualize a página e tente novamente.", "error")
-        elif not configured_user or not configured_password:
-            flash("Configure ADMIN_USERNAME e ADMIN_PASSWORD no Render antes de entrar.", "error")
-        elif hmac.compare_digest(request.form.get("username", ""), configured_user) and hmac.compare_digest(request.form.get("password", ""), configured_password):
+        elif not configured_user or not (configured_password_hash or configured_password):
+            flash("As credenciais administrativas ainda não estão configuradas.", "error")
+        elif hmac.compare_digest(request.form.get("username", ""), configured_user) and ((configured_password_hash and check_password_hash(configured_password_hash, request.form.get("password", ""))) or (configured_password and hmac.compare_digest(request.form.get("password", ""), configured_password))):
             session.clear()
             session.permanent = True
             session["admin_authenticated"] = True
@@ -117,17 +121,37 @@ def article_form(article_id=None):
     if request.method == "POST":
         validate_csrf()
         title = request.form.get("title", "").strip()
-        if len(title) < 5:
-            flash("O título deve ter pelo menos cinco caracteres.", "error")
+        if not 5 <= len(title) <= 240:
+            flash("O título deve ter entre 5 e 240 caracteres.", "error")
         else:
+            summary = request.form.get("summary", "").strip()
+            body = request.form.get("body", "").strip()
+            status = request.form.get("status", "draft")
+            try:
+                author_id = int(request.form.get("author_id", ""))
+                category_id = int(request.form.get("category_id", ""))
+                read_minutes = max(1, min(120, int(request.form.get("read_minutes") or 5)))
+                scheduled_at = parse_datetime(request.form.get("scheduled_at"))
+            except (TypeError, ValueError):
+                flash("Revise autor, categoria, tempo de leitura e data programada.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if not 10 <= len(summary) <= 2000 or status not in {"draft", "published", "scheduled"}:
+                flash("O resumo deve ter entre 10 e 2000 caracteres e o estado deve ser válido.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if status in {"published", "scheduled"} and len(body) < 50:
+                flash("Artigos publicados ou programados precisam de conteúdo completo.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
+                flash("Selecione um autor e uma categoria existentes.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             article.title = title
             base_slug = slugify(request.form.get("slug") or title)
             candidate, number = base_slug, 2
             while Article.query.filter(Article.slug == candidate, Article.id != article.id).first():
                 candidate, number = f"{base_slug}-{number}", number + 1
             article.slug = candidate
-            article.summary = request.form.get("summary", "").strip()
-            article.body = request.form.get("body", "").strip()
+            article.summary = summary
+            article.body = body
             article.references = request.form.get("references", "").strip()
             article.keywords = request.form.get("keywords", "").strip()
             article.doi = request.form.get("doi", "").strip()
@@ -137,12 +161,12 @@ def article_form(article_id=None):
             except ImageUploadError as error:
                 flash(str(error), "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
-            article.read_minutes = max(1, int(request.form.get("read_minutes") or 5))
-            article.author_id = int(request.form["author_id"])
-            article.category_id = int(request.form["category_id"])
+            article.read_minutes = read_minutes
+            article.author_id = author_id
+            article.category_id = category_id
             article.featured = request.form.get("featured") == "on"
-            article.status = request.form.get("status", "draft")
-            article.scheduled_at = parse_datetime(request.form.get("scheduled_at"))
+            article.status = status
+            article.scheduled_at = scheduled_at
             if article.status == "published" and not article.published_at:
                 article.published_at = utcnow()
             if article.status == "scheduled" and not article.scheduled_at:
@@ -239,3 +263,47 @@ def contacts():
 @login_required
 def subscribers():
     return render_template("admin/subscribers.html", subscribers=Subscriber.query.order_by(Subscriber.created_at.desc()).all())
+
+
+@admin_bp.post("/contactos/<int:message_id>/eliminar")
+@login_required
+def delete_contact(message_id):
+    validate_csrf()
+    message = db.get_or_404(ContactMessage, message_id)
+    db.session.delete(message)
+    db.session.commit()
+    flash("Mensagem eliminada.", "success")
+    return redirect(url_for("admin.contacts"))
+
+
+@admin_bp.post("/subscritores/<int:subscriber_id>/estado")
+@login_required
+def toggle_subscriber(subscriber_id):
+    validate_csrf()
+    subscriber = db.get_or_404(Subscriber, subscriber_id)
+    subscriber.active = not subscriber.active
+    db.session.commit()
+    flash("Estado do subscritor atualizado.", "success")
+    return redirect(url_for("admin.subscribers"))
+
+
+def csv_download(filename, headers, rows):
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+    writer.writerow(headers)
+    writer.writerows(rows)
+    return Response("\ufeff" + stream.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@admin_bp.get("/contactos/exportar.csv")
+@login_required
+def export_contacts():
+    rows = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
+    return csv_download("contactos.csv", ["Nome", "E-mail", "Assunto", "Mensagem", "Data"], ((x.name, x.email, x.subject, x.message, x.created_at.isoformat()) for x in rows))
+
+
+@admin_bp.get("/subscritores/exportar.csv")
+@login_required
+def export_subscribers():
+    rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
+    return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))

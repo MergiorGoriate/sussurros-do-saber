@@ -2,7 +2,9 @@ from flask import Flask, Response, jsonify, render_template, request, url_for
 from xml.sax.saxutils import escape
 import requests
 import os
-from datetime import timedelta
+import re
+from datetime import datetime, timedelta, timezone
+from email.utils import format_datetime
 import bleach
 import markdown
 from markupsafe import Markup
@@ -23,10 +25,11 @@ app.config.update(
     SECRET_KEY=os.getenv("SECRET_KEY", "local-development-only-change-me"),
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.getenv("RENDER", "") == "true",
+    SESSION_COOKIE_SECURE=os.getenv("RENDER", "").lower() == "true" or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
     MAX_CONTENT_LENGTH=9 * 1024 * 1024,
 )
+SITE_URL = os.getenv("SITE_URL", "https://sussurrosdosaber.com").rstrip("/")
 db.init_app(app)
 limiter.init_app(app)
 app.register_blueprint(admin_bp)
@@ -45,7 +48,30 @@ def security_headers(response):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; "
+        "object-src 'none'; img-src 'self' data: https:; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
+        "frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; upgrade-insecure-requests",
+    )
+    if request.is_secure:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    if request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=604800, stale-while-revalidate=86400"
+    else:
+        private_response = request.method != "GET" or request.path.startswith(("/admin", "/api/"))
+        response.headers.setdefault("Cache-Control", "no-store" if private_response else "public, max-age=60")
+    if request.path.startswith("/admin"):
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
     return response
+
+
+@app.context_processor
+def site_context():
+    return {"site_url": SITE_URL}
 
 
 @app.errorhandler(429)
@@ -64,9 +90,9 @@ SEED_ARTICLES = [
 ]
 
 JOURNALS = [
-    {"title": "Cadernos de Biodiversidade", "abbr": "CBIO", "field": "Biologia e Ecologia", "description": "Estudos sobre biodiversidade, conservação, ecologia e recursos naturais, com atenção aos contextos africanos.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
-    {"title": "Saúde & Comunidade", "abbr": "SACO", "field": "Saúde Pública", "description": "Investigação e práticas sobre saúde comunitária, nutrição, prevenção e determinantes sociais da saúde.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Em preparação"},
-    {"title": "Educação Científica", "abbr": "EDCI", "field": "Ensino e Aprendizagem", "description": "Pesquisa e experiências sobre ensino de Ciências e Biologia, formação docente e inovação pedagógica.", "frequency": "Anual", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
+    {"slug": "cadernos-de-biodiversidade", "title": "Cadernos de Biodiversidade", "abbr": "CBIO", "field": "Biologia e Ecologia", "description": "Estudos sobre biodiversidade, conservação, ecologia e recursos naturais, com atenção aos contextos africanos.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
+    {"slug": "saude-e-comunidade", "title": "Saúde & Comunidade", "abbr": "SACO", "field": "Saúde Pública", "description": "Investigação e práticas sobre saúde comunitária, nutrição, prevenção e determinantes sociais da saúde.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Em preparação"},
+    {"slug": "educacao-cientifica", "title": "Educação Científica", "abbr": "EDCI", "field": "Ensino e Aprendizagem", "description": "Pesquisa e experiências sobre ensino de Ciências e Biologia, formação docente e inovação pedagógica.", "frequency": "Anual", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
 ]
 
 LEARNING_RESOURCES = [
@@ -92,7 +118,7 @@ def articles():
         results = results.join(Category).filter(db.func.lower(Category.name) == category)
     if query:
         like = f"%{query}%"
-        results = results.filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like)))
+        results = results.join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like), db.func.lower(Author.name).like(like)))
     return render_template("articles.html", articles=results.order_by(Article.published_at.desc()).all(), query=request.args.get("q", ""))
 
 @app.get("/artigo/<int:article_id>")
@@ -109,7 +135,7 @@ def about():
 
 @app.get("/autores")
 def authors():
-    return render_template("authors.html")
+    return render_template("authors.html", authors=Author.query.filter_by(active=True).order_by(Author.name).all())
 
 @app.get("/contacto")
 def contact():
@@ -180,31 +206,43 @@ def api_articles():
     items = Article.public_query()
     if query:
         like = f"%{query}%"
-        items = items.join(Category).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Category.name).like(like)))
+        items = items.join(Category).join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Category.name).like(like), db.func.lower(Author.name).like(like)))
     return jsonify([{"id": a.id, "category": a.category, "title": a.title, "summary": a.summary, "author": a.author, "date": a.date, "read_time": a.read_time, "image": a.image} for a in items.all()])
 
 @app.get("/feed.xml")
 def feed():
     articles = Article.public_query().order_by(Article.published_at.desc()).all()
-    items = "".join(f"<item><title>{escape(a.title)}</title><link>{request.url_root.rstrip('/')}{url_for('article', article_id=a.id)}</link><description>{escape(a.summary)}</description></item>" for a in articles)
-    xml = f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sussurros do Saber</title><link>{request.url_root}</link><description>Ciência que se compreende</description>{items}</channel></rss>'
+    items = "".join(f"<item><title>{escape(a.title)}</title><link>{SITE_URL}{url_for('article', article_id=a.id)}</link><guid isPermaLink=\"true\">{SITE_URL}{url_for('article', article_id=a.id)}</guid><pubDate>{format_datetime((a.published_at or a.created_at).replace(tzinfo=timezone.utc))}</pubDate><description>{escape(a.summary)}</description></item>" for a in articles)
+    last_build = format_datetime(datetime.now(timezone.utc))
+    xml = f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sussurros do Saber</title><link>{SITE_URL}/</link><description>Ciência que se compreende</description><language>pt-MZ</language><lastBuildDate>{last_build}</lastBuildDate>{items}</channel></rss>'
     return Response(xml, mimetype="application/rss+xml")
 
 @app.get("/sitemap.xml")
 def sitemap():
     paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a.id) for a in Article.public_query().all()]
-    urls = "".join(f"<url><loc>{request.url_root.rstrip('/')}{path}</loc></url>" for path in paths)
+    article_updates = {url_for("article", article_id=a.id): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
+    urls = "".join(f"<url><loc>{SITE_URL}{path}</loc>{f'<lastmod>{article_updates[path]}</lastmod>' if path in article_updates else ''}</url>" for path in paths)
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
 
 @app.get("/robots.txt")
 def robots():
-    return Response(f"User-agent: *\nAllow: /\nSitemap: {request.url_root}sitemap.xml\n", mimetype="text/plain")
+    return Response(f"User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: {SITE_URL}/sitemap.xml\n", mimetype="text/plain")
+
+
+@app.get("/healthz")
+def healthcheck():
+    db.session.execute(text("SELECT 1"))
+    return jsonify({"ok": True})
+
+
+def valid_email(value):
+    return bool(re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value)) and len(value) <= 254
 
 @app.post("/api/newsletter")
 @limiter.limit("5 per hour")
 def newsletter():
     email = (request.get_json(silent=True) or {}).get("email", "").strip().lower()
-    if "@" not in email:
+    if not valid_email(email):
         return jsonify({"ok": False, "message": "Introduza um endereço de e-mail válido."}), 400
     subscriber = Subscriber.query.filter_by(email=email).first()
     if subscriber:
@@ -251,7 +289,10 @@ def submit_contact():
     email = data.get("email", "").strip()
     subject = data.get("subject", "").strip()
     message = data.get("message", "").strip()
-    if len(name) < 2 or "@" not in email or len(subject) < 3 or len(message) < 10:
+    website = data.get("website", "").strip()
+    if website:
+        return jsonify({"ok": True, "message": "Mensagem recebida."})
+    if not 2 <= len(name) <= 120 or not valid_email(email) or not 3 <= len(subject) <= 220 or not 10 <= len(message) <= 5000:
         return jsonify({"ok": False, "message": "Preencha correctamente todos os campos."}), 400
     db.session.add(ContactMessage(name=name, email=email, subject=subject, message=message))
     db.session.commit()
@@ -286,11 +327,14 @@ def seed_database():
         categories[name] = category
     db.session.flush()
     default_body = "A ciência começa com uma pergunta bem formulada. Este artigo apresenta o tema de forma acessível, sem perder o rigor nem a ligação às evidências.\n\nCombinando observação, experimentação e análise crítica, investigadores conseguem transformar fenómenos pouco visíveis em conhecimento verificável. O contexto local também importa: perguntas científicas relevantes surgem das necessidades das comunidades e dos ecossistemas onde a pesquisa acontece.\n\nCompreender ciência ajuda estudantes e cidadãos a tomar decisões informadas e aproxima a produção académica do público."
+    month_numbers = {"Janeiro": 1, "Fevereiro": 2, "Março": 3, "Abril": 4, "Maio": 5, "Junho": 6, "Julho": 7, "Agosto": 8, "Setembro": 9, "Outubro": 10, "Novembro": 11, "Dezembro": 12}
     for item in SEED_ARTICLES:
+        day, month_name, year = item["date"].split()
+        published_at = datetime(int(year), month_numbers[month_name], int(day))
         db.session.add(Article(
             title=item["title"], slug=f"artigo-{item['id']}", summary=item["summary"], body=default_body,
             image=item["image"], status="published", read_minutes=int(item["read_time"].split()[0]),
-            featured=item.get("featured", False), published_at=utcnow(), author_rel=authors[item["author"]], category_rel=categories[item["category"]],
+            featured=item.get("featured", False), published_at=published_at, author_rel=authors[item["author"]], category_rel=categories[item["category"]],
         ))
     db.session.commit()
 
