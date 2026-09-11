@@ -1,0 +1,27 @@
+{% extends 'admin/base.html' %}
+{% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}{% endblock %}
+{% block content %}
+<header class="admin-header"><div><span>Publicações científicas</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
+<form method="post" enctype="multipart/form-data" class="editor-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="editor-main">
+    <label>Título da revista<input name="title" value="{{ journal.title or '' }}" required minlength="3" maxlength="180"></label>
+    <div class="form-grid"><label>Sigla<input name="abbreviation" value="{{ journal.abbreviation or '' }}" required minlength="2" maxlength="20" placeholder="SSB"></label><label>Área científica<input name="field" value="{{ journal.field or '' }}" required maxlength="140" placeholder="Ciências da Vida"></label></div>
+    <label>Descrição editorial<textarea name="description" rows="6" required minlength="20" maxlength="3000">{{ journal.description or '' }}</textarea></label>
+    <label>Diretrizes para autores (Markdown)<textarea name="guidelines" rows="12" placeholder="## Escopo&#10;&#10;## Preparação do manuscrito&#10;&#10;## Referências">{{ journal.guidelines or '' }}</textarea><small>Pode utilizar títulos, listas, ligações e texto em negrito com Markdown.</small></label>
+    <div class="form-grid"><label>Carregar capa (JPG, PNG ou WebP; máximo 8 MB)<input name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Ou endereço externo da capa<input name="image" type="url" value="{{ journal.image or '' }}" placeholder="https://..."></label></div>
+    {% if journal.image %}<img class="image-preview" src="{{ journal.image }}" alt="Capa atual de {{ journal.title }}">{% endif %}
+  </section>
+  <aside class="editor-side">
+    <label>Estado editorial<input name="status" value="{{ journal.status or 'Em preparação' }}" maxlength="80" placeholder="Aceitando submissões"></label>
+    <label class="check"><input name="active" type="checkbox" {% if journal.active %}checked{% endif %}> Publicar no portal</label>
+    <label>Slug<input name="slug" value="{{ journal.slug or '' }}" placeholder="gerado automaticamente"></label>
+    <label>Periodicidade<input name="frequency" value="{{ journal.frequency or 'Anual' }}" maxlength="80" placeholder="Semestral"></label>
+    <label>Edição atual<input name="current_issue" value="{{ journal.current_issue or '' }}" maxlength="100" placeholder="Vol. 1, N.º 1 (2026)"></label>
+    <label>ISSN impresso<input name="issn_print" value="{{ journal.issn_print or '' }}" maxlength="20" placeholder="0000-0000"></label>
+    <label>ISSN eletrónico<input name="issn_online" value="{{ journal.issn_online or '' }}" maxlength="20" placeholder="0000-0000"></label>
+    <label>E-mail editorial<input name="contact_email" type="email" value="{{ journal.contact_email or '' }}" maxlength="180" placeholder="revista@exemplo.org"></label>
+    <button class="admin-primary">Guardar revista</button>
+  </aside>
+</form>
+{% endblock %}

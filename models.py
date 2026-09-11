@@ -37,6 +37,34 @@ class Category(db.Model):
     articles = db.relationship("Article", back_populates="category_rel")
 
 
+class Journal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(180), unique=True, nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    abbreviation = db.Column(db.String(20), nullable=False)
+    field = db.Column(db.String(140), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    frequency = db.Column(db.String(80), default="Anual", nullable=False)
+    current_issue = db.Column(db.String(100), default="", nullable=False)
+    status = db.Column(db.String(80), default="Em preparação", nullable=False)
+    issn_print = db.Column(db.String(20), default="", nullable=False)
+    issn_online = db.Column(db.String(20), default="", nullable=False)
+    contact_email = db.Column(db.String(180), default="", nullable=False)
+    guidelines = db.Column(db.Text, default="", nullable=False)
+    image = db.Column(db.String(600), default="", nullable=False)
+    active = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    @property
+    def abbr(self):
+        return self.abbreviation
+
+    @property
+    def issue(self):
+        return self.current_issue
+
+
 class Article(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(240), nullable=False)

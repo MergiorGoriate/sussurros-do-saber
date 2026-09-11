@@ -1,0 +1,21 @@
+.journal-hero {
+  background: linear-gradient(135deg, rgba(8, 127, 115, 0.12), rgba(255, 90, 79, 0.07));
+  border-bottom: 1px solid var(--line);
+}
+.journal-cover-placeholder {
+  aspect-ratio: 3 / 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(145deg, #087f73, #064d48);
+  color: #fff;
+  box-shadow: 0 22px 55px rgba(8, 127, 115, 0.22);
+}
+.journal-cover-placeholder strong { font: 700 3rem Georgia, serif; }
+.journal-cover-placeholder span { font: 700 1.4rem/1.15 Georgia, serif; }
+.journal-facts { display: grid; margin-top: 1rem; }
+.journal-facts div { padding: 0.8rem 0; border-top: 1px solid var(--line); }
+.journal-facts dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.55; }
+.journal-facts dd { margin: 0.2rem 0 0; font-weight: 700; }

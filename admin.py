@@ -10,7 +10,7 @@ import requests
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
 from storage import ImageUploadError, upload_article_image
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -151,6 +151,80 @@ def administrators():
 @login_required
 def articles():
     return render_template("admin/articles.html", articles=Article.query.order_by(Article.updated_at.desc()).all())
+
+
+@admin_bp.get("/revistas")
+@login_required
+def journals():
+    return render_template("admin/journals.html", journals=Journal.query.order_by(Journal.updated_at.desc()).all())
+
+
+@admin_bp.route("/revistas/nova", methods=["GET", "POST"])
+@admin_bp.route("/revistas/<int:journal_id>/editar", methods=["GET", "POST"])
+@login_required
+def journal_form(journal_id=None):
+    journal = db.session.get(Journal, journal_id) if journal_id else Journal()
+    if journal_id and not journal:
+        abort(404)
+    if request.method == "POST":
+        validate_csrf()
+        title = request.form.get("title", "").strip()
+        abbreviation = request.form.get("abbreviation", "").strip().upper()
+        field = request.form.get("field", "").strip()
+        description = request.form.get("description", "").strip()
+        contact_email = request.form.get("contact_email", "").strip().lower()
+        base_slug = slugify(request.form.get("slug") or title)
+        duplicate_title = Journal.query.filter(db.func.lower(Journal.title) == title.lower(), Journal.id != journal.id).first()
+        if not 3 <= len(title) <= 180 or not base_slug:
+            flash("Informe um título válido com até 180 caracteres.", "error")
+        elif not re.fullmatch(r"[A-Z0-9-]{2,20}", abbreviation):
+            flash("A sigla deve ter 2 a 20 letras, números ou hífen.", "error")
+        elif not 3 <= len(field) <= 140 or not 20 <= len(description) <= 3000:
+            flash("Informe a área científica e uma descrição com pelo menos 20 caracteres.", "error")
+        elif contact_email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", contact_email):
+            flash("Informe um e-mail editorial válido.", "error")
+        elif duplicate_title:
+            flash("Já existe uma revista com esse título.", "error")
+        else:
+            candidate, number = base_slug, 2
+            while Journal.query.filter(Journal.slug == candidate, Journal.id != journal.id).first():
+                candidate, number = f"{base_slug}-{number}", number + 1
+            journal.title = title
+            journal.slug = candidate
+            journal.abbreviation = abbreviation
+            journal.field = field
+            journal.description = description
+            journal.frequency = request.form.get("frequency", "Anual").strip()[:80] or "Anual"
+            journal.current_issue = request.form.get("current_issue", "").strip()[:100]
+            journal.status = request.form.get("status", "Em preparação").strip()[:80] or "Em preparação"
+            journal.issn_print = request.form.get("issn_print", "").strip()[:20]
+            journal.issn_online = request.form.get("issn_online", "").strip()[:20]
+            journal.contact_email = contact_email[:180]
+            journal.guidelines = request.form.get("guidelines", "").strip()
+            journal.active = request.form.get("active") == "on"
+            image_file = request.files.get("image_file")
+            try:
+                journal.image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("image", "").strip()[:600]
+            except ImageUploadError as error:
+                flash(str(error), "error")
+                return render_template("admin/journal_form.html", journal=journal)
+            if not journal.id:
+                db.session.add(journal)
+            db.session.commit()
+            flash("Revista guardada com sucesso.", "success")
+            return redirect(url_for("admin.journals"))
+    return render_template("admin/journal_form.html", journal=journal)
+
+
+@admin_bp.post("/revistas/<int:journal_id>/eliminar")
+@login_required
+def delete_journal(journal_id):
+    validate_csrf()
+    journal = db.get_or_404(Journal, journal_id)
+    db.session.delete(journal)
+    db.session.commit()
+    flash("Revista eliminada.", "success")
+    return redirect(url_for("admin.journals"))
 
 
 def parse_datetime(value):

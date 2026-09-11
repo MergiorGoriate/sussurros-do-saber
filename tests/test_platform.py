@@ -11,7 +11,7 @@ os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app  # noqa: E402
-from models import AdminUser, Article, db  # noqa: E402
+from models import AdminUser, Article, Journal, db  # noqa: E402
 
 
 class PlatformTests(unittest.TestCase):
@@ -69,6 +69,27 @@ class PlatformTests(unittest.TestCase):
         response = self.client.post("/admin/login", data={"csrf_token": "login-csrf", "username": "editor.cientifico", "password": "uma-palavra-passe-segura"})
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.location.endswith("/admin"))
+
+    def test_administrator_can_manage_journals(self):
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["csrf_token"] = "journal-csrf"
+        response = self.client.post("/admin/revistas/nova", data={
+            "csrf_token": "journal-csrf", "title": "Revista de Ciência Aberta", "abbreviation": "RCA",
+            "field": "Ciência Aberta", "description": "Publicação dedicada à investigação aberta e à comunicação científica.",
+            "frequency": "Semestral", "current_issue": "Vol. 1, N.º 1", "status": "Aceitando submissões",
+            "contact_email": "revista@example.org", "guidelines": "## Submissão\n\nEnvie trabalhos originais.", "active": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            journal = Journal.query.filter_by(abbreviation="RCA").first()
+            self.assertIsNotNone(journal)
+            journal_id, journal_slug = journal.id, journal.slug
+        self.assertEqual(self.client.get(f"/revistas/{journal_slug}").status_code, 200)
+        response = self.client.post(f"/admin/revistas/{journal_id}/eliminar", data={"csrf_token": "journal-csrf"})
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            self.assertIsNone(db.session.get(Journal, journal_id))
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
