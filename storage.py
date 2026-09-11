@@ -1,8 +1,9 @@
 import io
 import os
 import uuid
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError
+import cloudinary
+import cloudinary.uploader
+from cloudinary.exceptions import Error as CloudinaryError
 from PIL import Image, UnidentifiedImageError
 
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -33,20 +34,28 @@ def upload_article_image(file):
     except (UnidentifiedImageError, OSError):
         raise ImageUploadError("O arquivo enviado não é uma imagem válida.")
 
-    required = ["R2_ENDPOINT_URL", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_PUBLIC_URL"]
+    required = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"]
     missing = [key for key in required if not os.getenv(key)]
     if missing:
-        raise ImageUploadError("O Cloudflare R2 ainda não está configurado no Render.")
-    key = f"artigos/{uuid.uuid4().hex}.webp"
-    client = boto3.client(
-        "s3",
-        endpoint_url=os.environ["R2_ENDPOINT_URL"],
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-        region_name="auto",
+        raise ImageUploadError("O Cloudinary ainda não está configurado no Render.")
+    cloudinary.config(
+        cloud_name=os.environ["CLOUDINARY_CLOUD_NAME"],
+        api_key=os.environ["CLOUDINARY_API_KEY"],
+        api_secret=os.environ["CLOUDINARY_API_SECRET"],
+        secure=True,
     )
     try:
-        client.upload_fileobj(output, os.environ["R2_BUCKET"], key, ExtraArgs={"ContentType": "image/webp", "CacheControl": "public, max-age=31536000, immutable"})
-    except (BotoCoreError, ClientError):
-        raise ImageUploadError("Não foi possível enviar a imagem ao Cloudflare R2. Verifique as credenciais.")
-    return f"{os.environ['R2_PUBLIC_URL'].rstrip('/')}/{key}"
+        result = cloudinary.uploader.upload(
+            output,
+            public_id=uuid.uuid4().hex,
+            folder=os.getenv("CLOUDINARY_FOLDER", "sussurros-do-saber/artigos"),
+            resource_type="image",
+            format="webp",
+            overwrite=False,
+        )
+    except CloudinaryError:
+        raise ImageUploadError("Não foi possível enviar a imagem ao Cloudinary. Verifique as credenciais.")
+    secure_url = result.get("secure_url")
+    if not secure_url:
+        raise ImageUploadError("O Cloudinary não devolveu o endereço da imagem.")
+    return secure_url
