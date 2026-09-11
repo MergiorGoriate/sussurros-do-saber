@@ -12,7 +12,7 @@ from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from admin import admin_bp
 from extensions import limiter
-from models import Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
+from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -107,8 +107,7 @@ LEARNING_RESOURCES = [
 @app.get("/")
 def home():
     items = Article.public_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(6).all()
-    journal_items = Journal.query.filter_by(active=True).order_by(Journal.title).limit(3).all()
-    return render_template("index.html", articles=items, journals=journal_items)
+    return render_template("index.html", articles=items, journals=JOURNALS)
 
 @app.get("/artigos")
 def articles():
@@ -172,15 +171,7 @@ def scientific_editing():
 
 @app.get("/revistas")
 def journals():
-    return render_template("journals.html", journals=Journal.query.filter_by(active=True).order_by(Journal.title).all())
-
-
-@app.get("/revistas/<slug>")
-def journal_detail(slug):
-    selected = Journal.query.filter_by(slug=slug, active=True).first()
-    if not selected:
-        return render_template("404.html"), 404
-    return render_template("journal.html", journal=selected)
+    return render_template("journals.html", journals=JOURNALS)
 
 @app.get("/recursos")
 def resources():
@@ -228,7 +219,7 @@ def feed():
 
 @app.get("/sitemap.xml")
 def sitemap():
-    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a.id) for a in Article.public_query().all()] + [url_for("journal_detail", slug=j.slug) for j in Journal.query.filter_by(active=True).all()]
+    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a.id) for a in Article.public_query().all()]
     article_updates = {url_for("article", article_id=a.id): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
     urls = "".join(f"<url><loc>{SITE_URL}{path}</loc>{f'<lastmod>{article_updates[path]}</lastmod>' if path in article_updates else ''}</url>" for path in paths)
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
@@ -320,15 +311,6 @@ def ensure_article_columns():
 def seed_database():
     db.create_all()
     ensure_article_columns()
-    if not Journal.query.first():
-        for item in JOURNALS:
-            db.session.add(Journal(
-                title=item["title"], slug=item["slug"], abbreviation=item["abbr"], field=item["field"],
-                description=item["description"], frequency=item["frequency"], current_issue=item["issue"],
-                status=item["status"], contact_email="editor@sussurrosdosaber.com",
-                guidelines="Consulte a Política Editorial e contacte a equipa antes de submeter o manuscrito.", active=True,
-            ))
-        db.session.commit()
     if Article.query.first():
         return
     author_names = sorted({item["author"] for item in SEED_ARTICLES})
