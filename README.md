@@ -12,6 +12,17 @@ Portal editorial científico criado com Python (Flask), Tailwind CSS e JavaScrip
 6. Execute: `python app.py`
 7. Abra `http://127.0.0.1:5000`
 
+## Administração e base de dados
+
+A área editorial está disponível em `/admin`. Antes de publicar, configure:
+
+- `SECRET_KEY`: sequência longa e aleatória para proteger sessões.
+- `ADMIN_USERNAME`: nome do administrador.
+- `ADMIN_PASSWORD`: palavra-passe forte.
+- `DATABASE_URL`: ligação PostgreSQL fornecida pelo serviço de base de dados.
+
+Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No Render, utilize PostgreSQL para manter artigos, contactos e subscritores após reinicializações.
+
 ## Funcionalidades
 
 - Página inicial editorial responsiva
@@ -44,3 +55,6 @@ Portal editorial científico criado com Python (Flask), Tailwind CSS e JavaScrip
 - Página de Serviços para Autores e Pesquisadores
 - Página detalhada de Edição Científica
 - Página Revistas com catálogo pesquisável e informações editoriais
+- Painel administrativo protegido, rascunhos e publicações programadas
+- Gestão de artigos, autores, categorias, contactos e subscritores
+- Política Editorial, Política de Correções e Declaração de Acessibilidade

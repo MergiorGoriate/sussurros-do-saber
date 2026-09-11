@@ -1,10 +1,27 @@
 from flask import Flask, Response, jsonify, render_template, request, url_for
 from xml.sax.saxutils import escape
 import requests
+import os
+from sqlalchemy import or_
+from admin import admin_bp
+from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
 
 app = Flask(__name__)
+database_url = os.getenv("DATABASE_URL", "sqlite:///sussurros.db")
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config.update(
+    SQLALCHEMY_DATABASE_URI=database_url,
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    SECRET_KEY=os.getenv("SECRET_KEY", "local-development-only-change-me"),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.getenv("RENDER", "") == "true",
+)
+db.init_app(app)
+app.register_blueprint(admin_bp)
 
-ARTICLES = [
+SEED_ARTICLES = [
     {"id": 1, "category": "Biologia", "title": "Bactérias endofíticas: os microrganismos invisíveis que protegem as plantas", "summary": "Dentro das plantas vivem comunidades capazes de produzir compostos com potencial antibacteriano.", "author": "Mergior Goriate", "date": "10 Setembro 2026", "read_time": "7 min", "image": "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1400&q=85", "featured": True},
     {"id": 2, "category": "Saúde", "title": "Por que sentimos sono depois de comer?", "summary": "A digestão, as hormonas e o relógio biológico explicam a queda de energia após as refeições.", "author": "Redacção", "date": "8 Setembro 2026", "read_time": "5 min", "image": "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=1000&q=85"},
     {"id": 3, "category": "Ambiente", "title": "Plantas medicinais de Nampula e o futuro da investigação local", "summary": "Conhecimento tradicional e métodos laboratoriais podem abrir caminhos para novas descobertas.", "author": "Mergior Goriate", "date": "6 Setembro 2026", "read_time": "9 min", "image": "https://images.unsplash.com/photo-1531058240690-006c446962d8?auto=format&fit=crop&w=1000&q=85"},
@@ -30,25 +47,27 @@ LEARNING_RESOURCES = [
 
 @app.get("/")
 def home():
-    return render_template("index.html", articles=ARTICLES, journals=JOURNALS)
+    items = Article.public_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(6).all()
+    return render_template("index.html", articles=items, journals=JOURNALS)
 
 @app.get("/artigos")
 def articles():
     category = request.args.get("categoria", "").strip().lower()
     query = request.args.get("q", "").strip().lower()
-    results = ARTICLES
+    results = Article.public_query()
     if category:
-        results = [a for a in results if a["category"].lower() == category]
+        results = results.join(Category).filter(db.func.lower(Category.name) == category)
     if query:
-        results = [a for a in results if query in (a["title"] + " " + a["summary"]).lower()]
-    return render_template("articles.html", articles=results, query=request.args.get("q", ""))
+        like = f"%{query}%"
+        results = results.filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like)))
+    return render_template("articles.html", articles=results.order_by(Article.published_at.desc()).all(), query=request.args.get("q", ""))
 
 @app.get("/artigo/<int:article_id>")
 def article(article_id):
-    selected = next((a for a in ARTICLES if a["id"] == article_id), None)
+    selected = Article.public_query().filter_by(id=article_id).first()
     if not selected:
         return render_template("404.html"), 404
-    related = [a for a in ARTICLES if a["id"] != article_id][:3]
+    related = Article.public_query().filter(Article.id != article_id).order_by(Article.published_at.desc()).limit(3).all()
     return render_template("article.html", article=selected, related=related)
 
 @app.get("/sobre")
@@ -70,6 +89,18 @@ def terms():
 @app.get("/politica-de-privacidade")
 def privacy():
     return render_template("privacy.html")
+
+@app.get("/politica-editorial")
+def editorial_policy():
+    return render_template("editorial_policy.html")
+
+@app.get("/politica-de-correcoes")
+def corrections_policy():
+    return render_template("corrections_policy.html")
+
+@app.get("/acessibilidade")
+def accessibility():
+    return render_template("accessibility.html")
 
 @app.get("/servicos")
 def services():
@@ -113,18 +144,22 @@ def favorites():
 @app.get("/api/artigos")
 def api_articles():
     query = request.args.get("q", "").strip().lower()
-    items = ARTICLES if not query else [a for a in ARTICLES if query in (a["title"] + " " + a["summary"] + " " + a["category"]).lower()]
-    return jsonify(items)
+    items = Article.public_query()
+    if query:
+        like = f"%{query}%"
+        items = items.join(Category).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Category.name).like(like)))
+    return jsonify([{"id": a.id, "category": a.category, "title": a.title, "summary": a.summary, "author": a.author, "date": a.date, "read_time": a.read_time, "image": a.image} for a in items.all()])
 
 @app.get("/feed.xml")
 def feed():
-    items = "".join(f"<item><title>{escape(a['title'])}</title><link>{request.url_root.rstrip('/')}{url_for('article', article_id=a['id'])}</link><description>{escape(a['summary'])}</description></item>" for a in ARTICLES)
+    articles = Article.public_query().order_by(Article.published_at.desc()).all()
+    items = "".join(f"<item><title>{escape(a.title)}</title><link>{request.url_root.rstrip('/')}{url_for('article', article_id=a.id)}</link><description>{escape(a.summary)}</description></item>" for a in articles)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sussurros do Saber</title><link>{request.url_root}</link><description>Ciência que se compreende</description>{items}</channel></rss>'
     return Response(xml, mimetype="application/rss+xml")
 
 @app.get("/sitemap.xml")
 def sitemap():
-    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a["id"]) for a in ARTICLES]
+    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a.id) for a in Article.public_query().all()]
     urls = "".join(f"<url><loc>{request.url_root.rstrip('/')}{path}</loc></url>" for path in paths)
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
 
@@ -134,9 +169,15 @@ def robots():
 
 @app.post("/api/newsletter")
 def newsletter():
-    email = (request.get_json(silent=True) or {}).get("email", "").strip()
+    email = (request.get_json(silent=True) or {}).get("email", "").strip().lower()
     if "@" not in email:
         return jsonify({"ok": False, "message": "Introduza um endereço de e-mail válido."}), 400
+    subscriber = Subscriber.query.filter_by(email=email).first()
+    if subscriber:
+        subscriber.active = True
+    else:
+        db.session.add(Subscriber(email=email))
+    db.session.commit()
     return jsonify({"ok": True, "message": "Inscrição confirmada. Bem-vindo ao Sussurros do Saber!"})
 
 @app.post("/api/assistente")
@@ -172,7 +213,40 @@ def submit_contact():
     message = data.get("message", "").strip()
     if len(name) < 2 or "@" not in email or len(subject) < 3 or len(message) < 10:
         return jsonify({"ok": False, "message": "Preencha correctamente todos os campos."}), 400
+    db.session.add(ContactMessage(name=name, email=email, subject=subject, message=message))
+    db.session.commit()
     return jsonify({"ok": True, "message": "Mensagem recebida. Obrigado por contactar o Sussurros do Saber."})
+
+
+def seed_database():
+    db.create_all()
+    if Article.query.first():
+        return
+    author_names = sorted({item["author"] for item in SEED_ARTICLES})
+    authors = {}
+    for name in author_names:
+        author = Author(name=name, bio="Autor do Sussurros do Saber.")
+        db.session.add(author)
+        authors[name] = author
+    category_names = sorted({item["category"] for item in SEED_ARTICLES})
+    categories = {}
+    for name in category_names:
+        category = Category(name=name, slug=name.lower().replace("ú", "u").replace("ç", "c").replace("ã", "a").replace(" ", "-"))
+        db.session.add(category)
+        categories[name] = category
+    db.session.flush()
+    default_body = "A ciência começa com uma pergunta bem formulada. Este artigo apresenta o tema de forma acessível, sem perder o rigor nem a ligação às evidências.\n\nCombinando observação, experimentação e análise crítica, investigadores conseguem transformar fenómenos pouco visíveis em conhecimento verificável. O contexto local também importa: perguntas científicas relevantes surgem das necessidades das comunidades e dos ecossistemas onde a pesquisa acontece.\n\nCompreender ciência ajuda estudantes e cidadãos a tomar decisões informadas e aproxima a produção académica do público."
+    for item in SEED_ARTICLES:
+        db.session.add(Article(
+            title=item["title"], slug=f"artigo-{item['id']}", summary=item["summary"], body=default_body,
+            image=item["image"], status="published", read_minutes=int(item["read_time"].split()[0]),
+            featured=item.get("featured", False), published_at=utcnow(), author_rel=authors[item["author"]], category_rel=categories[item["category"]],
+        ))
+    db.session.commit()
+
+
+with app.app_context():
+    seed_database()
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
