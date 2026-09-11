@@ -237,6 +237,19 @@ label {
   font-weight: bold;
   margin-bottom: 16px;
 }
+.form-help,
+.field-help {
+  color: #667579;
+}
+.field-help {
+  display: block;
+  margin: -10px 0 16px;
+}
+.optional {
+  color: #738084;
+  font-size: 12px;
+  font-weight: normal;
+}
 input,
 textarea,
 select {

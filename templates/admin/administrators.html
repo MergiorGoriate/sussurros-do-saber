@@ -1,0 +1,38 @@
+{% extends 'admin/base.html' %}
+{% block title %}Administradores{% endblock %}
+{% block content %}
+<header class="admin-header">
+  <div><span>Segurança e acesso</span><h1>Administradores</h1></div>
+</header>
+<div class="two-columns">
+  <form method="post" class="admin-panel compact-form">
+    <h2>Cadastrar novo administrador</h2>
+    <p class="form-help">Crie uma conta individual. A palavra-passe será guardada de forma protegida e não poderá ser consultada depois.</p>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Nome completo<input name="display_name" required minlength="2" maxlength="120" autocomplete="name"></label>
+    <label>Utilizador<input name="username" required minlength="3" maxlength="60" pattern="[a-zA-Z0-9._-]+" autocomplete="username" aria-describedby="usernameHelp"></label>
+    <small id="usernameHelp" class="field-help">Use letras, números, ponto, hífen ou sublinhado.</small>
+    <label>E-mail <span class="optional">opcional</span><input name="email" type="email" maxlength="180" autocomplete="email"></label>
+    <label>Palavra-passe<input name="password" type="password" required minlength="12" autocomplete="new-password"></label>
+    <label>Confirmar palavra-passe<input name="password_confirmation" type="password" required minlength="12" autocomplete="new-password"></label>
+    <button class="admin-primary">Criar administrador</button>
+  </form>
+  <section class="admin-panel">
+    <h2>Administradores cadastrados</h2>
+    <div class="admin-list">
+      {% for administrator in administrators %}
+      <div>
+        <div>
+          <strong>{{ administrator.display_name }}</strong>
+          <small>@{{ administrator.username }}{% if administrator.email %} · {{ administrator.email }}{% endif %}</small>
+          <small>Criado em {{ administrator.created_at.strftime('%d/%m/%Y') }}{% if administrator.last_login_at %} · Último acesso {{ administrator.last_login_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}</small>
+        </div>
+        <span class="status {{ 'published' if administrator.active else 'draft' }}">{{ 'Ativo' if administrator.active else 'Inativo' }}</span>
+      </div>
+      {% else %}
+      <p>Ainda não existem administradores cadastrados na base de dados. O acesso atual continua disponível pelas variáveis do Render.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

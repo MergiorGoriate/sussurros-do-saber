@@ -1,1 +1,40 @@
-<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="same-origin"><title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title><link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}"></head><body><aside class="admin-sidebar"><a class="admin-brand" href="{{ url_for('admin.dashboard') }}"><img src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Logotipo do Sussurros do Saber"><span>Sussurros<br>do Saber</span></a><nav aria-label="Administração"><a href="{{ url_for('admin.dashboard') }}">Visão geral</a><a href="{{ url_for('admin.articles') }}">Artigos</a><a href="{{ url_for('admin.authors') }}">Autores</a><a href="{{ url_for('admin.categories') }}">Categorias</a><a href="{{ url_for('admin.contacts') }}">Contactos</a><a href="{{ url_for('admin.subscribers') }}">Subscritores</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a></nav><form action="{{ url_for('admin.logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Sair</button></form></aside><main class="admin-main">{% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="alert {{ category }}" role="status">{{ message }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main></body></html>
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="same-origin">
+  <title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title>
+  <link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}">
+</head>
+<body>
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
+      <img src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Logotipo do Sussurros do Saber">
+      <span>Sussurros<br>do Saber</span>
+    </a>
+    <nav aria-label="Administração">
+      <a href="{{ url_for('admin.dashboard') }}">Visão geral</a>
+      <a href="{{ url_for('admin.articles') }}">Artigos</a>
+      <a href="{{ url_for('admin.authors') }}">Autores</a>
+      <a href="{{ url_for('admin.categories') }}">Categorias</a>
+      <a href="{{ url_for('admin.administrators') }}">Administradores</a>
+      <a href="{{ url_for('admin.contacts') }}">Contactos</a>
+      <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>
+      <a href="/" target="_blank" rel="noopener">Ver site ↗</a>
+    </nav>
+    <form action="{{ url_for('admin.logout') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button>Sair</button>
+    </form>
+  </aside>
+  <main class="admin-main">
+    {% with messages=get_flashed_messages(with_categories=true) %}
+      {% for category,message in messages %}<div class="alert {{ category }}" role="status">{{ message }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

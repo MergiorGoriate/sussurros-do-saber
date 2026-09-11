@@ -11,7 +11,7 @@ os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app  # noqa: E402
-from models import Article, db  # noqa: E402
+from models import AdminUser, Article, db  # noqa: E402
 
 
 class PlatformTests(unittest.TestCase):
@@ -47,6 +47,28 @@ class PlatformTests(unittest.TestCase):
         response = self.client.get("/admin")
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow")
+
+    def test_administrator_can_be_created_and_sign_in(self):
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["csrf_token"] = "test-csrf"
+        response = self.client.post("/admin/administradores", data={
+            "csrf_token": "test-csrf",
+            "display_name": "Editor Científico",
+            "username": "editor.cientifico",
+            "email": "editor@example.org",
+            "password": "uma-palavra-passe-segura",
+            "password_confirmation": "uma-palavra-passe-segura",
+        })
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            self.assertIsNotNone(AdminUser.query.filter_by(username="editor.cientifico").first())
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["csrf_token"] = "login-csrf"
+        response = self.client.post("/admin/login", data={"csrf_token": "login-csrf", "username": "editor.cientifico", "password": "uma-palavra-passe-segura"})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/admin"))
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
