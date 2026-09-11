@@ -334,6 +334,17 @@ select {
   margin-top: 18px;
   color: var(--green);
 }
+.editor-field { display: grid; gap: 8px; }
+.editor-label, .preview-title { font-weight: 700; }
+.editor-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background: #edf4f3; border-radius: 10px; }
+.editor-toolbar button { border: 1px solid #cad9d7; background: #fff; color: #174f49; border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+.editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.editor-workspace textarea { min-height: 480px; font: 15px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.markdown-preview { min-height: 480px; margin-top: 8px; padding: 18px; border: 1px solid #d7e0df; border-radius: 10px; background: #fff; line-height: 1.7; overflow-wrap: anywhere; }
+.markdown-preview h2, .markdown-preview h3 { font-family: Georgia, serif; }
+.markdown-preview blockquote { border-left: 4px solid #0b7a6d; margin-left: 0; padding-left: 14px; color: #52615f; }
+.preview-empty { color: #7b8987; }
+.editor-main small { color: #657174; font-weight: 400; }
 @media (max-width: 850px) {
   .admin-sidebar {
     position: static;
@@ -361,6 +372,7 @@ select {
   .editor-side {
     position: static;
   }
+  .editor-workspace { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
   .metric-grid {

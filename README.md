@@ -20,6 +20,25 @@ A área editorial está disponível em `/admin`. Antes de publicar, configure:
 - `ADMIN_USERNAME`: nome do administrador.
 - `ADMIN_PASSWORD`: palavra-passe forte.
 - `DATABASE_URL`: ligação PostgreSQL fornecida pelo serviço de base de dados.
+- `ASSISTANT_SHARED_KEY`: segredo igual no Render e no Cloudflare Worker.
+- `ASSISTANT_WORKER_URL`: URL do Worker (opcional se mantiver o endereço actual).
+- `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`: protecção Cloudflare Turnstile no login (recomendado).
+- `RATELIMIT_STORAGE_URI`: URL Redis para limites partilhados entre processos; sem ela usa memória local.
+
+### Upload de imagens com Cloudflare R2
+
+Crie um bucket R2 e configure no Render:
+
+- `R2_ENDPOINT_URL`: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
+- `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY`: token R2 com escrita no bucket
+- `R2_BUCKET`: nome do bucket
+- `R2_PUBLIC_URL`: domínio público do bucket, sem barra no fim
+
+As imagens são verificadas, reduzidas para até 2000 × 2000 px, convertidas em WebP e guardadas em `artigos/`. O máximo aceite é 8 MB.
+
+### Cloudflare Worker
+
+O código pronto e as instruções do assistente estão em `cloudflare-worker/`. Nunca coloque `ASSISTANT_SHARED_KEY` no JavaScript público.
 
 Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No Render, utilize PostgreSQL para manter artigos, contactos e subscritores após reinicializações.
 
@@ -57,4 +76,8 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No R
 - Página Revistas com catálogo pesquisável e informações editoriais
 - Painel administrativo protegido, rascunhos e publicações programadas
 - Gestão de artigos, autores, categorias, contactos e subscritores
+- Upload de imagens optimizadas para Cloudflare R2
+- Editor Markdown com pré-visualização, referências, DOI e palavras-chave
+- Limites de utilização no login, assistente, contacto e newsletter
+- Turnstile opcional e segredo privado entre Flask e Cloudflare Worker
 - Política Editorial, Política de Correções e Declaração de Acessibilidade

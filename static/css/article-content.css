@@ -1,0 +1,8 @@
+.article-markdown { font-size: 1.08rem; line-height: 1.85; }
+.article-markdown h2, .article-markdown h3 { font-family: Georgia, serif; line-height: 1.25; margin: 2rem 0 .8rem; }
+.article-markdown blockquote { border-left: 4px solid #087b70; margin: 1.5rem 0; padding: .2rem 0 .2rem 1.2rem; color: #52615f; }
+.article-markdown a, .article-identifiers a { color: #087b70; text-decoration: underline; text-underline-offset: 3px; }
+.article-markdown table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
+.article-markdown th, .article-markdown td { border: 1px solid #d8dfde; padding: .65rem; }
+.article-identifiers, .article-references { border-top: 1px solid rgba(0,0,0,.14); margin-top: 2rem; padding-top: 1.5rem; }
+.article-references h2 { font-family: Georgia, serif; font-size: 1.8rem; }

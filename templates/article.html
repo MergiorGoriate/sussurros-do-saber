@@ -3,6 +3,7 @@ Saber{% endblock %}{% block content %}<link
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}" />
 <article>
   <header class="max-w-4xl mx-auto px-4 pt-14 text-center">
     <span class="eyebrow">{{ article.category }}</span>
@@ -30,9 +31,12 @@ Saber{% endblock %}{% block content %}<link
     class="max-w-6xl mx-auto w-full aspect-[16/7] object-cover mt-8 md:rounded-3xl"
   />
   <div class="prose-article">
-    {% for paragraph in article.body.split('\n\n') %}
-    <p{% if loop.first %} class="lead"{% endif %}>{{ paragraph }}</p>
-    {% endfor %}
+    <div class="article-markdown">{{ article.body|markdown }}</div>
+    {% if article.keywords or article.doi %}<div class="article-identifiers">
+      {% if article.keywords %}<p><strong>Palavras-chave:</strong> {{ article.keywords }}</p>{% endif %}
+      {% if article.doi %}<p><strong>DOI:</strong> <a href="https://doi.org/{{ article.doi }}" rel="external noopener">{{ article.doi }}</a></p>{% endif %}
+    </div>{% endif %}
+    {% if article.references %}<section class="article-references" aria-labelledby="references-title"><h2 id="references-title">Referências</h2><div class="article-markdown">{{ article.references|markdown }}</div></section>{% endif %}
     <aside class="share-panel" data-title="{{ article.title }}">
       <div>
         <span class="eyebrow">Divulgue conhecimento</span>

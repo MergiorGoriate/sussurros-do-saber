@@ -4,8 +4,11 @@ import re
 import secrets
 from datetime import datetime
 from functools import wraps
+import requests
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from extensions import limiter
 from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
+from storage import ImageUploadError, upload_article_image
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -40,19 +43,38 @@ def validate_csrf():
 
 @admin_bp.app_context_processor
 def admin_context():
-    return {"csrf_token": csrf_token}
+    return {"csrf_token": csrf_token, "turnstile_site_key": os.getenv("TURNSTILE_SITE_KEY", "")}
+
+
+def turnstile_valid():
+    secret = os.getenv("TURNSTILE_SECRET_KEY")
+    if not secret:
+        return True
+    try:
+        response = requests.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data={"secret": secret, "response": request.form.get("cf-turnstile-response", ""), "remoteip": request.remote_addr},
+            timeout=8,
+        )
+        return bool(response.json().get("success"))
+    except (requests.RequestException, ValueError):
+        return False
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute; 20 per hour")
 def login():
     if request.method == "POST":
         validate_csrf()
         configured_user = os.getenv("ADMIN_USERNAME")
         configured_password = os.getenv("ADMIN_PASSWORD")
-        if not configured_user or not configured_password:
+        if not turnstile_valid():
+            flash("A verificação de segurança falhou. Actualize a página e tente novamente.", "error")
+        elif not configured_user or not configured_password:
             flash("Configure ADMIN_USERNAME e ADMIN_PASSWORD no Render antes de entrar.", "error")
         elif hmac.compare_digest(request.form.get("username", ""), configured_user) and hmac.compare_digest(request.form.get("password", ""), configured_password):
             session.clear()
+            session.permanent = True
             session["admin_authenticated"] = True
             session["csrf_token"] = secrets.token_urlsafe(32)
             return redirect(url_for("admin.dashboard"))
@@ -106,7 +128,15 @@ def article_form(article_id=None):
             article.slug = candidate
             article.summary = request.form.get("summary", "").strip()
             article.body = request.form.get("body", "").strip()
-            article.image = request.form.get("image", "").strip()
+            article.references = request.form.get("references", "").strip()
+            article.keywords = request.form.get("keywords", "").strip()
+            article.doi = request.form.get("doi", "").strip()
+            image_file = request.files.get("image_file")
+            try:
+                article.image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("image", "").strip()
+            except ImageUploadError as error:
+                flash(str(error), "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             article.read_minutes = max(1, int(request.form.get("read_minutes") or 5))
             article.author_id = int(request.form["author_id"])
             article.category_id = int(request.form["category_id"])

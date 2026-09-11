@@ -2,11 +2,18 @@ from flask import Flask, Response, jsonify, render_template, request, url_for
 from xml.sax.saxutils import escape
 import requests
 import os
-from sqlalchemy import or_
+from datetime import timedelta
+import bleach
+import markdown
+from markupsafe import Markup
+from sqlalchemy import inspect, or_, text
+from werkzeug.middleware.proxy_fix import ProxyFix
 from admin import admin_bp
+from extensions import limiter
 from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 database_url = os.getenv("DATABASE_URL", "sqlite:///sussurros.db")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -17,9 +24,35 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("RENDER", "") == "true",
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+    MAX_CONTENT_LENGTH=9 * 1024 * 1024,
 )
 db.init_app(app)
+limiter.init_app(app)
 app.register_blueprint(admin_bp)
+
+
+@app.template_filter("markdown")
+def render_markdown(value):
+    html = markdown.markdown(value or "", extensions=["extra", "sane_lists"])
+    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td"})
+    return Markup(bleach.clean(html, tags=allowed, attributes={"a": ["href", "title", "rel"]}, protocols=["http", "https", "mailto"], strip=True))
+
+
+@app.after_request
+def security_headers(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    return response
+
+
+@app.errorhandler(429)
+def rate_limited(error):
+    if request.path.startswith("/api/"):
+        return jsonify({"ok": False, "answer": "Limite temporário atingido. Aguarde antes de tentar novamente."}), 429
+    return render_template("429.html"), 429
 
 SEED_ARTICLES = [
     {"id": 1, "category": "Biologia", "title": "Bactérias endofíticas: os microrganismos invisíveis que protegem as plantas", "summary": "Dentro das plantas vivem comunidades capazes de produzir compostos com potencial antibacteriano.", "author": "Mergior Goriate", "date": "10 Setembro 2026", "read_time": "7 min", "image": "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1400&q=85", "featured": True},
@@ -168,6 +201,7 @@ def robots():
     return Response(f"User-agent: *\nAllow: /\nSitemap: {request.url_root}sitemap.xml\n", mimetype="text/plain")
 
 @app.post("/api/newsletter")
+@limiter.limit("5 per hour")
 def newsletter():
     email = (request.get_json(silent=True) or {}).get("email", "").strip().lower()
     if "@" not in email:
@@ -181,6 +215,7 @@ def newsletter():
     return jsonify({"ok": True, "message": "Inscrição confirmada. Bem-vindo ao Sussurros do Saber!"})
 
 @app.post("/api/assistente")
+@limiter.limit("5 per minute; 20 per hour")
 def assistant():
     message = (request.get_json(silent=True) or {}).get("message", "").strip()
     if not message:
@@ -189,9 +224,13 @@ def assistant():
         return jsonify({"ok": False, "answer": "Utilize até 800 caracteres por pergunta."}), 400
 
     try:
+        headers = {}
+        if os.getenv("ASSISTANT_SHARED_KEY"):
+            headers["X-Assistant-Key"] = os.environ["ASSISTANT_SHARED_KEY"]
         worker_response = requests.post(
-            "https://assistente-sussurros.geniospurificado.workers.dev",
+            os.getenv("ASSISTANT_WORKER_URL", "https://assistente-sussurros.geniospurificado.workers.dev"),
             json={"message": message},
+            headers=headers,
             timeout=25,
         )
         worker_response.raise_for_status()
@@ -205,6 +244,7 @@ def assistant():
         }), 502
 
 @app.post("/api/contacto")
+@limiter.limit("10 per hour")
 def submit_contact():
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
@@ -218,8 +258,18 @@ def submit_contact():
     return jsonify({"ok": True, "message": "Mensagem recebida. Obrigado por contactar o Sussurros do Saber."})
 
 
+def ensure_article_columns():
+    existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
+    additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
+    for name, definition in additions.items():
+        if name not in existing:
+            db.session.execute(text(f'ALTER TABLE article ADD COLUMN "{name}" {definition}'))
+    db.session.commit()
+
+
 def seed_database():
     db.create_all()
+    ensure_article_columns()
     if Article.query.first():
         return
     author_names = sorted({item["author"] for item in SEED_ARTICLES})
