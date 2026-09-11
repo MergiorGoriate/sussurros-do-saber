@@ -1,0 +1,183 @@
+from flask import Flask, Response, jsonify, render_template, request, url_for
+from xml.sax.saxutils import escape
+
+app = Flask(__name__)
+
+ARTICLES = [
+    {"id": 1, "category": "Biologia", "title": "Bactérias endofíticas: os microrganismos invisíveis que protegem as plantas", "summary": "Dentro das plantas vivem comunidades capazes de produzir compostos com potencial antibacteriano.", "author": "Mergior Goriate", "date": "10 Setembro 2026", "read_time": "7 min", "image": "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1400&q=85", "featured": True},
+    {"id": 2, "category": "Saúde", "title": "Por que sentimos sono depois de comer?", "summary": "A digestão, as hormonas e o relógio biológico explicam a queda de energia após as refeições.", "author": "Redacção", "date": "8 Setembro 2026", "read_time": "5 min", "image": "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=1000&q=85"},
+    {"id": 3, "category": "Ambiente", "title": "Plantas medicinais de Nampula e o futuro da investigação local", "summary": "Conhecimento tradicional e métodos laboratoriais podem abrir caminhos para novas descobertas.", "author": "Mergior Goriate", "date": "6 Setembro 2026", "read_time": "9 min", "image": "https://images.unsplash.com/photo-1531058240690-006c446962d8?auto=format&fit=crop&w=1000&q=85"},
+    {"id": 4, "category": "Espaço", "title": "Como os radiotelescópios africanos observam o universo", "summary": "A radioastronomia transforma África num ponto estratégico para estudar galáxias distantes.", "author": "Redacção", "date": "4 Setembro 2026", "read_time": "6 min", "image": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1000&q=85"},
+    {"id": 5, "category": "Educação", "title": "Cinco estratégias para aprender Biologia com rigor científico", "summary": "Da observação à explicação: um método simples para estudar processos biológicos.", "author": "Mergior Goriate", "date": "1 Setembro 2026", "read_time": "4 min", "image": "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=1000&q=85"},
+    {"id": 6, "category": "Tecnologia", "title": "Python na investigação: da folha de cálculo à análise reprodutível", "summary": "Como estudantes podem automatizar tarefas, explorar dados e documentar melhor as suas análises.", "author": "Mergior Goriate", "date": "28 Agosto 2026", "read_time": "8 min", "image": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1000&q=85"},
+]
+
+JOURNALS = [
+    {"title": "Cadernos de Biodiversidade", "abbr": "CBIO", "field": "Biologia e Ecologia", "description": "Estudos sobre biodiversidade, conservação, ecologia e recursos naturais, com atenção aos contextos africanos.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
+    {"title": "Saúde & Comunidade", "abbr": "SACO", "field": "Saúde Pública", "description": "Investigação e práticas sobre saúde comunitária, nutrição, prevenção e determinantes sociais da saúde.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Em preparação"},
+    {"title": "Educação Científica", "abbr": "EDCI", "field": "Ensino e Aprendizagem", "description": "Pesquisa e experiências sobre ensino de Ciências e Biologia, formação docente e inovação pedagógica.", "frequency": "Anual", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
+]
+
+LEARNING_RESOURCES = [
+    {"id": 1, "type": "Interactivo", "topic": "Biologia Celular", "level": "Universitário", "title": "Explore a célula", "description": "Identifique organelos e relacione estruturas com as suas funções.", "icon": "◉"},
+    {"id": 2, "type": "Laboratório Virtual", "topic": "Fisiologia", "level": "Secundário", "title": "Osmose em células", "description": "Teste concentrações e observe o movimento previsto da água.", "icon": "⌁", "url": "/laboratorio/osmose"},
+    {"id": 3, "type": "Actividade", "topic": "Genética", "level": "Universitário", "title": "Heredogramas passo a passo", "description": "Pratique a identificação de padrões de herança em famílias.", "icon": "◇"},
+    {"id": 4, "type": "Vídeo", "topic": "Microbiologia", "level": "Secundário", "title": "O mundo invisível dos microrganismos", "description": "Uma introdução visual à diversidade microbiana.", "icon": "▶"},
+    {"id": 5, "type": "Dados", "topic": "Ecologia", "level": "Universitário", "title": "Diversidade de espécies", "description": "Conjunto demonstrativo para calcular riqueza e abundância.", "icon": "▥"},
+    {"id": 6, "type": "Explicador", "topic": "Bioquímica", "level": "Universitário", "title": "Do DNA à proteína", "description": "Uma sequência guiada por replicação, transcrição e tradução.", "icon": "↝"},
+]
+
+@app.get("/")
+def home():
+    return render_template("index.html", articles=ARTICLES, journals=JOURNALS)
+
+@app.get("/artigos")
+def articles():
+    category = request.args.get("categoria", "").strip().lower()
+    query = request.args.get("q", "").strip().lower()
+    results = ARTICLES
+    if category:
+        results = [a for a in results if a["category"].lower() == category]
+    if query:
+        results = [a for a in results if query in (a["title"] + " " + a["summary"]).lower()]
+    return render_template("articles.html", articles=results, query=request.args.get("q", ""))
+
+@app.get("/artigo/<int:article_id>")
+def article(article_id):
+    selected = next((a for a in ARTICLES if a["id"] == article_id), None)
+    if not selected:
+        return render_template("404.html"), 404
+    related = [a for a in ARTICLES if a["id"] != article_id][:3]
+    return render_template("article.html", article=selected, related=related)
+
+@app.get("/sobre")
+def about():
+    return render_template("about.html")
+
+@app.get("/autores")
+def authors():
+    return render_template("authors.html")
+
+@app.get("/contacto")
+def contact():
+    return render_template("contact.html")
+
+@app.get("/termos-e-condicoes")
+def terms():
+    return render_template("terms.html")
+
+@app.get("/politica-de-privacidade")
+def privacy():
+    return render_template("privacy.html")
+
+@app.get("/servicos")
+def services():
+    return render_template("services.html")
+
+@app.get("/servicos/edicao-cientifica")
+def scientific_editing():
+    return render_template("scientific_editing.html")
+
+@app.get("/revistas")
+def journals():
+    return render_template("journals.html", journals=JOURNALS)
+
+@app.get("/recursos")
+def resources():
+    return render_template("resources.html")
+
+@app.get("/aprender")
+def learn():
+    resource_type = request.args.get("tipo", "").strip().lower()
+    topic = request.args.get("tema", "").strip().lower()
+    items = LEARNING_RESOURCES
+    if resource_type:
+        items = [item for item in items if item["type"].lower() == resource_type]
+    if topic:
+        items = [item for item in items if item["topic"].lower() == topic]
+    return render_template("learn.html", resources=items, all_resources=LEARNING_RESOURCES)
+
+@app.get("/laboratorio/osmose")
+def osmosis_lab():
+    return render_template("osmosis_lab.html")
+
+@app.get("/api/recursos")
+def api_resources():
+    return jsonify(LEARNING_RESOURCES)
+
+@app.get("/favoritos")
+def favorites():
+    return render_template("favorites.html")
+
+@app.get("/api/artigos")
+def api_articles():
+    query = request.args.get("q", "").strip().lower()
+    items = ARTICLES if not query else [a for a in ARTICLES if query in (a["title"] + " " + a["summary"] + " " + a["category"]).lower()]
+    return jsonify(items)
+
+@app.get("/feed.xml")
+def feed():
+    items = "".join(f"<item><title>{escape(a['title'])}</title><link>{request.url_root.rstrip('/')}{url_for('article', article_id=a['id'])}</link><description>{escape(a['summary'])}</description></item>" for a in ARTICLES)
+    xml = f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sussurros do Saber</title><link>{request.url_root}</link><description>Ciência que se compreende</description>{items}</channel></rss>'
+    return Response(xml, mimetype="application/rss+xml")
+
+@app.get("/sitemap.xml")
+def sitemap():
+    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a["id"]) for a in ARTICLES]
+    urls = "".join(f"<url><loc>{request.url_root.rstrip('/')}{path}</loc></url>" for path in paths)
+    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
+
+@app.get("/robots.txt")
+def robots():
+    return Response(f"User-agent: *\nAllow: /\nSitemap: {request.url_root}sitemap.xml\n", mimetype="text/plain")
+
+@app.post("/api/newsletter")
+def newsletter():
+    email = (request.get_json(silent=True) or {}).get("email", "").strip()
+    if "@" not in email:
+        return jsonify({"ok": False, "message": "Introduza um endereço de e-mail válido."}), 400
+    return jsonify({"ok": True, "message": "Inscrição confirmada. Bem-vindo ao Sussurros do Saber!"})
+
+@app.post("/api/assistente")
+def assistant():
+    message = (request.get_json(silent=True) or {}).get("message", "").strip()
+    text = message.lower()
+    if not message:
+        return jsonify({"ok": False, "answer": "Escreva uma pergunta para eu poder ajudar."}), 400
+
+    if any(word in text for word in ["média", "mediana", "estatística", "desvio"]):
+        answer = "Na área Recursos encontra uma calculadora descritiva. A média é a soma dos valores dividida pelo número de observações; a mediana é o valor central depois de ordenar os dados."
+        links = [{"label": "Abrir calculadora", "url": "/recursos"}]
+    elif any(word in text for word in ["apa", "referência", "citação"]):
+        answer = "Posso orientar a escrita académica. Em Recursos existe um gerador básico de referências APA. Confirme sempre autores, ano, título, periódico, volume, número, páginas e DOI na fonte original."
+        links = [{"label": "Gerar referência", "url": "/recursos"}]
+    elif any(word in text for word in ["endof", "bactéria", "microbiologia", "planta"]):
+        answer = "Bactérias endofíticas vivem no interior dos tecidos vegetais sem causar sintomas aparentes. Algumas produzem compostos com potencial antibacteriano e interesse biotecnológico."
+        links = [{"label": "Ler artigo relacionado", "url": "/artigo/1"}]
+    elif any(word in text for word in ["python", "programação", "dados"]):
+        answer = "Python pode ajudar a organizar dados, calcular estatísticas, criar gráficos e automatizar tarefas laboratoriais. Comece por variáveis, listas, condições, ciclos e funções."
+        links = [{"label": "Explorar Python na investigação", "url": "/artigo/6"}]
+    elif any(word in text for word in ["artigo", "pesquisar", "procuro", "encontrar"]):
+        answer = "Use a pesquisa no cabeçalho ou escolha uma categoria. Também pode guardar artigos no coração e encontrá-los depois na página Favoritos."
+        links = [{"label": "Explorar artigos", "url": "/artigos"}]
+    elif any(word in text for word in ["olá", "ola", "bom dia", "boa tarde", "ajuda"]):
+        answer = "Olá! Sou o assistente do Sussurros do Saber. Posso ajudar com Biologia, estatística, referências APA, Python e navegação no portal."
+        links = []
+    else:
+        answer = "Ainda não tenho uma resposta específica para essa pergunta. Posso ajudar com Biologia, estatística, referências APA, Python ou indicar artigos do portal."
+        links = [{"label": "Consultar todos os artigos", "url": "/artigos"}]
+    return jsonify({"ok": True, "answer": answer, "links": links})
+
+@app.post("/api/contacto")
+def submit_contact():
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+    subject = data.get("subject", "").strip()
+    message = data.get("message", "").strip()
+    if len(name) < 2 or "@" not in email or len(subject) < 3 or len(message) < 10:
+        return jsonify({"ok": False, "message": "Preencha correctamente todos os campos."}), 400
+    return jsonify({"ok": True, "message": "Mensagem recebida. Obrigado por contactar o Sussurros do Saber."})
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
