@@ -1,5 +1,6 @@
 from flask import Flask, Response, jsonify, render_template, request, url_for
 from xml.sax.saxutils import escape
+import requests
 
 app = Flask(__name__)
 
@@ -141,32 +142,26 @@ def newsletter():
 @app.post("/api/assistente")
 def assistant():
     message = (request.get_json(silent=True) or {}).get("message", "").strip()
-    text = message.lower()
     if not message:
         return jsonify({"ok": False, "answer": "Escreva uma pergunta para eu poder ajudar."}), 400
+    if len(message) > 800:
+        return jsonify({"ok": False, "answer": "Utilize até 800 caracteres por pergunta."}), 400
 
-    if any(word in text for word in ["média", "mediana", "estatística", "desvio"]):
-        answer = "Na área Recursos encontra uma calculadora descritiva. A média é a soma dos valores dividida pelo número de observações; a mediana é o valor central depois de ordenar os dados."
-        links = [{"label": "Abrir calculadora", "url": "/recursos"}]
-    elif any(word in text for word in ["apa", "referência", "citação"]):
-        answer = "Posso orientar a escrita académica. Em Recursos existe um gerador básico de referências APA. Confirme sempre autores, ano, título, periódico, volume, número, páginas e DOI na fonte original."
-        links = [{"label": "Gerar referência", "url": "/recursos"}]
-    elif any(word in text for word in ["endof", "bactéria", "microbiologia", "planta"]):
-        answer = "Bactérias endofíticas vivem no interior dos tecidos vegetais sem causar sintomas aparentes. Algumas produzem compostos com potencial antibacteriano e interesse biotecnológico."
-        links = [{"label": "Ler artigo relacionado", "url": "/artigo/1"}]
-    elif any(word in text for word in ["python", "programação", "dados"]):
-        answer = "Python pode ajudar a organizar dados, calcular estatísticas, criar gráficos e automatizar tarefas laboratoriais. Comece por variáveis, listas, condições, ciclos e funções."
-        links = [{"label": "Explorar Python na investigação", "url": "/artigo/6"}]
-    elif any(word in text for word in ["artigo", "pesquisar", "procuro", "encontrar"]):
-        answer = "Use a pesquisa no cabeçalho ou escolha uma categoria. Também pode guardar artigos no coração e encontrá-los depois na página Favoritos."
-        links = [{"label": "Explorar artigos", "url": "/artigos"}]
-    elif any(word in text for word in ["olá", "ola", "bom dia", "boa tarde", "ajuda"]):
-        answer = "Olá! Sou o assistente do Sussurros do Saber. Posso ajudar com Biologia, estatística, referências APA, Python e navegação no portal."
-        links = []
-    else:
-        answer = "Ainda não tenho uma resposta específica para essa pergunta. Posso ajudar com Biologia, estatística, referências APA, Python ou indicar artigos do portal."
-        links = [{"label": "Consultar todos os artigos", "url": "/artigos"}]
-    return jsonify({"ok": True, "answer": answer, "links": links})
+    try:
+        worker_response = requests.post(
+            "https://assistente-sussurros.geniospurificado.workers.dev",
+            json={"message": message},
+            timeout=25,
+        )
+        worker_response.raise_for_status()
+        result = worker_response.json()
+        return jsonify(result), 200 if result.get("ok") else 502
+    except (requests.RequestException, ValueError):
+        return jsonify({
+            "ok": False,
+            "answer": "O assistente está temporariamente indisponível. Tente novamente dentro de alguns instantes.",
+            "links": [],
+        }), 502
 
 @app.post("/api/contacto")
 def submit_contact():
