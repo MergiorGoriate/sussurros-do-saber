@@ -63,6 +63,14 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No R
 - Execute `flask db upgrade` no processo de implantação quando forem adicionadas migrações Alembic.
 - Não envie `.venv`, `.env`, bases SQLite nem credenciais para o Drive ou repositório.
 
+### Comando de arranque no Render
+
+Use exatamente:
+
+`gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile -`
+
+O parâmetro `--bind 0.0.0.0:$PORT` é obrigatório para que o Render detete a porta do serviço. O projecto inclui também `render.yaml` e `Procfile` com esta configuração.
+
 ## Segurança administrativa
 
 - A `SECRET_KEY` de produção deve ter no mínimo 32 caracteres; a aplicação recusa iniciar sem ela.
