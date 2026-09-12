@@ -104,6 +104,41 @@ class Article(db.Model):
         ))
 
 
+class Journal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(180), nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    abbreviation = db.Column(db.String(30), default="", nullable=False)
+    field = db.Column(db.String(140), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    issn = db.Column(db.String(20), default="", nullable=False)
+    frequency = db.Column(db.String(80), default="", nullable=False)
+    current_issue = db.Column(db.String(120), default="", nullable=False)
+    guidelines = db.Column(db.Text, default="", nullable=False)
+    cover_image = db.Column(db.String(600), default="", nullable=False)
+    cover_public_id = db.Column(db.String(300), default="", nullable=False)
+    cover_alt = db.Column(db.String(300), default="", nullable=False)
+    published = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    @classmethod
+    def public_query(cls):
+        return cls.query.filter_by(published=True)
+
+    @property
+    def abbr(self):
+        return self.abbreviation
+
+    @property
+    def issue(self):
+        return self.current_issue
+
+    @property
+    def status(self):
+        return "Publicada" if self.published else "Oculta"
+
+
 class ContactMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)

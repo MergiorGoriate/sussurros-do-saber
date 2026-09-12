@@ -105,6 +105,7 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No R
 - Página Revistas com catálogo pesquisável e informações editoriais
 - Painel administrativo protegido, rascunhos e publicações programadas
 - Gestão de artigos, autores, categorias, contactos e subscritores
+- Gestão completa de revistas: catálogo, criação, edição, ISSN, periodicidade, edição atual, diretrizes, capa por Cloudinary ou URL, publicação/ocultação, eliminação e página pública por slug
 - Cadastro de administradores individuais com palavras-passe protegidas por hash
 - Upload de imagens optimizadas para Cloudinary
 - Editor Markdown com pré-visualização, referências, DOI e palavras-chave

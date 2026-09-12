@@ -13,7 +13,7 @@ class ImageUploadError(ValueError):
     pass
 
 
-def upload_article_image(file):
+def upload_article_image(file, folder=None):
     if not file or not file.filename:
         return None
     payload = file.read(MAX_IMAGE_BYTES + 1)
@@ -48,7 +48,7 @@ def upload_article_image(file):
         result = cloudinary.uploader.upload(
             output,
             public_id=uuid.uuid4().hex,
-            folder=os.getenv("CLOUDINARY_FOLDER", "sussurros-do-saber/artigos"),
+            folder=folder or os.getenv("CLOUDINARY_FOLDER", "sussurros-do-saber/artigos"),
             resource_type="image",
             format="webp",
             overwrite=False,

@@ -7,3 +7,4 @@
 5. Faça o deploy do Worker e depois um novo deploy do serviço no Render.
 
 O navegador não acede directamente ao Worker: ele chama `/api/assistente` no Flask. O Flask aplica limites de utilização e autentica-se no Worker pelo segredo partilhado.
+
