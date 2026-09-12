@@ -11,7 +11,7 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
-from app import app  # noqa: E402
+from app import app, ensure_legacy_columns  # noqa: E402
 from models import AdminUser, Article, Author, Category, Journal, db  # noqa: E402
 
 
@@ -150,6 +150,20 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.status_code, 301)
         self.assertTrue(response.location.endswith(f"/artigo/{slug}"))
         self.assertEqual(self.client.get(f"/artigo/{slug}").status_code, 200)
+
+    def test_y_legacy_journal_schema_is_upgraded(self):
+        from sqlalchemy import inspect, text
+        with app.app_context():
+            db.session.execute(text("DROP TABLE journal"))
+            db.session.execute(text("CREATE TABLE journal (id INTEGER PRIMARY KEY, title VARCHAR(180) NOT NULL, slug VARCHAR(200) NOT NULL, field VARCHAR(140) NOT NULL, description TEXT NOT NULL, abbr VARCHAR(30), issue VARCHAR(120), status VARCHAR(30))"))
+            db.session.execute(text("INSERT INTO journal (id,title,slug,field,description,abbr,issue,status) VALUES (1,'Revista Antiga','revista-antiga','Biologia','Descrição da revista antiga','RA','Vol. 1','published')"))
+            db.session.commit()
+            ensure_legacy_columns()
+            columns = {column["name"] for column in inspect(db.engine).get_columns("journal")}
+            self.assertTrue({"abbreviation", "current_issue", "cover_public_id", "published", "guidelines"}.issubset(columns))
+            journal = Journal.query.filter_by(slug="revista-antiga").first()
+            self.assertEqual(journal.abbreviation, "RA")
+            self.assertTrue(journal.published)
 
     def test_api_pagination_limit(self):
         response = self.client.get("/api/artigos?limit=1")

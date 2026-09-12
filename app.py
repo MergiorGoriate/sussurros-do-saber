@@ -332,12 +332,35 @@ def ensure_legacy_columns():
     migrations = {
         "article": {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''", "image_alt": "VARCHAR(300) DEFAULT ''", "image_public_id": "VARCHAR(255) DEFAULT ''"},
         "admin_user": {"role": "VARCHAR(20) DEFAULT 'editor' NOT NULL", "session_version": "INTEGER DEFAULT 1 NOT NULL", "password_changed_at": "TIMESTAMP"},
+        "journal": {
+            "abbreviation": "VARCHAR(30) DEFAULT '' NOT NULL",
+            "issn": "VARCHAR(20) DEFAULT '' NOT NULL",
+            "frequency": "VARCHAR(80) DEFAULT '' NOT NULL",
+            "current_issue": "VARCHAR(120) DEFAULT '' NOT NULL",
+            "guidelines": "TEXT DEFAULT '' NOT NULL",
+            "cover_image": "VARCHAR(600) DEFAULT '' NOT NULL",
+            "cover_public_id": "VARCHAR(300) DEFAULT '' NOT NULL",
+            "cover_alt": "VARCHAR(300) DEFAULT '' NOT NULL",
+            "published": "BOOLEAN DEFAULT FALSE NOT NULL",
+            "created_at": "TIMESTAMP",
+            "updated_at": "TIMESTAMP",
+        },
     }
     for table_name, additions in migrations.items():
         existing = {column["name"] for column in inspect(db.engine).get_columns(table_name)}
         for name, definition in additions.items():
             if name not in existing:
                 db.session.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN "{name}" {definition}'))
+        if table_name == "journal":
+            current = {column["name"] for column in inspect(db.engine).get_columns("journal")}
+            if "abbr" in current:
+                db.session.execute(text("UPDATE journal SET abbreviation = abbr WHERE abbreviation = '' AND abbr IS NOT NULL"))
+            if "issue" in current:
+                db.session.execute(text("UPDATE journal SET current_issue = issue WHERE current_issue = '' AND issue IS NOT NULL"))
+            if "image" in current:
+                db.session.execute(text("UPDATE journal SET cover_image = image WHERE cover_image = '' AND image IS NOT NULL"))
+            if "status" in current:
+                db.session.execute(text("UPDATE journal SET published = TRUE WHERE lower(status) IN ('published', 'publicada', 'ativo', 'active')"))
     db.session.commit()
 
 
