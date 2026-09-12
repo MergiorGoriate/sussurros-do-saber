@@ -10,8 +10,8 @@ import requests
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
-from storage import ImageUploadError, upload_article_image
+from models import AdminAuditLog, AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
+from storage import ImageUploadError, delete_article_image, upload_article_image
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -27,8 +27,31 @@ def login_required(view):
     def wrapped(*args, **kwargs):
         if not session.get("admin_authenticated"):
             return redirect(url_for("admin.login", next=request.path))
+        admin_id = session.get("admin_id")
+        if admin_id:
+            admin = db.session.get(AdminUser, admin_id)
+            if not admin or not admin.active or admin.session_version != session.get("admin_session_version"):
+                session.clear()
+                flash("A sessão expirou ou a conta foi desativada.", "error")
+                return redirect(url_for("admin.login"))
         return view(*args, **kwargs)
     return wrapped
+
+
+def superadmin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        admin_id = session.get("admin_id")
+        admin = db.session.get(AdminUser, admin_id) if admin_id else None
+        if not session.get("bootstrap_superadmin") and (not admin or not admin.is_superadmin):
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def audit(action, target=""):
+    db.session.add(AdminAuditLog(admin_id=session.get("admin_id"), actor_username=session.get("admin_username", "unknown"), action=action, target=str(target), ip_address=request.remote_addr or ""))
 
 
 def csrf_token():
@@ -73,7 +96,7 @@ def login():
         password = request.form.get("password", "")
         database_admin = AdminUser.query.filter(db.func.lower(AdminUser.username) == username, AdminUser.active.is_(True)).first()
         configured_user = os.getenv("ADMIN_USERNAME")
-        configured_password = os.getenv("ADMIN_PASSWORD")
+        configured_password = os.getenv("ADMIN_PASSWORD") if not os.getenv("RENDER") or os.getenv("ALLOW_LEGACY_ADMIN_PASSWORD", "false").lower() == "true" else None
         configured_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
         if not turnstile_valid():
             flash("A verificação de segurança falhou. Actualize a página e tente novamente.", "error")
@@ -83,6 +106,8 @@ def login():
             session["admin_authenticated"] = True
             session["admin_id"] = database_admin.id
             session["admin_username"] = database_admin.username
+            session["admin_session_version"] = database_admin.session_version
+            session["admin_role"] = database_admin.role
             session["csrf_token"] = secrets.token_urlsafe(32)
             database_admin.last_login_at = utcnow()
             db.session.commit()
@@ -94,6 +119,8 @@ def login():
             session.permanent = True
             session["admin_authenticated"] = True
             session["admin_username"] = configured_user
+            session["admin_role"] = "superadmin"
+            session["bootstrap_superadmin"] = True
             session["csrf_token"] = secrets.token_urlsafe(32)
             return redirect(url_for("admin.dashboard"))
         else:
@@ -116,7 +143,7 @@ def dashboard():
 
 
 @admin_bp.route("/administradores", methods=["GET", "POST"])
-@login_required
+@superadmin_required
 def administrators():
     if request.method == "POST":
         validate_csrf()
@@ -125,6 +152,7 @@ def administrators():
         email = request.form.get("email", "").strip().lower() or None
         password = request.form.get("password", "")
         password_confirmation = request.form.get("password_confirmation", "")
+        role = request.form.get("role", "editor")
         duplicate_username = AdminUser.query.filter(db.func.lower(AdminUser.username) == username).first()
         duplicate_email = email and AdminUser.query.filter(db.func.lower(AdminUser.email) == email).first()
         if not re.fullmatch(r"[a-z0-9._-]{3,60}", username):
@@ -133,18 +161,59 @@ def administrators():
             flash("Informe o nome do administrador.", "error")
         elif email and (len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)):
             flash("Informe um endereço de e-mail válido.", "error")
-        elif len(password) < 12:
-            flash("A palavra-passe deve ter pelo menos 12 caracteres.", "error")
+        elif role not in {"editor", "administrator", "superadmin"}:
+            flash("Selecione uma função válida.", "error")
+        elif len(password) < 14 or not re.search(r"[A-Z]", password) or not re.search(r"[a-z]", password) or not re.search(r"\d", password):
+            flash("A palavra-passe deve ter 14 caracteres e incluir maiúscula, minúscula e número.", "error")
         elif password != password_confirmation:
             flash("A confirmação da palavra-passe não corresponde.", "error")
         elif duplicate_username or duplicate_email:
             flash("Já existe um administrador com esse utilizador ou e-mail.", "error")
         else:
-            db.session.add(AdminUser(username=username, display_name=display_name, email=email, password_hash=generate_password_hash(password)))
+            account = AdminUser(username=username, display_name=display_name, email=email, role=role, password_hash=generate_password_hash(password))
+            db.session.add(account)
+            audit("admin_created", username)
             db.session.commit()
             flash("Novo administrador criado com sucesso.", "success")
             return redirect(url_for("admin.administrators"))
     return render_template("admin/administrators.html", administrators=AdminUser.query.order_by(AdminUser.created_at.desc()).all())
+
+
+@admin_bp.post("/administradores/<int:admin_id>/estado")
+@superadmin_required
+def toggle_administrator(admin_id):
+    validate_csrf()
+    administrator = db.get_or_404(AdminUser, admin_id)
+    if administrator.id == session.get("admin_id"):
+        flash("Não pode desativar a própria conta.", "error")
+    elif administrator.is_superadmin and administrator.active and AdminUser.query.filter_by(role="superadmin", active=True).count() <= 1:
+        flash("É obrigatório manter pelo menos um superadministrador ativo.", "error")
+    else:
+        administrator.active = not administrator.active
+        administrator.session_version += 1
+        audit("admin_status_changed", f"{administrator.username}:{administrator.active}")
+        db.session.commit()
+        flash("Estado do administrador atualizado.", "success")
+    return redirect(url_for("admin.administrators"))
+
+
+@admin_bp.post("/administradores/<int:admin_id>/palavra-passe")
+@superadmin_required
+def reset_administrator_password(admin_id):
+    validate_csrf()
+    administrator = db.get_or_404(AdminUser, admin_id)
+    password = request.form.get("password", "")
+    confirmation = request.form.get("password_confirmation", "")
+    if password != confirmation or len(password) < 14 or not re.search(r"[A-Z]", password) or not re.search(r"[a-z]", password) or not re.search(r"\d", password):
+        flash("A nova palavra-passe não cumpre os requisitos ou a confirmação não corresponde.", "error")
+    else:
+        administrator.password_hash = generate_password_hash(password)
+        administrator.password_changed_at = utcnow()
+        administrator.session_version += 1
+        audit("admin_password_reset", administrator.username)
+        db.session.commit()
+        flash("Palavra-passe alterada e sessões anteriores encerradas.", "success")
+    return redirect(url_for("admin.administrators"))
 
 
 @admin_bp.get("/artigos")
@@ -154,7 +223,11 @@ def articles():
 
 
 def parse_datetime(value):
-    return datetime.fromisoformat(value) if value else None
+    if not value:
+        return None
+    from zoneinfo import ZoneInfo
+    local = datetime.fromisoformat(value).replace(tzinfo=ZoneInfo(os.getenv("ADMIN_TIMEZONE", "Africa/Maputo")))
+    return local.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
 
 @admin_bp.route("/artigos/novo", methods=["GET", "POST"])
@@ -200,10 +273,17 @@ def article_form(article_id=None):
             article.body = body
             article.references = request.form.get("references", "").strip()
             article.keywords = request.form.get("keywords", "").strip()
-            article.doi = request.form.get("doi", "").strip()
+            article.doi = re.sub(r"^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)", "", request.form.get("doi", "").strip(), flags=re.I)[:180]
             image_file = request.files.get("image_file")
             try:
-                article.image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("image", "").strip()
+                if image_file and image_file.filename:
+                    old_public_id = article.image_public_id
+                    article.image, article.image_public_id = upload_article_image(image_file)
+                    if old_public_id:
+                        delete_article_image(old_public_id)
+                else:
+                    article.image = request.form.get("image", "").strip()
+                article.image_alt = request.form.get("image_alt", "").strip()[:300]
             except ImageUploadError as error:
                 flash(str(error), "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
@@ -231,6 +311,7 @@ def article_form(article_id=None):
 def delete_article(article_id):
     validate_csrf()
     article = db.get_or_404(Article, article_id)
+    delete_article_image(article.image_public_id)
     db.session.delete(article)
     db.session.commit()
     flash("Artigo eliminado.", "success")

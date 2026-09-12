@@ -20,6 +20,7 @@ A área editorial está disponível em `/admin`. Antes de publicar, configure:
 - `ADMIN_USERNAME`: nome do administrador.
 - `ADMIN_PASSWORD_HASH`: hash seguro da palavra-passe administrativa (recomendado).
 - `ADMIN_PASSWORD`: alternativa compatível; mantenha apenas enquanto migra para o hash.
+- `ALLOW_LEGACY_ADMIN_PASSWORD=true`: apenas para uma migração temporária; em produção, `ADMIN_PASSWORD` é ignorada por padrão.
 - `DATABASE_URL`: ligação PostgreSQL fornecida pelo serviço de base de dados.
 - `SITE_URL`: endereço canónico, por exemplo `https://sussurrosdosaber.com`.
 - `ASSISTANT_SHARED_KEY`: segredo igual no Render e no Cloudflare Worker.
@@ -27,6 +28,7 @@ A área editorial está disponível em `/admin`. Antes de publicar, configure:
 - `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`: protecção Cloudflare Turnstile no login (recomendado).
 - `REQUIRE_TURNSTILE=true`: impede o login quando o Turnstile não está corretamente configurado.
 - `RATELIMIT_STORAGE_URI`: URL Redis para limites partilhados entre processos; sem ela usa memória local.
+- `ADMIN_TIMEZONE`: fuso usado no agendamento editorial; por padrão `Africa/Maputo`.
 
 Para gerar o hash da palavra-passe no Prompt de Comando do Windows, execute:
 
@@ -58,6 +60,16 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No R
 - Use Redis em `RATELIMIT_STORAGE_URI` quando executar mais de um processo ou instância.
 - Mantenha Cloudinary, Render e Cloudflare com autenticação de dois fatores.
 - Teste localmente com `python -m unittest discover -s tests -v` antes de cada publicação.
+- Execute `flask db upgrade` no processo de implantação quando forem adicionadas migrações Alembic.
+- Não envie `.venv`, `.env`, bases SQLite nem credenciais para o Drive ou repositório.
+
+## Segurança administrativa
+
+- A `SECRET_KEY` de produção deve ter no mínimo 32 caracteres; a aplicação recusa iniciar sem ela.
+- A conta configurada no Render atua como acesso inicial de superadministrador. Crie uma conta individual e mantenha apenas `ADMIN_PASSWORD_HASH` durante a transição.
+- Editores não podem gerir administradores. Somente superadministradores podem criar, desativar, reativar ou redefinir palavras-passe.
+- Desativar uma conta ou redefinir a sua palavra-passe invalida sessões abertas.
+- Palavras-passe de novas contas exigem 14 caracteres, letra maiúscula, letra minúscula e número.
 
 ## Funcionalidades
 

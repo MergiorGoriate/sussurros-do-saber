@@ -15,9 +15,26 @@ class AdminUser(db.Model):
     display_name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(180), unique=True)
     password_hash = db.Column(db.String(300), nullable=False)
+    role = db.Column(db.String(20), default="editor", nullable=False)
+    session_version = db.Column(db.Integer, default=1, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime)
+    password_changed_at = db.Column(db.DateTime)
+
+    @property
+    def is_superadmin(self):
+        return self.role == "superadmin"
+
+
+class AdminAuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admin_user.id"))
+    actor_username = db.Column(db.String(60), nullable=False)
+    action = db.Column(db.String(80), nullable=False)
+    target = db.Column(db.String(240), default="", nullable=False)
+    ip_address = db.Column(db.String(80), default="", nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
 
 class Author(db.Model):
@@ -47,6 +64,8 @@ class Article(db.Model):
     keywords = db.Column(db.String(500), default="")
     doi = db.Column(db.String(180), default="")
     image = db.Column(db.String(600), default="")
+    image_public_id = db.Column(db.String(300), default="")
+    image_alt = db.Column(db.String(300), default="")
     status = db.Column(db.String(20), default="draft", nullable=False)
     read_minutes = db.Column(db.Integer, default=5, nullable=False)
     featured = db.Column(db.Boolean, default=False, nullable=False)

@@ -58,4 +58,17 @@ def upload_article_image(file):
     secure_url = result.get("secure_url")
     if not secure_url:
         raise ImageUploadError("O Cloudinary não devolveu o endereço da imagem.")
-    return secure_url
+    return secure_url, result.get("public_id", "")
+
+
+def delete_article_image(public_id):
+    if not public_id:
+        return
+    required = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"]
+    if any(not os.getenv(key) for key in required):
+        return
+    cloudinary.config(cloud_name=os.environ[required[0]], api_key=os.environ[required[1]], api_secret=os.environ[required[2]], secure=True)
+    try:
+        cloudinary.uploader.destroy(public_id, resource_type="image", invalidate=True)
+    except CloudinaryError:
+        pass

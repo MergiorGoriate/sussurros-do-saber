@@ -20,7 +20,7 @@
       <a href="{{ url_for('admin.articles') }}">Artigos</a>
       <a href="{{ url_for('admin.authors') }}">Autores</a>
       <a href="{{ url_for('admin.categories') }}">Categorias</a>
-      <a href="{{ url_for('admin.administrators') }}">Administradores</a>
+      {% if session.get('admin_role') == 'superadmin' %}<a href="{{ url_for('admin.administrators') }}">Administradores</a>{% endif %}
       <a href="{{ url_for('admin.contacts') }}">Contactos</a>
       <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>
       <a href="/" target="_blank" rel="noopener">Ver site ↗</a>

@@ -1,4 +1,4 @@
-from flask import Flask, Response, jsonify, render_template, request, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
 from xml.sax.saxutils import escape
 import requests
 import os
@@ -10,19 +10,24 @@ import markdown
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_migrate import Migrate
 from admin import admin_bp
 from extensions import limiter
 from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+production = bool(os.getenv("RENDER") or os.getenv("FLASK_ENV") == "production")
+secret_key = os.getenv("SECRET_KEY")
+if production and (not secret_key or len(secret_key) < 32 or secret_key == "local-development-only-change-me"):
+    raise RuntimeError("SECRET_KEY segura (mínimo 32 caracteres) é obrigatória em produção.")
 database_url = os.getenv("DATABASE_URL", "sqlite:///sussurros.db")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 app.config.update(
     SQLALCHEMY_DATABASE_URI=database_url,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    SECRET_KEY=os.getenv("SECRET_KEY", "local-development-only-change-me"),
+    SECRET_KEY=secret_key or "local-development-only-change-me",
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("RENDER", "").lower() == "true" or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
@@ -31,6 +36,7 @@ app.config.update(
 )
 SITE_URL = os.getenv("SITE_URL", "https://sussurrosdosaber.com").rstrip("/")
 db.init_app(app)
+migrate = Migrate(app, db)
 limiter.init_app(app)
 app.register_blueprint(admin_bp)
 
@@ -119,14 +125,26 @@ def articles():
     if query:
         like = f"%{query}%"
         results = results.join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like), db.func.lower(Author.name).like(like)))
-    return render_template("articles.html", articles=results.order_by(Article.published_at.desc()).all(), query=request.args.get("q", ""))
+    page = request.args.get("page", 1, type=int)
+    pagination = results.order_by(Article.published_at.desc()).paginate(page=max(1, page), per_page=12, error_out=False)
+    return render_template("articles.html", articles=pagination.items, pagination=pagination, query=request.args.get("q", ""), category=request.args.get("categoria", ""))
 
 @app.get("/artigo/<int:article_id>")
 def article(article_id):
     selected = Article.public_query().filter_by(id=article_id).first()
     if not selected:
         return render_template("404.html"), 404
-    related = Article.public_query().filter(Article.id != article_id).order_by(Article.published_at.desc()).limit(3).all()
+    return redirect(url_for("article_by_slug", slug=selected.slug), code=301)
+
+@app.get("/artigo/<slug>")
+def article_by_slug(slug):
+    selected = Article.public_query().filter_by(slug=slug).first()
+    if not selected:
+        return render_template("404.html"), 404
+    related = Article.public_query().filter(Article.id != selected.id, Article.category_id == selected.category_id).order_by(Article.published_at.desc()).limit(3).all()
+    if len(related) < 3:
+        excluded = [selected.id] + [item.id for item in related]
+        related += Article.public_query().filter(~Article.id.in_(excluded)).order_by(Article.published_at.desc()).limit(3 - len(related)).all()
     return render_template("article.html", article=selected, related=related)
 
 @app.get("/sobre")
@@ -207,20 +225,22 @@ def api_articles():
     if query:
         like = f"%{query}%"
         items = items.join(Category).join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Category.name).like(like), db.func.lower(Author.name).like(like)))
-    return jsonify([{"id": a.id, "category": a.category, "title": a.title, "summary": a.summary, "author": a.author, "date": a.date, "read_time": a.read_time, "image": a.image} for a in items.all()])
+    limit = min(max(request.args.get("limit", 50, type=int), 1), 100)
+    offset = max(request.args.get("offset", 0, type=int), 0)
+    return jsonify([{"id": a.id, "slug": a.slug, "category": a.category, "title": a.title, "summary": a.summary, "author": a.author, "date": a.date, "read_time": a.read_time, "image": a.image} for a in items.order_by(Article.published_at.desc()).offset(offset).limit(limit).all()])
 
 @app.get("/feed.xml")
 def feed():
     articles = Article.public_query().order_by(Article.published_at.desc()).all()
-    items = "".join(f"<item><title>{escape(a.title)}</title><link>{SITE_URL}{url_for('article', article_id=a.id)}</link><guid isPermaLink=\"true\">{SITE_URL}{url_for('article', article_id=a.id)}</guid><pubDate>{format_datetime((a.published_at or a.created_at).replace(tzinfo=timezone.utc))}</pubDate><description>{escape(a.summary)}</description></item>" for a in articles)
+    items = "".join(f"<item><title>{escape(a.title)}</title><link>{SITE_URL}{url_for('article_by_slug', slug=a.slug)}</link><guid isPermaLink=\"true\">{SITE_URL}{url_for('article_by_slug', slug=a.slug)}</guid><pubDate>{format_datetime((a.published_at or a.created_at).replace(tzinfo=timezone.utc))}</pubDate><description>{escape(a.summary)}</description></item>" for a in articles)
     last_build = format_datetime(datetime.now(timezone.utc))
     xml = f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sussurros do Saber</title><link>{SITE_URL}/</link><description>Ciência que se compreende</description><language>pt-MZ</language><lastBuildDate>{last_build}</lastBuildDate>{items}</channel></rss>'
     return Response(xml, mimetype="application/rss+xml")
 
 @app.get("/sitemap.xml")
 def sitemap():
-    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a.id) for a in Article.public_query().all()]
-    article_updates = {url_for("article", article_id=a.id): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
+    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article_by_slug", slug=a.slug) for a in Article.public_query().all()]
+    article_updates = {url_for("article_by_slug", slug=a.slug): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
     urls = "".join(f"<url><loc>{SITE_URL}{path}</loc>{f'<lastmod>{article_updates[path]}</lastmod>' if path in article_updates else ''}</url>" for path in paths)
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
 
@@ -273,6 +293,8 @@ def assistant():
         )
         worker_response.raise_for_status()
         result = worker_response.json()
+        if not isinstance(result, dict) or not isinstance(result.get("answer"), str) or len(result.get("answer", "")) > 10000:
+            raise ValueError("Resposta inválida do assistente")
         return jsonify(result), 200 if result.get("ok") else 502
     except (requests.RequestException, ValueError):
         return jsonify({
@@ -299,18 +321,22 @@ def submit_contact():
     return jsonify({"ok": True, "message": "Mensagem recebida. Obrigado por contactar o Sussurros do Saber."})
 
 
-def ensure_article_columns():
-    existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
-    additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
-    for name, definition in additions.items():
-        if name not in existing:
-            db.session.execute(text(f'ALTER TABLE article ADD COLUMN "{name}" {definition}'))
+def ensure_legacy_columns():
+    migrations = {
+        "article": {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''", "image_alt": "VARCHAR(300) DEFAULT ''", "image_public_id": "VARCHAR(255) DEFAULT ''"},
+        "admin_user": {"role": "VARCHAR(20) DEFAULT 'editor' NOT NULL", "session_version": "INTEGER DEFAULT 1 NOT NULL", "password_changed_at": "TIMESTAMP"},
+    }
+    for table_name, additions in migrations.items():
+        existing = {column["name"] for column in inspect(db.engine).get_columns(table_name)}
+        for name, definition in additions.items():
+            if name not in existing:
+                db.session.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN "{name}" {definition}'))
     db.session.commit()
 
 
 def seed_database():
     db.create_all()
-    ensure_article_columns()
+    ensure_legacy_columns()
     if Article.query.first():
         return
     author_names = sorted({item["author"] for item in SEED_ARTICLES})
