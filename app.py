@@ -3,6 +3,7 @@ from xml.sax.saxutils import escape
 import requests
 import os
 import re
+import threading
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 import bleach
@@ -258,8 +259,17 @@ def robots():
 
 @app.get("/healthz")
 def healthcheck():
-    db.session.execute(text("SELECT 1"))
     return jsonify({"ok": True})
+
+
+@app.get("/readyz")
+def readiness_check():
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"ok": True, "database": "ready"})
+    except Exception:
+        db.session.rollback()
+        return jsonify({"ok": False, "database": "unavailable"}), 503
 
 
 def valid_email(value):
@@ -399,8 +409,26 @@ def seed_database():
     db.session.commit()
 
 
-with app.app_context():
-    seed_database()
+def initialize_database():
+    """Prepare the schema without delaying the production web-server bind."""
+    try:
+        with app.app_context():
+            seed_database()
+        app.logger.info("Database initialization completed.")
+    except Exception:
+        # Keep the web process alive so Render can expose the health endpoint
+        # and the real database error remains visible in the service logs.
+        app.logger.exception("Database initialization failed.")
+
+
+if production:
+    threading.Thread(
+        target=initialize_database,
+        name="database-initializer",
+        daemon=True,
+    ).start()
+else:
+    initialize_database()
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

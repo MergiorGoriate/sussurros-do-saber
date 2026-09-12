@@ -1,0 +1,16 @@
+{% extends 'admin/base.html' %}
+{% block title %}Revistas{% endblock %}
+{% block content %}
+<header class="admin-header"><div><span>Publicações</span><h1>Revistas</h1></div><a class="admin-primary" href="{{ url_for('admin.journal_form') }}">Nova revista</a></header>
+<section class="admin-panel"><div class="admin-list">
+{% for journal in journals %}<article>
+  {% if journal.cover_image %}<img src="{{ journal.cover_image }}" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}" width="72" loading="lazy">{% endif %}
+  <div><strong>{{ journal.title }}</strong><small>{{ journal.abbreviation }} · {{ journal.field }} · {{ journal.issn or 'Sem ISSN' }}</small><small>{{ journal.frequency }} · {{ journal.current_issue }}</small></div>
+  <span class="status {{ 'published' if journal.published else 'draft' }}">{{ 'Publicada' if journal.published else 'Oculta' }}</span>
+  <a href="{{ url_for('admin.journal_form', journal_id=journal.id) }}">Editar</a>
+  {% if journal.published %}<a href="{{ url_for('journal_detail', slug=journal.slug) }}" target="_blank" rel="noopener">Ver</a>{% endif %}
+  <form method="post" action="{{ url_for('admin.toggle_journal', journal_id=journal.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>{{ 'Ocultar' if journal.published else 'Publicar' }}</button></form>
+  <form method="post" action="{{ url_for('admin.delete_journal', journal_id=journal.id) }}" onsubmit="return confirm('Eliminar esta revista permanentemente?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger">Eliminar</button></form>
+</article>{% else %}<p>Nenhuma revista cadastrada.</p>{% endfor %}
+</div></section>
+{% endblock %}

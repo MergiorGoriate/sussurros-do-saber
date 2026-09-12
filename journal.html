@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}{{ journal.title }} — Sussurros do Saber{% endblock %}
+{% block meta_description %}{{ journal.description }}{% endblock %}
+{% block canonical %}{{ site_url }}{{ url_for('journal_detail', slug=journal.slug) }}{% endblock %}
+{% block content %}
+<article class="max-w-6xl mx-auto px-4 py-14">
+<div class="grid md:grid-cols-[300px_1fr] gap-10 items-start">
+{% if journal.cover_image %}<img class="w-full rounded-2xl shadow-xl" src="{{ journal.cover_image }}" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}">{% endif %}
+<div><span class="eyebrow">{{ journal.field }}</span><h1 class="font-serif text-5xl mt-3">{{ journal.title }}</h1><p class="text-xl opacity-70 mt-5">{{ journal.description }}</p>
+<dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição atual</dt><dd>{{ journal.current_issue or 'Em preparação' }}</dd></div></dl>
+<div class="mt-8 flex gap-3"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
+</div>
+<section class="prose-article mt-14"><h2>Diretrizes para autores</h2><div class="article-markdown">{{ journal.guidelines|markdown }}</div></section>
+</article>
+{% endblock %}
