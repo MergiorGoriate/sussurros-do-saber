@@ -14,8 +14,6 @@ Portal editorial científico criado com Python (Flask), Tailwind CSS e JavaScrip
 
 ## Administração e base de dados
 
-No menu **Revistas**, a equipa pode cadastrar a ficha institucional, criar volumes e números, publicar ou manter edições como rascunho e associar artigos pelo campo **Revista e edição** do editor. Edições e revistas com artigos associados ficam protegidas contra eliminação acidental.
-
 A área editorial está disponível em `/admin`. Antes de publicar, configure:
 
 - `SECRET_KEY`: sequência longa e aleatória para proteger sessões.
