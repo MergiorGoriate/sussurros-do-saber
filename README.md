@@ -67,9 +67,9 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No R
 
 Use exatamente:
 
-`gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile - --error-logfile -`
+`gunicorn app:app --bind 0.0.0.0:10000 --workers 1 --timeout 120 --access-logfile - --error-logfile -`
 
-O parâmetro `--bind 0.0.0.0:$PORT` é obrigatório para que o Render detete a porta do serviço. O projecto inclui também `render.yaml` e `Procfile` com esta configuração.
+O parâmetro `--bind 0.0.0.0:10000` abre explicitamente a porta padrão do Render e evita ambientes em que `$PORT` não é expandida no campo Start Command. O projecto inclui também `render.yaml` e `Procfile` com esta configuração.
 
 ## Segurança administrativa
 
