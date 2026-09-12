@@ -8,9 +8,10 @@ from datetime import datetime
 from functools import wraps
 import requests
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
+from sqlalchemy import or_
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, ContactMessage, Journal, JournalIssue, Subscriber, db, utcnow
 from storage import ImageUploadError, upload_article_image
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -112,7 +113,19 @@ def logout():
 @admin_bp.get("")
 @login_required
 def dashboard():
-    return render_template("admin/dashboard.html", article_count=Article.query.count(), draft_count=Article.query.filter_by(status="draft").count(), contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(), recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all())
+    services = {
+        "Assistente IA": bool(os.getenv("AI_WORKER_URL")),
+        "Cloudinary": all(os.getenv(key) for key in ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")),
+        "Turnstile": bool(os.getenv("TURNSTILE_SITE_KEY") and os.getenv("TURNSTILE_SECRET_KEY")),
+        "Limite distribuído": bool(os.getenv("RATELIMIT_STORAGE_URI")),
+    }
+    return render_template(
+        "admin/dashboard.html", article_count=Article.query.count(),
+        draft_count=Article.query.filter_by(status="draft").count(),
+        scheduled_count=Article.query.filter_by(status="scheduled").count(), journal_count=Journal.query.count(),
+        contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(),
+        recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all(), services=services,
+    )
 
 
 @admin_bp.route("/administradores", methods=["GET", "POST"])
@@ -150,11 +163,184 @@ def administrators():
 @admin_bp.get("/artigos")
 @login_required
 def articles():
-    return render_template("admin/articles.html", articles=Article.query.order_by(Article.updated_at.desc()).all())
+    search = request.args.get("q", "").strip()
+    status = request.args.get("status", "").strip()
+    query = Article.query.join(Author).join(Category)
+    if search:
+        like = f"%{search.lower()}%"
+        query = query.filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Author.name).like(like), db.func.lower(Category.name).like(like)))
+    if status in {"draft", "published", "scheduled"}:
+        query = query.filter(Article.status == status)
+    return render_template("admin/articles.html", articles=query.order_by(Article.updated_at.desc()).all(), search=search, selected_status=status)
+
+
+@admin_bp.get("/revistas")
+@login_required
+def journals():
+    search = request.args.get("q", "").strip()
+    visibility = request.args.get("visibility", "").strip()
+    query = Journal.query
+    if search:
+        like = f"%{search.lower()}%"
+        query = query.filter(or_(db.func.lower(Journal.title).like(like), db.func.lower(Journal.abbreviation).like(like), db.func.lower(Journal.field).like(like)))
+    if visibility == "published":
+        query = query.filter(Journal.active.is_(True))
+    elif visibility == "hidden":
+        query = query.filter(Journal.active.is_(False))
+    return render_template("admin/journals.html", journals=query.order_by(Journal.updated_at.desc()).all(), search=search, selected_visibility=visibility)
+
+
+@admin_bp.route("/revistas/<int:journal_id>/edicoes/nova", methods=["GET", "POST"])
+@admin_bp.route("/revistas/edicoes/<int:issue_id>/editar", methods=["GET", "POST"])
+@login_required
+def journal_issue_form(journal_id=None, issue_id=None):
+    issue = db.session.get(JournalIssue, issue_id) if issue_id else JournalIssue(journal_id=journal_id)
+    if issue_id and not issue:
+        abort(404)
+    journal = db.get_or_404(Journal, issue.journal_id)
+    if request.method == "POST":
+        validate_csrf()
+        try:
+            volume = int(request.form.get("volume", ""))
+            number = int(request.form.get("number", ""))
+            year = int(request.form.get("year", ""))
+        except ValueError:
+            volume = number = year = 0
+        duplicate = JournalIssue.query.filter_by(journal_id=journal.id, volume=volume, number=number, year=year).filter(JournalIssue.id != issue.id).first()
+        if volume < 1 or number < 1 or not 1900 <= year <= 2200:
+            flash("Informe volume, número e ano válidos.", "error")
+        elif duplicate:
+            flash("Esta edição já existe na revista.", "error")
+        else:
+            issue.volume, issue.number, issue.year = volume, number, year
+            issue.title = request.form.get("title", "").strip()[:180]
+            issue.description = request.form.get("description", "").strip()[:3000]
+            issue.published = request.form.get("published") == "on"
+            issue.published_at = issue.published_at or (utcnow() if issue.published else None)
+            image_file = request.files.get("cover_file")
+            try:
+                issue.cover_image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("cover_image", "").strip()[:600]
+            except ImageUploadError as error:
+                flash(str(error), "error")
+                return render_template("admin/journal_issue_form.html", issue=issue, journal=journal)
+            if not issue.id:
+                db.session.add(issue)
+            journal.current_issue = issue.label if issue.published else journal.current_issue
+            db.session.commit()
+            flash("Edição guardada com sucesso.", "success")
+            return redirect(url_for("admin.journal_form", journal_id=journal.id))
+    return render_template("admin/journal_issue_form.html", issue=issue, journal=journal)
+
+
+@admin_bp.post("/revistas/edicoes/<int:issue_id>/eliminar")
+@login_required
+def delete_journal_issue(issue_id):
+    validate_csrf()
+    issue = db.get_or_404(JournalIssue, issue_id)
+    journal_id = issue.journal_id
+    if issue.articles:
+        flash("Não é possível eliminar uma edição que possui artigos.", "error")
+    else:
+        db.session.delete(issue)
+        db.session.commit()
+        flash("Edição eliminada.", "success")
+    return redirect(url_for("admin.journal_form", journal_id=journal_id))
+
+
+@admin_bp.route("/revistas/nova", methods=["GET", "POST"])
+@admin_bp.route("/revistas/<int:journal_id>/editar", methods=["GET", "POST"])
+@login_required
+def journal_form(journal_id=None):
+    journal = db.session.get(Journal, journal_id) if journal_id else Journal()
+    if journal_id and not journal:
+        abort(404)
+    if request.method == "POST":
+        validate_csrf()
+        title = request.form.get("title", "").strip()
+        abbreviation = request.form.get("abbreviation", "").strip().upper()
+        field = request.form.get("field", "").strip()
+        description = request.form.get("description", "").strip()
+        contact_email = request.form.get("contact_email", "").strip().lower()
+        base_slug = slugify(request.form.get("slug") or title)
+        duplicate_title = Journal.query.filter(db.func.lower(Journal.title) == title.lower(), Journal.id != journal.id).first()
+        duplicate_abbreviation = Journal.query.filter(db.func.lower(Journal.abbreviation) == abbreviation.lower(), Journal.id != journal.id).first()
+        if not 3 <= len(title) <= 180 or not base_slug:
+            flash("Informe um título válido com até 180 caracteres.", "error")
+        elif not re.fullmatch(r"[A-Z0-9-]{2,20}", abbreviation):
+            flash("A sigla deve ter 2 a 20 letras, números ou hífen.", "error")
+        elif not 3 <= len(field) <= 140 or not 20 <= len(description) <= 3000:
+            flash("Informe a área científica e uma descrição com pelo menos 20 caracteres.", "error")
+        elif contact_email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", contact_email):
+            flash("Informe um e-mail editorial válido.", "error")
+        elif duplicate_title or duplicate_abbreviation:
+            flash("Já existe uma revista com esse título ou sigla.", "error")
+        else:
+            candidate, number = base_slug, 2
+            while Journal.query.filter(Journal.slug == candidate, Journal.id != journal.id).first():
+                candidate, number = f"{base_slug}-{number}", number + 1
+            journal.title = title
+            journal.slug = candidate
+            journal.abbreviation = abbreviation
+            journal.field = field
+            journal.description = description
+            journal.frequency = request.form.get("frequency", "Anual").strip()[:80] or "Anual"
+            journal.current_issue = request.form.get("current_issue", "").strip()[:100]
+            journal.status = request.form.get("status", "Em preparação").strip()[:80] or "Em preparação"
+            journal.issn_print = request.form.get("issn_print", "").strip()[:20]
+            journal.issn_online = request.form.get("issn_online", "").strip()[:20]
+            journal.contact_email = contact_email[:180]
+            journal.guidelines = request.form.get("guidelines", "").strip()
+            journal.active = request.form.get("active") == "on"
+            image_file = request.files.get("image_file")
+            try:
+                journal.image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("image", "").strip()[:600]
+            except ImageUploadError as error:
+                flash(str(error), "error")
+                return render_template("admin/journal_form.html", journal=journal)
+            if not journal.id:
+                db.session.add(journal)
+            db.session.commit()
+            flash("Revista guardada com sucesso.", "success")
+            return redirect(url_for("admin.journals"))
+    return render_template("admin/journal_form.html", journal=journal)
+
+
+@admin_bp.post("/revistas/<int:journal_id>/eliminar")
+@login_required
+def delete_journal(journal_id):
+    validate_csrf()
+    journal = db.get_or_404(Journal, journal_id)
+    if any(issue.articles for issue in journal.issues):
+        flash("Não é possível eliminar uma revista com artigos associados.", "error")
+    else:
+        db.session.delete(journal)
+        db.session.commit()
+        flash("Revista eliminada.", "success")
+    return redirect(url_for("admin.journals"))
+
+
+@admin_bp.post("/revistas/<int:journal_id>/visibilidade")
+@login_required
+def toggle_journal_visibility(journal_id):
+    validate_csrf()
+    journal = db.get_or_404(Journal, journal_id)
+    journal.active = not journal.active
+    db.session.commit()
+    flash(f"Revista {'publicada' if journal.active else 'ocultada'} com sucesso.", "success")
+    return redirect(request.referrer if request.referrer and request.referrer.startswith(request.host_url) else url_for("admin.journals"))
 
 
 def parse_datetime(value):
     return datetime.fromisoformat(value) if value else None
+
+
+def article_form_context(article):
+    return {
+        "article": article,
+        "authors": Author.query.filter_by(active=True).all(),
+        "categories": Category.query.order_by(Category.name).all(),
+        "journal_issues": JournalIssue.query.join(Journal).order_by(Journal.title, JournalIssue.year.desc(), JournalIssue.number.desc()).all(),
+    }
 
 
 @admin_bp.route("/artigos/novo", methods=["GET", "POST"])
@@ -180,16 +366,16 @@ def article_form(article_id=None):
                 scheduled_at = parse_datetime(request.form.get("scheduled_at"))
             except (TypeError, ValueError):
                 flash("Revise autor, categoria, tempo de leitura e data programada.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", **article_form_context(article))
             if not 10 <= len(summary) <= 2000 or status not in {"draft", "published", "scheduled"}:
                 flash("O resumo deve ter entre 10 e 2000 caracteres e o estado deve ser válido.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", **article_form_context(article))
             if status in {"published", "scheduled"} and len(body) < 50:
                 flash("Artigos publicados ou programados precisam de conteúdo completo.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", **article_form_context(article))
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", **article_form_context(article))
             article.title = title
             base_slug = slugify(request.form.get("slug") or title)
             candidate, number = base_slug, 2
@@ -206,10 +392,12 @@ def article_form(article_id=None):
                 article.image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("image", "").strip()
             except ImageUploadError as error:
                 flash(str(error), "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", **article_form_context(article))
             article.read_minutes = read_minutes
             article.author_id = author_id
             article.category_id = category_id
+            issue_id = request.form.get("journal_issue_id", "").strip()
+            article.journal_issue_id = int(issue_id) if issue_id and db.session.get(JournalIssue, int(issue_id)) else None
             article.featured = request.form.get("featured") == "on"
             article.status = status
             article.scheduled_at = scheduled_at
@@ -217,13 +405,13 @@ def article_form(article_id=None):
                 article.published_at = utcnow()
             if article.status == "scheduled" and not article.scheduled_at:
                 flash("Informe a data e hora da publicação programada.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", **article_form_context(article))
             if not article.id:
                 db.session.add(article)
             db.session.commit()
             flash("Artigo guardado com sucesso.", "success")
             return redirect(url_for("admin.articles"))
-    return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+    return render_template("admin/article_form.html", **article_form_context(article))
 
 
 @admin_bp.post("/artigos/<int:article_id>/eliminar")

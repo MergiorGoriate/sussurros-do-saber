@@ -23,6 +23,7 @@
     <label>Programar para<input name="scheduled_at" type="datetime-local" value="{{ article.scheduled_at.strftime('%Y-%m-%dT%H:%M') if article.scheduled_at else '' }}"></label>
     <label>Autor<select name="author_id" required>{% for author in authors %}<option value="{{ author.id }}" {% if article.author_id==author.id %}selected{% endif %}>{{ author.name }}</option>{% endfor %}</select></label>
     <label>Categoria<select name="category_id" required>{% for category in categories %}<option value="{{ category.id }}" {% if article.category_id==category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+    <label>Revista e edição (opcional)<select name="journal_issue_id"><option value="">Artigo independente</option>{% for issue in journal_issues %}<option value="{{ issue.id }}" {% if article.journal_issue_id==issue.id %}selected{% endif %}>{{ issue.journal.abbreviation }} — {{ issue.label }}</option>{% endfor %}</select><small>Associe apenas artigos aceites para uma edição.</small></label>
     <label>Tempo de leitura<input name="read_minutes" type="number" min="1" value="{{ article.read_minutes or 5 }}"></label><label>Slug<input name="slug" value="{{ article.slug or '' }}" placeholder="gerado automaticamente"></label>
     <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button class="admin-primary">Guardar artigo</button>
   </aside>
