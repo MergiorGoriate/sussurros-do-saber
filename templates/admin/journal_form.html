@@ -24,4 +24,14 @@
     <button class="admin-primary">Guardar revista</button>
   </aside>
 </form>
+{% if journal.id %}
+<section class="admin-panel issue-manager">
+  <div class="panel-head"><div><span class="section-kicker">Gestão editorial</span><h2>Volumes e edições</h2></div><a class="admin-primary" href="{{ url_for('admin.journal_issue_form', journal_id=journal.id) }}">+ Nova edição</a></div>
+  <div class="admin-list">
+  {% for issue in journal.issues %}
+    <div><div><strong>{{ issue.label }}</strong><small>{{ issue.title or 'Sem título temático' }} · {{ issue.articles|length }} artigo(s)</small></div><div class="actions"><span class="status {{ 'published' if issue.published else 'draft' }}">{{ 'Publicada' if issue.published else 'Rascunho' }}</span><a href="{{ url_for('admin.journal_issue_form', issue_id=issue.id) }}">Editar</a><form method="post" action="{{ url_for('admin.delete_journal_issue', issue_id=issue.id) }}" onsubmit="return confirm('Eliminar esta edição?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Eliminar</button></form></div></div>
+  {% else %}<div class="empty-admin"><strong>Ainda não existem edições</strong><span>Crie o primeiro volume e número desta revista.</span></div>{% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

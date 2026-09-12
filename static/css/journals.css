@@ -19,3 +19,12 @@
 .journal-facts div { padding: 0.8rem 0; border-top: 1px solid var(--line); }
 .journal-facts dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.55; }
 .journal-facts dd { margin: 0.2rem 0 0; font-weight: 700; }
+.issue-grid { display: grid; gap: 1.25rem; }
+.issue-card { display: grid; grid-template-columns: 150px 1fr; gap: 1.5rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: 1.25rem; background: #fff; }
+.issue-card > img { width: 150px; aspect-ratio: 3/4; object-fit: cover; border-radius: .75rem; }
+.issue-card h3 { margin: .4rem 0; font: 700 1.55rem Georgia, serif; }
+.issue-card ol { margin: 1rem 0 0; padding-left: 1.2rem; }
+.issue-card li { padding: .6rem 0; border-top: 1px solid var(--line); }
+.issue-card li a { color: var(--green); font-weight: 700; }
+.issue-card li small { display: block; opacity: .65; }
+@media (max-width: 640px) { .issue-card { grid-template-columns: 1fr; } .issue-card > img { width: 120px; } }

@@ -1,1 +1,25 @@
-{% extends 'admin/base.html' %}{% block title %}Visão geral{% endblock %}{% block content %}<header class="admin-header"><div><span>Painel editorial</span><h1>Visão geral</h1></div><a class="admin-primary" href="{{ url_for('admin.article_form') }}">+ Novo artigo</a></header><section class="metric-grid"><article><span>Artigos</span><strong>{{ article_count }}</strong></article><article><span>Rascunhos</span><strong>{{ draft_count }}</strong></article><article><span>Contactos não lidos</span><strong>{{ contact_count }}</strong></article><article><span>Subscritores ativos</span><strong>{{ subscriber_count }}</strong></article></section><section class="admin-panel"><div class="panel-head"><h2>Atualizados recentemente</h2><a href="{{ url_for('admin.articles') }}">Ver todos</a></div><div class="admin-list">{% for article in recent_articles %}<a href="{{ url_for('admin.article_form',article_id=article.id) }}"><div><strong>{{ article.title }}</strong><small>{{ article.category }} · {{ article.author }}</small></div><span class="status {{ article.status }}">{{ article.status }}</span></a>{% else %}<p>Ainda não existem artigos.</p>{% endfor %}</div></section>{% endblock %}
+{% extends 'admin/base.html' %}
+{% block title %}Visão geral{% endblock %}
+{% block content %}
+<header class="admin-header">
+  <div><span>Painel editorial</span><h1>Visão geral</h1></div>
+  <div class="header-actions"><a href="{{ url_for('admin.journal_form') }}">+ Nova revista</a><a class="admin-primary" href="{{ url_for('admin.article_form') }}">+ Novo artigo</a></div>
+</header>
+<section class="metric-grid">
+  <article><span>Artigos</span><strong>{{ article_count }}</strong><small>{{ draft_count }} rascunho(s) · {{ scheduled_count }} programado(s)</small></article>
+  <article><span>Revistas</span><strong>{{ journal_count }}</strong><small><a href="{{ url_for('admin.journals') }}">Gerir catálogo</a></small></article>
+  <article><span>Contactos não lidos</span><strong>{{ contact_count }}</strong><small><a href="{{ url_for('admin.contacts') }}">Abrir caixa de entrada</a></small></article>
+  <article><span>Subscritores ativos</span><strong>{{ subscriber_count }}</strong><small><a href="{{ url_for('admin.subscribers') }}">Consultar lista</a></small></article>
+</section>
+<div class="dashboard-grid">
+  <section class="admin-panel">
+    <div class="panel-head"><h2>Atualizados recentemente</h2><a href="{{ url_for('admin.articles') }}">Ver todos</a></div>
+    <div class="admin-list">{% for article in recent_articles %}<a href="{{ url_for('admin.article_form', article_id=article.id) }}"><div><strong>{{ article.title }}</strong><small>{{ article.category }} · {{ article.author }}</small></div><span class="status {{ article.status }}">{{ article.status }}</span></a>{% else %}<div class="empty-admin"><strong>Ainda não existem artigos</strong><a href="{{ url_for('admin.article_form') }}">Criar o primeiro artigo</a></div>{% endfor %}</div>
+  </section>
+  <section class="admin-panel">
+    <div class="panel-head"><h2>Serviços da plataforma</h2></div>
+    <ul class="service-list">{% for name, enabled in services.items() %}<li><span><i class="service-dot {{ 'online' if enabled }}"></i>{{ name }}</span><strong>{{ 'Configurado' if enabled else 'Pendente' }}</strong></li>{% endfor %}</ul>
+    <p class="panel-note">Este diagnóstico não apresenta palavras-passe nem chaves.</p>
+  </section>
+</div>
+{% endblock %}

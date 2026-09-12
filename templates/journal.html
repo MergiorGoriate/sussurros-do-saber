@@ -27,4 +27,10 @@
     {% if journal.contact_email %}<a href="mailto:{{ journal.contact_email }}" class="modern-link block mt-4">Contactar editoria →</a>{% endif %}
   </aside>
 </section>
+<section class="py-16"><div class="container mx-auto px-5"><span class="eyebrow">Arquivo</span><h2 class="font-serif text-4xl mt-2">Edições publicadas</h2>
+  <div class="issue-grid mt-8">
+  {% for issue in issues %}<article class="issue-card">{% if issue.cover_image %}<img src="{{ issue.cover_image }}" alt="Capa de {{ issue.label }}" loading="lazy">{% endif %}<div><span class="eyebrow">{{ issue.label }}</span><h3>{{ issue.title or journal.title }}</h3>{% if issue.description %}<p>{{ issue.description }}</p>{% endif %}<strong>{{ issue.articles|selectattr('status', 'equalto', 'published')|list|length }} artigo(s)</strong><ol>{% for article in issue.articles if article.status == 'published' %}<li><a href="{{ url_for('article', article_id=article.id) }}">{{ article.title }}</a><small>{{ article.author }}</small></li>{% endfor %}</ol></div></article>
+  {% else %}<div class="empty-state"><h3>Primeira edição em preparação</h3><p>O arquivo será apresentado aqui quando a equipa editorial publicar uma edição.</p></div>{% endfor %}
+  </div>
+</div></section>
 {% endblock %}
