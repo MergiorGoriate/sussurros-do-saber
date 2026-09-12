@@ -16,7 +16,6 @@
     <label>DOI<input name="doi" value="{{ article.doi or '' }}" placeholder="10.xxxx/xxxxx"></label>
     <label>Carregar imagem (JPG, PNG ou WebP; máximo 8 MB)<input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
     <label>Ou endereço externo da imagem<input id="imageUrl" name="image" type="url" value="{{ article.image or '' }}" placeholder="https://..."></label>
-    <label>Texto alternativo da imagem<input name="image_alt" maxlength="300" value="{{ article.image_alt or '' }}" placeholder="Descreva objetivamente o conteúdo da imagem"></label>
     <img id="imagePreview" class="image-preview" src="{{ article.image or '' }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}>
   </section>
   <aside class="editor-side">

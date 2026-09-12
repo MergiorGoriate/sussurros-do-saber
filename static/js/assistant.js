@@ -81,4 +81,3 @@
     .querySelectorAll(".assistant-chip")
     .forEach((b) => (b.onclick = () => ask(b.textContent)));
 })();
-

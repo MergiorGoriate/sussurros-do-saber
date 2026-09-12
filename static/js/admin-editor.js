@@ -12,4 +12,3 @@
   const url=document.querySelector('#imageUrl'),file=document.querySelector('#imageFile'),image=document.querySelector('#imagePreview');
   url?.addEventListener('input',()=>{image.src=url.value;image.hidden=!url.value}); file?.addEventListener('change',()=>{if(file.files[0]){image.src=URL.createObjectURL(file.files[0]);image.hidden=false}});
 })();
-

@@ -10,8 +10,8 @@ import requests
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
-from models import AdminAuditLog, AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
-from storage import ImageUploadError, delete_article_image, upload_article_image
+from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
+from storage import ImageUploadError, upload_article_image
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -25,32 +25,10 @@ def slugify(value):
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("admin_authenticated") or not session.get("admin_id"):
+        if not session.get("admin_authenticated"):
             return redirect(url_for("admin.login", next=request.path))
-        admin_id = session.get("admin_id")
-        admin = db.session.get(AdminUser, admin_id)
-        if not admin or not admin.active or admin.session_version != session.get("admin_session_version"):
-            session.clear()
-            flash("A sessão expirou ou a conta foi desativada.", "error")
-            return redirect(url_for("admin.login"))
         return view(*args, **kwargs)
     return wrapped
-
-
-def superadmin_required(view):
-    @wraps(view)
-    @login_required
-    def wrapped(*args, **kwargs):
-        admin_id = session.get("admin_id")
-        admin = db.session.get(AdminUser, admin_id) if admin_id else None
-        if not admin or not admin.is_superadmin:
-            abort(403)
-        return view(*args, **kwargs)
-    return wrapped
-
-
-def audit(action, target=""):
-    db.session.add(AdminAuditLog(admin_id=session.get("admin_id"), actor_username=session.get("admin_username", "unknown"), action=action, target=str(target), ip_address=request.remote_addr or ""))
 
 
 def csrf_token():
@@ -95,7 +73,7 @@ def login():
         password = request.form.get("password", "")
         database_admin = AdminUser.query.filter(db.func.lower(AdminUser.username) == username, AdminUser.active.is_(True)).first()
         configured_user = os.getenv("ADMIN_USERNAME")
-        configured_password = os.getenv("ADMIN_PASSWORD") if not os.getenv("RENDER") or os.getenv("ALLOW_LEGACY_ADMIN_PASSWORD", "false").lower() == "true" else None
+        configured_password = os.getenv("ADMIN_PASSWORD")
         configured_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
         if not turnstile_valid():
             flash("A verificação de segurança falhou. Actualize a página e tente novamente.", "error")
@@ -105,8 +83,6 @@ def login():
             session["admin_authenticated"] = True
             session["admin_id"] = database_admin.id
             session["admin_username"] = database_admin.username
-            session["admin_session_version"] = database_admin.session_version
-            session["admin_role"] = database_admin.role
             session["csrf_token"] = secrets.token_urlsafe(32)
             database_admin.last_login_at = utcnow()
             db.session.commit()
@@ -114,32 +90,11 @@ def login():
         elif not configured_user or not (configured_password_hash or configured_password):
             flash("As credenciais administrativas ainda não estão configuradas.", "error")
         elif hmac.compare_digest(username, configured_user.lower()) and ((configured_password_hash and check_password_hash(configured_password_hash, password)) or (configured_password and hmac.compare_digest(password, configured_password))):
-            bootstrap_admin = AdminUser.query.filter(db.func.lower(AdminUser.username) == username).first()
-            if bootstrap_admin and not bootstrap_admin.active:
-                flash("Esta conta administrativa está desativada.", "error")
-                return render_template("admin/login.html")
-            if not bootstrap_admin:
-                bootstrap_admin = AdminUser(
-                    username=username,
-                    display_name=os.getenv("ADMIN_DISPLAY_NAME", "Administrador principal"),
-                    password_hash=configured_password_hash or generate_password_hash(password),
-                    role="superadmin",
-                    active=True,
-                )
-                db.session.add(bootstrap_admin)
-                db.session.flush()
-            elif bootstrap_admin.role != "superadmin":
-                bootstrap_admin.role = "superadmin"
             session.clear()
             session.permanent = True
             session["admin_authenticated"] = True
-            session["admin_id"] = bootstrap_admin.id
             session["admin_username"] = configured_user
-            session["admin_session_version"] = bootstrap_admin.session_version
-            session["admin_role"] = "superadmin"
             session["csrf_token"] = secrets.token_urlsafe(32)
-            bootstrap_admin.last_login_at = utcnow()
-            db.session.commit()
             return redirect(url_for("admin.dashboard"))
         else:
             flash("Utilizador ou palavra-passe inválidos.", "error")
@@ -161,7 +116,7 @@ def dashboard():
 
 
 @admin_bp.route("/administradores", methods=["GET", "POST"])
-@superadmin_required
+@login_required
 def administrators():
     if request.method == "POST":
         validate_csrf()
@@ -170,7 +125,6 @@ def administrators():
         email = request.form.get("email", "").strip().lower() or None
         password = request.form.get("password", "")
         password_confirmation = request.form.get("password_confirmation", "")
-        role = request.form.get("role", "editor")
         duplicate_username = AdminUser.query.filter(db.func.lower(AdminUser.username) == username).first()
         duplicate_email = email and AdminUser.query.filter(db.func.lower(AdminUser.email) == email).first()
         if not re.fullmatch(r"[a-z0-9._-]{3,60}", username):
@@ -179,59 +133,18 @@ def administrators():
             flash("Informe o nome do administrador.", "error")
         elif email and (len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)):
             flash("Informe um endereço de e-mail válido.", "error")
-        elif role not in {"editor", "administrator", "superadmin"}:
-            flash("Selecione uma função válida.", "error")
-        elif len(password) < 14 or not re.search(r"[A-Z]", password) or not re.search(r"[a-z]", password) or not re.search(r"\d", password):
-            flash("A palavra-passe deve ter 14 caracteres e incluir maiúscula, minúscula e número.", "error")
+        elif len(password) < 12:
+            flash("A palavra-passe deve ter pelo menos 12 caracteres.", "error")
         elif password != password_confirmation:
             flash("A confirmação da palavra-passe não corresponde.", "error")
         elif duplicate_username or duplicate_email:
             flash("Já existe um administrador com esse utilizador ou e-mail.", "error")
         else:
-            account = AdminUser(username=username, display_name=display_name, email=email, role=role, password_hash=generate_password_hash(password))
-            db.session.add(account)
-            audit("admin_created", username)
+            db.session.add(AdminUser(username=username, display_name=display_name, email=email, password_hash=generate_password_hash(password)))
             db.session.commit()
             flash("Novo administrador criado com sucesso.", "success")
             return redirect(url_for("admin.administrators"))
     return render_template("admin/administrators.html", administrators=AdminUser.query.order_by(AdminUser.created_at.desc()).all())
-
-
-@admin_bp.post("/administradores/<int:admin_id>/estado")
-@superadmin_required
-def toggle_administrator(admin_id):
-    validate_csrf()
-    administrator = db.get_or_404(AdminUser, admin_id)
-    if administrator.id == session.get("admin_id"):
-        flash("Não pode desativar a própria conta.", "error")
-    elif administrator.is_superadmin and administrator.active and AdminUser.query.filter_by(role="superadmin", active=True).count() <= 1:
-        flash("É obrigatório manter pelo menos um superadministrador ativo.", "error")
-    else:
-        administrator.active = not administrator.active
-        administrator.session_version += 1
-        audit("admin_status_changed", f"{administrator.username}:{administrator.active}")
-        db.session.commit()
-        flash("Estado do administrador atualizado.", "success")
-    return redirect(url_for("admin.administrators"))
-
-
-@admin_bp.post("/administradores/<int:admin_id>/palavra-passe")
-@superadmin_required
-def reset_administrator_password(admin_id):
-    validate_csrf()
-    administrator = db.get_or_404(AdminUser, admin_id)
-    password = request.form.get("password", "")
-    confirmation = request.form.get("password_confirmation", "")
-    if password != confirmation or len(password) < 14 or not re.search(r"[A-Z]", password) or not re.search(r"[a-z]", password) or not re.search(r"\d", password):
-        flash("A nova palavra-passe não cumpre os requisitos ou a confirmação não corresponde.", "error")
-    else:
-        administrator.password_hash = generate_password_hash(password)
-        administrator.password_changed_at = utcnow()
-        administrator.session_version += 1
-        audit("admin_password_reset", administrator.username)
-        db.session.commit()
-        flash("Palavra-passe alterada e sessões anteriores encerradas.", "success")
-    return redirect(url_for("admin.administrators"))
 
 
 @admin_bp.get("/artigos")
@@ -241,11 +154,7 @@ def articles():
 
 
 def parse_datetime(value):
-    if not value:
-        return None
-    from zoneinfo import ZoneInfo
-    local = datetime.fromisoformat(value).replace(tzinfo=ZoneInfo(os.getenv("ADMIN_TIMEZONE", "Africa/Maputo")))
-    return local.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    return datetime.fromisoformat(value) if value else None
 
 
 @admin_bp.route("/artigos/novo", methods=["GET", "POST"])
@@ -291,17 +200,10 @@ def article_form(article_id=None):
             article.body = body
             article.references = request.form.get("references", "").strip()
             article.keywords = request.form.get("keywords", "").strip()
-            article.doi = re.sub(r"^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)", "", request.form.get("doi", "").strip(), flags=re.I)[:180]
+            article.doi = request.form.get("doi", "").strip()
             image_file = request.files.get("image_file")
             try:
-                if image_file and image_file.filename:
-                    old_public_id = article.image_public_id
-                    article.image, article.image_public_id = upload_article_image(image_file)
-                    if old_public_id:
-                        delete_article_image(old_public_id)
-                else:
-                    article.image = request.form.get("image", "").strip()
-                article.image_alt = request.form.get("image_alt", "").strip()[:300]
+                article.image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("image", "").strip()
             except ImageUploadError as error:
                 flash(str(error), "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
@@ -329,7 +231,6 @@ def article_form(article_id=None):
 def delete_article(article_id):
     validate_csrf()
     article = db.get_or_404(Article, article_id)
-    delete_article_image(article.image_public_id)
     db.session.delete(article)
     db.session.commit()
     flash("Artigo eliminado.", "success")
@@ -394,94 +295,6 @@ def delete_category(category_id):
     else:
         db.session.delete(category); db.session.commit(); flash("Categoria eliminada.", "success")
     return redirect(url_for("admin.categories"))
-
-
-@admin_bp.get("/revistas")
-@login_required
-def journals():
-    return render_template("admin/journals.html", journals=Journal.query.order_by(Journal.updated_at.desc()).all())
-
-
-@admin_bp.route("/revistas/nova", methods=["GET", "POST"])
-@admin_bp.route("/revistas/<int:journal_id>/editar", methods=["GET", "POST"])
-@login_required
-def journal_form(journal_id=None):
-    journal = db.session.get(Journal, journal_id) if journal_id else Journal()
-    if journal_id and not journal:
-        abort(404)
-    if request.method == "POST":
-        validate_csrf()
-        title = request.form.get("title", "").strip()
-        field = request.form.get("field", "").strip()
-        description = request.form.get("description", "").strip()
-        issn = request.form.get("issn", "").strip()
-        if not 3 <= len(title) <= 180 or not 2 <= len(field) <= 140 or not 20 <= len(description) <= 4000:
-            flash("Preencha título, área e descrição corretamente.", "error")
-        elif issn and not re.fullmatch(r"\d{4}-\d{3}[\dXx]", issn):
-            flash("O ISSN deve seguir o formato 1234-567X.", "error")
-        else:
-            requested_slug = slugify(request.form.get("slug") or title)
-            if not requested_slug:
-                flash("Não foi possível gerar um endereço para a revista.", "error")
-                return render_template("admin/journal_form.html", journal=journal)
-            candidate, number = requested_slug, 2
-            while Journal.query.filter(Journal.slug == candidate, Journal.id != journal.id).first():
-                candidate, number = f"{requested_slug}-{number}", number + 1
-            image_file = request.files.get("cover_file")
-            try:
-                if image_file and image_file.filename:
-                    old_public_id = journal.cover_public_id
-                    journal.cover_image, journal.cover_public_id = upload_article_image(image_file, "sussurros-do-saber/revistas")
-                    if old_public_id:
-                        delete_article_image(old_public_id)
-                else:
-                    journal.cover_image = request.form.get("cover_image", "").strip()
-            except ImageUploadError as error:
-                flash(str(error), "error")
-                return render_template("admin/journal_form.html", journal=journal)
-            journal.title = title
-            journal.slug = candidate
-            journal.abbreviation = request.form.get("abbreviation", "").strip()[:30]
-            journal.field = field
-            journal.description = description
-            journal.issn = issn.upper()
-            journal.frequency = request.form.get("frequency", "").strip()[:80]
-            journal.current_issue = request.form.get("current_issue", "").strip()[:120]
-            journal.guidelines = request.form.get("guidelines", "").strip()
-            journal.cover_alt = request.form.get("cover_alt", "").strip()[:300]
-            journal.published = request.form.get("published") == "on"
-            if not journal.id:
-                db.session.add(journal)
-            audit("journal_saved", journal.slug)
-            db.session.commit()
-            flash("Revista guardada com sucesso.", "success")
-            return redirect(url_for("admin.journals"))
-    return render_template("admin/journal_form.html", journal=journal)
-
-
-@admin_bp.post("/revistas/<int:journal_id>/estado")
-@login_required
-def toggle_journal(journal_id):
-    validate_csrf()
-    journal = db.get_or_404(Journal, journal_id)
-    journal.published = not journal.published
-    audit("journal_visibility_changed", f"{journal.slug}:{journal.published}")
-    db.session.commit()
-    flash("Visibilidade da revista atualizada.", "success")
-    return redirect(url_for("admin.journals"))
-
-
-@admin_bp.post("/revistas/<int:journal_id>/eliminar")
-@login_required
-def delete_journal(journal_id):
-    validate_csrf()
-    journal = db.get_or_404(Journal, journal_id)
-    delete_article_image(journal.cover_public_id)
-    audit("journal_deleted", journal.slug)
-    db.session.delete(journal)
-    db.session.commit()
-    flash("Revista eliminada.", "success")
-    return redirect(url_for("admin.journals"))
 
 
 @admin_bp.get("/contactos")
