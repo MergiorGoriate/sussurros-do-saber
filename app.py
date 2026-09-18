@@ -12,7 +12,7 @@ import markdown
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
-from admin import admin_bp
+from admin import admin_bp, slugify
 from extensions import limiter
 from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
 
@@ -203,6 +203,10 @@ def articles():
 def article(slug):
     selected = Article.public_query().filter_by(slug=slug).first()
     if not selected:
+        legacy_match = re.fullmatch(r"artigo-(\d+)", slug)
+        legacy = Article.public_query().filter_by(id=int(legacy_match.group(1))).first() if legacy_match else None
+        if legacy:
+            return redirect(url_for("article", slug=legacy.slug), code=301)
         return render_template("404.html"), 404
     related = Article.public_query().filter(Article.id != selected.id).order_by(Article.published_at.desc()).limit(3).all()
     return render_template("article.html", article=selected, related=related)
@@ -394,10 +398,32 @@ def ensure_article_columns():
     db.session.commit()
 
 
+def ensure_article_slugs():
+    articles = Article.query.order_by(Article.id).all()
+    fixed_slugs = {
+        article.slug for article in articles
+        if article.slug and not re.fullmatch(r"(?:artigo-)?\d+", article.slug)
+    }
+    changed = False
+    for article in articles:
+        if article.slug and not re.fullmatch(r"(?:artigo-)?\d+", article.slug):
+            continue
+        base = slugify(article.title) or f"artigo-{article.id}"
+        candidate, number = base, 2
+        while candidate in fixed_slugs:
+            candidate, number = f"{base}-{number}", number + 1
+        article.slug = candidate
+        fixed_slugs.add(candidate)
+        changed = True
+    if changed:
+        db.session.commit()
+
+
 def seed_database():
     db.create_all()
     ensure_article_columns()
     if Article.query.first():
+        ensure_article_slugs()
         return
     author_names = sorted({item["author"] for item in SEED_ARTICLES})
     authors = {}
@@ -418,7 +444,7 @@ def seed_database():
         day, month_name, year = item["date"].split()
         published_at = datetime(int(year), month_numbers[month_name], int(day))
         db.session.add(Article(
-            title=item["title"], slug=f"artigo-{item['id']}", summary=item["summary"], body=default_body,
+            title=item["title"], slug=slugify(item["title"]), summary=item["summary"], body=default_body,
             image=item["image"], status="published", read_minutes=int(item["read_time"].split()[0]),
             featured=item.get("featured", False), published_at=published_at, author_rel=authors[item["author"]], category_rel=categories[item["category"]],
         ))
