@@ -11,7 +11,7 @@ os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app  # noqa: E402
-from models import AdminUser, Article, Author, db  # noqa: E402
+from models import AdminUser, Article, Author, Journal, db  # noqa: E402
 
 
 class PlatformTests(unittest.TestCase):
@@ -117,6 +117,32 @@ class PlatformTests(unittest.TestCase):
             self.assertEqual(author.photo, "https://images.example.org/autora.webp")
         response = self.client.get("/autores")
         self.assertIn(b"https://images.example.org/autora.webp", response.data)
+
+    def test_journal_can_be_managed_and_published(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["csrf_token"] = "journal-csrf"
+        response = self.client.post("/admin/revistas/nova", data={
+            "csrf_token": "journal-csrf",
+            "title": "Revista de Teste Científico",
+            "description": "Uma descrição suficientemente completa para a revista científica.",
+            "field": "Ciências Biológicas",
+            "abbreviation": "RTC",
+            "issn": "1234-567X",
+            "frequency": "Semestral",
+            "current_issue": "Vol. 1 · N.º 1",
+            "guidelines": "Diretrizes editoriais da revista.",
+            "published": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            journal = Journal.query.filter_by(slug="revista-de-teste-cientifico").first()
+            self.assertIsNotNone(journal)
+            self.assertTrue(journal.published)
+        response = self.client.get("/revistas/revista-de-teste-cientifico")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Revista de Teste Científico".encode(), response.data)
 
     def test_secondary_administrator_cannot_manage_accounts(self):
         with self.client.session_transaction() as session:
