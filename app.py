@@ -37,8 +37,8 @@ limiter.init_app(app)
 app.register_blueprint(admin_bp)
 
 
-IMAGE_DIRECTIVE = re.compile(r"!\\[([^\\]]*)\\]\\((https?://[^\\s)]+)\\)", re.I)
-VIDEO_DIRECTIVE = re.compile(r"^\\[video:\\s*([^\\]]*)\\]\\((https?://[^\\s)]+)\\)\\s*$", re.I | re.M)
+IMAGE_DIRECTIVE = re.compile(r"!\[([^\]]*)\]\((https?://[^\s)]+)\)", re.I)
+VIDEO_DIRECTIVE = re.compile(r"^\[video:\s*([^\]]*)\]\((https?://[^\s)]+)\)\s*$", re.I | re.M)
 
 
 def safe_video_embed(url, title):
@@ -55,7 +55,7 @@ def safe_video_embed(url, title):
         if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
             embed_url = f"https://www.youtube-nocookie.com/embed/{video_id}"
     elif host in {"vimeo.com", "player.vimeo.com"}:
-        match = re.search(r"(?:video/)?(\\d{5,12})", parsed.path)
+        match = re.search(r"(?:video/)?(\d{5,12})", parsed.path)
         if match:
             embed_url = f"https://player.vimeo.com/video/{match.group(1)}"
 
