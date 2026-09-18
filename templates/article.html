@@ -4,16 +4,18 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}" />
-<article>
-  <header class="max-w-4xl mx-auto px-4 pt-14 text-center">
+<article class="article-page">
+  <header class="article-header max-w-4xl mx-auto px-4 pt-14 text-center">
     <span class="eyebrow">{{ article.category }}</span>
-    <h1 class="font-serif text-4xl md:text-6xl leading-tight mt-4">
+    <h1 class="article-title font-serif leading-tight mt-4">
       {{ article.title }}
     </h1>
-    <p class="text-xl opacity-60 mt-5">{{ article.summary }}</p>
-    <p class="article-meta justify-center">
-      Por {{ article.author }} · Publicado em {{ article.date }} · Atualizado em
-      {{ article.updated_at.strftime('%d/%m/%Y') }} · {{ article.read_time }}
+    <p class="article-summary opacity-60 mt-5">{{ article.summary }}</p>
+    <p class="article-meta article-byline justify-center">
+      <span>Por {{ article.author }}</span>
+      <span>Publicado em {{ article.date }}</span>
+      <span>Atualizado em {{ article.updated_at.strftime('%d/%m/%Y') }}</span>
+      <span>{{ article.read_time }}</span>
     </p>
     <div class="reading-tools">
       <button
@@ -26,13 +28,16 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       </button>
     </div>
   </header>
-  <img
-    src="{{ article.image }}"
-    alt="Imagem de apoio: {{ article.title }}"
-    fetchpriority="high"
-    decoding="async"
-    class="max-w-6xl mx-auto w-full aspect-[16/7] object-cover mt-8 md:rounded-3xl"
-  />
+  <figure class="article-cover max-w-6xl mx-auto mt-8">
+    <img
+      src="{{ article.image }}"
+      alt="Imagem de apoio: {{ article.title }}"
+      fetchpriority="high"
+      decoding="async"
+      sizes="(max-width: 767px) 100vw, 1152px"
+      class="w-full object-cover md:rounded-3xl"
+    />
+  </figure>
   <div class="prose-article">
     <div class="article-markdown">{{ article.body|markdown }}</div>
     {% if article.keywords or article.doi %}<div class="article-identifiers">
@@ -92,10 +97,10 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
   </div>
 </article>
 <section
-  class="max-w-7xl mx-auto px-4 py-12 border-t border-black/10 dark:border-white/10"
+  class="article-related max-w-7xl mx-auto px-4 py-12 border-t border-black/10 dark:border-white/10"
 >
   <div class="section-rule"><span>Continue a explorar</span></div>
-  <div class="grid md:grid-cols-3 gap-6 mt-7">
+  <div class="article-related-grid grid md:grid-cols-3 gap-6 mt-7">
     {% for item in related %}<a
       href="{{ url_for('article',article_id=item.id) }}"
       class="story-card"
