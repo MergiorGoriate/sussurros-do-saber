@@ -4,6 +4,7 @@ import io
 import os
 import re
 import secrets
+import unicodedata
 from datetime import datetime
 from functools import wraps
 import requests
@@ -17,9 +18,10 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
 def slugify(value):
-    value = value.lower().strip()
-    value = re.sub(r"[^a-z0-9à-ÿ]+", "-", value, flags=re.I)
-    return value.strip("-")
+    value = unicodedata.normalize("NFKD", (value or "").strip())
+    value = value.encode("ascii", "ignore").decode("ascii").lower()
+    value = re.sub(r"[^a-z0-9]+", "-", value)
+    return value.strip("-")[:260]
 
 
 def login_required(view):
@@ -206,7 +208,7 @@ def article_form(article_id=None):
                 flash("Selecione um autor e uma categoria existentes.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             article.title = title
-            base_slug = slugify(request.form.get("slug") or title)
+            base_slug = slugify(request.form.get("slug") or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
             candidate, number = base_slug, 2
             while Article.query.filter(Article.slug == candidate, Article.id != article.id).first():
                 candidate, number = f"{base_slug}-{number}", number + 1
