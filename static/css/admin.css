@@ -528,3 +528,16 @@ input,textarea,select,button{font-size:16px}
   .admin-sidebar form{top:14px;right:12px}
   .admin-sidebar form button{padding-inline:12px}
 }
+
+.editor-generator-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.editor-generator-fields .generator-wide{grid-column:1/-1}
+.editor-generator-fields input,.editor-generator-fields select{margin-top:6px}
+.markdown-preview .preview-table-wrapper{max-width:100%;overflow-x:auto;margin:1.25rem 0;border:1px solid #d7e0df;border-radius:10px}
+.markdown-preview table{width:100%;min-width:32rem;border-collapse:collapse}
+.markdown-preview th,.markdown-preview td{padding:9px 11px;border:1px solid #d7e0df;text-align:left}
+.markdown-preview th{background:#edf4f3;color:#174f49}
+.markdown-preview .preview-chart{margin:1.25rem 0;padding:12px;border:1px solid #d7e0df;border-radius:12px;background:#fff}
+.markdown-preview .preview-chart svg{display:block;width:100%;height:auto;overflow:visible}
+.markdown-preview .preview-chart text{font:12px system-ui,sans-serif;fill:#334155}
+.preview-error{color:#a12622}
+@media(max-width:620px){.editor-generator-fields{grid-template-columns:1fr}.editor-generator-fields .generator-wide{grid-column:auto}}
