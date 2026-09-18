@@ -61,6 +61,22 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b'<meta name="twitter:card" content="summary_large_image">', response.data)
         self.assertIn(b'?share=', response.data)
 
+    def test_external_social_images_are_converted_to_jpeg(self):
+        previous = os.environ.get("CLOUDINARY_CLOUD_NAME")
+        os.environ["CLOUDINARY_CLOUD_NAME"] = "demo"
+        try:
+            source = "https://commons.wikimedia.org/wiki/Special:FilePath/Neuron_Hand-tuned.svg"
+            result = social_image_url(source)
+            self.assertTrue(result.startswith("https://res.cloudinary.com/demo/image/fetch/"))
+            self.assertIn("f_jpg,q_auto:good,w_1200,h_630,c_fill,g_auto,fl_force_strip", result)
+            self.assertIn("Neuron_Hand-tuned.svg", result)
+            self.assertNotEqual(result, source)
+        finally:
+            if previous is None:
+                os.environ.pop("CLOUDINARY_CLOUD_NAME", None)
+            else:
+                os.environ["CLOUDINARY_CLOUD_NAME"] = previous
+
     def test_cloudinary_images_get_responsive_variants(self):
         source = "https://res.cloudinary.com/demo/image/upload/sample.webp"
         self.assertIn(
