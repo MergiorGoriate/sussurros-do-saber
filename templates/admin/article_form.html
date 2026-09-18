@@ -15,7 +15,7 @@
           <label>Carregar imagem<input id="inlineImageFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
           <span class="field-separator">ou</span>
           <label>Endereço externo<input id="inlineImageUrl" type="url" inputmode="url" placeholder="https://..."></label>
-          <label>Descrição acessível<input id="inlineImageAlt" maxlength="180" placeholder="Descreva o que aparece na imagem" required></label>
+          <label>Descrição acessível<input id="inlineImageAlt" maxlength="180" placeholder="Descreva o que aparece na imagem"></label>
           <label>Legenda <span class="optional">(opcional)</span><input id="inlineImageCaption" maxlength="300" placeholder="Fonte, autor ou explicação breve"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineImage" class="admin-primary">Inserir no artigo</button><span id="inlineImageStatus" role="status" aria-live="polite"></span></div>
@@ -23,8 +23,8 @@
       <section id="inlineVideoPanel" class="inline-image-panel inline-video-panel" hidden aria-labelledby="inlineVideoTitle">
         <div class="inline-image-head"><div><strong id="inlineVideoTitle">Inserir vídeo no texto</strong><small>Compatível com YouTube, Vimeo e ficheiros MP4, WebM ou OGG.</small></div><button type="button" id="closeInlineVideo" aria-label="Fechar">×</button></div>
         <div class="inline-video-fields">
-          <label>Endereço do vídeo<input id="inlineVideoUrl" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=..." required></label>
-          <label>Título ou legenda<input id="inlineVideoTitleInput" maxlength="180" placeholder="Descreva brevemente o conteúdo do vídeo" required></label>
+          <label>Endereço do vídeo<input id="inlineVideoUrl" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=..."></label>
+          <label>Título ou legenda<input id="inlineVideoTitleInput" maxlength="180" placeholder="Descreva brevemente o conteúdo do vídeo"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineVideo" class="admin-primary">Inserir vídeo no artigo</button><span id="inlineVideoStatus" role="status" aria-live="polite"></span></div>
       </section>
