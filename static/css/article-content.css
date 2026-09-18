@@ -84,3 +84,13 @@
 @media(max-width:420px){
   .article-cover{aspect-ratio:4/3}
 }
+
+.article-chart{margin:2rem 0;padding:clamp(.65rem,2vw,1.25rem);border:1px solid #d8dfde;border-radius:1rem;background:#fff;overflow-x:auto}
+.article-chart svg{display:block;width:100%;min-width:36rem;height:auto}
+.article-chart figcaption{text-align:center;margin-top:.75rem;color:#52615f;font-size:.95rem;font-weight:600}
+.article-chart .chart-axis{stroke:#64748b;stroke-width:1.5}
+.article-chart .chart-grid{stroke:#e2e8f0;stroke-width:1}
+.article-chart .chart-line{fill:none;stroke:#087f72;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}
+.article-chart .chart-value,.article-chart .chart-label,.article-chart .chart-legend{font-family:system-ui,sans-serif;fill:#334155}
+.article-chart .chart-value{font-size:12px}.article-chart .chart-label{font-size:11px}.article-chart .chart-legend{font-size:13px}
+@media(max-width:640px){.article-chart{margin-inline:-.5rem}.article-chart svg{min-width:32rem}}
