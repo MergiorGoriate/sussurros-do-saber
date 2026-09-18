@@ -38,11 +38,14 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
   {% if article.image %}
   <figure class="article-cover max-w-6xl mx-auto mt-8">
     <img
-      src="{{ article.image }}"
+      src="{{ article.image|image_variant(1200) }}"
+      srcset="{{ article.image|image_variant(480) }} 480w, {{ article.image|image_variant(768) }} 768w, {{ article.image|image_variant(1200) }} 1200w"
       alt="Imagem de apoio: {{ article.title }}"
       fetchpriority="high"
       decoding="async"
       sizes="(max-width: 767px) 100vw, 1152px"
+      width="1200"
+      height="600"
       class="article-cover-image"
     />
   </figure>
