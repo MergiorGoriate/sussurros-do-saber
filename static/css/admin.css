@@ -508,3 +508,23 @@ input,textarea,select,button{font-size:16px}
 .admin-list article form button{border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:#fff;cursor:pointer}
 .admin-list article form button.danger{border-color:#bd3e35;color:#bd3e35}
 @media(max-width:760px){.admin-list article{align-items:flex-start;flex-wrap:wrap}.admin-list article>div{flex-basis:calc(100% - 80px)}}
+
+
+/* Mantém a saída acessível em qualquer altura de ecrã */
+.admin-sidebar{overflow:hidden}
+.admin-sidebar .admin-brand{flex:0 0 auto}
+.admin-sidebar nav{flex:1 1 auto;min-height:0;align-content:start;overflow-x:hidden;overflow-y:auto;padding-right:4px}
+.admin-sidebar form{flex:0 0 auto;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14)}
+.admin-sidebar form button{display:block;width:100%;cursor:pointer}
+.admin-sidebar form button:hover,.admin-sidebar form button:focus-visible{background:#17282b;color:#fff}
+@media(max-width:850px){
+  .admin-sidebar{position:sticky;top:0;overflow:visible;padding-right:110px}
+  .admin-sidebar nav{display:flex;flex:none;overflow-x:auto;overflow-y:hidden;padding-right:0}
+  .admin-sidebar form{display:block;position:absolute;top:16px;right:16px;margin:0;padding:0;border:0}
+  .admin-sidebar form button{width:auto;min-height:44px;padding-inline:16px;border:1px solid rgba(255,255,255,.22);background:#132528}
+}
+@media(max-width:520px){
+  .admin-sidebar{position:sticky;padding-right:92px}
+  .admin-sidebar form{top:14px;right:12px}
+  .admin-sidebar form button{padding-inline:12px}
+}
