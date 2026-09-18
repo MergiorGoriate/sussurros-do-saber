@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block title %}{{ article.title }} — Sussurros do
-Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock %}{% block canonical %}{{ site_url }}{{ url_for('article', slug=article.slug) }}{% endblock %}{% block og_type %}article{% endblock %}{% block og_title %}{{ article.title }}{% endblock %}{% block og_description %}{{ article.summary }}{% endblock %}{% block twitter_title %}{{ article.title }}{% endblock %}{% block twitter_description %}{{ article.summary }}{% endblock %}{% block content %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":article.title,"description":article.summary,"datePublished":(article.published_at or article.created_at).isoformat(),"dateModified":article.updated_at.isoformat(),"author":{"@type":"Person","name":article.author},"publisher":{"@type":"Organization","name":"Sussurros do Saber","url":site_url},"mainEntityOfPage":site_url ~ url_for('article', slug=article.slug),"image":article.image}|tojson }}</script><link
+Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock %}{% block canonical %}{{ site_url }}{{ url_for('article', slug=article.slug) }}{% endblock %}{% block og_type %}article{% endblock %}{% block og_title %}{{ article.title }}{% endblock %}{% block og_description %}{{ article.summary }}{% endblock %}{% block twitter_title %}{{ article.title }}{% endblock %}{% block twitter_description %}{{ article.summary }}{% endblock %}{% block content %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":article.title,"description":article.summary,"datePublished":(article.published_at or article.created_at).isoformat(),"dateModified":article.updated_at.isoformat(),"author":{"@type":"Person","name":article.author,"image":article.author_rel.photo or none},"publisher":{"@type":"Organization","name":"Sussurros do Saber","url":site_url},"mainEntityOfPage":site_url ~ url_for('article', slug=article.slug),"image":article.image}|tojson }}</script><link
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
@@ -11,8 +11,15 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       {{ article.title }}
     </h1>
     <p class="article-summary opacity-60 mt-5">{{ article.summary }}</p>
-    <p class="article-meta article-byline justify-center">
+    <div class="article-author-line">
+      {% if article.author_rel.photo %}
+      <img src="{{ article.author_rel.photo }}" alt="" class="article-author-avatar" loading="lazy" decoding="async">
+      {% else %}
+      <span class="article-author-avatar article-author-fallback" aria-hidden="true">{{ article.author[:2]|upper }}</span>
+      {% endif %}
       <span>Por {{ article.author }}</span>
+    </div>
+    <p class="article-meta article-byline justify-center">
       <span>Publicado em {{ article.date }}</span>
       <span>Atualizado em {{ article.updated_at.strftime('%d/%m/%Y') }}</span>
       <span>{{ article.read_time }}</span>
