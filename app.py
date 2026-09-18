@@ -212,7 +212,7 @@ def social_image_url(url):
     if "res.cloudinary.com/" in value and "/upload/" in value:
         value = value.replace(
             "/upload/",
-            "/upload/f_auto,q_auto:good,w_1200,h_630,c_fill,g_auto/",
+            "/upload/f_jpg,q_auto:good,w_1200,h_630,c_fill,g_auto,fl_force_strip/",
             1,
         )
     return absolute_url(value)
