@@ -37,7 +37,8 @@ limiter.init_app(app)
 app.register_blueprint(admin_bp)
 
 
-IMAGE_DIRECTIVE = re.compile(r"!\\[([^\\]]*)\\]\\((https?://[^\\s)]+)\\)", re.I)\nVIDEO_DIRECTIVE = re.compile(r"^\\[video:\\s*([^\\]]*)\\]\\((https?://[^\\s)]+)\\)\\s*$", re.I | re.M)
+IMAGE_DIRECTIVE = re.compile(r"!\\[([^\\]]*)\\]\\((https?://[^\\s)]+)\\)", re.I)
+VIDEO_DIRECTIVE = re.compile(r"^\\[video:\\s*([^\\]]*)\\]\\((https?://[^\\s)]+)\\)\\s*$", re.I | re.M)
 
 
 def safe_video_embed(url, title):
