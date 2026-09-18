@@ -136,6 +136,7 @@
   const slugField=document.querySelector('#slugField');
   const slugPreview=document.querySelector('#slugPreview');
   const slugify=(value)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,260);
+  if(slugField?.value)slugField.value=slugify(slugField.value);
   let slugWasEdited=Boolean(slugField?.value);
   const updateSlugPreview=()=>{
     if(!slugWasEdited&&slugField)slugField.value=slugify(titleField?.value||'');
@@ -143,6 +144,9 @@
   };
   slugField?.addEventListener('input',()=>{slugWasEdited=true;const cursor=slugField.selectionStart;slugField.value=slugify(slugField.value);slugField.setSelectionRange(cursor,cursor);updateSlugPreview()});
   titleField?.addEventListener('input',updateSlugPreview);
+  editor.closest('form')?.addEventListener('submit',()=>{
+    if(slugField)slugField.value=slugify(slugField.value||titleField?.value||'artigo');
+  });
   updateSlugPreview();
 
   const url=document.querySelector('#imageUrl'),file=document.querySelector('#imageFile'),image=document.querySelector('#imagePreview');

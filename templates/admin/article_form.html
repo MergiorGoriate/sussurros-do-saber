@@ -44,10 +44,10 @@
     <label>Categoria<select name="category_id" required>{% for category in categories %}<option value="{{ category.id }}" {% if article.category_id==category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
     <label>Tempo de leitura<input name="read_minutes" type="number" min="1" value="{{ article.read_minutes or 5 }}"></label>
     <label>Endereço personalizado
-      <div class="slug-field"><span>/artigo/</span><input id="slugField" name="slug" value="{{ article.slug or '' }}" placeholder="gerado-a-partir-do-titulo" pattern="[a-z0-9-]+" maxlength="260"></div>
+      <div class="slug-field"><span>/artigo/</span><input id="slugField" name="slug" value="{{ article.slug or '' }}" placeholder="gerado-a-partir-do-titulo" maxlength="260" autocapitalize="none" autocomplete="off" spellcheck="false"></div>
       <small id="slugPreview" class="url-preview">URL: {{ site_url }}/artigo/{{ article.slug or 'gerado-a-partir-do-titulo' }}</small>
     </label>
-    <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button class="admin-primary">Guardar artigo</button>
+    <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
   </aside>
 </form><script src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
 {% endblock %}
