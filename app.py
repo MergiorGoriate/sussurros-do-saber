@@ -5,6 +5,8 @@ import os
 import re
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
+from html import escape as html_escape
+from urllib.parse import parse_qs, urlparse
 import bleach
 import markdown
 from markupsafe import Markup
@@ -35,6 +37,7 @@ limiter.init_app(app)
 app.register_blueprint(admin_bp)
 
 
+IMAGE_DIRECTIVE = re.compile(r"!\\[([^\\]]*)\\]\\((https?://[^\\s)]+)\\)", re.I)
 VIDEO_DIRECTIVE = re.compile(r"^\\[video:\\s*([^\\]]*)\\]\\((https?://[^\\s)]+)\\)\\s*$", re.I | re.M)
 
 
@@ -78,21 +81,37 @@ def safe_video_embed(url, title):
 @app.template_filter("markdown")
 def render_markdown(value):
     embeds = {}
-    def video_placeholder(match):
-        embed = safe_video_embed(match.group(2), match.group(1))
-        if not embed:
-            return match.group(0)
-        token = f"VIDEOEMBEDTOKEN{len(embeds)}"
+
+    def store_embed(prefix, embed):
+        token = f"{prefix}EMBEDTOKEN{len(embeds)}"
         embeds[token] = embed
         return token
 
-    prepared = VIDEO_DIRECTIVE.sub(video_placeholder, value or "")
+    def image_placeholder(match):
+        parsed = urlparse(match.group(2))
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return match.group(0)
+        safe_url = html_escape(match.group(2), quote=True)
+        safe_alt = html_escape((match.group(1) or "Imagem do artigo").strip()[:180], quote=True)
+        image = (
+            '<figure class="article-inline-image">'
+            f'<img src="{safe_url}" alt="{safe_alt}" loading="lazy" decoding="async">'
+            '</figure>'
+        )
+        return store_embed("IMAGE", image)
+
+    def video_placeholder(match):
+        embed = safe_video_embed(match.group(2), match.group(1))
+        return store_embed("VIDEO", embed) if embed else match.group(0)
+
+    prepared = IMAGE_DIRECTIVE.sub(image_placeholder, value or "")
+    prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
     allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
     cleaned = bleach.clean(
         rendered,
         tags=allowed,
-        attributes={"a": ["href", "title", "rel"], "img": ["src", "alt", "title"]},
+        attributes={"a": ["href", "title", "rel"], "img": ["src", "alt", "title", "loading", "decoding"]},
         protocols=["http", "https", "mailto"],
         strip=True,
     )
