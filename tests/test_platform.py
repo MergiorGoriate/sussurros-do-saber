@@ -77,6 +77,29 @@ class PlatformTests(unittest.TestCase):
             else:
                 os.environ["CLOUDINARY_CLOUD_NAME"] = previous
 
+    def test_external_images_use_responsive_cloudinary_fetch(self):
+        previous = os.environ.get("CLOUDINARY_CLOUD_NAME")
+        os.environ["CLOUDINARY_CLOUD_NAME"] = "demo"
+        try:
+            result = responsive_image_url("https://example.org/large-image.jpg", 480)
+            self.assertIn("/image/fetch/f_auto,q_auto:eco,w_480,c_limit/", result)
+            self.assertIn("https%3A%2F%2Fexample.org%2Flarge-image.jpg", result)
+        finally:
+            if previous is None:
+                os.environ.pop("CLOUDINARY_CLOUD_NAME", None)
+            else:
+                os.environ["CLOUDINARY_CLOUD_NAME"] = previous
+
+    def test_static_assets_have_long_immutable_cache(self):
+        response = self.client.get("/static/css/style.css")
+        self.assertIn("max-age=31536000", response.headers.get("Cache-Control", ""))
+        self.assertIn("immutable", response.headers.get("Cache-Control", ""))
+
+    def test_articles_are_paginated(self):
+        response = self.client.get("/artigos?page=1")
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(response.data.count(b'class="story-card group relative"'), 12)
+
     def test_cloudinary_images_get_responsive_variants(self):
         source = "https://res.cloudinary.com/demo/image/upload/sample.webp"
         self.assertIn(
