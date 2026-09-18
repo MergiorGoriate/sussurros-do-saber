@@ -76,3 +76,12 @@ def upload_author_photo(file):
         folder=os.getenv("CLOUDINARY_AUTHOR_FOLDER", "sussurros-do-saber/autores"),
         max_dimensions=(800, 800),
     )
+
+
+
+def upload_journal_cover(file):
+    return _upload_image(
+        file,
+        folder=os.getenv("CLOUDINARY_JOURNAL_FOLDER", "sussurros-do-saber/revistas"),
+        max_dimensions=(1600, 2200),
+    )
