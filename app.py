@@ -1,6 +1,7 @@
 from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
 from xml.sax.saxutils import escape
 import requests
+import gzip
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -144,12 +145,44 @@ def security_headers(response):
         response.headers.setdefault("Cache-Control", "no-store" if private_response else "public, max-age=60")
     if request.path.startswith("/admin"):
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
+
+    compressible = {
+        "text/html", "text/css", "text/plain", "text/xml",
+        "application/json", "application/javascript", "application/xml",
+    }
+    accepts_gzip = "gzip" in request.headers.get("Accept-Encoding", "").lower()
+    if (
+        accepts_gzip
+        and response.status_code == 200
+        and not response.direct_passthrough
+        and not response.headers.get("Content-Encoding")
+        and response.mimetype in compressible
+    ):
+        payload = response.get_data()
+        if len(payload) >= 1024:
+            response.set_data(gzip.compress(payload, compresslevel=5))
+            response.headers["Content-Encoding"] = "gzip"
+            response.headers["Content-Length"] = len(response.get_data())
+            response.vary.add("Accept-Encoding")
     return response
 
 
 @app.context_processor
 def site_context():
     return {"site_url": SITE_URL}
+
+
+@app.template_filter("image_variant")
+def responsive_image_url(url, width=1200):
+    value = (url or "").strip()
+    try:
+        requested_width = max(160, min(2000, int(width)))
+    except (TypeError, ValueError):
+        requested_width = 1200
+    if "res.cloudinary.com/" in value and "/upload/" in value:
+        transformation = f"f_auto,q_auto:eco,w_{requested_width},c_limit"
+        return value.replace("/upload/", f"/upload/{transformation}/", 1)
+    return value
 
 
 @app.errorhandler(429)

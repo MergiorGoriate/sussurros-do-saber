@@ -15,16 +15,19 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="{% block twitter_title %}Sussurros do Saber{% endblock %}">
 <meta name="twitter:description" content="{% block twitter_description %}Ciência, educação e investigação explicadas com clareza.{% endblock %}">
-<script src="https://cdn.tailwindcss.com">
-</script>
+<link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+<link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+<script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{ink:'#101820',science:'#087F73',signal:'#FF5A4F',paper:'#F5F7F8'},fontFamily:{sans:['Inter','sans-serif'],serif:['Georgia','serif']}}}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260918-3') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}"></noscript>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 </head>
 <body class="bg-white text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
@@ -41,7 +44,7 @@
 <div class="max-w-7xl mx-auto px-4">
 <div class="h-20 flex items-center justify-between">
 <a href="/" class="brand-link" aria-label="Sussurros do Saber — página inicial">
-<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Sussurros do Saber"></picture>
+<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Sussurros do Saber" width="304" height="52" decoding="async"></picture>
 </a>
 <div class="flex gap-2">
 <button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
@@ -72,7 +75,7 @@
 <footer class="bg-ink text-white mt-20">
 <div class="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-9">
 <div>
-<a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-footer.png') }}" alt="Logotipo do Sussurros do Saber"><span>Sussurros do Saber</span></a>
+<a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-footer.png') }}" alt="Logotipo do Sussurros do Saber" loading="lazy" decoding="async" width="240" height="64"><span>Sussurros do Saber</span></a>
 <p class="text-white/65">Divulgação científica independente, com atenção à investigação em África.</p>
 </div>
 <div>
@@ -110,13 +113,10 @@
 <div class="max-w-7xl mx-auto px-4 py-5 text-sm text-white/55">© 2026 Sussurros do Saber.</div>
 </div>
 </footer>
-<script src="{{ url_for('static',filename='js/main.js') }}">
-</script>
-<script src="{{ url_for('static',filename='js/pages.js') }}">
-</script>
-<script src="{{ url_for('static',filename='js/assistant.js') }}">
-</script>
-<script src="{{ url_for('static',filename='js/animations.js') }}">
+<script src="{{ url_for('static',filename='js/main.js',v='20260918-3') }}" defer></script>
+<script src="{{ url_for('static',filename='js/pages.js',v='20260918-3') }}" defer></script>
+<script>
+(()=>{let done=false;const load=()=>{if(done)return;done=true;['assistant.js','animations.js'].forEach(name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260918-3';script.defer=true;document.body.appendChild(script)})};if('requestIdleCallback'in window)requestIdleCallback(load,{timeout:2500});else setTimeout(load,1500)})();
 </script>
 </body>
 </html>

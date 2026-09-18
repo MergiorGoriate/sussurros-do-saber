@@ -10,7 +10,7 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
-from app import app  # noqa: E402
+from app import app, responsive_image_url  # noqa: E402
 from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Journal, db  # noqa: E402
 
@@ -32,6 +32,22 @@ class PlatformTests(unittest.TestCase):
         for path in ["/", "/artigos", "/autores", "/revistas", "/contacto", "/feed.xml", "/sitemap.xml", "/robots.txt", "/healthz"]:
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 200)
+
+    def test_cloudinary_images_get_responsive_variants(self):
+        source = "https://res.cloudinary.com/demo/image/upload/sample.webp"
+        self.assertIn(
+            "/upload/f_auto,q_auto:eco,w_480,c_limit/",
+            responsive_image_url(source, 480),
+        )
+        self.assertEqual(
+            responsive_image_url("https://example.org/image.jpg", 480),
+            "https://example.org/image.jpg",
+        )
+
+    def test_gzip_compression_for_public_html(self):
+        response = self.client.get("/", headers={"Accept-Encoding": "gzip"})
+        self.assertEqual(response.headers.get("Content-Encoding"), "gzip")
+        self.assertIn("Accept-Encoding", response.headers.get("Vary", ""))
 
     def test_security_headers(self):
         response = self.client.get("/", base_url="https://sussurrosdosaber.com")
