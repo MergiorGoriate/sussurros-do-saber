@@ -181,11 +181,15 @@ def render_markdown(value):
         parsed = urlparse(match.group(2))
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             return match.group(0)
-        safe_url = html_escape(match.group(2), quote=True)
+        source_url = match.group(2)
+        safe_url = html_escape(responsive_image_url(source_url, 1200), quote=True)
+        safe_small = html_escape(responsive_image_url(source_url, 480), quote=True)
+        safe_medium = html_escape(responsive_image_url(source_url, 768), quote=True)
         safe_alt = html_escape((match.group(1) or "Imagem do artigo").strip()[:180], quote=True)
         image = (
             '<figure class="article-inline-image">'
-            f'<img src="{safe_url}" alt="{safe_alt}" loading="lazy" decoding="async">'
+            f'<img src="{safe_url}" srcset="{safe_small} 480w, {safe_medium} 768w, {safe_url} 1200w" '
+            f'sizes="(max-width: 760px) 100vw, 760px" alt="{safe_alt}" loading="lazy" decoding="async">'
             '</figure>'
         )
         return store_embed("IMAGE", image)
@@ -233,7 +237,7 @@ def security_headers(response):
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     if request.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=604800, stale-while-revalidate=86400"
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     else:
         private_response = request.method != "GET" or request.path.startswith(("/admin", "/api/"))
         response.headers.setdefault("Cache-Control", "no-store" if private_response else "public, max-age=60")
@@ -276,6 +280,13 @@ def site_context():
     }
 
 
+def cloudinary_cloud_name():
+    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
+    if cloud_name:
+        return cloud_name
+    return urlparse(os.getenv("CLOUDINARY_URL", "").strip()).hostname or ""
+
+
 @app.template_filter("image_variant")
 def responsive_image_url(url, width=1200):
     value = (url or "").strip()
@@ -283,9 +294,15 @@ def responsive_image_url(url, width=1200):
         requested_width = max(160, min(2000, int(width)))
     except (TypeError, ValueError):
         requested_width = 1200
+    transformation = f"f_auto,q_auto:eco,w_{requested_width},c_limit"
     if "res.cloudinary.com/" in value and "/upload/" in value:
-        transformation = f"f_auto,q_auto:eco,w_{requested_width},c_limit"
         return value.replace("/upload/", f"/upload/{transformation}/", 1)
+    cloud_name = cloudinary_cloud_name()
+    if cloud_name and value.startswith(("http://", "https://")):
+        return (
+            f"https://res.cloudinary.com/{cloud_name}/image/fetch/"
+            f"{transformation}/{quote(value, safe='')}"
+        )
     return value
 
 @app.template_filter("absolute_url")
@@ -308,10 +325,7 @@ def social_image_url(url):
     if "res.cloudinary.com/" in value and "/upload/" in value:
         return value.replace("/upload/", f"/upload/{transformation}/", 1)
 
-    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
-    if not cloud_name:
-        cloudinary_url = os.getenv("CLOUDINARY_URL", "").strip()
-        cloud_name = urlparse(cloudinary_url).hostname or ""
+    cloud_name = cloudinary_cloud_name()
 
     if cloud_name and value.startswith(("http://", "https://")):
         encoded_source = quote(value, safe="")
@@ -368,7 +382,14 @@ def articles():
     if query:
         like = f"%{query}%"
         results = results.join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like), db.func.lower(Author.name).like(like)))
-    return render_template("articles.html", articles=results.order_by(Article.published_at.desc()).all(), query=request.args.get("q", ""))
+    page = max(1, request.args.get("page", 1, type=int))
+    pagination = results.order_by(Article.published_at.desc()).paginate(page=page, per_page=12, error_out=False)
+    return render_template(
+        "articles.html",
+        articles=pagination.items,
+        pagination=pagination,
+        query=request.args.get("q", ""),
+    )
 
 @app.get("/artigo/<slug>")
 def article(slug):
