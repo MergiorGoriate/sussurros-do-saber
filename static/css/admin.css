@@ -468,3 +468,24 @@ input,textarea,select,button{font-size:16px}
 .slug-field input{border:0;border-radius:0;outline:0;min-width:0}
 .url-preview{display:block;margin-top:6px;overflow-wrap:anywhere;color:#667579}
 @media(max-width:520px){.slug-field{align-items:stretch;flex-direction:column}.slug-field span{min-height:38px}.slug-field input{min-height:44px}}
+
+
+/* Gestão segura de administradores */
+.admin-security-note{display:grid;gap:4px;margin-bottom:20px;padding:16px 18px;border:1px solid #a9d6d0;border-radius:12px;background:#eef9f7;color:#24433f}
+.admin-security-note small{color:#55726f}
+.admin-management-grid{align-items:start}
+.administrator-cards{display:grid;gap:14px}
+.administrator-card{border:1px solid #d9e2e1;border-radius:12px;background:#fff;overflow:hidden}
+.administrator-summary{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:16px}
+.administrator-summary small{display:block;margin-top:5px;color:#697978;overflow-wrap:anywhere}
+.administrator-name{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.role-badge{padding:3px 8px;border-radius:999px;background:#0a776c;color:#fff;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.role-badge.secondary{background:#e8efee;color:#435451}
+.administrator-editor{border-top:1px solid #e3e9e8;background:#f8fbfa}
+.administrator-editor>summary{padding:12px 16px;color:#086e64;font-weight:700;cursor:pointer}
+.administrator-editor>.compact-form,.administrator-editor>form{padding:4px 16px 16px}
+.administrator-actions{display:flex;gap:10px;align-items:center}
+.danger-button{margin-top:0;border:1px solid #b42318;border-radius:8px;padding:10px 14px;background:#fff;color:#b42318;font-weight:700;cursor:pointer}
+.danger-button:hover{background:#fff0ee}
+.protected-account{display:block;padding:0 16px 16px;color:#697978}
+@media(max-width:700px){.administrator-summary{flex-direction:column}.administrator-summary .status{align-self:flex-start}}
