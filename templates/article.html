@@ -3,7 +3,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
-<link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css', v='20260918-2') }}" />
 <article class="article-page">
   <header class="article-header max-w-4xl mx-auto px-4 pt-14 text-center">
     <span class="eyebrow">{{ article.category }}</span>
@@ -35,6 +35,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       </button>
     </div>
   </header>
+  {% if article.image %}
   <figure class="article-cover max-w-6xl mx-auto mt-8">
     <img
       src="{{ article.image }}"
@@ -42,9 +43,10 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       fetchpriority="high"
       decoding="async"
       sizes="(max-width: 767px) 100vw, 1152px"
-      class="w-full object-cover md:rounded-3xl"
+      class="article-cover-image"
     />
   </figure>
+  {% endif %}
   <div class="prose-article">
     <div class="article-markdown">{{ article.body|markdown }}</div>
     {% if article.keywords or article.doi %}<div class="article-identifiers">
