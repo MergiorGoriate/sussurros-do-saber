@@ -91,3 +91,14 @@ main,.article-page,.article-header,.article-cover,.prose-article{min-width:0}
 .dark .author-profile{border-color:rgba(255,255,255,.14);background:#0b1719}
 .dark .author-profile p{color:#aebabc}
 @media(max-width:640px){.author-profile{grid-template-columns:1fr;text-align:center}.author-profile-photo{width:112px;height:112px;margin:auto}.author-profile p{margin-inline:auto}}
+
+
+/* Desempenho de renderização em dispositivos móveis */
+main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-size:auto 720px}
+.story-card img,.article-cover img{background:#e7eceb}
+@media(max-width:767px){
+  .story-card,.journal-card{contain:layout paint style}
+  .group-hover\:scale-105{transform:none!important}
+  .site-header{backdrop-filter:none;background:rgba(255,255,255,.97)}
+  .dark .site-header{background:rgba(8,16,18,.97)}
+}
