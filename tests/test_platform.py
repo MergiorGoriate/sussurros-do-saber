@@ -56,8 +56,10 @@ class PlatformTests(unittest.TestCase):
         response = self.client.get(f"/artigo/{slug}")
         self.assertEqual(response.status_code, 200)
         self.assertIn(f'<meta property="og:image" content="{expected_image}">'.encode(), response.data)
+        self.assertIn(f'<meta property="og:image:url" content="{expected_image}">'.encode(), response.data)
         self.assertIn(f'<meta name="twitter:image" content="{expected_image}">'.encode(), response.data)
         self.assertIn(b'<meta name="twitter:card" content="summary_large_image">', response.data)
+        self.assertIn(b'?share=', response.data)
 
     def test_cloudinary_images_get_responsive_variants(self):
         source = "https://res.cloudinary.com/demo/image/upload/sample.webp"
