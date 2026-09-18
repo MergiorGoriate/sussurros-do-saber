@@ -4,11 +4,30 @@
   if (!editor || !preview) return;
 
   const escape = (text) => text.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  const videoPreview = (title, rawUrl) => {
+    try {
+      const url = new URL(rawUrl.replace(/&amp;/g,'&'));
+      const host = url.hostname.toLowerCase().replace(/^www\./,'');
+      let embed = '';
+      if (['youtube.com','m.youtube.com','youtube-nocookie.com'].includes(host)) {
+        const id = url.pathname.includes('/embed/') ? url.pathname.split('/embed/')[1].split('/')[0] : url.searchParams.get('v');
+        if (/^[A-Za-z0-9_-]{6,20}$/.test(id||'')) embed = `https://www.youtube-nocookie.com/embed/${id}`;
+      } else if (host === 'youtu.be') {
+        const id=url.pathname.slice(1).split('/')[0]; if (/^[A-Za-z0-9_-]{6,20}$/.test(id)) embed=`https://www.youtube-nocookie.com/embed/${id}`;
+      } else if (['vimeo.com','player.vimeo.com'].includes(host)) {
+        const match=url.pathname.match(/(?:video\/)?(\d{5,12})/); if(match)embed=`https://player.vimeo.com/video/${match[1]}`;
+      }
+      if(embed)return `<figure class="preview-video"><div><iframe src="${embed}" title="${title}" loading="lazy"></iframe></div><figcaption>${title}</figcaption></figure>`;
+      if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) return `<figure class="preview-video"><video src="${escape(rawUrl)}" controls preload="metadata"></video><figcaption>${title}</figcaption></figure>`;
+    } catch {}
+    return `<p><a href="${escape(rawUrl)}">Vídeo: ${title}</a></p>`;
+  };
   const render = () => {
     const html = escape(editor.value)
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+      .replace(/\[video:\s*([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, (_,title,url) => videoPreview(title,url))
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<figure><img src="$2" alt="$1" loading="lazy"></figure>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -79,6 +98,35 @@
       editor.focus();
     }catch(error){inlineStatus.textContent=error.message}
     finally{insertButton.disabled=false}
+  });
+
+  const videoPanel=document.querySelector('#inlineVideoPanel');
+  const openVideo=document.querySelector('#openInlineVideo');
+  const closeVideo=document.querySelector('#closeInlineVideo');
+  const insertVideo=document.querySelector('#insertInlineVideo');
+  const videoUrl=document.querySelector('#inlineVideoUrl');
+  const videoTitle=document.querySelector('#inlineVideoTitleInput');
+  const videoStatus=document.querySelector('#inlineVideoStatus');
+  let videoInsertionPoint=0;
+  const setVideoPanel=(open)=>{
+    videoPanel.hidden=!open;
+    openVideo.setAttribute('aria-expanded',String(open));
+    if(open){videoInsertionPoint=editor.selectionStart;videoUrl.focus()}else{openVideo.focus()}
+  };
+  openVideo?.addEventListener('click',()=>setVideoPanel(videoPanel.hidden));
+  closeVideo?.addEventListener('click',()=>setVideoPanel(false));
+  insertVideo?.addEventListener('click',()=>{
+    const url=videoUrl.value.trim(),title=cleanText(videoTitle.value);
+    if(!/^https?:\/\//i.test(url)){videoStatus.textContent='Informe um endereço válido iniciado por https://.';videoUrl.focus();return}
+    if(!title){videoStatus.textContent='Escreva um título ou uma legenda para o vídeo.';videoTitle.focus();return}
+    try{
+      const parsed=new URL(url),host=parsed.hostname.toLowerCase().replace(/^www\./,'');
+      const direct=/\.(mp4|webm|ogg)$/i.test(parsed.pathname);
+      const supported=['youtube.com','m.youtube.com','youtube-nocookie.com','youtu.be','vimeo.com','player.vimeo.com'].includes(host)||direct;
+      if(!supported){videoStatus.textContent='Use uma ligação do YouTube, Vimeo, MP4, WebM ou OGG.';return}
+      editor.setRangeText(`\n\n[video: ${title}](${url})\n\n`,videoInsertionPoint,videoInsertionPoint,'end');
+      render();videoUrl.value='';videoTitle.value='';videoStatus.textContent='Vídeo inserido no artigo.';setVideoPanel(false);editor.focus();
+    }catch{videoStatus.textContent='O endereço do vídeo não é válido.'}
   });
 
   editor.addEventListener('input', render);
