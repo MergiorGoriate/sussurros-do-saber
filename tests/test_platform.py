@@ -11,6 +11,7 @@ os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app  # noqa: E402
+from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Journal, db  # noqa: E402
 
 
@@ -117,6 +118,14 @@ class PlatformTests(unittest.TestCase):
             self.assertEqual(author.photo, "https://images.example.org/autora.webp")
         response = self.client.get("/autores")
         self.assertIn(b"https://images.example.org/autora.webp", response.data)
+
+    def test_journal_schema_contains_all_management_columns(self):
+        with app.app_context():
+            columns = {column["name"] for column in inspect(db.engine).get_columns("journal")}
+        self.assertTrue({
+            "issn", "frequency", "current_issue", "guidelines",
+            "cover_image", "cover_alt", "published", "created_at", "updated_at",
+        }.issubset(columns))
 
     def test_journal_can_be_managed_and_published(self):
         with self.client.session_transaction() as session:
