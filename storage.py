@@ -13,7 +13,7 @@ class ImageUploadError(ValueError):
     pass
 
 
-def upload_article_image(file):
+def _upload_image(file, *, folder, max_dimensions):
     if not file or not file.filename:
         return None
     payload = file.read(MAX_IMAGE_BYTES + 1)
@@ -25,7 +25,7 @@ def upload_article_image(file):
         image = Image.open(io.BytesIO(payload))
         if image.width * image.height > 40_000_000:
             raise ImageUploadError("A imagem possui resolução demasiado elevada.")
-        image.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
+        image.thumbnail(max_dimensions, Image.Resampling.LANCZOS)
         if image.mode not in ("RGB", "RGBA"):
             image = image.convert("RGB")
         output = io.BytesIO()
@@ -48,7 +48,7 @@ def upload_article_image(file):
         result = cloudinary.uploader.upload(
             output,
             public_id=uuid.uuid4().hex,
-            folder=os.getenv("CLOUDINARY_FOLDER", "sussurros-do-saber/artigos"),
+            folder=folder,
             resource_type="image",
             format="webp",
             overwrite=False,
@@ -59,3 +59,20 @@ def upload_article_image(file):
     if not secure_url:
         raise ImageUploadError("O Cloudinary não devolveu o endereço da imagem.")
     return secure_url
+
+
+
+def upload_article_image(file):
+    return _upload_image(
+        file,
+        folder=os.getenv("CLOUDINARY_FOLDER", "sussurros-do-saber/artigos"),
+        max_dimensions=(2000, 2000),
+    )
+
+
+def upload_author_photo(file):
+    return _upload_image(
+        file,
+        folder=os.getenv("CLOUDINARY_AUTHOR_FOLDER", "sussurros-do-saber/autores"),
+        max_dimensions=(800, 800),
+    )
