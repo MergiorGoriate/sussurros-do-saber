@@ -6,3 +6,18 @@
 .article-markdown th, .article-markdown td { border: 1px solid #d8dfde; padding: .65rem; }
 .article-identifiers, .article-references { border-top: 1px solid rgba(0,0,0,.14); margin-top: 2rem; padding-top: 1.5rem; }
 .article-references h2 { font-family: Georgia, serif; font-size: 1.8rem; }
+
+
+.article-markdown img { display:block; max-width:100%; height:auto; margin:1.5rem auto; border-radius:.75rem; }
+.article-markdown pre { max-width:100%; overflow-x:auto; padding:1rem; border-radius:.75rem; background:#101820; color:#f8fafc; font-size:.9rem; }
+.article-markdown code { overflow-wrap:anywhere; }
+.article-markdown pre code { overflow-wrap:normal; white-space:pre; }
+.article-markdown table { min-width:36rem; }
+.article-markdown .table-wrapper { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+@media (max-width:640px) {
+  .article-markdown { font-size:1rem; line-height:1.75; }
+  .article-markdown h2 { font-size:1.65rem; }
+  .article-markdown h3 { font-size:1.3rem; }
+  .article-markdown blockquote { margin:1.25rem 0; padding-left:.9rem; }
+  .article-identifiers,.article-references { overflow-wrap:anywhere; }
+}
