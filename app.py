@@ -451,6 +451,37 @@ def ensure_author_columns():
         db.session.commit()
 
 
+
+def ensure_journal_columns():
+    inspector = inspect(db.engine)
+    if "journal" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("journal")}
+    additions = {
+        "abbreviation": "VARCHAR(30) DEFAULT ''",
+        "field": "VARCHAR(140) DEFAULT '' NOT NULL",
+        "description": "TEXT DEFAULT '' NOT NULL",
+        "issn": "VARCHAR(9) DEFAULT ''",
+        "frequency": "VARCHAR(80) DEFAULT ''",
+        "current_issue": "VARCHAR(120) DEFAULT ''",
+        "guidelines": "TEXT DEFAULT ''",
+        "cover_image": "VARCHAR(600) DEFAULT ''",
+        "cover_alt": "VARCHAR(300) DEFAULT ''",
+        "published": "BOOLEAN DEFAULT TRUE NOT NULL",
+        "created_at": "TIMESTAMP",
+        "updated_at": "TIMESTAMP",
+    }
+    changed = False
+    for name, definition in additions.items():
+        if name not in existing:
+            db.session.execute(text(
+                f'ALTER TABLE journal ADD COLUMN "{name}" {definition}'
+            ))
+            changed = True
+    if changed:
+        db.session.commit()
+
+
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
     additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
@@ -485,6 +516,7 @@ def seed_database():
     db.create_all()
     ensure_admin_columns()
     ensure_author_columns()
+    ensure_journal_columns()
     ensure_article_columns()
     if not Journal.query.first():
         default_guidelines = (
