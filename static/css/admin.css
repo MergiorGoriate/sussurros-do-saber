@@ -427,3 +427,28 @@ input,textarea,select,button{font-size:16px}
   .editor-toolbar button{white-space:nowrap;min-height:42px}
   .editor-workspace textarea,.markdown-preview{min-height:360px}
 }
+
+
+/* Inserção de imagens no corpo do artigo */
+.inline-image-panel{margin:12px 0 16px;padding:18px;border:1px solid #b8d5d1;border-radius:14px;background:#f3faf9}
+.inline-image-panel[hidden]{display:none}
+.inline-image-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.inline-image-head strong{display:block;font:700 1.15rem Georgia,serif}
+.inline-image-head small{display:block;color:#667579;margin-top:3px}
+.inline-image-head>button{border:0;background:transparent;font-size:1.6rem;line-height:1;cursor:pointer}
+.inline-image-fields{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:end}
+.inline-image-fields label:nth-of-type(3),.inline-image-fields label:nth-of-type(4){grid-column:1/-1}
+.inline-image-fields label{margin:0}
+.field-separator{padding-bottom:12px;color:#738084;font-size:.8rem;text-transform:uppercase}
+.inline-image-actions{display:flex;align-items:center;gap:12px;margin-top:15px}
+.inline-image-actions .admin-primary:disabled{opacity:.6;cursor:wait}
+#inlineImageStatus{color:#52615f;font-size:.9rem}
+.markdown-preview figure{margin:1.25rem 0}
+.markdown-preview figure img{display:block;width:100%;max-height:420px;object-fit:contain;border-radius:10px;background:#edf2f1}
+@media(max-width:700px){
+  .inline-image-fields{grid-template-columns:1fr}
+  .inline-image-fields label:nth-of-type(3),.inline-image-fields label:nth-of-type(4){grid-column:auto}
+  .field-separator{padding:0;text-align:center}
+  .inline-image-actions{align-items:stretch;flex-direction:column}
+  .inline-image-actions .admin-primary{width:100%}
+}
