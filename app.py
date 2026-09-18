@@ -194,6 +194,30 @@ def responsive_image_url(url, width=1200):
         return value.replace("/upload/", f"/upload/{transformation}/", 1)
     return value
 
+@app.template_filter("absolute_url")
+def absolute_url(value):
+    address = (value or "").strip()
+    if address.startswith(("http://", "https://")):
+        return address
+    if address.startswith("//"):
+        return "https:" + address
+    return SITE_URL + "/" + address.lstrip("/")
+
+
+@app.template_filter("social_image")
+def social_image_url(url):
+    value = (url or "").strip()
+    if not value:
+        return SITE_URL + "/static/img/logo-sussurros-horizontal.png"
+    if "res.cloudinary.com/" in value and "/upload/" in value:
+        value = value.replace(
+            "/upload/",
+            "/upload/f_auto,q_auto:good,w_1200,h_630,c_fill,g_auto/",
+            1,
+        )
+    return absolute_url(value)
+
+
 
 @app.errorhandler(429)
 def rate_limited(error):

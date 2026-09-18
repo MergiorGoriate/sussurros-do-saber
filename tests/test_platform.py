@@ -10,7 +10,7 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
-from app import app, responsive_image_url  # noqa: E402
+from app import app, responsive_image_url, social_image_url  # noqa: E402
 from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Journal, db  # noqa: E402
 
@@ -47,6 +47,17 @@ class PlatformTests(unittest.TestCase):
         for path in ["/", "/artigos", "/autores", "/revistas", "/contacto", "/feed.xml", "/sitemap.xml", "/robots.txt", "/healthz"]:
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 200)
+
+    def test_article_sharing_uses_cover_image(self):
+        with app.app_context():
+            article = Article.public_query().first()
+            slug = article.slug
+            expected_image = social_image_url(article.image)
+        response = self.client.get(f"/artigo/{slug}")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'<meta property="og:image" content="{expected_image}">'.encode(), response.data)
+        self.assertIn(f'<meta name="twitter:image" content="{expected_image}">'.encode(), response.data)
+        self.assertIn(b'<meta name="twitter:card" content="summary_large_image">', response.data)
 
     def test_cloudinary_images_get_responsive_variants(self):
         source = "https://res.cloudinary.com/demo/image/upload/sample.webp"
