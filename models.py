@@ -26,6 +26,7 @@ class Author(db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(180), unique=True)
     bio = db.Column(db.Text, default="")
+    photo = db.Column(db.String(600), default="")
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     articles = db.relationship("Article", back_populates="author_rel")
