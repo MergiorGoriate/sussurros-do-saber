@@ -7,7 +7,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from html import escape as html_escape
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 import bleach
 import markdown
 from markupsafe import Markup
@@ -206,16 +206,26 @@ def absolute_url(value):
 
 @app.template_filter("social_image")
 def social_image_url(url):
-    value = (url or "").strip()
+    value = absolute_url((url or "").strip()) if url else ""
     if not value:
         return SITE_URL + "/static/img/logo-sussurros-horizontal.png"
+
+    transformation = "f_jpg,q_auto:good,w_1200,h_630,c_fill,g_auto,fl_force_strip"
     if "res.cloudinary.com/" in value and "/upload/" in value:
-        value = value.replace(
-            "/upload/",
-            "/upload/f_jpg,q_auto:good,w_1200,h_630,c_fill,g_auto,fl_force_strip/",
-            1,
+        return value.replace("/upload/", f"/upload/{transformation}/", 1)
+
+    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
+    if not cloud_name:
+        cloudinary_url = os.getenv("CLOUDINARY_URL", "").strip()
+        cloud_name = urlparse(cloudinary_url).hostname or ""
+
+    if cloud_name and value.startswith(("http://", "https://")):
+        encoded_source = quote(value, safe="")
+        return (
+            f"https://res.cloudinary.com/{cloud_name}/image/fetch/"
+            f"{transformation}/{encoded_source}"
         )
-    return absolute_url(value)
+    return value
 
 
 
