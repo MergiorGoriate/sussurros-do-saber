@@ -28,6 +28,12 @@ class PlatformTests(unittest.TestCase):
             db.engine.dispose()
         os.unlink(database_file.name)
 
+    def test_footer_contains_accessible_social_links(self):
+        response = self.client.get("/")
+        for network in ["Facebook", "Instagram", "YouTube", "LinkedIn", "X", "WhatsApp"]:
+            self.assertIn(f'aria-label="'.encode(), response.data)
+            self.assertIn(network.encode(), response.data)
+
     def test_public_routes_and_discovery_files(self):
         for path in ["/", "/artigos", "/autores", "/revistas", "/contacto", "/feed.xml", "/sitemap.xml", "/robots.txt", "/healthz"]:
             with self.subTest(path=path):

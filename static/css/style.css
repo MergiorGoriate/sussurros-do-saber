@@ -102,3 +102,17 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   .site-header{backdrop-filter:none;background:rgba(255,255,255,.97)}
   .dark .site-header{background:rgba(8,16,18,.97)}
 }
+
+
+/* Redes sociais no rodapé */
+.footer-social{margin-top:1.35rem}
+.footer-social>p{margin-bottom:.65rem;color:#fff;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.social-links{display:flex;flex-wrap:wrap;gap:.55rem}
+.social-links a{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(255,255,255,.24);border-radius:50%;color:#fff;background:rgba(255,255,255,.06);transition:transform .2s ease,background .2s ease,border-color .2s ease}
+.social-links a:hover,.social-links a:focus-visible{transform:translateY(-2px);border-color:#2ac9b7;background:#087f73;outline:none}
+.social-links svg{width:20px;height:20px;fill:currentColor}
+.social-links svg rect,.social-links svg circle{fill:none;stroke:currentColor;stroke-width:2}
+.social-links svg .social-dot{fill:currentColor;stroke:none}
+.social-links svg .social-play{fill:#101820}
+@media(max-width:639px){.footer-social{margin-top:1.1rem}.social-links a{width:44px;height:44px}}
+@media(prefers-reduced-motion:reduce){.social-links a{transition:none}.social-links a:hover{transform:none}}

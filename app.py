@@ -169,7 +169,17 @@ def security_headers(response):
 
 @app.context_processor
 def site_context():
-    return {"site_url": SITE_URL}
+    return {
+        "site_url": SITE_URL,
+        "social_links": {
+            "facebook": os.getenv("SOCIAL_FACEBOOK_URL", "https://www.facebook.com/"),
+            "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/"),
+            "youtube": os.getenv("SOCIAL_YOUTUBE_URL", "https://www.youtube.com/"),
+            "linkedin": os.getenv("SOCIAL_LINKEDIN_URL", "https://www.linkedin.com/"),
+            "x": os.getenv("SOCIAL_X_URL", "https://x.com/"),
+            "whatsapp": os.getenv("SOCIAL_WHATSAPP_URL", "https://www.whatsapp.com/"),
+        },
+    }
 
 
 @app.template_filter("image_variant")

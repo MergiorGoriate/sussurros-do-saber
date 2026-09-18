@@ -25,7 +25,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260918-3') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260918-4') }}">
 <link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}"></noscript>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
@@ -77,6 +77,17 @@
 <div>
 <a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-footer.png') }}" alt="Logotipo do Sussurros do Saber" loading="lazy" decoding="async" width="240" height="64"><span>Sussurros do Saber</span></a>
 <p class="text-white/65">Divulgação científica independente, com atenção à investigação em África.</p>
+<div class="footer-social">
+<p>Siga-nos</p>
+<div class="social-links" aria-label="Redes sociais do Sussurros do Saber">
+<a href="{{ social_links.facebook }}" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no Facebook" title="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h3V4h-3c-3 0-5 2-5 5v2H6v4h3v7h4v-7h3l1-4h-4V9c0-.7.3-1 1-1Z"/></svg></a>
+<a href="{{ social_links.instagram }}" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no Instagram" title="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle class="social-dot" cx="17.5" cy="6.5" r="1"/></svg></a>
+<a href="{{ social_links.youtube }}" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no YouTube" title="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.2c-.2-1.3-1.2-2.3-2.5-2.5C16.7 4.4 14.5 4.3 12 4.3s-4.7.1-6.5.4A3 3 0 0 0 3 7.2c-.3 1.5-.4 3-.4 4.8s.1 3.3.4 4.8c.2 1.3 1.2 2.3 2.5 2.5 1.8.3 4 .4 6.5.4s4.7-.1 6.5-.4a3 3 0 0 0 2.5-2.5c.3-1.5.4-3 .4-4.8s-.1-3.3-.4-4.8Z"/><path class="social-play" d="m10 9 5 3-5 3Z"/></svg></a>
+<a href="{{ social_links.linkedin }}" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no LinkedIn" title="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.5h4V20H5zM7 3a2.3 2.3 0 1 1 0 4.6A2.3 2.3 0 0 1 7 3Zm4 5.5h3.8V10c.8-1.2 2-1.9 3.7-1.9 3.8 0 4.5 2.5 4.5 5.8V20h-4v-5.4c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9V20h-4Z"/></svg></a>
+<a href="{{ social_links.x }}" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no X" title="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h4.8l4.1 5.5L17.6 4H20l-6 7.3L20.5 20h-4.8l-4.6-6.1L6 20H3.5l6.5-7.9Z"/></svg></a>
+<a href="{{ social_links.whatsapp }}" target="_blank" rel="me noopener noreferrer" aria-label="Contacte-nos pelo WhatsApp" title="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.7 13.7L3 21l4.4-1.2A9 9 0 1 0 12 3Zm0 16a7 7 0 0 1-3.6-1l-.4-.2-2.6.7.7-2.5-.2-.4A7 7 0 1 1 12 19Zm3.8-5.2c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a5.8 5.8 0 0 1-2.8-2.5c-.2-.3.2-.4.5-1 .1-.1 0-.3 0-.4l-.7-1.6c-.2-.4-.4-.3-.5-.3h-.4c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2 0 1.2.9 2.4 1 2.5.1.2 1.7 2.7 4.2 3.7 1.6.7 2.5.7 3.4.6 1-.2 1.8-.8 2-1.5.3-.7.3-1.3.2-1.5-.1-.1-.2-.2-.4-.3Z"/></svg></a>
+</div>
+</div>
 </div>
 <div>
 <h3 class="font-bold mb-4">Explorar</h3>
