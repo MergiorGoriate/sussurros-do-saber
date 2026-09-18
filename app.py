@@ -35,11 +35,70 @@ limiter.init_app(app)
 app.register_blueprint(admin_bp)
 
 
+VIDEO_DIRECTIVE = re.compile(r"^\\[video:\\s*([^\\]]*)\\]\\((https?://[^\\s)]+)\\)\\s*$", re.I | re.M)
+
+
+def safe_video_embed(url, title):
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower().removeprefix("www.")
+    label = (title or "Vídeo incorporado").strip()[:180]
+    embed_url = None
+    if host in {"youtube.com", "m.youtube.com", "youtube-nocookie.com"}:
+        video_id = parsed.path.split("/embed/", 1)[1].split("/", 1)[0] if "/embed/" in parsed.path else parse_qs(parsed.query).get("v", [""])[0]
+        if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+            embed_url = f"https://www.youtube-nocookie.com/embed/{video_id}"
+    elif host == "youtu.be":
+        video_id = parsed.path.strip("/").split("/", 1)[0]
+        if re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+            embed_url = f"https://www.youtube-nocookie.com/embed/{video_id}"
+    elif host in {"vimeo.com", "player.vimeo.com"}:
+        match = re.search(r"(?:video/)?(\\d{5,12})", parsed.path)
+        if match:
+            embed_url = f"https://player.vimeo.com/video/{match.group(1)}"
+
+    safe_label = html_escape(label, quote=True)
+    if embed_url:
+        return (
+            '<figure class="article-video"><div class="article-video-frame">'
+            f'<iframe src="{embed_url}" title="{safe_label}" loading="lazy" '
+            'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" '
+            'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'
+            f'<figcaption>{safe_label}</figcaption></figure>'
+        )
+    if parsed.scheme in {"http", "https"} and parsed.path.lower().endswith((".mp4", ".webm", ".ogg")):
+        safe_url = html_escape(url, quote=True)
+        return (
+            f'<figure class="article-video"><video controls preload="metadata" aria-label="{safe_label}">'
+            f'<source src="{safe_url}">O navegador não suporta este vídeo.</video>'
+            f'<figcaption>{safe_label}</figcaption></figure>'
+        )
+    return None
+
+
 @app.template_filter("markdown")
 def render_markdown(value):
-    html = markdown.markdown(value or "", extensions=["extra", "sane_lists"])
-    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td"})
-    return Markup(bleach.clean(html, tags=allowed, attributes={"a": ["href", "title", "rel"]}, protocols=["http", "https", "mailto"], strip=True))
+    embeds = {}
+    def video_placeholder(match):
+        embed = safe_video_embed(match.group(2), match.group(1))
+        if not embed:
+            return match.group(0)
+        token = f"VIDEOEMBEDTOKEN{len(embeds)}"
+        embeds[token] = embed
+        return token
+
+    prepared = VIDEO_DIRECTIVE.sub(video_placeholder, value or "")
+    rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
+    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
+    cleaned = bleach.clean(
+        rendered,
+        tags=allowed,
+        attributes={"a": ["href", "title", "rel"], "img": ["src", "alt", "title"]},
+        protocols=["http", "https", "mailto"],
+        strip=True,
+    )
+    for token, embed in embeds.items():
+        cleaned = cleaned.replace(f"<p>{token}</p>", embed).replace(token, embed)
+    return Markup(cleaned)
 
 
 @app.after_request
@@ -55,7 +114,7 @@ def security_headers(response):
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
-        "frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; upgrade-insecure-requests",
+        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com; upgrade-insecure-requests",
     )
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
