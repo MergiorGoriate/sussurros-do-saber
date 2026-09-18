@@ -10,7 +10,7 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
-from app import app, responsive_image_url, social_image_url  # noqa: E402
+from app import app, render_markdown, responsive_image_url, social_image_url  # noqa: E402
 from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Journal, db  # noqa: E402
 
@@ -87,6 +87,18 @@ class PlatformTests(unittest.TestCase):
             responsive_image_url("https://example.org/image.jpg", 480),
             "https://example.org/image.jpg",
         )
+
+    def test_markdown_renders_tables_and_safe_charts(self):
+        table = render_markdown("| Grupo | Valor |\n| --- | --- |\n| A | 12 |")
+        self.assertIn("<table>", str(table))
+        chart = render_markdown("[chart: bar|Participantes|Grupo A=12; Grupo B=8]")
+        self.assertIn('class="article-chart"', str(chart))
+        self.assertIn("<svg", str(chart))
+        self.assertIn("Participantes", str(chart))
+
+    def test_invalid_chart_data_is_not_embedded(self):
+        chart = render_markdown("[chart: pie|Teste|A=texto]")
+        self.assertNotIn('class="article-chart"', str(chart))
 
     def test_gzip_compression_for_public_html(self):
         response = self.client.get("/", headers={"Accept-Encoding": "gzip"})

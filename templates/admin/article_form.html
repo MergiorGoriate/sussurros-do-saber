@@ -8,7 +8,7 @@
     <label>Título<input id="titleField" name="title" value="{{ article.title or '' }}" required minlength="5"></label>
     <label>Resumo<textarea name="summary" rows="3" required>{{ article.summary or '' }}</textarea></label>
     <div class="editor-field"><span class="editor-label">Conteúdo em Markdown</span>
-      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button></div>
+      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button><button type="button" id="openTable" aria-expanded="false" aria-controls="tablePanel">Tabela</button><button type="button" id="openChart" aria-expanded="false" aria-controls="chartPanel">Gráfico</button></div>
       <section id="inlineImagePanel" class="inline-image-panel" hidden aria-labelledby="inlineImageTitle">
         <div class="inline-image-head"><div><strong id="inlineImageTitle">Inserir imagem no texto</strong><small>A imagem será colocada na posição actual do cursor.</small></div><button type="button" id="closeInlineImage" aria-label="Fechar">×</button></div>
         <div class="inline-image-fields">
@@ -27,6 +27,24 @@
           <label>Título ou legenda<input id="inlineVideoTitleInput" maxlength="180" placeholder="Descreva brevemente o conteúdo do vídeo"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineVideo" class="admin-primary">Inserir vídeo no artigo</button><span id="inlineVideoStatus" role="status" aria-live="polite"></span></div>
+      </section>
+      <section id="tablePanel" class="inline-image-panel" hidden aria-labelledby="tablePanelTitle">
+        <div class="inline-image-head"><div><strong id="tablePanelTitle">Inserir tabela</strong><small>Cria uma tabela editável em Markdown na posição actual do cursor.</small></div><button type="button" id="closeTable" aria-label="Fechar">×</button></div>
+        <div class="editor-generator-fields">
+          <label>Número de colunas<input id="tableColumns" type="number" min="2" max="8" value="3"></label>
+          <label>Número de linhas<input id="tableRows" type="number" min="1" max="20" value="3"></label>
+        </div>
+        <div class="inline-image-actions"><button type="button" id="insertTable" class="admin-primary">Inserir tabela</button><span id="tableStatus" role="status" aria-live="polite"></span></div>
+      </section>
+      <section id="chartPanel" class="inline-image-panel" hidden aria-labelledby="chartPanelTitle">
+        <div class="inline-image-head"><div><strong id="chartPanelTitle">Inserir gráfico</strong><small>Use até 12 categorias e valores numéricos não negativos.</small></div><button type="button" id="closeChart" aria-label="Fechar">×</button></div>
+        <div class="editor-generator-fields chart-fields">
+          <label>Tipo<select id="chartType"><option value="bar">Barras</option><option value="line">Linhas</option><option value="pie">Circular</option></select></label>
+          <label>Título<input id="chartTitle" maxlength="180" placeholder="Ex.: Participantes por faixa etária"></label>
+          <label class="generator-wide">Categorias <small>(separadas por vírgula)</small><input id="chartLabels" placeholder="18–25, 26–35, 36–45"></label>
+          <label class="generator-wide">Valores <small>(separados por vírgula)</small><input id="chartValues" placeholder="42, 35, 23"></label>
+        </div>
+        <div class="inline-image-actions"><button type="button" id="insertChart" class="admin-primary">Inserir gráfico</button><span id="chartStatus" role="status" aria-live="polite"></span></div>
       </section>
       <div class="editor-workspace"><textarea id="bodyEditor" name="body" rows="20" placeholder="Escreva em Markdown...">{{ article.body or '' }}</textarea><div><span class="preview-title">Pré-visualização</span><div id="markdownPreview" class="markdown-preview"></div></div></div>
     </div>

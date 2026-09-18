@@ -10,6 +10,7 @@ from html import escape as html_escape
 from urllib.parse import parse_qs, quote, urlparse
 import bleach
 import markdown
+import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -40,6 +41,7 @@ app.register_blueprint(admin_bp)
 
 IMAGE_DIRECTIVE = re.compile(r"!\[([^\]]*)\]\((https?://[^\s)]+)\)", re.I)
 VIDEO_DIRECTIVE = re.compile(r"^\[video:\s*([^\]]*)\]\((https?://[^\s)]+)\)\s*$", re.I | re.M)
+CHART_DIRECTIVE = re.compile(r"^\[chart:\s*(bar|line|pie)\|([^\]\n]{1,180})\|([^\]\n]{1,1200})\]\s*$", re.I | re.M)
 
 
 def safe_video_embed(url, title):
@@ -79,6 +81,93 @@ def safe_video_embed(url, title):
     return None
 
 
+def safe_chart_embed(chart_type, title, raw_data):
+    chart_type = chart_type.lower()
+    title = (title or "Gráfico").strip()[:180]
+    points = []
+    for item in raw_data.split(";")[:12]:
+        if "=" not in item:
+            continue
+        label, raw_value = item.rsplit("=", 1)
+        label = label.strip()[:40]
+        try:
+            value = float(raw_value.strip().replace(",", "."))
+        except ValueError:
+            continue
+        if label and math.isfinite(value) and value >= 0:
+            points.append((label, value))
+    if not points or max(value for _, value in points) <= 0:
+        return None
+
+    safe_title = html_escape(title, quote=True)
+    colours = ["#087f72", "#e85d4a", "#2f6db0", "#d69e2e", "#805ad5", "#319795",
+               "#c05621", "#4a5568", "#38a169", "#b83280", "#718096", "#dd6b20"]
+    svg = [f'<svg viewBox="0 0 800 440" role="img" aria-label="{safe_title}">',
+           f"<title>{safe_title}</title>", '<rect width="800" height="440" fill="#fff"/>']
+
+    if chart_type in {"bar", "line"}:
+        maximum = max(value for _, value in points)
+        left, top, width, height = 80, 45, 680, 285
+        svg.extend([
+            f'<line x1="{left}" y1="{top}" x2="{left}" y2="{top + height}" class="chart-axis"/>',
+            f'<line x1="{left}" y1="{top + height}" x2="{left + width}" y2="{top + height}" class="chart-axis"/>',
+        ])
+        for tick in range(5):
+            value = maximum * tick / 4
+            y = top + height - (height * tick / 4)
+            svg.append(f'<line x1="{left}" y1="{y:.1f}" x2="{left + width}" y2="{y:.1f}" class="chart-grid"/>')
+            svg.append(f'<text x="{left - 10}" y="{y + 5:.1f}" text-anchor="end" class="chart-value">{value:g}</text>')
+        step = width / len(points)
+        if chart_type == "bar":
+            bar_width = min(58, step * .65)
+            for index, (label, value) in enumerate(points):
+                x = left + index * step + (step - bar_width) / 2
+                bar_height = height * value / maximum
+                y = top + height - bar_height
+                safe_label = html_escape(label)
+                svg.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_width:.1f}" height="{bar_height:.1f}" rx="5" fill="{colours[index % len(colours)]}"/>')
+                svg.append(f'<text x="{x + bar_width / 2:.1f}" y="{y - 8:.1f}" text-anchor="middle" class="chart-value">{value:g}</text>')
+                svg.append(f'<text x="{x + bar_width / 2:.1f}" y="{top + height + 24}" text-anchor="middle" class="chart-label">{safe_label}</text>')
+        else:
+            coords = []
+            for index, (label, value) in enumerate(points):
+                x = left + (width / max(1, len(points) - 1)) * index
+                y = top + height - height * value / maximum
+                coords.append(f"{x:.1f},{y:.1f}")
+                safe_label = html_escape(label)
+                svg.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" fill="{colours[index % len(colours)]}"/>')
+                svg.append(f'<text x="{x:.1f}" y="{y - 12:.1f}" text-anchor="middle" class="chart-value">{value:g}</text>')
+                svg.append(f'<text x="{x:.1f}" y="{top + height + 24}" text-anchor="middle" class="chart-label">{safe_label}</text>')
+            svg.insert(-len(points) * 3, f'<polyline points="{" ".join(coords)}" class="chart-line"/>')
+    else:
+        total = sum(value for _, value in points)
+        cx, cy, radius = 275, 220, 145
+        start = -math.pi / 2
+        if len(points) == 1:
+            svg.append(f'<circle cx="{cx}" cy="{cy}" r="{radius}" fill="{colours[0]}"/>')
+        else:
+            for index, (_, value) in enumerate(points):
+                end = start + 2 * math.pi * value / total
+                x1, y1 = cx + radius * math.cos(start), cy + radius * math.sin(start)
+                x2, y2 = cx + radius * math.cos(end), cy + radius * math.sin(end)
+                large = 1 if end - start > math.pi else 0
+                svg.append(f'<path d="M {cx} {cy} L {x1:.2f} {y1:.2f} A {radius} {radius} 0 {large} 1 {x2:.2f} {y2:.2f} Z" fill="{colours[index % len(colours)]}"/>')
+                start = end
+        for index, (label, value) in enumerate(points):
+            safe_label = html_escape(label)
+            percent = value / total * 100
+            y = 75 + index * 27
+            svg.append(f'<rect x="500" y="{y - 13}" width="16" height="16" rx="3" fill="{colours[index % len(colours)]}"/>')
+            svg.append(f'<text x="526" y="{y}" class="chart-legend">{safe_label}: {value:g} ({percent:.1f}%)</text>')
+
+    svg.append("</svg>")
+    return (
+        '<figure class="article-chart">'
+        + "".join(svg)
+        + f"<figcaption>{safe_title}</figcaption></figure>"
+    )
+
+
 @app.template_filter("markdown")
 def render_markdown(value):
     embeds = {}
@@ -105,8 +194,13 @@ def render_markdown(value):
         embed = safe_video_embed(match.group(2), match.group(1))
         return store_embed("VIDEO", embed) if embed else match.group(0)
 
+    def chart_placeholder(match):
+        embed = safe_chart_embed(match.group(1), match.group(2), match.group(3))
+        return store_embed("CHART", embed) if embed else match.group(0)
+
     prepared = IMAGE_DIRECTIVE.sub(image_placeholder, value or "")
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
+    prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
     rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
     allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
     cleaned = bleach.clean(

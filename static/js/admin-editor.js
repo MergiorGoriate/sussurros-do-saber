@@ -22,12 +22,39 @@
     } catch {}
     return `<p><a href="${escape(rawUrl)}">Vídeo: ${title}</a></p>`;
   };
+  const tablePreview = (block) => {
+    const rows=block.trim().split('\n').map(line=>line.trim().replace(/^\||\|$/g,'').split('|').map(cell=>cell.trim()));
+    if(rows.length<2||!rows[1].every(cell=>/^:?-{3,}:?$/.test(cell)))return block;
+    const header='<thead><tr>'+rows[0].map(cell=>`<th>${cell}</th>`).join('')+'</tr></thead>';
+    const body='<tbody>'+rows.slice(2).map(row=>'<tr>'+rows[0].map((_,index)=>`<td>${row[index]||''}</td>`).join('')+'</tr>').join('')+'</tbody>';
+    return `<div class="preview-table-wrapper"><table>${header}${body}</table></div>`;
+  };
+  const chartPreview = (type,title,data) => {
+    const points=data.split(';').slice(0,12).map(item=>{const index=item.lastIndexOf('=');return index>0?{label:item.slice(0,index).trim(),value:Number(item.slice(index+1).trim().replace(',','.'))}:null}).filter(point=>point&&point.label&&Number.isFinite(point.value)&&point.value>=0);
+    const maximum=Math.max(...points.map(point=>point.value),0);
+    if(!points.length||maximum<=0)return '<p class="preview-error">Dados do gráfico inválidos.</p>';
+    const colours=['#087f72','#e85d4a','#2f6db0','#d69e2e','#805ad5','#319795','#c05621','#4a5568','#38a169','#b83280','#718096','#dd6b20'];
+    let shapes='';
+    if(type==='bar'){
+      const step=680/points.length,width=Math.min(58,step*.65);
+      points.forEach((point,index)=>{const height=260*point.value/maximum,x=80+index*step+(step-width)/2,y=315-height;shapes+=`<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="5" fill="${colours[index%colours.length]}"/><text x="${x+width/2}" y="${y-7}" text-anchor="middle">${point.value}</text><text x="${x+width/2}" y="342" text-anchor="middle">${point.label}</text>`;});
+    }else if(type==='line'){
+      const coords=points.map((point,index)=>({x:80+(680/Math.max(1,points.length-1))*index,y:315-260*point.value/maximum,...point}));
+      shapes=`<polyline points="${coords.map(point=>`${point.x},${point.y}`).join(' ')}" fill="none" stroke="#087f72" stroke-width="4"/>`+coords.map((point,index)=>`<circle cx="${point.x}" cy="${point.y}" r="6" fill="${colours[index%colours.length]}"/><text x="${point.x}" y="${point.y-12}" text-anchor="middle">${point.value}</text><text x="${point.x}" y="342" text-anchor="middle">${point.label}</text>`).join('');
+    }else{
+      const total=points.reduce((sum,point)=>sum+point.value,0);let offset=0;
+      shapes=points.map((point,index)=>{const part=point.value/total*100,current=offset;offset+=part;return `<circle cx="270" cy="210" r="125" fill="none" stroke="${colours[index%colours.length]}" stroke-width="250" pathLength="100" stroke-dasharray="${part} ${100-part}" stroke-dashoffset="${-current}" transform="rotate(-90 270 210)"/><rect x="500" y="${75+index*27}" width="16" height="16" rx="3" fill="${colours[index%colours.length]}"/><text x="525" y="${89+index*27}">${point.label}: ${point.value}</text>`;}).join('');
+    }
+    return `<figure class="preview-chart"><svg viewBox="0 0 800 390" role="img" aria-label="${title}"><line x1="80" y1="315" x2="760" y2="315" stroke="#94a3b8"/>${shapes}</svg><figcaption>${title}</figcaption></figure>`;
+  };
   const render = () => {
     const html = escape(editor.value)
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
       .replace(/\[video:\s*([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, (_,title,url) => videoPreview(title,url))
+      .replace(/^\[chart:\s*(bar|line|pie)\|([^\]\n]+)\|([^\]\n]+)\]\s*$/gim, (_,type,title,data) => chartPreview(type.toLowerCase(),title,data))
+      .replace(/((?:^\|.*\|\s*$\n?){2,})/gm, (_,block) => tablePreview(block))
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<figure><img src="$2" alt="$1" loading="lazy"></figure>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -127,6 +154,35 @@
       editor.setRangeText(`\n\n[video: ${title}](${url})\n\n`,videoInsertionPoint,videoInsertionPoint,'end');
       render();videoUrl.value='';videoTitle.value='';videoStatus.textContent='Vídeo inserido no artigo.';setVideoPanel(false);editor.focus();
     }catch{videoStatus.textContent='O endereço do vídeo não é válido.'}
+  });
+
+  const tablePanel=document.querySelector('#tablePanel'),openTable=document.querySelector('#openTable'),closeTable=document.querySelector('#closeTable'),insertTable=document.querySelector('#insertTable'),tableColumns=document.querySelector('#tableColumns'),tableRows=document.querySelector('#tableRows'),tableStatus=document.querySelector('#tableStatus');
+  let tableInsertionPoint=0;
+  const setTablePanel=(open)=>{tablePanel.hidden=!open;openTable.setAttribute('aria-expanded',String(open));if(open){tableInsertionPoint=editor.selectionStart;tableColumns.focus()}else{openTable.focus()}};
+  openTable?.addEventListener('click',()=>setTablePanel(tablePanel.hidden));
+  closeTable?.addEventListener('click',()=>setTablePanel(false));
+  insertTable?.addEventListener('click',()=>{
+    const columns=Math.max(2,Math.min(8,Number(tableColumns.value)||3)),rows=Math.max(1,Math.min(20,Number(tableRows.value)||3));
+    const header='| '+Array.from({length:columns},(_,index)=>`Coluna ${index+1}`).join(' | ')+' |';
+    const separator='| '+Array(columns).fill('---').join(' | ')+' |';
+    const body=Array.from({length:rows},()=>('| '+Array(columns).fill('Conteúdo').join(' | ')+' |')).join('\n');
+    editor.setRangeText(`\n\n${header}\n${separator}\n${body}\n\n`,tableInsertionPoint,tableInsertionPoint,'end');
+    render();tableStatus.textContent='Tabela inserida. Edite os títulos e conteúdos no texto.';setTablePanel(false);editor.focus();
+  });
+
+  const chartPanel=document.querySelector('#chartPanel'),openChart=document.querySelector('#openChart'),closeChart=document.querySelector('#closeChart'),insertChart=document.querySelector('#insertChart'),chartType=document.querySelector('#chartType'),chartTitle=document.querySelector('#chartTitle'),chartLabels=document.querySelector('#chartLabels'),chartValues=document.querySelector('#chartValues'),chartStatus=document.querySelector('#chartStatus');
+  let chartInsertionPoint=0;
+  const setChartPanel=(open)=>{chartPanel.hidden=!open;openChart.setAttribute('aria-expanded',String(open));if(open){chartInsertionPoint=editor.selectionStart;chartTitle.focus()}else{openChart.focus()}};
+  openChart?.addEventListener('click',()=>setChartPanel(chartPanel.hidden));
+  closeChart?.addEventListener('click',()=>setChartPanel(false));
+  insertChart?.addEventListener('click',()=>{
+    const title=cleanText(chartTitle.value),labels=chartLabels.value.split(',').map(cleanText).filter(Boolean),values=chartValues.value.split(',').map(value=>Number(value.trim().replace(',','.')));
+    if(!title){chartStatus.textContent='Escreva o título do gráfico.';chartTitle.focus();return}
+    if(labels.length<1||labels.length>12||labels.length!==values.length){chartStatus.textContent='Informe entre 1 e 12 categorias e a mesma quantidade de valores.';return}
+    if(values.some(value=>!Number.isFinite(value)||value<0)||Math.max(...values)<=0){chartStatus.textContent='Use valores numéricos não negativos e pelo menos um valor maior que zero.';return}
+    const data=labels.map((label,index)=>`${label.replace(/[;=|\[\]]/g,' ')}=${values[index]}`).join('; ');
+    editor.setRangeText(`\n\n[chart: ${chartType.value}|${title.replace(/[|\[\]]/g,' ')}|${data}]\n\n`,chartInsertionPoint,chartInsertionPoint,'end');
+    render();chartTitle.value='';chartLabels.value='';chartValues.value='';chartStatus.textContent='Gráfico inserido no artigo.';setChartPanel(false);editor.focus();
   });
 
   editor.addEventListener('input', render);
