@@ -489,3 +489,10 @@ input,textarea,select,button{font-size:16px}
 .danger-button:hover{background:#fff0ee}
 .protected-account{display:block;padding:0 16px 16px;color:#697978}
 @media(max-width:700px){.administrator-summary{flex-direction:column}.administrator-summary .status{align-self:flex-start}}
+
+
+/* Fotografias dos autores */
+.author-admin-heading{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.author-admin-heading small{margin:3px 0 0}
+.author-admin-photo{width:64px;height:64px;flex:0 0 64px;border-radius:50%;object-fit:cover;border:2px solid #dce8e6;background:#edf4f3}
+.author-admin-fallback{display:grid;place-items:center;color:#087f73;font-weight:800}
