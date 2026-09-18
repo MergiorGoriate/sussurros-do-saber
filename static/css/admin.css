@@ -400,3 +400,30 @@ select {
     padding: 16px;
   }
 }
+
+
+/* Ajustes responsivos do painel */
+.admin-sidebar nav{-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.table-wrap{max-width:100%;-webkit-overflow-scrolling:touch}
+table{min-width:680px}
+input,textarea,select,button{font-size:16px}
+@media(max-width:850px){
+  .admin-sidebar{padding:16px;position:sticky;top:0;z-index:20}
+  .admin-brand img{width:38px;height:38px}
+  .admin-sidebar nav{gap:6px;margin-top:12px;padding-bottom:4px}
+  .admin-sidebar nav a{white-space:nowrap;min-height:44px;display:flex;align-items:center}
+  .admin-header h1{font-size:clamp(1.8rem,7vw,2.4rem)}
+  .admin-panel,.metric-grid article,.editor-main,.editor-side{padding:clamp(15px,4vw,22px)}
+  .actions{flex-wrap:wrap}
+}
+@media(max-width:520px){
+  .admin-sidebar{position:static}
+  .admin-main{padding:14px}
+  .panel-head,.message-grid article header{align-items:flex-start;flex-direction:column;gap:10px}
+  .admin-list>a,.admin-list>div{align-items:flex-start;flex-direction:column}
+  .two-columns{gap:14px}
+  .login-card{padding:24px 20px}
+  .editor-toolbar{overflow-x:auto;flex-wrap:nowrap}
+  .editor-toolbar button{white-space:nowrap;min-height:42px}
+  .editor-workspace textarea,.markdown-preview{min-height:360px}
+}
