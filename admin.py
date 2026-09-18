@@ -12,7 +12,7 @@ from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_t
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
-from storage import ImageUploadError, upload_article_image
+from storage import ImageUploadError, upload_article_image, upload_author_photo
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -354,16 +354,38 @@ def authors():
     if request.method == "POST":
         validate_csrf()
         name = request.form.get("name", "").strip()
-        if name:
-            author_id = request.form.get("author_id")
-            author = db.session.get(Author, int(author_id)) if author_id else Author()
+        author_id = request.form.get("author_id")
+        author = db.session.get(Author, int(author_id)) if author_id else Author()
+        if author_id and not author:
+            abort(404)
+
+        email = request.form.get("email", "").strip() or None
+        photo_url = request.form.get("photo_url", "").strip()
+        photo_file = request.files.get("photo_file")
+        if not name:
+            flash("Informe o nome do autor.", "error")
+        elif photo_url and not re.fullmatch(r"https?://[^\\s]+", photo_url, re.I):
+            flash("Informe um endereço válido para a fotografia.", "error")
+        else:
+            try:
+                if request.form.get("remove_photo") == "on":
+                    author.photo = ""
+                if photo_url:
+                    author.photo = photo_url
+                if photo_file and photo_file.filename:
+                    author.photo = upload_author_photo(photo_file)
+            except ImageUploadError as error:
+                flash(str(error), "error")
+                return redirect(url_for("admin.authors"))
+
             author.name = name
-            author.email = request.form.get("email", "").strip() or None
+            author.email = email
             author.bio = request.form.get("bio", "").strip()
             if not author.id:
                 db.session.add(author)
             db.session.commit()
-            flash("Autor guardado.", "success")
+            flash("Autor guardado com sucesso.", "success")
+            return redirect(url_for("admin.authors"))
     return render_template("admin/authors.html", authors=Author.query.order_by(Author.name).all())
 
 

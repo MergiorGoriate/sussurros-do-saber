@@ -77,3 +77,17 @@ main,.article-page,.article-header,.article-cover,.prose-article{min-width:0}
     body>.topline,body>.site-header,body>main,body>footer{width:100dvw}
   }
 }
+
+
+/* Perfis dos autores */
+.author-profile{display:grid;grid-template-columns:128px minmax(0,1fr);align-items:center;gap:28px;padding:28px;border:1px solid rgba(16,24,32,.12);border-radius:22px;background:#fff}
+.author-profile-photo{width:128px;height:128px;border-radius:50%;object-fit:cover;border:4px solid #e5f3f1;background:#e5f3f1}
+.author-monogram{display:grid;place-items:center;color:#087f73;font:700 2rem Georgia,serif}
+.author-profile h2{margin:.35rem 0;font:700 clamp(1.7rem,3vw,2.4rem) Georgia,serif}
+.author-profile p{max-width:760px;color:#536064;line-height:1.75}
+.article-author-line{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:22px;font-size:.92rem;font-weight:700}
+.article-author-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #d9ebe8;background:#e5f3f1}
+.article-author-fallback{display:grid;place-items:center;color:#087f73;font-size:.72rem}
+.dark .author-profile{border-color:rgba(255,255,255,.14);background:#0b1719}
+.dark .author-profile p{color:#aebabc}
+@media(max-width:640px){.author-profile{grid-template-columns:1fr;text-align:center}.author-profile-photo{width:112px;height:112px;margin:auto}.author-profile p{margin-inline:auto}}

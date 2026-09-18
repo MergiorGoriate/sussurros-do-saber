@@ -11,7 +11,7 @@ os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app  # noqa: E402
-from models import AdminUser, Article, db  # noqa: E402
+from models import AdminUser, Article, Author, db  # noqa: E402
 
 
 class PlatformTests(unittest.TestCase):
@@ -98,6 +98,25 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         with app.app_context():
             self.assertIsNone(db.session.get(AdminUser, administrator_id))
+
+    def test_author_photo_url_is_saved_and_rendered(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["csrf_token"] = "author-csrf"
+        response = self.client.post("/admin/autores", data={
+            "csrf_token": "author-csrf",
+            "name": "Autora com Fotografia",
+            "email": "autora.foto@example.org",
+            "bio": "Investigadora e divulgadora científica.",
+            "photo_url": "https://images.example.org/autora.webp",
+        })
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            author = Author.query.filter_by(email="autora.foto@example.org").first()
+            self.assertEqual(author.photo, "https://images.example.org/autora.webp")
+        response = self.client.get("/autores")
+        self.assertIn(b"https://images.example.org/autora.webp", response.data)
 
     def test_secondary_administrator_cannot_manage_accounts(self):
         with self.client.session_transaction() as session:
