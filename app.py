@@ -1,4 +1,4 @@
-from flask import Flask, Response, jsonify, render_template, request, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
 from xml.sax.saxutils import escape
 import requests
 import os
@@ -199,13 +199,21 @@ def articles():
         results = results.join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like), db.func.lower(Author.name).like(like)))
     return render_template("articles.html", articles=results.order_by(Article.published_at.desc()).all(), query=request.args.get("q", ""))
 
+@app.get("/artigo/<slug>")
+def article(slug):
+    selected = Article.public_query().filter_by(slug=slug).first()
+    if not selected:
+        return render_template("404.html"), 404
+    related = Article.public_query().filter(Article.id != selected.id).order_by(Article.published_at.desc()).limit(3).all()
+    return render_template("article.html", article=selected, related=related)
+
+
 @app.get("/artigo/<int:article_id>")
-def article(article_id):
+def article_legacy(article_id):
     selected = Article.public_query().filter_by(id=article_id).first()
     if not selected:
         return render_template("404.html"), 404
-    related = Article.public_query().filter(Article.id != article_id).order_by(Article.published_at.desc()).limit(3).all()
-    return render_template("article.html", article=selected, related=related)
+    return redirect(url_for("article", slug=selected.slug), code=301)
 
 @app.get("/sobre")
 def about():
@@ -285,20 +293,20 @@ def api_articles():
     if query:
         like = f"%{query}%"
         items = items.join(Category).join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Category.name).like(like), db.func.lower(Author.name).like(like)))
-    return jsonify([{"id": a.id, "category": a.category, "title": a.title, "summary": a.summary, "author": a.author, "date": a.date, "read_time": a.read_time, "image": a.image} for a in items.all()])
+    return jsonify([{"id": a.id, "slug": a.slug, "category": a.category, "title": a.title, "summary": a.summary, "author": a.author, "date": a.date, "read_time": a.read_time, "image": a.image} for a in items.all()])
 
 @app.get("/feed.xml")
 def feed():
     articles = Article.public_query().order_by(Article.published_at.desc()).all()
-    items = "".join(f"<item><title>{escape(a.title)}</title><link>{SITE_URL}{url_for('article', article_id=a.id)}</link><guid isPermaLink=\"true\">{SITE_URL}{url_for('article', article_id=a.id)}</guid><pubDate>{format_datetime((a.published_at or a.created_at).replace(tzinfo=timezone.utc))}</pubDate><description>{escape(a.summary)}</description></item>" for a in articles)
+    items = "".join(f"<item><title>{escape(a.title)}</title><link>{SITE_URL}{url_for('article', slug=a.slug)}</link><guid isPermaLink=\"true\">{SITE_URL}{url_for('article', slug=a.slug)}</guid><pubDate>{format_datetime((a.published_at or a.created_at).replace(tzinfo=timezone.utc))}</pubDate><description>{escape(a.summary)}</description></item>" for a in articles)
     last_build = format_datetime(datetime.now(timezone.utc))
     xml = f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sussurros do Saber</title><link>{SITE_URL}/</link><description>Ciência que se compreende</description><language>pt-MZ</language><lastBuildDate>{last_build}</lastBuildDate>{items}</channel></rss>'
     return Response(xml, mimetype="application/rss+xml")
 
 @app.get("/sitemap.xml")
 def sitemap():
-    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", article_id=a.id) for a in Article.public_query().all()]
-    article_updates = {url_for("article", article_id=a.id): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
+    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", slug=a.slug) for a in Article.public_query().all()]
+    article_updates = {url_for("article", slug=a.slug): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
     urls = "".join(f"<url><loc>{SITE_URL}{path}</loc>{f'<lastmod>{article_updates[path]}</lastmod>' if path in article_updates else ''}</url>" for path in paths)
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
 

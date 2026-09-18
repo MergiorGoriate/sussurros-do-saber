@@ -5,7 +5,7 @@
 <form method="post" enctype="multipart/form-data" class="editor-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <section class="editor-main">
-    <label>Título<input name="title" value="{{ article.title or '' }}" required minlength="5"></label>
+    <label>Título<input id="titleField" name="title" value="{{ article.title or '' }}" required minlength="5"></label>
     <label>Resumo<textarea name="summary" rows="3" required>{{ article.summary or '' }}</textarea></label>
     <div class="editor-field"><span class="editor-label">Conteúdo em Markdown</span>
       <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button></div>
@@ -42,7 +42,11 @@
     <label>Programar para<input name="scheduled_at" type="datetime-local" value="{{ article.scheduled_at.strftime('%Y-%m-%dT%H:%M') if article.scheduled_at else '' }}"></label>
     <label>Autor<select name="author_id" required>{% for author in authors %}<option value="{{ author.id }}" {% if article.author_id==author.id %}selected{% endif %}>{{ author.name }}</option>{% endfor %}</select></label>
     <label>Categoria<select name="category_id" required>{% for category in categories %}<option value="{{ category.id }}" {% if article.category_id==category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
-    <label>Tempo de leitura<input name="read_minutes" type="number" min="1" value="{{ article.read_minutes or 5 }}"></label><label>Slug<input name="slug" value="{{ article.slug or '' }}" placeholder="gerado automaticamente"></label>
+    <label>Tempo de leitura<input name="read_minutes" type="number" min="1" value="{{ article.read_minutes or 5 }}"></label>
+    <label>Endereço personalizado
+      <div class="slug-field"><span>/artigo/</span><input id="slugField" name="slug" value="{{ article.slug or '' }}" placeholder="gerado-a-partir-do-titulo" pattern="[a-z0-9-]+" maxlength="260"></div>
+      <small id="slugPreview" class="url-preview">URL: {{ site_url }}/artigo/{{ article.slug or 'gerado-a-partir-do-titulo' }}</small>
+    </label>
     <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button class="admin-primary">Guardar artigo</button>
   </aside>
 </form><script src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>

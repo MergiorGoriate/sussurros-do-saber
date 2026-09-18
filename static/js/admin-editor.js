@@ -132,6 +132,19 @@
   editor.addEventListener('input', render);
   render();
 
+  const titleField=document.querySelector('#titleField');
+  const slugField=document.querySelector('#slugField');
+  const slugPreview=document.querySelector('#slugPreview');
+  const slugify=(value)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,260);
+  let slugWasEdited=Boolean(slugField?.value);
+  const updateSlugPreview=()=>{
+    if(!slugWasEdited&&slugField)slugField.value=slugify(titleField?.value||'');
+    if(slugPreview)slugPreview.textContent=`URL: ${location.origin}/artigo/${slugField?.value||'gerado-a-partir-do-titulo'}`;
+  };
+  slugField?.addEventListener('input',()=>{slugWasEdited=true;const cursor=slugField.selectionStart;slugField.value=slugify(slugField.value);slugField.setSelectionRange(cursor,cursor);updateSlugPreview()});
+  titleField?.addEventListener('input',updateSlugPreview);
+  updateSlugPreview();
+
   const url=document.querySelector('#imageUrl'),file=document.querySelector('#imageFile'),image=document.querySelector('#imagePreview');
   url?.addEventListener('input',()=>{image.src=url.value;image.hidden=!url.value});
   file?.addEventListener('change',()=>{if(file.files[0]){image.src=URL.createObjectURL(file.files[0]);image.hidden=false}});
