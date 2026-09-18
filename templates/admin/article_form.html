@@ -8,7 +8,7 @@
     <label>Título<input name="title" value="{{ article.title or '' }}" required minlength="5"></label>
     <label>Resumo<textarea name="summary" rows="3" required>{{ article.summary or '' }}</textarea></label>
     <div class="editor-field"><span class="editor-label">Conteúdo em Markdown</span>
-      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button></div>
+      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button></div>
       <section id="inlineImagePanel" class="inline-image-panel" hidden aria-labelledby="inlineImageTitle">
         <div class="inline-image-head"><div><strong id="inlineImageTitle">Inserir imagem no texto</strong><small>A imagem será colocada na posição actual do cursor.</small></div><button type="button" id="closeInlineImage" aria-label="Fechar">×</button></div>
         <div class="inline-image-fields">
@@ -19,6 +19,14 @@
           <label>Legenda <span class="optional">(opcional)</span><input id="inlineImageCaption" maxlength="300" placeholder="Fonte, autor ou explicação breve"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineImage" class="admin-primary">Inserir no artigo</button><span id="inlineImageStatus" role="status" aria-live="polite"></span></div>
+      </section>
+      <section id="inlineVideoPanel" class="inline-image-panel inline-video-panel" hidden aria-labelledby="inlineVideoTitle">
+        <div class="inline-image-head"><div><strong id="inlineVideoTitle">Inserir vídeo no texto</strong><small>Compatível com YouTube, Vimeo e ficheiros MP4, WebM ou OGG.</small></div><button type="button" id="closeInlineVideo" aria-label="Fechar">×</button></div>
+        <div class="inline-video-fields">
+          <label>Endereço do vídeo<input id="inlineVideoUrl" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=..." required></label>
+          <label>Título ou legenda<input id="inlineVideoTitleInput" maxlength="180" placeholder="Descreva brevemente o conteúdo do vídeo" required></label>
+        </div>
+        <div class="inline-image-actions"><button type="button" id="insertInlineVideo" class="admin-primary">Inserir vídeo no artigo</button><span id="inlineVideoStatus" role="status" aria-live="polite"></span></div>
       </section>
       <div class="editor-workspace"><textarea id="bodyEditor" name="body" rows="20" placeholder="Escreva em Markdown...">{{ article.body or '' }}</textarea><div><span class="preview-title">Pré-visualização</span><div id="markdownPreview" class="markdown-preview"></div></div></div>
     </div>
