@@ -428,6 +428,18 @@ def ensure_admin_columns():
             db.session.commit()
 
 
+def ensure_author_columns():
+    inspector = inspect(db.engine)
+    if "author" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("author")}
+    if "photo" not in existing:
+        db.session.execute(text(
+            'ALTER TABLE author ADD COLUMN photo VARCHAR(600) DEFAULT \'\''
+        ))
+        db.session.commit()
+
+
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
     additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
@@ -461,6 +473,7 @@ def ensure_article_slugs():
 def seed_database():
     db.create_all()
     ensure_admin_columns()
+    ensure_author_columns()
     ensure_article_columns()
     if Article.query.first():
         ensure_article_slugs()
