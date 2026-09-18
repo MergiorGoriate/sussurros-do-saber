@@ -39,6 +39,24 @@ class Category(db.Model):
     articles = db.relationship("Article", back_populates="category_rel")
 
 
+class Journal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(180), nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    abbreviation = db.Column(db.String(30), default="")
+    field = db.Column(db.String(140), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    issn = db.Column(db.String(9), default="")
+    frequency = db.Column(db.String(80), default="")
+    current_issue = db.Column(db.String(120), default="")
+    guidelines = db.Column(db.Text, default="")
+    cover_image = db.Column(db.String(600), default="")
+    cover_alt = db.Column(db.String(300), default="")
+    published = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+
 class Article(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(240), nullable=False)

@@ -11,8 +11,8 @@ import requests
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
-from storage import ImageUploadError, upload_article_image, upload_author_photo
+from models import AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
+from storage import ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -428,6 +428,99 @@ def delete_category(category_id):
     else:
         db.session.delete(category); db.session.commit(); flash("Categoria eliminada.", "success")
     return redirect(url_for("admin.categories"))
+
+
+@admin_bp.get("/revistas")
+@login_required
+def journals():
+    return render_template(
+        "admin/journals.html",
+        journals=Journal.query.order_by(Journal.updated_at.desc()).all(),
+    )
+
+
+@admin_bp.route("/revistas/nova", methods=["GET", "POST"])
+@admin_bp.route("/revistas/<int:journal_id>/editar", methods=["GET", "POST"])
+@login_required
+def journal_form(journal_id=None):
+    journal = db.session.get(Journal, journal_id) if journal_id else Journal()
+    if journal_id and not journal:
+        abort(404)
+
+    if request.method == "POST":
+        validate_csrf()
+        title = request.form.get("title", "").strip()
+        field = request.form.get("field", "").strip()
+        description = request.form.get("description", "").strip()
+        issn = request.form.get("issn", "").strip().upper()
+        base_slug = slugify(request.form.get("slug") or title)
+        duplicate = Journal.query.filter(Journal.slug == base_slug, Journal.id != journal.id).first()
+        cover_url = request.form.get("cover_image", "").strip()
+        cover_file = request.files.get("cover_file")
+
+        if not 3 <= len(title) <= 180:
+            flash("O título deve ter entre 3 e 180 caracteres.", "error")
+        elif not field or len(field) > 140:
+            flash("Informe uma área científica válida.", "error")
+        elif not 20 <= len(description) <= 4000:
+            flash("A descrição deve ter entre 20 e 4000 caracteres.", "error")
+        elif not base_slug:
+            flash("Não foi possível gerar o endereço da revista.", "error")
+        elif duplicate:
+            flash("Já existe uma revista com este endereço.", "error")
+        elif issn and not re.fullmatch(r"[0-9]{4}-[0-9]{3}[0-9X]", issn):
+            flash("O ISSN deve seguir o formato 1234-567X.", "error")
+        elif cover_url and not re.fullmatch(r"https?://[^\\s]+", cover_url, re.I):
+            flash("Informe um endereço válido para a capa.", "error")
+        else:
+            try:
+                if cover_file and cover_file.filename:
+                    cover_url = upload_journal_cover(cover_file)
+            except ImageUploadError as error:
+                flash(str(error), "error")
+                return render_template("admin/journal_form.html", journal=journal)
+
+            journal.title = title
+            journal.slug = base_slug
+            journal.abbreviation = request.form.get("abbreviation", "").strip().upper()
+            journal.field = field
+            journal.description = description
+            journal.issn = issn
+            journal.frequency = request.form.get("frequency", "").strip()
+            journal.current_issue = request.form.get("current_issue", "").strip()
+            journal.guidelines = request.form.get("guidelines", "").strip()
+            journal.cover_image = cover_url
+            journal.cover_alt = request.form.get("cover_alt", "").strip()
+            journal.published = request.form.get("published") == "on"
+            if not journal.id:
+                db.session.add(journal)
+            db.session.commit()
+            flash("Revista guardada com sucesso.", "success")
+            return redirect(url_for("admin.journals"))
+
+    return render_template("admin/journal_form.html", journal=journal)
+
+
+@admin_bp.post("/revistas/<int:journal_id>/publicacao")
+@login_required
+def toggle_journal(journal_id):
+    validate_csrf()
+    journal = db.get_or_404(Journal, journal_id)
+    journal.published = not journal.published
+    db.session.commit()
+    flash("Revista publicada." if journal.published else "Revista ocultada.", "success")
+    return redirect(url_for("admin.journals"))
+
+
+@admin_bp.post("/revistas/<int:journal_id>/eliminar")
+@login_required
+def delete_journal(journal_id):
+    validate_csrf()
+    journal = db.get_or_404(Journal, journal_id)
+    db.session.delete(journal)
+    db.session.commit()
+    flash("Revista eliminada.", "success")
+    return redirect(url_for("admin.journals"))
 
 
 @admin_bp.get("/contactos")
