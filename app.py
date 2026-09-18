@@ -14,7 +14,7 @@ from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from admin import admin_bp, slugify
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -167,7 +167,7 @@ SEED_ARTICLES = [
     {"id": 6, "category": "Tecnologia", "title": "Python na investigação: da folha de cálculo à análise reprodutível", "summary": "Como estudantes podem automatizar tarefas, explorar dados e documentar melhor as suas análises.", "author": "Mergior Goriate", "date": "28 Agosto 2026", "read_time": "8 min", "image": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1000&q=85"},
 ]
 
-JOURNALS = [
+DEFAULT_JOURNALS = [
     {"slug": "cadernos-de-biodiversidade", "title": "Cadernos de Biodiversidade", "abbr": "CBIO", "field": "Biologia e Ecologia", "description": "Estudos sobre biodiversidade, conservação, ecologia e recursos naturais, com atenção aos contextos africanos.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
     {"slug": "saude-e-comunidade", "title": "Saúde & Comunidade", "abbr": "SACO", "field": "Saúde Pública", "description": "Investigação e práticas sobre saúde comunitária, nutrição, prevenção e determinantes sociais da saúde.", "frequency": "Semestral", "issue": "Vol. 1 · N.º 1", "status": "Em preparação"},
     {"slug": "educacao-cientifica", "title": "Educação Científica", "abbr": "EDCI", "field": "Ensino e Aprendizagem", "description": "Pesquisa e experiências sobre ensino de Ciências e Biologia, formação docente e inovação pedagógica.", "frequency": "Anual", "issue": "Vol. 1 · N.º 1", "status": "Recebendo artigos"},
@@ -185,7 +185,7 @@ LEARNING_RESOURCES = [
 @app.get("/")
 def home():
     items = Article.public_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(6).all()
-    return render_template("index.html", articles=items, journals=JOURNALS)
+    return render_template("index.html", articles=items, journals=Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).limit(3).all())
 
 @app.get("/artigos")
 def articles():
@@ -261,7 +261,18 @@ def scientific_editing():
 
 @app.get("/revistas")
 def journals():
-    return render_template("journals.html", journals=JOURNALS)
+    return render_template(
+        "journals.html",
+        journals=Journal.query.filter_by(published=True).order_by(Journal.title).all(),
+    )
+
+
+@app.get("/revistas/<slug>")
+def journal_detail(slug):
+    journal = Journal.query.filter_by(slug=slug, published=True).first()
+    if not journal:
+        return render_template("404.html"), 404
+    return render_template("journal.html", journal=journal)
 
 @app.get("/recursos")
 def resources():
@@ -309,7 +320,7 @@ def feed():
 
 @app.get("/sitemap.xml")
 def sitemap():
-    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("article", slug=a.slug) for a in Article.public_query().all()]
+    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("journal_detail", slug=j.slug) for j in Journal.query.filter_by(published=True).all()] + [url_for("article", slug=a.slug) for a in Article.public_query().all()]
     article_updates = {url_for("article", slug=a.slug): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
     urls = "".join(f"<url><loc>{SITE_URL}{path}</loc>{f'<lastmod>{article_updates[path]}</lastmod>' if path in article_updates else ''}</url>" for path in paths)
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
@@ -475,6 +486,25 @@ def seed_database():
     ensure_admin_columns()
     ensure_author_columns()
     ensure_article_columns()
+    if not Journal.query.first():
+        default_guidelines = (
+            "Aceitamos manuscritos originais, revisões e relatos fundamentados. "
+            "As submissões devem respeitar princípios de ética, transparência, "
+            "atribuição de fontes e revisão editorial."
+        )
+        for item in DEFAULT_JOURNALS:
+            db.session.add(Journal(
+                title=item["title"],
+                slug=item["slug"],
+                abbreviation=item["abbr"],
+                field=item["field"],
+                description=item["description"],
+                frequency=item["frequency"],
+                current_issue=item["issue"],
+                guidelines=default_guidelines,
+                published=True,
+            ))
+        db.session.commit()
     if Article.query.first():
         ensure_article_slugs()
         return
