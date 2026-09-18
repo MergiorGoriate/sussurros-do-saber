@@ -7,7 +7,7 @@ import secrets
 from datetime import datetime
 from functools import wraps
 import requests
-from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
@@ -155,6 +155,21 @@ def articles():
 
 def parse_datetime(value):
     return datetime.fromisoformat(value) if value else None
+
+
+@admin_bp.post("/api/imagens")
+@login_required
+@limiter.limit("20 per hour")
+def upload_inline_image():
+    validate_csrf()
+    image_file = request.files.get("image")
+    if not image_file or not image_file.filename:
+        return jsonify(ok=False, error="Seleccione uma imagem para carregar."), 400
+    try:
+        image_url = upload_article_image(image_file)
+    except ImageUploadError as error:
+        return jsonify(ok=False, error=str(error)), 400
+    return jsonify(ok=True, url=image_url)
 
 
 @admin_bp.route("/artigos/novo", methods=["GET", "POST"])
