@@ -496,3 +496,15 @@ input,textarea,select,button{font-size:16px}
 .author-admin-heading small{margin:3px 0 0}
 .author-admin-photo{width:64px;height:64px;flex:0 0 64px;border-radius:50%;object-fit:cover;border:2px solid #dce8e6;background:#edf4f3}
 .author-admin-fallback{display:grid;place-items:center;color:#087f73;font-weight:800}
+
+
+/* Gestão de revistas */
+.admin-list article{display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+.admin-list article>img{width:58px;height:78px;object-fit:cover;border-radius:6px;background:#edf4f3}
+.admin-list article>div{min-width:180px;flex:1}
+.admin-list article small{display:block;margin-top:4px;color:#738084}
+.admin-list article>a{color:var(--green);font-weight:700;text-decoration:none}
+.admin-list article form{margin:0}
+.admin-list article form button{border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:#fff;cursor:pointer}
+.admin-list article form button.danger{border-color:#bd3e35;color:#bd3e35}
+@media(max-width:760px){.admin-list article{align-items:flex-start;flex-wrap:wrap}.admin-list article>div{flex-basis:calc(100% - 80px)}}
