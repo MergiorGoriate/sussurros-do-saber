@@ -14,7 +14,7 @@ from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from admin import admin_bp, slugify
 from extensions import limiter
-from models import Article, Author, Category, ContactMessage, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, ContactMessage, Subscriber, db, utcnow
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -389,6 +389,45 @@ def submit_contact():
     return jsonify({"ok": True, "message": "Mensagem recebida. Obrigado por contactar o Sussurros do Saber."})
 
 
+def ensure_admin_columns():
+    inspector = inspect(db.engine)
+    if "admin_user" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("admin_user")}
+    if "is_superadmin" not in existing:
+        db.session.execute(text(
+            'ALTER TABLE admin_user ADD COLUMN is_superadmin BOOLEAN DEFAULT FALSE NOT NULL'
+        ))
+        db.session.commit()
+
+    administrators = AdminUser.query.order_by(AdminUser.created_at, AdminUser.id).all()
+    configured_primary = bool(os.getenv("ADMIN_USERNAME"))
+    if configured_primary:
+        changed = False
+        for administrator in administrators:
+            if administrator.is_superadmin:
+                administrator.is_superadmin = False
+                changed = True
+        if changed:
+            db.session.commit()
+        return
+
+    if administrators:
+        active = [administrator for administrator in administrators if administrator.active]
+        primary = next(
+            (administrator for administrator in administrators if administrator.is_superadmin and administrator.active),
+            active[0] if active else administrators[0],
+        )
+        changed = False
+        for administrator in administrators:
+            should_be_primary = administrator.id == primary.id
+            if administrator.is_superadmin != should_be_primary:
+                administrator.is_superadmin = should_be_primary
+                changed = True
+        if changed:
+            db.session.commit()
+
+
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
     additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
@@ -421,6 +460,7 @@ def ensure_article_slugs():
 
 def seed_database():
     db.create_all()
+    ensure_admin_columns()
     ensure_article_columns()
     if Article.query.first():
         ensure_article_slugs()
