@@ -1,1 +1,47 @@
-{% extends 'admin/base.html' %}{% block title %}Autores{% endblock %}{% block content %}<header class="admin-header"><div><span>Equipa editorial</span><h1>Autores</h1></div></header><div class="two-columns"><form method="post" class="admin-panel compact-form"><h2>Adicionar autor</h2><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label>Nome<input name="name" required></label><label>E-mail<input name="email" type="email"></label><label>Biografia<textarea name="bio" rows="5"></textarea></label><button class="admin-primary">Adicionar</button></form><section class="admin-panel"><h2>Autores registados</h2>{% for author in authors %}<form method="post" class="record-editor"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="author_id" value="{{ author.id }}"><label>Nome<input name="name" value="{{ author.name }}" required></label><label>E-mail<input name="email" type="email" value="{{ author.email or '' }}"></label><label>Biografia<textarea name="bio" rows="3">{{ author.bio }}</textarea></label><small>{{ author.articles|length }} artigo(s)</small><button class="admin-primary">Guardar alterações</button><button formmethod="post" formaction="{{ url_for('admin.delete_author',author_id=author.id) }}" onclick="return confirm('Eliminar este autor?')" class="danger-button">Eliminar</button></form>{% endfor %}</section></div>{% endblock %}
+{% extends 'admin/base.html' %}
+{% block title %}Autores{% endblock %}
+{% block content %}
+<header class="admin-header">
+  <div><span>Equipa editorial</span><h1>Autores</h1></div>
+</header>
+<div class="two-columns">
+  <form method="post" enctype="multipart/form-data" class="admin-panel compact-form">
+    <h2>Adicionar autor</h2>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Nome<input name="name" required maxlength="120"></label>
+    <label>E-mail<input name="email" type="email" maxlength="180"></label>
+    <label>Fotografia do perfil<input name="photo_file" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+    <small class="field-help">JPG, PNG, WebP ou GIF, até 8 MB. A imagem será otimizada automaticamente.</small>
+    <label>Ou URL da fotografia<input name="photo_url" type="url" maxlength="600" placeholder="https://…"></label>
+    <label>Biografia<textarea name="bio" rows="5"></textarea></label>
+    <button class="admin-primary">Adicionar autor</button>
+  </form>
+  <section class="admin-panel">
+    <h2>Autores registados</h2>
+    {% for author in authors %}
+    <form method="post" enctype="multipart/form-data" class="record-editor author-record">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="author_id" value="{{ author.id }}">
+      <div class="author-admin-heading">
+        {% if author.photo %}
+        <img src="{{ author.photo }}" alt="Fotografia de {{ author.name }}" class="author-admin-photo">
+        {% else %}
+        <span class="author-admin-photo author-admin-fallback" aria-hidden="true">{{ author.name[:2]|upper }}</span>
+        {% endif %}
+        <div><strong>{{ author.name }}</strong><small>{{ author.articles|length }} artigo(s)</small></div>
+      </div>
+      <label>Nome<input name="name" value="{{ author.name }}" required maxlength="120"></label>
+      <label>E-mail<input name="email" type="email" value="{{ author.email or '' }}" maxlength="180"></label>
+      <label>Substituir fotografia<input name="photo_file" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+      <label>Ou URL da fotografia<input name="photo_url" type="url" maxlength="600" placeholder="https://…"></label>
+      {% if author.photo %}<label class="check"><input name="remove_photo" type="checkbox"> Remover fotografia atual</label>{% endif %}
+      <label>Biografia<textarea name="bio" rows="3">{{ author.bio }}</textarea></label>
+      <button class="admin-primary">Guardar alterações</button>
+      <button formmethod="post" formaction="{{ url_for('admin.delete_author',author_id=author.id) }}" onclick="return confirm('Eliminar este autor?')" class="danger-button">Eliminar</button>
+    </form>
+    {% else %}
+    <p>Ainda não existem autores cadastrados.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}
