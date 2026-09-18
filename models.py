@@ -15,6 +15,7 @@ class AdminUser(db.Model):
     display_name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(180), unique=True)
     password_hash = db.Column(db.String(300), nullable=False)
+    is_superadmin = db.Column(db.Boolean, default=False, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime)

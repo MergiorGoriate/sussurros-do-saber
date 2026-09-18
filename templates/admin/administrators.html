@@ -4,10 +4,17 @@
 <header class="admin-header">
   <div><span>Segurança e acesso</span><h1>Administradores</h1></div>
 </header>
-<div class="two-columns">
+
+<div class="admin-security-note" role="note">
+  <strong>Gestão exclusiva do Administrador principal.</strong>
+  <span>As contas secundárias podem gerir o conteúdo do site, mas não podem cadastrar, editar ou remover administradores.</span>
+  {% if configured_primary %}<small>Conta principal configurada no servidor: @{{ configured_primary }}</small>{% endif %}
+</div>
+
+<div class="two-columns admin-management-grid">
   <form method="post" class="admin-panel compact-form">
     <h2>Cadastrar novo administrador</h2>
-    <p class="form-help">Crie uma conta individual. A palavra-passe será guardada de forma protegida e não poderá ser consultada depois.</p>
+    <p class="form-help">A nova conta será secundária. A palavra-passe é guardada de forma protegida e nunca será exibida.</p>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Nome completo<input name="display_name" required minlength="2" maxlength="120" autocomplete="name"></label>
     <label>Utilizador<input name="username" required minlength="3" maxlength="60" pattern="[a-zA-Z0-9._-]+" autocomplete="username" aria-describedby="usernameHelp"></label>
@@ -17,20 +24,54 @@
     <label>Confirmar palavra-passe<input name="password_confirmation" type="password" required minlength="12" autocomplete="new-password"></label>
     <button class="admin-primary">Criar administrador</button>
   </form>
+
   <section class="admin-panel">
     <h2>Administradores cadastrados</h2>
-    <div class="admin-list">
+    <div class="administrator-cards">
       {% for administrator in administrators %}
-      <div>
-        <div>
-          <strong>{{ administrator.display_name }}</strong>
-          <small>@{{ administrator.username }}{% if administrator.email %} · {{ administrator.email }}{% endif %}</small>
-          <small>Criado em {{ administrator.created_at.strftime('%d/%m/%Y') }}{% if administrator.last_login_at %} · Último acesso {{ administrator.last_login_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}</small>
+      <article class="administrator-card">
+        <div class="administrator-summary">
+          <div>
+            <div class="administrator-name">
+              <strong>{{ administrator.display_name }}</strong>
+              {% if administrator.is_superadmin %}<span class="role-badge">Principal</span>{% else %}<span class="role-badge secondary">Secundário</span>{% endif %}
+            </div>
+            <small>@{{ administrator.username }}{% if administrator.email %} · {{ administrator.email }}{% endif %}</small>
+            <small>Criado em {{ administrator.created_at.strftime('%d/%m/%Y') }}{% if administrator.last_login_at %} · Último acesso {{ administrator.last_login_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}</small>
+          </div>
+          <span class="status {{ 'published' if administrator.active else 'draft' }}">{{ 'Ativo' if administrator.active else 'Inativo' }}</span>
         </div>
-        <span class="status {{ 'published' if administrator.active else 'draft' }}">{{ 'Ativo' if administrator.active else 'Inativo' }}</span>
-      </div>
+
+        <details class="administrator-editor">
+          <summary>Editar configurações</summary>
+          <form method="post" action="{{ url_for('admin.edit_administrator', administrator_id=administrator.id) }}" class="compact-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Nome completo<input name="display_name" value="{{ administrator.display_name }}" required minlength="2" maxlength="120"></label>
+            <label>Utilizador<input name="username" value="{{ administrator.username }}" required minlength="3" maxlength="60" pattern="[a-zA-Z0-9._-]+"></label>
+            <label>E-mail <span class="optional">opcional</span><input name="email" value="{{ administrator.email or '' }}" type="email" maxlength="180"></label>
+            <label>Nova palavra-passe <span class="optional">deixe vazio para manter</span><input name="password" type="password" minlength="12" autocomplete="new-password"></label>
+            <label>Confirmar nova palavra-passe<input name="password_confirmation" type="password" minlength="12" autocomplete="new-password"></label>
+            <label class="check-row">
+              <input name="active" type="checkbox" {% if administrator.active %}checked{% endif %} {% if administrator.is_superadmin %}disabled{% endif %}>
+              Conta ativa
+            </label>
+            {% if administrator.is_superadmin %}<input type="hidden" name="active" value="on">{% endif %}
+            <div class="administrator-actions">
+              <button class="admin-primary">Guardar alterações</button>
+            </div>
+          </form>
+          {% if not administrator.is_superadmin and current_admin_id != administrator.id %}
+          <form method="post" action="{{ url_for('admin.delete_administrator', administrator_id=administrator.id) }}" onsubmit="return confirm('Eliminar definitivamente este administrador?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="danger-button">Eliminar administrador</button>
+          </form>
+          {% else %}
+          <small class="protected-account">{{ 'A conta principal não pode ser eliminada.' if administrator.is_superadmin else 'Não pode eliminar a conta que está a utilizar.' }}</small>
+          {% endif %}
+        </details>
+      </article>
       {% else %}
-      <p>Ainda não existem administradores cadastrados na base de dados. O acesso atual continua disponível pelas variáveis do Render.</p>
+      <p>Ainda não existem administradores cadastrados na base de dados. O acesso principal continua disponível pelas configurações seguras do servidor.</p>
       {% endfor %}
     </div>
   </section>

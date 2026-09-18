@@ -51,6 +51,7 @@ class PlatformTests(unittest.TestCase):
     def test_administrator_can_be_created_and_sign_in(self):
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True
+            session["admin_superuser"] = True
             session["csrf_token"] = "test-csrf"
         response = self.client.post("/admin/administradores", data={
             "csrf_token": "test-csrf",
@@ -69,6 +70,42 @@ class PlatformTests(unittest.TestCase):
         response = self.client.post("/admin/login", data={"csrf_token": "login-csrf", "username": "editor.cientifico", "password": "uma-palavra-passe-segura"})
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.location.endswith("/admin"))
+        with self.client.session_transaction() as session:
+            self.assertFalse(session["admin_superuser"])
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_superuser"] = True
+            session["csrf_token"] = "manage-csrf"
+        with app.app_context():
+            administrator = AdminUser.query.filter_by(username="editor.cientifico").first()
+            administrator_id = administrator.id
+        response = self.client.post(f"/admin/administradores/{administrator_id}/editar", data={
+            "csrf_token": "manage-csrf",
+            "display_name": "Editor Atualizado",
+            "username": "editor.atualizado",
+            "email": "atualizado@example.org",
+            "password": "",
+            "password_confirmation": "",
+            "active": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            self.assertIsNotNone(AdminUser.query.filter_by(username="editor.atualizado").first())
+        response = self.client.post(
+            f"/admin/administradores/{administrator_id}/eliminar",
+            data={"csrf_token": "manage-csrf"},
+        )
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            self.assertIsNone(db.session.get(AdminUser, administrator_id))
+
+    def test_secondary_administrator_cannot_manage_accounts(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_superuser"] = False
+            session["csrf_token"] = "secondary-csrf"
+        self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
