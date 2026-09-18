@@ -28,6 +28,15 @@ class PlatformTests(unittest.TestCase):
             db.engine.dispose()
         os.unlink(database_file.name)
 
+    def test_cookie_consent_controls_and_policy_are_available(self):
+        response = self.client.get("/")
+        self.assertIn(b'id="cookieConsent"', response.data)
+        self.assertIn(b'id="cookieAccept"', response.data)
+        self.assertIn(b'id="cookieReject"', response.data)
+        self.assertIn(b'id="cookieSettingsLink"', response.data)
+        policy = self.client.get("/politica-de-privacidade")
+        self.assertIn("Cookies e consentimento".encode(), policy.data)
+
     def test_footer_contains_accessible_social_links(self):
         response = self.client.get("/")
         for network in ["Facebook", "Instagram", "YouTube", "LinkedIn", "X", "WhatsApp"]:

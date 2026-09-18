@@ -25,7 +25,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260918-4') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260918-5') }}">
 <link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}"></noscript>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
@@ -116,6 +116,7 @@
 <a href="/politica-editorial">Política Editorial</a>
 <a href="/politica-de-correcoes">Política de Correções</a>
 <a href="/acessibilidade">Acessibilidade</a>
+<button id="cookieSettingsLink" class="footer-cookie-link" type="button">Configurar cookies</button>
 <a href="/feed.xml">Feed RSS</a>
 </div>
 </div>
@@ -124,7 +125,28 @@
 <div class="max-w-7xl mx-auto px-4 py-5 text-sm text-white/55">© 2026 Sussurros do Saber.</div>
 </div>
 </footer>
-<script src="{{ url_for('static',filename='js/main.js',v='20260918-3') }}" defer></script>
+<section id="cookieConsent" class="cookie-consent" role="dialog" aria-modal="false" aria-labelledby="cookieTitle" aria-describedby="cookieDescription" hidden>
+  <div class="cookie-consent-inner">
+    <div class="cookie-copy">
+      <span class="cookie-icon" aria-hidden="true">◔</span>
+      <div>
+        <h2 id="cookieTitle">A sua privacidade importa</h2>
+        <p id="cookieDescription">Utilizamos armazenamento essencial para guardar preferências e proteger o funcionamento do site. Cookies opcionais só serão ativados com a sua autorização. <a href="{{ url_for('privacy') }}">Política de Privacidade</a>.</p>
+      </div>
+    </div>
+    <div id="cookiePreferences" class="cookie-preferences" hidden>
+      <label><span><strong>Essenciais</strong><small>Necessários para segurança, sessão e preferências.</small></span><input type="checkbox" checked disabled></label>
+      <label><span><strong>Análise e desempenho</strong><small>Ajuda a compreender a utilização do site de forma agregada.</small></span><input id="analyticsConsent" type="checkbox"></label>
+    </div>
+    <div class="cookie-actions">
+      <button id="cookieReject" class="cookie-secondary" type="button">Recusar não essenciais</button>
+      <button id="cookieCustomize" class="cookie-secondary" type="button" aria-expanded="false" aria-controls="cookiePreferences">Personalizar</button>
+      <button id="cookieSave" class="cookie-primary" type="button" hidden>Guardar escolhas</button>
+      <button id="cookieAccept" class="cookie-primary" type="button">Aceitar todos</button>
+    </div>
+  </div>
+</section>
+<script src="{{ url_for('static',filename='js/main.js',v='20260918-5') }}" defer></script>
 <script src="{{ url_for('static',filename='js/pages.js',v='20260918-3') }}" defer></script>
 <script>
 (()=>{let done=false;const load=()=>{if(done)return;done=true;['assistant.js','animations.js'].forEach(name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260918-3';script.defer=true;document.body.appendChild(script)})};if('requestIdleCallback'in window)requestIdleCallback(load,{timeout:2500});else setTimeout(load,1500)})();
