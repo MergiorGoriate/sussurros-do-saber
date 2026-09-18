@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block title %}{{ article.title }} — Sussurros do
-Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock %}{% block canonical %}{{ site_url }}{{ url_for('article', slug=article.slug) }}{% endblock %}{% block og_type %}article{% endblock %}{% block og_title %}{{ article.title }}{% endblock %}{% block og_description %}{{ article.summary }}{% endblock %}{% block og_image %}{{ article.image|social_image }}{% endblock %}{% block og_image_secure %}{{ article.image|social_image }}{% endblock %}{% block og_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block twitter_title %}{{ article.title }}{% endblock %}{% block twitter_description %}{{ article.summary }}{% endblock %}{% block twitter_image %}{{ article.image|social_image }}{% endblock %}{% block twitter_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block content %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":article.title,"description":article.summary,"datePublished":(article.published_at or article.created_at).isoformat(),"dateModified":article.updated_at.isoformat(),"author":{"@type":"Person","name":article.author,"image":article.author_rel.photo or none},"publisher":{"@type":"Organization","name":"Sussurros do Saber","url":site_url},"mainEntityOfPage":site_url ~ url_for('article', slug=article.slug),"image":article.image|social_image}|tojson }}</script><link
+Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock %}{% block canonical %}{{ site_url }}{{ url_for('article', slug=article.slug) }}{% endblock %}{% block og_type %}article{% endblock %}{% block og_title %}{{ article.title }}{% endblock %}{% block og_description %}{{ article.summary }}{% endblock %}{% block og_image %}{{ article.image|social_image }}{% endblock %}{% block og_image_url %}{{ article.image|social_image }}{% endblock %}{% block og_image_secure %}{{ article.image|social_image }}{% endblock %}{% block og_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block twitter_title %}{{ article.title }}{% endblock %}{% block twitter_description %}{{ article.summary }}{% endblock %}{% block twitter_image %}{{ article.image|social_image }}{% endblock %}{% block twitter_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block content %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":article.title,"description":article.summary,"datePublished":(article.published_at or article.created_at).isoformat(),"dateModified":article.updated_at.isoformat(),"author":{"@type":"Person","name":article.author,"image":article.author_rel.photo or none},"publisher":{"@type":"Organization","name":"Sussurros do Saber","url":site_url},"mainEntityOfPage":site_url ~ url_for('article', slug=article.slug),"image":article.image|social_image}|tojson }}</script><link
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
@@ -57,7 +57,8 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       {% if article.doi %}<p><strong>DOI:</strong> <a href="https://doi.org/{{ article.doi }}" rel="external noopener">{{ article.doi }}</a></p>{% endif %}
     </div>{% endif %}
     {% if article.references %}<section class="article-references" aria-labelledby="references-title"><h2 id="references-title">Referências</h2><div class="article-markdown">{{ article.references|markdown }}</div></section>{% endif %}
-    <aside class="share-panel" data-title="{{ article.title }}">
+    {% set share_url = site_url ~ url_for('article', slug=article.slug) ~ '?share=' ~ article.updated_at.strftime('%Y%m%d%H%M%S') %}
+    <aside class="share-panel" data-title="{{ article.title }}" data-url="{{ share_url }}">
       <div>
         <span class="eyebrow">Divulgue conhecimento</span>
         <h2>Compartilhe este artigo</h2>
@@ -67,37 +68,37 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
         <a
           data-network="whatsapp"
           class="whatsapp"
-          href="https://wa.me/?text={{ (article.title ~ ' ' ~ site_url ~ url_for('article', slug=article.slug))|urlencode }}"
+          href="https://wa.me/?text={{ (article.title ~ ' ' ~ share_url)|urlencode }}"
           aria-label="Compartilhar no WhatsApp"
           ><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a
         ><a
           data-network="facebook"
           class="facebook"
-          href="https://www.facebook.com/sharer/sharer.php?u={{ (site_url ~ url_for('article', slug=article.slug))|urlencode }}"
+          href="https://www.facebook.com/sharer/sharer.php?u={{ (share_url)|urlencode }}"
           aria-label="Compartilhar no Facebook"
           ><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a
         ><a
           data-network="x"
           class="x-twitter"
-          href="https://twitter.com/intent/tweet?text={{ article.title|urlencode }}&url={{ (site_url ~ url_for('article', slug=article.slug))|urlencode }}"
+          href="https://twitter.com/intent/tweet?text={{ article.title|urlencode }}&url={{ (share_url)|urlencode }}"
           aria-label="Compartilhar no X"
           ><i class="fa-brands fa-x-twitter"></i><span>X</span></a
         ><a
           data-network="linkedin"
           class="linkedin"
-          href="https://www.linkedin.com/sharing/share-offsite/?url={{ (site_url ~ url_for('article', slug=article.slug))|urlencode }}"
+          href="https://www.linkedin.com/sharing/share-offsite/?url={{ (share_url)|urlencode }}"
           aria-label="Compartilhar no LinkedIn"
           ><i class="fa-brands fa-linkedin-in"></i><span>LinkedIn</span></a
         ><a
           data-network="telegram"
           class="telegram"
-          href="https://t.me/share/url?url={{ (site_url ~ url_for('article', slug=article.slug))|urlencode }}&text={{ article.title|urlencode }}"
+          href="https://t.me/share/url?url={{ (share_url)|urlencode }}&text={{ article.title|urlencode }}"
           aria-label="Compartilhar no Telegram"
           ><i class="fa-brands fa-telegram"></i><span>Telegram</span></a
         ><a
           data-network="email"
           class="email"
-          href="mailto:?subject={{ article.title|urlencode }}&body={{ (site_url ~ url_for('article', slug=article.slug))|urlencode }}"
+          href="mailto:?subject={{ article.title|urlencode }}&body={{ (share_url)|urlencode }}"
           aria-label="Compartilhar por e-mail"
           ><i class="fa-solid fa-envelope"></i><span>E-mail</span></a
         ><button id="copyArticleLink" aria-label="Copiar ligação">
