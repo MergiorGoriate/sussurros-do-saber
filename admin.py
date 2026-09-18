@@ -33,6 +33,17 @@ def login_required(view):
     return wrapped
 
 
+def superadmin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("admin_authenticated"):
+            return redirect(url_for("admin.login", next=request.path))
+        if not session.get("admin_superuser"):
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
 def csrf_token():
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_urlsafe(32)
@@ -48,7 +59,12 @@ def validate_csrf():
 
 @admin_bp.app_context_processor
 def admin_context():
-    return {"csrf_token": csrf_token, "turnstile_site_key": os.getenv("TURNSTILE_SITE_KEY", "")}
+    return {
+        "csrf_token": csrf_token,
+        "turnstile_site_key": os.getenv("TURNSTILE_SITE_KEY", ""),
+        "current_admin_id": session.get("admin_id"),
+        "current_admin_is_primary": bool(session.get("admin_superuser")),
+    }
 
 
 def turnstile_valid():
@@ -85,6 +101,7 @@ def login():
             session["admin_authenticated"] = True
             session["admin_id"] = database_admin.id
             session["admin_username"] = database_admin.username
+            session["admin_superuser"] = bool(database_admin.is_superadmin)
             session["csrf_token"] = secrets.token_urlsafe(32)
             database_admin.last_login_at = utcnow()
             db.session.commit()
@@ -96,6 +113,7 @@ def login():
             session.permanent = True
             session["admin_authenticated"] = True
             session["admin_username"] = configured_user
+            session["admin_superuser"] = True
             session["csrf_token"] = secrets.token_urlsafe(32)
             return redirect(url_for("admin.dashboard"))
         else:
@@ -118,7 +136,7 @@ def dashboard():
 
 
 @admin_bp.route("/administradores", methods=["GET", "POST"])
-@login_required
+@superadmin_required
 def administrators():
     if request.method == "POST":
         validate_csrf()
@@ -142,11 +160,87 @@ def administrators():
         elif duplicate_username or duplicate_email:
             flash("Já existe um administrador com esse utilizador ou e-mail.", "error")
         else:
-            db.session.add(AdminUser(username=username, display_name=display_name, email=email, password_hash=generate_password_hash(password)))
+            db.session.add(AdminUser(
+                username=username,
+                display_name=display_name,
+                email=email,
+                password_hash=generate_password_hash(password),
+                is_superadmin=False,
+            ))
             db.session.commit()
             flash("Novo administrador criado com sucesso.", "success")
             return redirect(url_for("admin.administrators"))
-    return render_template("admin/administrators.html", administrators=AdminUser.query.order_by(AdminUser.created_at.desc()).all())
+    return render_template(
+        "admin/administrators.html",
+        administrators=AdminUser.query.order_by(AdminUser.is_superadmin.desc(), AdminUser.created_at.desc()).all(),
+        configured_primary=os.getenv("ADMIN_USERNAME"),
+    )
+
+
+@admin_bp.post("/administradores/<int:administrator_id>/editar")
+@superadmin_required
+def edit_administrator(administrator_id):
+    validate_csrf()
+    administrator = db.get_or_404(AdminUser, administrator_id)
+    username = request.form.get("username", "").strip().lower()
+    display_name = request.form.get("display_name", "").strip()
+    email = request.form.get("email", "").strip().lower() or None
+    password = request.form.get("password", "")
+    password_confirmation = request.form.get("password_confirmation", "")
+    active = request.form.get("active") == "on"
+    duplicate_username = AdminUser.query.filter(
+        db.func.lower(AdminUser.username) == username,
+        AdminUser.id != administrator.id,
+    ).first()
+    duplicate_email = email and AdminUser.query.filter(
+        db.func.lower(AdminUser.email) == email,
+        AdminUser.id != administrator.id,
+    ).first()
+
+    if not re.fullmatch(r"[a-z0-9._-]{3,60}", username):
+        flash("O utilizador deve ter 3 a 60 caracteres: letras, números, ponto, hífen ou sublinhado.", "error")
+    elif not 2 <= len(display_name) <= 120:
+        flash("Informe o nome do administrador.", "error")
+    elif email and (len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)):
+        flash("Informe um endereço de e-mail válido.", "error")
+    elif password and len(password) < 12:
+        flash("A nova palavra-passe deve ter pelo menos 12 caracteres.", "error")
+    elif password != password_confirmation:
+        flash("A confirmação da palavra-passe não corresponde.", "error")
+    elif duplicate_username or duplicate_email:
+        flash("Já existe um administrador com esse utilizador ou e-mail.", "error")
+    elif administrator.is_superadmin and not active:
+        flash("O Administrador principal não pode ser desativado.", "error")
+    elif session.get("admin_id") == administrator.id and not active:
+        flash("Não pode desativar a conta que está a utilizar.", "error")
+    else:
+        administrator.username = username
+        administrator.display_name = display_name
+        administrator.email = email
+        administrator.active = active
+        if password:
+            administrator.password_hash = generate_password_hash(password)
+        db.session.commit()
+        if session.get("admin_id") == administrator.id:
+            session["admin_username"] = administrator.username
+        flash("Administrador atualizado com sucesso.", "success")
+    return redirect(url_for("admin.administrators"))
+
+
+@admin_bp.post("/administradores/<int:administrator_id>/eliminar")
+@superadmin_required
+def delete_administrator(administrator_id):
+    validate_csrf()
+    administrator = db.get_or_404(AdminUser, administrator_id)
+    if administrator.is_superadmin:
+        flash("O Administrador principal não pode ser eliminado.", "error")
+    elif session.get("admin_id") == administrator.id:
+        flash("Não pode eliminar a conta que está a utilizar.", "error")
+    else:
+        db.session.delete(administrator)
+        db.session.commit()
+        flash("Administrador eliminado com sucesso.", "success")
+    return redirect(url_for("admin.administrators"))
 
 
 @admin_bp.get("/artigos")
