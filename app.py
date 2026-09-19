@@ -649,10 +649,20 @@ def ensure_admin_columns():
     if "admin_user" not in inspector.get_table_names():
         return
     existing = {column["name"] for column in inspector.get_columns("admin_user")}
-    if "is_superadmin" not in existing:
-        db.session.execute(text(
-            'ALTER TABLE admin_user ADD COLUMN is_superadmin BOOLEAN DEFAULT FALSE NOT NULL'
-        ))
+    additions = {
+        "is_superadmin": "BOOLEAN DEFAULT FALSE NOT NULL",
+        "two_factor_enabled": "BOOLEAN DEFAULT FALSE NOT NULL",
+        "totp_secret": "VARCHAR(64)",
+        "recovery_code_hashes": "TEXT DEFAULT '' NOT NULL",
+    }
+    changed = False
+    for name, definition in additions.items():
+        if name not in existing:
+            db.session.execute(text(
+                f'ALTER TABLE admin_user ADD COLUMN "{name}" {definition}'
+            ))
+            changed = True
+    if changed:
         db.session.commit()
 
     administrators = AdminUser.query.order_by(AdminUser.created_at, AdminUser.id).all()
