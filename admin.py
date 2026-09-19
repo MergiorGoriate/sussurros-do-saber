@@ -66,11 +66,35 @@ def admin_session_valid():
     return True
 
 
+PUBLIC_ADMIN_ENDPOINTS = {"admin.login", "admin.verify_two_factor"}
+
+
+@admin_bp.before_request
+def enforce_admin_authentication():
+    """Protege centralmente todas as rotas administrativas presentes e futuras."""
+    if request.endpoint in PUBLIC_ADMIN_ENDPOINTS:
+        return None
+    if admin_session_valid():
+        return None
+    session.clear()
+    if request.path.startswith("/admin/api/"):
+        return jsonify(
+            ok=False,
+            error="Autenticação administrativa necessária.",
+        ), 401
+    return redirect(url_for("admin.login", next=request.path))
+
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not admin_session_valid():
             session.clear()
+            if request.path.startswith("/admin/api/"):
+                return jsonify(
+                    ok=False,
+                    error="Autenticação administrativa necessária.",
+                ), 401
             return redirect(url_for("admin.login", next=request.path))
         return view(*args, **kwargs)
     return wrapped
