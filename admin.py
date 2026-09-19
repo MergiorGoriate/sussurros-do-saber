@@ -680,7 +680,7 @@ def authors():
         photo_file = request.files.get("photo_file")
         if not name:
             flash("Informe o nome do autor.", "error")
-        elif photo_url and not re.fullmatch(r"https?://[^\\s]+", photo_url, re.I):
+        elif photo_url and not re.fullmatch(r"https?://[^\s]+", photo_url, re.I):
             flash("Informe um endereço válido para a fotografia.", "error")
         else:
             try:
