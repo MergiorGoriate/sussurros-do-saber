@@ -30,10 +30,26 @@ def slugify(value):
     return value.strip("-")[:260]
 
 
+def admin_session_valid():
+    if not session.get("admin_authenticated"):
+        return False
+    administrator_id = session.get("admin_id")
+    if administrator_id is not None:
+        administrator = db.session.get(AdminUser, administrator_id)
+        if not administrator or not administrator.active:
+            return False
+        if administrator.two_factor_enabled and not session.get("admin_2fa_verified"):
+            return False
+        return True
+    configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
+    return not configured_totp or bool(session.get("admin_2fa_verified"))
+
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("admin_authenticated"):
+        if not admin_session_valid():
+            session.clear()
             return redirect(url_for("admin.login", next=request.path))
         return view(*args, **kwargs)
     return wrapped
@@ -42,7 +58,8 @@ def login_required(view):
 def superadmin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("admin_authenticated"):
+        if not admin_session_valid():
+            session.clear()
             return redirect(url_for("admin.login", next=request.path))
         if not session.get("admin_superuser"):
             abort(403)
