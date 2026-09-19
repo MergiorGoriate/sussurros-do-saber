@@ -307,9 +307,9 @@ def enroll_two_factor():
             db.session.commit()
             session.pop("pending_2fa_enrollment_admin_id", None)
             session.pop("totp_setup_secret", None)
-            response = complete_admin_login(administrator)
+            complete_admin_login(administrator)
             session["new_recovery_codes"] = recovery_codes
-            return response
+            return redirect(url_for("admin.two_factor_settings"))
     issuer = "Sussurros do Saber"
     account_label = administrator.email or administrator.username
     otpauth_uri = (
@@ -366,7 +366,7 @@ def two_factor_settings():
             enabled=bool(os.getenv("ADMIN_TOTP_SECRET", "").strip()),
         )
 
-    recovery_codes = None
+    recovery_codes = session.pop("new_recovery_codes", None)
     setup_secret = None
     if not administrator.two_factor_enabled:
         setup_secret = session.get("totp_setup_secret") or generate_totp_secret()
