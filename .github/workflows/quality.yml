@@ -1,0 +1,41 @@
+name: Quality checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SECRET_KEY: ci-secret-key-only
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD_HASH: scrypt:32768:8:1$ci$invalidhash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+      - name: Compile production CSS
+        run: npm run build:css
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt pip-audit
+      - name: Audit Python dependencies
+        run: pip-audit
+      - name: Run platform tests
+        run: python -m unittest discover -s tests -v
+      - name: Verify production CSS
+        run: test -s static/css/tailwind.min.css
