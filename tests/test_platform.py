@@ -37,6 +37,31 @@ class PlatformTests(unittest.TestCase):
         policy = self.client.get("/politica-de-privacidade")
         self.assertIn("Cookies e consentimento".encode(), policy.data)
 
+    def test_google_search_console_verification_and_discovery(self):
+        previous = os.environ.get("GOOGLE_SITE_VERIFICATION")
+        os.environ["GOOGLE_SITE_VERIFICATION"] = "google-test-verification-token"
+        try:
+            response = self.client.get("/")
+            self.assertIn(
+                b'<meta name="google-site-verification" content="google-test-verification-token">',
+                response.data,
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("GOOGLE_SITE_VERIFICATION", None)
+            else:
+                os.environ["GOOGLE_SITE_VERIFICATION"] = previous
+
+        sitemap = self.client.get("/sitemap.xml")
+        self.assertEqual(sitemap.status_code, 200)
+        self.assertIn(b"<urlset", sitemap.data)
+        self.assertIn(b"<lastmod>", sitemap.data)
+        self.assertIn("max-age=3600", sitemap.headers.get("Cache-Control", ""))
+
+        robots = self.client.get("/robots.txt")
+        self.assertIn(b"Sitemap: https://sussurrosdosaber.com/sitemap.xml", robots.data)
+        self.assertIn(b"Disallow: /admin", robots.data)
+
     def test_footer_contains_accessible_social_links(self):
         response = self.client.get("/")
         for network in ["Facebook", "Instagram", "YouTube", "LinkedIn", "X", "WhatsApp"]:
