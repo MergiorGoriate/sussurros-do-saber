@@ -23,6 +23,14 @@ from storage import ImageUploadError, upload_article_image, upload_author_photo,
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
+@admin_bp.after_request
+def protect_admin_responses(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 def slugify(value):
     value = unicodedata.normalize("NFKD", (value or "").strip())
     value = value.encode("ascii", "ignore").decode("ascii").lower()
@@ -33,6 +41,15 @@ def slugify(value):
 def admin_session_valid():
     if not session.get("admin_authenticated"):
         return False
+    try:
+        idle_timeout = max(1, min(120, int(os.getenv("ADMIN_IDLE_TIMEOUT_MINUTES", "15")))) * 60
+    except ValueError:
+        idle_timeout = 15 * 60
+    now = time.time()
+    last_activity = session.get("admin_last_activity_at")
+    if not isinstance(last_activity, (int, float)) or now - last_activity > idle_timeout:
+        return False
+
     administrator_id = session.get("admin_id")
     if administrator_id is not None:
         administrator = db.session.get(AdminUser, administrator_id)
@@ -40,9 +57,13 @@ def admin_session_valid():
             return False
         if administrator.two_factor_enabled and not session.get("admin_2fa_verified"):
             return False
-        return True
-    configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
-    return not configured_totp or bool(session.get("admin_2fa_verified"))
+    else:
+        configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
+        if configured_totp and not session.get("admin_2fa_verified"):
+            return False
+
+    session["admin_last_activity_at"] = now
+    return True
 
 
 def login_required(view):
@@ -171,7 +192,7 @@ def complete_admin_login(administrator=None, *, username=None, superuser=False):
         username = administrator.username
         superuser = bool(administrator.is_superadmin)
     session.clear()
-    session.permanent = True
+    session.permanent = False
     session["admin_authenticated"] = True
     session["admin_id"] = administrator.id if administrator is not None else None
     session["admin_username"] = username
@@ -180,13 +201,14 @@ def complete_admin_login(administrator=None, *, username=None, superuser=False):
         administrator.two_factor_enabled if administrator is not None
         else os.getenv("ADMIN_TOTP_SECRET", "").strip()
     )
+    session["admin_last_activity_at"] = time.time()
     session["csrf_token"] = secrets.token_urlsafe(32)
     return redirect(url_for("admin.dashboard"))
 
 
 def begin_two_factor_challenge(*, administrator=None, username=None, superuser=False):
     session.clear()
-    session.permanent = True
+    session.permanent = False
     session["pending_2fa_admin_id"] = administrator.id if administrator is not None else None
     session["pending_2fa_username"] = username
     session["pending_2fa_superuser"] = superuser
