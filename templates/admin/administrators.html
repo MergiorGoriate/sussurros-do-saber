@@ -38,6 +38,7 @@
             </div>
             <small>@{{ administrator.username }}{% if administrator.email %} · {{ administrator.email }}{% endif %}</small>
             <small>Criado em {{ administrator.created_at.strftime('%d/%m/%Y') }}{% if administrator.last_login_at %} · Último acesso {{ administrator.last_login_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}</small>
+            <small class="two-factor-inline {{ 'enabled' if administrator.two_factor_enabled else 'warning' }}">{{ '2FA ativo' if administrator.two_factor_enabled else '2FA pendente' }}</small>
           </div>
           <span class="status {{ 'published' if administrator.active else 'draft' }}">{{ 'Ativo' if administrator.active else 'Inativo' }}</span>
         </div>
