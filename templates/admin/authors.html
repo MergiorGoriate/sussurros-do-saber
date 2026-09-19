@@ -24,7 +24,7 @@
       <input type="hidden" name="author_id" value="{{ author.id }}">
       <div class="author-admin-heading">
         {% if author.photo %}
-        <img src="{{ author.photo }}" alt="Fotografia de {{ author.name }}" class="author-admin-photo">
+        <img src="{{ author.photo|safe_image_url }}" alt="Fotografia de {{ author.name }}" class="author-admin-photo">
         {% else %}
         <span class="author-admin-photo author-admin-fallback" aria-hidden="true">{{ author.name[:2]|upper }}</span>
         {% endif %}

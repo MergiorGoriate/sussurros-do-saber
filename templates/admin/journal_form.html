@@ -11,7 +11,7 @@
 <label>Capa via Cloudinary<input name="cover_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
 <label>Ou URL da capa<input name="cover_image" type="url" value="{{ journal.cover_image or '' }}" placeholder="https://..."></label>
 <label>Texto alternativo da capa<input name="cover_alt" maxlength="300" value="{{ journal.cover_alt or '' }}"></label>
-{% if journal.cover_image %}<img class="image-preview" src="{{ journal.cover_image }}" alt="Pré-visualização da capa">{% endif %}
+{% if journal.cover_image %}<img class="image-preview" src="{{ journal.cover_image|image_variant(800) }}" alt="Pré-visualização da capa">{% endif %}
 </section>
 <aside class="editor-side">
 <label>Abreviatura<input name="abbreviation" maxlength="30" value="{{ journal.abbreviation or '' }}"></label>

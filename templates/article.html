@@ -13,7 +13,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
     <p class="article-summary opacity-60 mt-5">{{ article.summary }}</p>
     <div class="article-author-line">
       {% if article.author_rel.photo %}
-      <img src="{{ article.author_rel.photo }}" alt="" class="article-author-avatar" loading="lazy" decoding="async">
+      <img src="{{ article.author_rel.photo|safe_image_url }}" alt="" class="article-author-avatar" loading="lazy" decoding="async">
       {% else %}
       <span class="article-author-avatar article-author-fallback" aria-hidden="true">{{ article.author[:2]|upper }}</span>
       {% endif %}
@@ -118,7 +118,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       href="{{ url_for('article',slug=item.slug) }}"
       class="story-card"
       ><img
-        src="{{ item.image }}"
+        src="{{ item.image|image_variant(640) }}"
         alt="Imagem de apoio: {{ item.title }}"
         loading="lazy"
         decoding="async"

@@ -6,7 +6,7 @@ import os
 import re
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
-from html import escape as html_escape
+from html import escape as html_escape, unescape as html_unescape
 from urllib.parse import parse_qs, quote, urlparse
 import bleach
 import markdown
@@ -210,7 +210,7 @@ def render_markdown(value):
     cleaned = bleach.clean(
         rendered,
         tags=allowed,
-        attributes={"a": ["href", "title", "rel"], "img": ["src", "alt", "title", "loading", "decoding"]},
+        attributes={"a": ["href", "title", "rel"], "img": ["src", "srcset", "sizes", "alt", "title", "loading", "decoding", "width", "height"]},
         protocols=["http", "https", "mailto"],
         strip=True,
     )
@@ -303,9 +303,29 @@ def cloudinary_cloud_name():
     return urlparse(os.getenv("CLOUDINARY_URL", "").strip()).hostname or ""
 
 
+@app.template_filter("safe_image_url")
+def safe_image_url(url):
+    """Normaliza URLs de imagem sem as encaminhar por proxies externos."""
+    value = html_unescape(str(url or "")).strip().strip(chr(34) + chr(39))
+    if value.startswith("//"):
+        value = "https:" + value
+    parsed = urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return value
+
+
 @app.template_filter("image_variant")
 def responsive_image_url(url, width=1200):
-    value = (url or "").strip()
+    """Otimiza apenas imagens alojadas no Cloudinary.
+
+    Imagens externas permanecem no endereço original. Encaminhá-las pelo
+    image/fetch do Cloudinary fazia capas e imagens do corpo quebrarem quando
+    o fetch remoto estava desativado ou a origem recusava o crawler.
+    """
+    value = safe_image_url(url)
+    if not value:
+        return ""
     try:
         requested_width = max(160, min(2000, int(width)))
     except (TypeError, ValueError):
@@ -313,17 +333,12 @@ def responsive_image_url(url, width=1200):
     transformation = f"f_auto,q_auto:eco,w_{requested_width},c_limit"
     if "res.cloudinary.com/" in value and "/upload/" in value:
         return value.replace("/upload/", f"/upload/{transformation}/", 1)
-    cloud_name = cloudinary_cloud_name()
-    if cloud_name and value.startswith(("http://", "https://")):
-        return (
-            f"https://res.cloudinary.com/{cloud_name}/image/fetch/"
-            f"{transformation}/{quote(value, safe='')}"
-        )
     return value
+
 
 @app.template_filter("absolute_url")
 def absolute_url(value):
-    address = (value or "").strip()
+    address = html_unescape(str(value or "")).strip().strip(chr(34) + chr(39))
     if address.startswith(("http://", "https://")):
         return address
     if address.startswith("//"):
@@ -333,7 +348,7 @@ def absolute_url(value):
 
 @app.template_filter("social_image")
 def social_image_url(url):
-    value = absolute_url((url or "").strip()) if url else ""
+    value = safe_image_url(url)
     if not value:
         return SITE_URL + "/static/img/logo-sussurros-horizontal.png"
 
@@ -341,14 +356,8 @@ def social_image_url(url):
     if "res.cloudinary.com/" in value and "/upload/" in value:
         return value.replace("/upload/", f"/upload/{transformation}/", 1)
 
-    cloud_name = cloudinary_cloud_name()
-
-    if cloud_name and value.startswith(("http://", "https://")):
-        encoded_source = quote(value, safe="")
-        return (
-            f"https://res.cloudinary.com/{cloud_name}/image/fetch/"
-            f"{transformation}/{encoded_source}"
-        )
+    # O endereço original é mais fiável do que Cloudinary image/fetch:
+    # muitas origens bloqueiam o fetch e algumas contas não o têm ativado.
     return value
 
 

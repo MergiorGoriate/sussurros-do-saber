@@ -52,8 +52,8 @@
     <label>Palavras-chave<input name="keywords" value="{{ article.keywords or '' }}" placeholder="biologia, microbiologia, educação"></label>
     <label>DOI<input name="doi" value="{{ article.doi or '' }}" placeholder="10.xxxx/xxxxx"></label>
     <label>Carregar imagem (JPG, PNG ou WebP; máximo 8 MB)<input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
-    <label>Ou endereço externo da imagem<input id="imageUrl" name="image" type="url" value="{{ article.image or '' }}" placeholder="https://..."></label>
-    <img id="imagePreview" class="image-preview" src="{{ article.image or '' }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}>
+    <label>Ou endereço externo da imagem<input id="imageUrl" name="image" type="url" value="{{ article.image|safe_image_url }}" placeholder="https://..."></label>
+    <img id="imagePreview" class="image-preview" src="{{ article.image|safe_image_url }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}>
   </section>
   <aside class="editor-side">
     <label>Estado<select name="status"><option value="draft" {% if article.status=='draft' %}selected{% endif %}>Rascunho</option><option value="published" {% if article.status=='published' %}selected{% endif %}>Publicado</option><option value="scheduled" {% if article.status=='scheduled' %}selected{% endif %}>Programado</option></select></label>

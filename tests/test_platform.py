@@ -10,7 +10,7 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
-from app import app, render_markdown, responsive_image_url, social_image_url  # noqa: E402
+from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
 from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Journal, db  # noqa: E402
 
@@ -115,34 +115,30 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b'<meta name="twitter:card" content="summary_large_image">', response.data)
         self.assertIn(b'?share=', response.data)
 
-    def test_external_social_images_are_converted_to_jpeg(self):
+    def test_external_images_keep_their_original_reliable_url(self):
         previous = os.environ.get("CLOUDINARY_CLOUD_NAME")
         os.environ["CLOUDINARY_CLOUD_NAME"] = "demo"
         try:
             source = "https://commons.wikimedia.org/wiki/Special:FilePath/Neuron_Hand-tuned.svg"
-            result = social_image_url(source)
-            self.assertTrue(result.startswith("https://res.cloudinary.com/demo/image/fetch/"))
-            self.assertIn("f_jpg,q_auto:good,w_1200,h_630,c_fill,g_auto,fl_force_strip", result)
-            self.assertIn("Neuron_Hand-tuned.svg", result)
-            self.assertNotEqual(result, source)
+            self.assertEqual(social_image_url(source), source)
+            self.assertEqual(responsive_image_url(source, 480), source)
         finally:
             if previous is None:
                 os.environ.pop("CLOUDINARY_CLOUD_NAME", None)
             else:
                 os.environ["CLOUDINARY_CLOUD_NAME"] = previous
 
-    def test_external_images_use_responsive_cloudinary_fetch(self):
-        previous = os.environ.get("CLOUDINARY_CLOUD_NAME")
-        os.environ["CLOUDINARY_CLOUD_NAME"] = "demo"
-        try:
-            result = responsive_image_url("https://example.org/large-image.jpg", 480)
-            self.assertIn("/image/fetch/f_auto,q_auto:eco,w_480,c_limit/", result)
-            self.assertIn("https%3A%2F%2Fexample.org%2Flarge-image.jpg", result)
-        finally:
-            if previous is None:
-                os.environ.pop("CLOUDINARY_CLOUD_NAME", None)
-            else:
-                os.environ["CLOUDINARY_CLOUD_NAME"] = previous
+    def test_image_urls_are_normalized_and_unsafe_values_rejected(self):
+        self.assertEqual(
+            safe_image_url("  //images.example.org/photo.jpg  "),
+            "https://images.example.org/photo.jpg",
+        )
+        self.assertEqual(
+            safe_image_url("https://images.example.org/photo.jpg?a=1&amp;b=2"),
+            "https://images.example.org/photo.jpg?a=1&b=2",
+        )
+        self.assertEqual(safe_image_url("javascript:alert(1)"), "")
+        self.assertEqual(responsive_image_url("not-a-url", 480), "")
 
     def test_static_assets_have_long_immutable_cache(self):
         response = self.client.get("/static/css/style.css")
