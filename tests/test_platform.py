@@ -2,8 +2,6 @@ import os
 import tempfile
 import unittest
 import re
-import time
-from html import escape
 
 
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
@@ -11,8 +9,7 @@ database_file.close()
 os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
-os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
-os.environ["ADMIN_TOTP_SECRET"] = "JBSWY3DPEHPK3PXP"
+os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"\nos.environ["ADMIN_TOTP_SECRET"] = "JBSWY3DPEHPK3PXP"
 
 from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
 from admin import generate_recovery_codes, totp_code, verify_totp  # noqa: E402
@@ -86,7 +83,7 @@ class PlatformTests(unittest.TestCase):
             self.assertIn(b"https://www.googletagmanager.com/gtm.js?id=", response.data)
             self.assertIn(b"GTM-TEST123", response.data)
             self.assertIn(b"analytics_storage:'denied'", response.data)
-            self.assertIn("googletagmanager.com", response.headers["Content-Security-Policy"])
+            self.assertIn(b"googletagmanager.com", response.headers["Content-Security-Policy"])
             javascript = self.client.get("/static/js/main.js").data
             for event in [b"article_view", b"search", b"share", b"scroll_depth", b"outbound_click", b"consent_update"]:
                 self.assertIn(event, javascript)
@@ -114,9 +111,9 @@ class PlatformTests(unittest.TestCase):
             expected_image = social_image_url(article.image)
         response = self.client.get(f"/artigo/{slug}")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f'<meta property="og:image" content="{escape(expected_image)}">'.encode(), response.data)
-        self.assertIn(f'<meta property="og:image:url" content="{escape(expected_image)}">'.encode(), response.data)
-        self.assertIn(f'<meta name="twitter:image" content="{escape(expected_image)}">'.encode(), response.data)
+        self.assertIn(f'<meta property="og:image" content="{expected_image}">'.encode(), response.data)
+        self.assertIn(f'<meta property="og:image:url" content="{expected_image}">'.encode(), response.data)
+        self.assertIn(f'<meta name="twitter:image" content="{expected_image}">'.encode(), response.data)
         self.assertIn(b'<meta name="twitter:card" content="summary_large_image">', response.data)
         self.assertIn(b'?share=', response.data)
 
@@ -209,8 +206,6 @@ class PlatformTests(unittest.TestCase):
     def test_administrator_can_be_created_and_sign_in(self):
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True
-            session["admin_2fa_verified"] = True
-            session["admin_last_activity_at"] = time.time()
             session["admin_superuser"] = True
             session["csrf_token"] = "test-csrf"
         response = self.client.post("/admin/administradores", data={
@@ -244,8 +239,6 @@ class PlatformTests(unittest.TestCase):
             self.assertTrue(session["admin_2fa_verified"])
             session.clear()
             session["admin_authenticated"] = True
-            session["admin_2fa_verified"] = True
-            session["admin_last_activity_at"] = time.time()
             session["admin_superuser"] = True
             session["csrf_token"] = "manage-csrf"
         with app.app_context():
@@ -327,8 +320,6 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
-            session["admin_2fa_verified"] = True
-            session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-csrf"
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-csrf",
@@ -356,8 +347,6 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
-            session["admin_2fa_verified"] = True
-            session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "journal-csrf"
         response = self.client.post("/admin/revistas/nova", data={
             "csrf_token": "journal-csrf",
@@ -384,8 +373,6 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
-            session["admin_2fa_verified"] = True
-            session["admin_last_activity_at"] = time.time()
             session["admin_superuser"] = False
             session["csrf_token"] = "secondary-csrf"
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
