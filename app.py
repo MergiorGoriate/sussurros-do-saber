@@ -395,14 +395,14 @@ LEARNING_RESOURCES = [
 
 @app.get("/")
 def home():
-    items = Article.public_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(6).all()
+    items = Article.public_card_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(6).all()
     return render_template("index.html", articles=items, journals=Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).limit(3).all())
 
 @app.get("/artigos")
 def articles():
     category = request.args.get("categoria", "").strip().lower()
     query = request.args.get("q", "").strip().lower()
-    results = Article.public_query()
+    results = Article.public_card_query()
     if category:
         results = results.join(Category).filter(db.func.lower(Category.name) == category)
     if query:
@@ -426,7 +426,7 @@ def article(slug):
         if legacy:
             return redirect(url_for("article", slug=legacy.slug), code=301)
         return render_template("404.html"), 404
-    related = Article.public_query().filter(Article.id != selected.id).order_by(Article.published_at.desc()).limit(3).all()
+    related = Article.public_card_query().filter(Article.id != selected.id).order_by(Article.published_at.desc()).limit(3).all()
     return render_template("article.html", article=selected, related=related)
 
 
@@ -513,7 +513,9 @@ def osmosis_lab():
 
 @app.get("/api/recursos")
 def api_resources():
-    return jsonify(LEARNING_RESOURCES)
+    response = jsonify(LEARNING_RESOURCES)
+    response.headers["Cache-Control"] = "public, max-age=600, stale-while-revalidate=3600"
+    return response
 
 @app.get("/favoritos")
 def favorites():
@@ -521,16 +523,47 @@ def favorites():
 
 @app.get("/api/artigos")
 def api_articles():
-    query = request.args.get("q", "").strip().lower()
-    items = Article.public_query()
+    query = request.args.get("q", "").strip().lower()[:120]
+    requested_ids = {
+        int(value) for value in request.args.get("ids", "").split(",")
+        if value.strip().isdigit()
+    }
+    requested_ids = set(list(requested_ids)[:50])
+    limit = max(1, min(50, request.args.get("limit", 24, type=int)))
+
+    items = Article.public_card_query()
+    if requested_ids:
+        items = items.filter(Article.id.in_(requested_ids))
+        limit = min(50, len(requested_ids))
     if query:
         like = f"%{query}%"
-        items = items.join(Category).join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Category.name).like(like), db.func.lower(Author.name).like(like)))
-    return jsonify([{"id": a.id, "slug": a.slug, "category": a.category, "title": a.title, "summary": a.summary, "author": a.author, "date": a.date, "read_time": a.read_time, "image": a.image} for a in items.all()])
+        items = items.join(Category).join(Author).filter(or_(
+            db.func.lower(Article.title).like(like),
+            db.func.lower(Article.summary).like(like),
+            db.func.lower(Category.name).like(like),
+            db.func.lower(Author.name).like(like),
+        ))
+    articles = items.order_by(Article.published_at.desc()).limit(limit).all()
+    response = jsonify([
+        {
+            "id": article.id,
+            "slug": article.slug,
+            "category": article.category,
+            "title": article.title,
+            "summary": article.summary,
+            "author": article.author,
+            "date": article.date,
+            "read_time": article.read_time,
+            "image": article.image,
+        }
+        for article in articles
+    ])
+    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
+    return response
 
 @app.get("/feed.xml")
 def feed():
-    articles = Article.public_query().order_by(Article.published_at.desc()).all()
+    articles = Article.public_card_query().order_by(Article.published_at.desc()).all()
     items = "".join(f"<item><title>{escape(a.title)}</title><link>{SITE_URL}{url_for('article', slug=a.slug)}</link><guid isPermaLink=\"true\">{SITE_URL}{url_for('article', slug=a.slug)}</guid><pubDate>{format_datetime((a.published_at or a.created_at).replace(tzinfo=timezone.utc))}</pubDate><description>{escape(a.summary)}</description></item>" for a in articles)
     last_build = format_datetime(datetime.now(timezone.utc))
     xml = f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sussurros do Saber</title><link>{SITE_URL}/</link><description>Ciência que se compreende</description><language>pt-MZ</language><lastBuildDate>{last_build}</lastBuildDate>{items}</channel></rss>'
@@ -538,7 +571,7 @@ def feed():
 
 @app.get("/sitemap.xml")
 def sitemap():
-    public_articles = Article.public_query().order_by(Article.updated_at.desc()).all()
+    public_articles = Article.public_card_query().order_by(Article.updated_at.desc()).all()
     public_journals = Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).all()
     static_paths = [
         url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"),
