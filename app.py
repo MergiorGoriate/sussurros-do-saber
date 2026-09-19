@@ -38,7 +38,7 @@ app.config.update(
     SESSION_REFRESH_EACH_REQUEST=False,
     MAX_CONTENT_LENGTH=9 * 1024 * 1024,
 )
-SITE_URL = os.getenv("SITE_URL", "https://www.sussurrosdosaber.com").rstrip("/")
+SITE_URL = ("https://www.sussurrosdosaber.com" if _is_production else os.getenv("SITE_URL", "https://www.sussurrosdosaber.com")).rstrip("/")
 CANONICAL_HOST = urlparse(SITE_URL).netloc.lower()
 db.init_app(app)
 limiter.init_app(app)
