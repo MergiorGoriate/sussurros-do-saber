@@ -30,7 +30,8 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("RENDER", "").lower() == "true" or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
-    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
+    SESSION_REFRESH_EACH_REQUEST=False,
     MAX_CONTENT_LENGTH=9 * 1024 * 1024,
 )
 SITE_URL = os.getenv("SITE_URL", "https://sussurrosdosaber.com").rstrip("/")
