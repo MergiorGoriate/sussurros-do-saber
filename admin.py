@@ -55,18 +55,18 @@ def admin_session_valid():
         administrator = db.session.get(AdminUser, administrator_id)
         if not administrator or not administrator.active:
             return False
-        if not administrator.two_factor_enabled or not administrator.totp_secret:
+        if administrator.two_factor_enabled and not session.get("admin_2fa_verified"):
             return False
-        if not session.get("admin_2fa_verified"):
+    else:
+        configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
+        if configured_totp and not session.get("admin_2fa_verified"):
             return False
-    elif not os.getenv("ADMIN_TOTP_SECRET", "").strip() or not session.get("admin_2fa_verified"):
-        return False
 
     session["admin_last_activity_at"] = now
     return True
 
 
-PUBLIC_ADMIN_ENDPOINTS = {"admin.login", "admin.verify_two_factor", "admin.enroll_two_factor"}
+PUBLIC_ADMIN_ENDPOINTS = {"admin.login", "admin.verify_two_factor"}
 
 
 @admin_bp.before_request
@@ -254,22 +254,20 @@ def login():
             AdminUser.active.is_(True),
         ).first()
         configured_user = os.getenv("ADMIN_USERNAME")
+        configured_password = os.getenv("ADMIN_PASSWORD")
         configured_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
         if not turnstile_valid():
             flash("A verificação de segurança falhou. Actualize a página e tente novamente.", "error")
         elif database_admin and check_password_hash(database_admin.password_hash, password):
             if database_admin.two_factor_enabled and database_admin.totp_secret:
                 return begin_two_factor_challenge(administrator=database_admin)
-            session.clear()
-            session.permanent = False
-            session["pending_2fa_enrollment_admin_id"] = database_admin.id
-            session["totp_setup_secret"] = generate_totp_secret()
-            session["csrf_token"] = secrets.token_urlsafe(32)
-            return redirect(url_for("admin.enroll_two_factor"))
-        elif not configured_user or not configured_password_hash:
+            flash("Ative a autenticação de dois fatores na área Segurança.", "warning")
+            return complete_admin_login(database_admin)
+        elif not configured_user or not (configured_password_hash or configured_password):
             flash("As credenciais administrativas ainda não estão configuradas.", "error")
         elif hmac.compare_digest(username, configured_user.lower()) and (
-            configured_password_hash and check_password_hash(configured_password_hash, password)
+            (configured_password_hash and check_password_hash(configured_password_hash, password))
+            or (configured_password and hmac.compare_digest(password, configured_password))
         ):
             env_totp_secret = os.getenv("ADMIN_TOTP_SECRET", "").strip()
             if env_totp_secret:
@@ -277,49 +275,14 @@ def login():
                     username=configured_user,
                     superuser=True,
                 )
-            flash("A conta principal exige ADMIN_TOTP_SECRET antes do acesso.", "error")
+            flash(
+                "A conta principal ainda não possui 2FA. Configure ADMIN_TOTP_SECRET no Render.",
+                "warning",
+            )
+            return complete_admin_login(username=configured_user, superuser=True)
         else:
             flash("Utilizador ou palavra-passe inválidos.", "error")
     return render_template("admin/login.html")
-
-
-@admin_bp.route("/configurar-2fa-inicial", methods=["GET", "POST"])
-@limiter.limit("10 per minute; 30 per hour")
-def enroll_two_factor():
-    administrator_id = session.get("pending_2fa_enrollment_admin_id")
-    administrator = db.session.get(AdminUser, administrator_id) if administrator_id else None
-    secret = session.get("totp_setup_secret")
-    if not administrator or not administrator.active or not secret:
-        session.clear()
-        return redirect(url_for("admin.login"))
-    if request.method == "POST":
-        validate_csrf()
-        code = request.form.get("code", "").strip()
-        if not verify_totp(secret, code):
-            flash("O código do autenticador é inválido ou expirou.", "error")
-        else:
-            recovery_codes = generate_recovery_codes()
-            administrator.totp_secret = secret
-            administrator.two_factor_enabled = True
-            administrator.recovery_code_hashes = json.dumps([
-                generate_password_hash(item) for item in recovery_codes
-            ])
-            db.session.commit()
-            session.pop("pending_2fa_enrollment_admin_id", None)
-            session.pop("totp_setup_secret", None)
-            complete_admin_login(administrator)
-            session["new_recovery_codes"] = recovery_codes
-            return redirect(url_for("admin.two_factor_settings"))
-    issuer = "Sussurros do Saber"
-    account_label = administrator.email or administrator.username
-    otpauth_uri = (
-        f"otpauth://totp/{quote(issuer)}:{quote(account_label)}"
-        f"?secret={secret}&issuer={quote(issuer)}&digits=6&period=30"
-    )
-    return render_template(
-        "admin/enroll_2fa.html", administrator=administrator,
-        setup_secret=secret, otpauth_uri=otpauth_uri,
-    )
 
 
 @admin_bp.route("/verificar-2fa", methods=["GET", "POST"])
@@ -366,7 +329,7 @@ def two_factor_settings():
             enabled=bool(os.getenv("ADMIN_TOTP_SECRET", "").strip()),
         )
 
-    recovery_codes = session.pop("new_recovery_codes", None)
+    recovery_codes = None
     setup_secret = None
     if not administrator.two_factor_enabled:
         setup_secret = session.get("totp_setup_secret") or generate_totp_secret()

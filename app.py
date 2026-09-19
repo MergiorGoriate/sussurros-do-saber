@@ -19,10 +19,6 @@ from extensions import limiter
 from models import AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
 
 app = Flask(__name__)
-_is_production = os.getenv("RENDER", "").lower() == "true" or os.getenv("FLASK_ENV", "").lower() == "production"
-_secret_key = os.getenv("SECRET_KEY", "").strip()
-if _is_production and (not _secret_key or _secret_key == "local-development-only-change-me"):
-    raise RuntimeError("SECRET_KEY forte é obrigatória em produção.")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 database_url = os.getenv("DATABASE_URL", "sqlite:///sussurros.db")
 if database_url.startswith("postgres://"):
@@ -30,7 +26,7 @@ if database_url.startswith("postgres://"):
 app.config.update(
     SQLALCHEMY_DATABASE_URI=database_url,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    SECRET_KEY=_secret_key or "local-development-only-change-me",
+    SECRET_KEY=os.getenv("SECRET_KEY", "local-development-only-change-me"),
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("RENDER", "").lower() == "true" or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
@@ -38,8 +34,7 @@ app.config.update(
     SESSION_REFRESH_EACH_REQUEST=False,
     MAX_CONTENT_LENGTH=9 * 1024 * 1024,
 )
-SITE_URL = os.getenv("SITE_URL", "https://www.sussurrosdosaber.com").rstrip("/")
-CANONICAL_HOST = urlparse(SITE_URL).netloc.lower()
+SITE_URL = os.getenv("SITE_URL", "https://sussurrosdosaber.com").rstrip("/")
 db.init_app(app)
 limiter.init_app(app)
 app.register_blueprint(admin_bp)
@@ -237,9 +232,8 @@ def security_headers(response):
         "object-src 'none'; img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
-        "frame-src https://www.googletagmanager.com https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com; "
-        "media-src https:; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com https://challenges.cloudflare.com; upgrade-insecure-requests",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
+        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com; upgrade-insecure-requests",
     )
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
