@@ -34,10 +34,26 @@ app.config.update(
     SESSION_REFRESH_EACH_REQUEST=False,
     MAX_CONTENT_LENGTH=9 * 1024 * 1024,
 )
-SITE_URL = os.getenv("SITE_URL", "https://sussurrosdosaber.com").rstrip("/")
+CANONICAL_ORIGIN = "https://www.sussurrosdosaber.com"
+_configured_site_url = os.getenv("SITE_URL", CANONICAL_ORIGIN).rstrip("/")
+_configured_host = (urlparse(_configured_site_url).hostname or "").lower()
+# A origem pública oficial usa www. Normalize também configurações antigas do Render
+# para impedir que canonical, Open Graph, sitemap e dados estruturados divirjam.
+SITE_URL = CANONICAL_ORIGIN if _configured_host == "sussurrosdosaber.com" else _configured_site_url
+
 db.init_app(app)
 limiter.init_app(app)
 app.register_blueprint(admin_bp)
+
+
+@app.before_request
+def redirect_bare_domain_to_www():
+    """Consolida sinais de indexação e ligações no único host canónico."""
+    request_host = request.host.split(":", 1)[0].lower()
+    if request_host == "sussurrosdosaber.com":
+        target = CANONICAL_ORIGIN + request.full_path
+        return redirect(target.rstrip("?"), code=308)
+    return None
 
 
 IMAGE_DIRECTIVE = re.compile(r"!\[([^\]]*)\]\((https?://[^\s)]+)\)", re.I)
