@@ -20,8 +20,8 @@
     <label>Utilizador<input name="username" required minlength="3" maxlength="60" pattern="[a-zA-Z0-9._-]+" autocomplete="username" aria-describedby="usernameHelp"></label>
     <small id="usernameHelp" class="field-help">Use letras, números, ponto, hífen ou sublinhado.</small>
     <label>E-mail <span class="optional">opcional</span><input name="email" type="email" maxlength="180" autocomplete="email"></label>
-    <label>Palavra-passe<input name="password" type="password" required minlength="12" autocomplete="new-password"></label>
-    <label>Confirmar palavra-passe<input name="password_confirmation" type="password" required minlength="12" autocomplete="new-password"></label>
+    <label>Palavra-passe<input name="password" type="password" required minlength="14" autocomplete="new-password"></label>
+    <label>Confirmar palavra-passe<input name="password_confirmation" type="password" required minlength="14" autocomplete="new-password"></label>
     <button class="admin-primary">Criar administrador</button>
   </form>
 
@@ -38,6 +38,7 @@
             </div>
             <small>@{{ administrator.username }}{% if administrator.email %} · {{ administrator.email }}{% endif %}</small>
             <small>Criado em {{ administrator.created_at.strftime('%d/%m/%Y') }}{% if administrator.last_login_at %} · Último acesso {{ administrator.last_login_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}</small>
+            <small class="two-factor-inline {{ 'enabled' if administrator.two_factor_enabled else 'warning' }}">{{ '2FA ativo' if administrator.two_factor_enabled else '2FA pendente' }}</small>
           </div>
           <span class="status {{ 'published' if administrator.active else 'draft' }}">{{ 'Ativo' if administrator.active else 'Inativo' }}</span>
         </div>
@@ -49,8 +50,8 @@
             <label>Nome completo<input name="display_name" value="{{ administrator.display_name }}" required minlength="2" maxlength="120"></label>
             <label>Utilizador<input name="username" value="{{ administrator.username }}" required minlength="3" maxlength="60" pattern="[a-zA-Z0-9._-]+"></label>
             <label>E-mail <span class="optional">opcional</span><input name="email" value="{{ administrator.email or '' }}" type="email" maxlength="180"></label>
-            <label>Nova palavra-passe <span class="optional">deixe vazio para manter</span><input name="password" type="password" minlength="12" autocomplete="new-password"></label>
-            <label>Confirmar nova palavra-passe<input name="password_confirmation" type="password" minlength="12" autocomplete="new-password"></label>
+            <label>Nova palavra-passe <span class="optional">deixe vazio para manter</span><input name="password" type="password" minlength="14" autocomplete="new-password"></label>
+            <label>Confirmar nova palavra-passe<input name="password_confirmation" type="password" minlength="14" autocomplete="new-password"></label>
             <label class="check-row">
               <input name="active" type="checkbox" {% if administrator.active %}checked{% endif %} {% if administrator.is_superadmin %}disabled{% endif %}>
               Conta ativa

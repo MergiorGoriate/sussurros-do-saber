@@ -1,0 +1,67 @@
+{% extends 'admin/base.html' %}
+{% block title %}Segurança{% endblock %}
+{% block content %}
+<header class="admin-header"><div><span>Proteção da conta</span><h1>Autenticação em dois fatores</h1></div></header>
+
+{% if environment_managed %}
+<section class="admin-panel security-panel">
+  <h2>Conta principal do servidor</h2>
+  {% if enabled %}
+  <div class="two-factor-status enabled"><strong>2FA ativo</strong><span>A segunda etapa está configurada através da variável segura <code>ADMIN_TOTP_SECRET</code> no Render.</span></div>
+  {% else %}
+  <div class="two-factor-status warning"><strong>2FA ainda não configurado</strong><span>Adicione <code>ADMIN_TOTP_SECRET</code> no Render com uma chave Base32 de, pelo menos, 20 bytes e faça uma nova implantação.</span></div>
+  <p>Para evitar bloquear o Administrador principal, esta credencial gerida pelo servidor não pode ser alterada pelo painel.</p>
+  {% endif %}
+</section>
+{% elif enabled %}
+<section class="admin-panel security-panel">
+  <div class="two-factor-status enabled"><strong>2FA ativo</strong><span>A conta exige um código temporário depois da palavra-passe.</span></div>
+  <h2>Códigos de recuperação</h2>
+  <p>Se perdeu os códigos anteriores, gere um novo conjunto. Os códigos antigos serão imediatamente invalidados.</p>
+  <form method="post" class="compact-form security-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="regenerate">
+    <label>Palavra-passe atual<input name="password" type="password" required autocomplete="current-password"></label>
+    <label>Código do autenticador<input name="code" required inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
+    <button class="admin-primary">Gerar novos códigos</button>
+  </form>
+  <details class="danger-zone">
+    <summary>Desativar autenticação em dois fatores</summary>
+    <form method="post" class="compact-form security-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="disable">
+      <label>Palavra-passe atual<input name="password" type="password" required autocomplete="current-password"></label>
+      <label>Código do autenticador ou recuperação<input name="code" required autocomplete="one-time-code" maxlength="14"></label>
+      <button class="danger-button">Desativar 2FA</button>
+    </form>
+  </details>
+</section>
+{% else %}
+<section class="admin-panel security-panel">
+  <div class="two-factor-status warning"><strong>2FA inativo</strong><span>Ative-o para impedir o acesso apenas com uma palavra-passe.</span></div>
+  <ol class="setup-steps">
+    <li>Abra Google Authenticator, Microsoft Authenticator, Authy ou outra aplicação TOTP.</li>
+    <li>Escolha adicionar uma conta manualmente e introduza a chave abaixo.</li>
+    <li>Use o código de 6 dígitos para confirmar.</li>
+  </ol>
+  <div class="totp-secret"><span>Chave de configuração</span><code>{{ setup_secret }}</code></div>
+  <p class="field-help">Tipo: baseado no tempo (TOTP) · 6 dígitos · intervalo de 30 segundos.</p>
+  <form method="post" class="compact-form security-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="enable">
+    <label>Palavra-passe atual<input name="password" type="password" required autocomplete="current-password"></label>
+    <label>Código gerado pela aplicação<input name="code" required inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6"></label>
+    <button class="admin-primary">Ativar autenticação em dois fatores</button>
+  </form>
+</section>
+{% endif %}
+
+{% if recovery_codes %}
+<section class="admin-panel recovery-panel" aria-labelledby="recovery-title">
+  <h2 id="recovery-title">Guarde estes códigos de recuperação agora</h2>
+  <p>Cada código só pode ser utilizado uma vez. Eles não serão mostrados novamente.</p>
+  <ul>{% for code in recovery_codes %}<li><code>{{ code }}</code></li>{% endfor %}</ul>
+  <button type="button" class="admin-primary" onclick="window.print()">Imprimir códigos</button>
+</section>
+{% endif %}
+{% endblock %}

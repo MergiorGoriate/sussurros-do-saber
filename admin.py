@@ -1,12 +1,18 @@
-import hmac
+import base64
 import csv
+import hashlib
+import hmac
 import io
+import json
 import os
 import re
 import secrets
+import struct
+import time
 import unicodedata
 from datetime import datetime
 from functools import wraps
+from urllib.parse import quote
 import requests
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -24,10 +30,26 @@ def slugify(value):
     return value.strip("-")[:260]
 
 
+def admin_session_valid():
+    if not session.get("admin_authenticated"):
+        return False
+    administrator_id = session.get("admin_id")
+    if administrator_id is not None:
+        administrator = db.session.get(AdminUser, administrator_id)
+        if not administrator or not administrator.active:
+            return False
+        if administrator.two_factor_enabled and not session.get("admin_2fa_verified"):
+            return False
+        return True
+    configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
+    return not configured_totp or bool(session.get("admin_2fa_verified"))
+
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("admin_authenticated"):
+        if not admin_session_valid():
+            session.clear()
             return redirect(url_for("admin.login", next=request.path))
         return view(*args, **kwargs)
     return wrapped
@@ -36,7 +58,8 @@ def login_required(view):
 def superadmin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("admin_authenticated"):
+        if not admin_session_valid():
+            session.clear()
             return redirect(url_for("admin.login", next=request.path))
         if not session.get("admin_superuser"):
             abort(403)
@@ -82,43 +105,253 @@ def turnstile_valid():
         return False
 
 
+def generate_totp_secret():
+    return base64.b32encode(secrets.token_bytes(20)).decode("ascii").rstrip("=")
+
+
+def totp_code(secret, timestamp=None):
+    cleaned = re.sub(r"[^A-Z2-7]", "", (secret or "").upper())
+    if not cleaned:
+        return ""
+    padded = cleaned + "=" * ((8 - len(cleaned) % 8) % 8)
+    try:
+        key = base64.b32decode(padded, casefold=True)
+    except (ValueError, TypeError):
+        return ""
+    counter = int((timestamp if timestamp is not None else time.time()) // 30)
+    digest = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    number = (struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1_000_000
+    return f"{number:06d}"
+
+
+def verify_totp(secret, value, window=1):
+    candidate = re.sub(r"\D", "", value or "")
+    if len(candidate) != 6:
+        return False
+    now = time.time()
+    return any(
+        hmac.compare_digest(totp_code(secret, now + offset * 30), candidate)
+        for offset in range(-window, window + 1)
+    )
+
+
+def generate_recovery_codes(count=8):
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return [
+        "-".join(
+            "".join(secrets.choice(alphabet) for _ in range(4))
+            for _ in range(3)
+        )
+        for _ in range(count)
+    ]
+
+
+def consume_recovery_code(administrator, candidate):
+    normalized = (candidate or "").strip().upper()
+    if not normalized:
+        return False
+    try:
+        hashes = json.loads(administrator.recovery_code_hashes or "[]")
+    except (TypeError, ValueError):
+        hashes = []
+    for index, stored_hash in enumerate(hashes):
+        if check_password_hash(stored_hash, normalized):
+            hashes.pop(index)
+            administrator.recovery_code_hashes = json.dumps(hashes)
+            db.session.commit()
+            return True
+    return False
+
+
+def complete_admin_login(administrator=None, *, username=None, superuser=False):
+    if administrator is not None:
+        administrator.last_login_at = utcnow()
+        db.session.commit()
+        username = administrator.username
+        superuser = bool(administrator.is_superadmin)
+    session.clear()
+    session.permanent = True
+    session["admin_authenticated"] = True
+    session["admin_id"] = administrator.id if administrator is not None else None
+    session["admin_username"] = username
+    session["admin_superuser"] = superuser
+    session["admin_2fa_verified"] = bool(
+        administrator.two_factor_enabled if administrator is not None
+        else os.getenv("ADMIN_TOTP_SECRET", "").strip()
+    )
+    session["csrf_token"] = secrets.token_urlsafe(32)
+    return redirect(url_for("admin.dashboard"))
+
+
+def begin_two_factor_challenge(*, administrator=None, username=None, superuser=False):
+    session.clear()
+    session.permanent = True
+    session["pending_2fa_admin_id"] = administrator.id if administrator is not None else None
+    session["pending_2fa_username"] = username
+    session["pending_2fa_superuser"] = superuser
+    session["csrf_token"] = secrets.token_urlsafe(32)
+    return redirect(url_for("admin.verify_two_factor"))
+
+
 @admin_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute; 20 per hour")
 def login():
+    if session.get("admin_authenticated"):
+        return redirect(url_for("admin.dashboard"))
     if request.method == "POST":
         validate_csrf()
         username = request.form.get("username", "").strip().lower()
         password = request.form.get("password", "")
-        database_admin = AdminUser.query.filter(db.func.lower(AdminUser.username) == username, AdminUser.active.is_(True)).first()
+        database_admin = AdminUser.query.filter(
+            db.func.lower(AdminUser.username) == username,
+            AdminUser.active.is_(True),
+        ).first()
         configured_user = os.getenv("ADMIN_USERNAME")
         configured_password = os.getenv("ADMIN_PASSWORD")
         configured_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
         if not turnstile_valid():
             flash("A verificação de segurança falhou. Actualize a página e tente novamente.", "error")
         elif database_admin and check_password_hash(database_admin.password_hash, password):
-            session.clear()
-            session.permanent = True
-            session["admin_authenticated"] = True
-            session["admin_id"] = database_admin.id
-            session["admin_username"] = database_admin.username
-            session["admin_superuser"] = bool(database_admin.is_superadmin)
-            session["csrf_token"] = secrets.token_urlsafe(32)
-            database_admin.last_login_at = utcnow()
-            db.session.commit()
-            return redirect(url_for("admin.dashboard"))
+            if database_admin.two_factor_enabled and database_admin.totp_secret:
+                return begin_two_factor_challenge(administrator=database_admin)
+            flash("Ative a autenticação de dois fatores na área Segurança.", "warning")
+            return complete_admin_login(database_admin)
         elif not configured_user or not (configured_password_hash or configured_password):
             flash("As credenciais administrativas ainda não estão configuradas.", "error")
-        elif hmac.compare_digest(username, configured_user.lower()) and ((configured_password_hash and check_password_hash(configured_password_hash, password)) or (configured_password and hmac.compare_digest(password, configured_password))):
-            session.clear()
-            session.permanent = True
-            session["admin_authenticated"] = True
-            session["admin_username"] = configured_user
-            session["admin_superuser"] = True
-            session["csrf_token"] = secrets.token_urlsafe(32)
-            return redirect(url_for("admin.dashboard"))
+        elif hmac.compare_digest(username, configured_user.lower()) and (
+            (configured_password_hash and check_password_hash(configured_password_hash, password))
+            or (configured_password and hmac.compare_digest(password, configured_password))
+        ):
+            env_totp_secret = os.getenv("ADMIN_TOTP_SECRET", "").strip()
+            if env_totp_secret:
+                return begin_two_factor_challenge(
+                    username=configured_user,
+                    superuser=True,
+                )
+            flash(
+                "A conta principal ainda não possui 2FA. Configure ADMIN_TOTP_SECRET no Render.",
+                "warning",
+            )
+            return complete_admin_login(username=configured_user, superuser=True)
         else:
             flash("Utilizador ou palavra-passe inválidos.", "error")
     return render_template("admin/login.html")
+
+
+@admin_bp.route("/verificar-2fa", methods=["GET", "POST"])
+@limiter.limit("6 per minute; 20 per hour")
+def verify_two_factor():
+    pending_id = session.get("pending_2fa_admin_id")
+    pending_username = session.get("pending_2fa_username")
+    if pending_id is None and not pending_username:
+        return redirect(url_for("admin.login"))
+    if request.method == "POST":
+        validate_csrf()
+        code = request.form.get("code", "").strip()
+        if pending_id is not None:
+            administrator = db.session.get(AdminUser, pending_id)
+            valid = bool(
+                administrator
+                and administrator.active
+                and (
+                    verify_totp(administrator.totp_secret, code)
+                    or consume_recovery_code(administrator, code)
+                )
+            )
+            if valid:
+                return complete_admin_login(administrator)
+        else:
+            env_secret = os.getenv("ADMIN_TOTP_SECRET", "").strip()
+            if env_secret and verify_totp(env_secret, code):
+                return complete_admin_login(
+                    username=pending_username,
+                    superuser=bool(session.get("pending_2fa_superuser")),
+                )
+        flash("Código de autenticação inválido ou expirado.", "error")
+    return render_template("admin/verify_2fa.html")
+
+
+@admin_bp.route("/seguranca/2fa", methods=["GET", "POST"])
+@login_required
+def two_factor_settings():
+    administrator = db.session.get(AdminUser, session.get("admin_id")) if session.get("admin_id") else None
+    if administrator is None:
+        return render_template(
+            "admin/two_factor.html",
+            environment_managed=True,
+            enabled=bool(os.getenv("ADMIN_TOTP_SECRET", "").strip()),
+        )
+
+    recovery_codes = None
+    setup_secret = None
+    if not administrator.two_factor_enabled:
+        setup_secret = session.get("totp_setup_secret") or generate_totp_secret()
+        session["totp_setup_secret"] = setup_secret
+
+    if request.method == "POST":
+        validate_csrf()
+        action = request.form.get("action", "enable")
+        password = request.form.get("password", "")
+        code = request.form.get("code", "")
+        if not check_password_hash(administrator.password_hash, password):
+            flash("A palavra-passe atual está incorreta.", "error")
+        elif action == "enable":
+            secret = session.get("totp_setup_secret")
+            if not secret or not verify_totp(secret, code):
+                flash("O código do autenticador é inválido ou expirou.", "error")
+            else:
+                recovery_codes = generate_recovery_codes()
+                administrator.totp_secret = secret
+                administrator.two_factor_enabled = True
+                administrator.recovery_code_hashes = json.dumps([
+                    generate_password_hash(item) for item in recovery_codes
+                ])
+                db.session.commit()
+                session.pop("totp_setup_secret", None)
+                session["admin_2fa_verified"] = True
+                setup_secret = None
+                flash("Autenticação de dois fatores ativada.", "success")
+        elif action == "regenerate":
+            if not administrator.two_factor_enabled or not verify_totp(administrator.totp_secret, code):
+                flash("Confirme a operação com um código válido do autenticador.", "error")
+            else:
+                recovery_codes = generate_recovery_codes()
+                administrator.recovery_code_hashes = json.dumps([
+                    generate_password_hash(item) for item in recovery_codes
+                ])
+                db.session.commit()
+                flash("Novos códigos de recuperação criados. Os anteriores foram invalidados.", "success")
+        elif action == "disable":
+            valid_second_factor = verify_totp(administrator.totp_secret, code) or consume_recovery_code(administrator, code)
+            if not administrator.two_factor_enabled or not valid_second_factor:
+                flash("Confirme a desativação com um código válido.", "error")
+            else:
+                administrator.two_factor_enabled = False
+                administrator.totp_secret = None
+                administrator.recovery_code_hashes = ""
+                db.session.commit()
+                session["admin_2fa_verified"] = False
+                setup_secret = generate_totp_secret()
+                session["totp_setup_secret"] = setup_secret
+                flash("Autenticação de dois fatores desativada.", "warning")
+
+    issuer = "Sussurros do Saber"
+    account_label = administrator.email or administrator.username
+    otpauth_uri = (
+        f"otpauth://totp/{quote(issuer)}:{quote(account_label)}"
+        f"?secret={setup_secret}&issuer={quote(issuer)}&digits=6&period=30"
+        if setup_secret else None
+    )
+    return render_template(
+        "admin/two_factor.html",
+        administrator=administrator,
+        environment_managed=False,
+        enabled=administrator.two_factor_enabled,
+        setup_secret=setup_secret,
+        otpauth_uri=otpauth_uri,
+        recovery_codes=recovery_codes,
+    )
 
 
 @admin_bp.post("/logout")
@@ -153,8 +386,8 @@ def administrators():
             flash("Informe o nome do administrador.", "error")
         elif email and (len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)):
             flash("Informe um endereço de e-mail válido.", "error")
-        elif len(password) < 12:
-            flash("A palavra-passe deve ter pelo menos 12 caracteres.", "error")
+        elif len(password) < 14:
+            flash("A palavra-passe deve ter pelo menos 14 caracteres.", "error")
         elif password != password_confirmation:
             flash("A confirmação da palavra-passe não corresponde.", "error")
         elif duplicate_username or duplicate_email:
@@ -203,8 +436,8 @@ def edit_administrator(administrator_id):
         flash("Informe o nome do administrador.", "error")
     elif email and (len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)):
         flash("Informe um endereço de e-mail válido.", "error")
-    elif password and len(password) < 12:
-        flash("A nova palavra-passe deve ter pelo menos 12 caracteres.", "error")
+    elif password and len(password) < 14:
+        flash("A nova palavra-passe deve ter pelo menos 14 caracteres.", "error")
     elif password != password_confirmation:
         flash("A confirmação da palavra-passe não corresponde.", "error")
     elif duplicate_username or duplicate_email:

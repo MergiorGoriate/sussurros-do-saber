@@ -26,6 +26,7 @@
       {% endif %}
       <a href="{{ url_for('admin.contacts') }}">Contactos</a>
       <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>
+      <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a>
       <a href="/" target="_blank" rel="noopener">Ver site ↗</a>
     </nav>
     <form action="{{ url_for('admin.logout') }}" method="post">

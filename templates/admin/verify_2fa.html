@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Verificação em dois fatores — Administração</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}">
+</head>
+<body class="login-page">
+  <form method="post" class="login-card">
+    <img src="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}" alt="Sussurros do Saber">
+    <span class="security-step">Segunda etapa</span>
+    <h1>Código de autenticação</h1>
+    <p>Introduza o código de 6 dígitos da aplicação autenticadora. Também pode utilizar um código de recuperação.</p>
+    {% with messages=get_flashed_messages(with_categories=true) %}
+      {% for category,message in messages %}<div class="alert {{ category }}">{{ message }}</div>{% endfor %}
+    {% endwith %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Código<input name="code" required inputmode="numeric" autocomplete="one-time-code" maxlength="14" autofocus placeholder="000000"></label>
+    <button class="admin-primary">Verificar e entrar</button>
+    <a href="{{ url_for('admin.login') }}">← Recomeçar o acesso</a>
+  </form>
+</body>
+</html>
