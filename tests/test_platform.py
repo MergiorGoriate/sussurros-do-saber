@@ -206,6 +206,7 @@ class PlatformTests(unittest.TestCase):
     def test_administrator_can_be_created_and_sign_in(self):
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_superuser"] = True
             session["csrf_token"] = "test-csrf"
         response = self.client.post("/admin/administradores", data={
@@ -239,6 +240,7 @@ class PlatformTests(unittest.TestCase):
             self.assertTrue(session["admin_2fa_verified"])
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_superuser"] = True
             session["csrf_token"] = "manage-csrf"
         with app.app_context():
@@ -320,6 +322,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["csrf_token"] = "author-csrf"
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-csrf",
@@ -347,6 +350,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["csrf_token"] = "journal-csrf"
         response = self.client.post("/admin/revistas/nova", data={
             "csrf_token": "journal-csrf",
@@ -373,6 +377,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_superuser"] = False
             session["csrf_token"] = "secondary-csrf"
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
