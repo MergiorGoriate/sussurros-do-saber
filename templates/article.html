@@ -2,7 +2,10 @@
 Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock %}{% block canonical %}{{ site_url }}{{ url_for('article', slug=article.slug) }}{% endblock %}{% block og_type %}article{% endblock %}{% block og_title %}{{ article.title }}{% endblock %}{% block og_description %}{{ article.summary }}{% endblock %}{% block og_image %}{{ article.image|social_image }}{% endblock %}{% block og_image_url %}{{ article.image|social_image }}{% endblock %}{% block og_image_secure %}{{ article.image|social_image }}{% endblock %}{% block og_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block twitter_title %}{{ article.title }}{% endblock %}{% block twitter_description %}{{ article.summary }}{% endblock %}{% block twitter_image %}{{ article.image|social_image }}{% endblock %}{% block twitter_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block content %}<script type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":article.title,"description":article.summary,"datePublished":(article.published_at or article.created_at).isoformat(),"dateModified":article.updated_at.isoformat(),"author":{"@type":"Person","name":article.author,"image":article.author_rel.photo or none},"publisher":{"@type":"Organization","name":"Sussurros do Saber","url":site_url},"mainEntityOfPage":site_url ~ url_for('article', slug=article.slug),"image":article.image|social_image}|tojson }}</script><link
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  media="print"
+  onload="this.media='all'"
 />
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"></noscript>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css', v='20260918-2') }}" />
 <article class="article-page">
   <header class="article-header max-w-4xl mx-auto px-4 pt-14 text-center">
@@ -119,9 +122,13 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       class="story-card"
       ><img
         src="{{ item.image|image_variant(640) }}"
+        srcset="{{ item.image|image_variant(360) }} 360w, {{ item.image|image_variant(640) }} 640w"
+        sizes="(max-width: 767px) 100vw, 33vw"
         alt="Imagem de apoio: {{ item.title }}"
         loading="lazy"
         decoding="async"
+        width="640"
+        height="360"
         class="w-full aspect-[16/9] object-cover"
       />
       <div class="p-5">
@@ -131,5 +138,5 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
     >{% endfor %}
   </div>
 </section>
-<script src="{{ url_for('static',filename='js/social-share.js') }}"></script>
+<script src="{{ url_for('static',filename='js/social-share.js',v='20260919-2') }}" defer></script>
 {% endblock %}
