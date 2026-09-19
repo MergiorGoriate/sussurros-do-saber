@@ -39,11 +39,22 @@ class PlatformTests(unittest.TestCase):
 
     def test_google_search_console_verification_and_discovery(self):
         previous = os.environ.get("GOOGLE_SITE_VERIFICATION")
-        os.environ["GOOGLE_SITE_VERIFICATION"] = "google-test-verification-token"
+        os.environ["GOOGLE_SITE_VERIFICATION"] = '"google-test-verification-token"'
         try:
             response = self.client.get("/")
             self.assertIn(
                 b'<meta name="google-site-verification" content="google-test-verification-token">',
+                response.data,
+            )
+            self.assertNotIn(b"&quot;google-test-verification-token&quot;", response.data)
+
+            os.environ["GOOGLE_SITE_VERIFICATION"] = (
+                '<meta name="google-site-verification" '
+                'content="google-complete-tag-verification" />'
+            )
+            response = self.client.get("/")
+            self.assertIn(
+                b'<meta name="google-site-verification" content="google-complete-tag-verification">',
                 response.data,
             )
         finally:
