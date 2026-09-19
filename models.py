@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload, load_only
 
 db = SQLAlchemy()
 
@@ -106,6 +107,19 @@ class Article(db.Model):
             cls.status == "published",
             and_(cls.status == "scheduled", cls.scheduled_at.isnot(None), cls.scheduled_at <= now),
         ))
+
+    @classmethod
+    def public_card_query(cls):
+        """Consulta leve para listas: evita carregar corpo e referências extensos."""
+        return cls.public_query().options(
+            load_only(
+                cls.id, cls.title, cls.slug, cls.summary, cls.image, cls.status,
+                cls.read_minutes, cls.featured, cls.published_at, cls.scheduled_at,
+                cls.created_at, cls.updated_at, cls.author_id, cls.category_id,
+            ),
+            joinedload(cls.author_rel).load_only(Author.id, Author.name, Author.photo),
+            joinedload(cls.category_rel).load_only(Category.id, Category.name, Category.slug),
+        )
 
 
 class ContactMessage(db.Model):
