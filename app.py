@@ -284,6 +284,7 @@ def site_context():
     return {
         "site_url": SITE_URL,
         "google_site_verification": google_site_verification_token(),
+        "gtm_container_id": os.getenv("GTM_CONTAINER_ID", "").strip(),
         "social_links": {
             "facebook": os.getenv("SOCIAL_FACEBOOK_URL", "https://www.facebook.com/"),
             "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/"),
