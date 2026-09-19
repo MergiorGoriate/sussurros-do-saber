@@ -269,6 +269,7 @@ def security_headers(response):
 def site_context():
     return {
         "site_url": SITE_URL,
+        "google_site_verification": os.getenv("GOOGLE_SITE_VERIFICATION", "").strip(),
         "social_links": {
             "facebook": os.getenv("SOCIAL_FACEBOOK_URL", "https://www.facebook.com/"),
             "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/"),
@@ -512,10 +513,37 @@ def feed():
 
 @app.get("/sitemap.xml")
 def sitemap():
-    paths = [url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"), url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"), url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("corrections_policy"), url_for("accessibility"), url_for("services"), url_for("scientific_editing"), url_for("journals")] + [url_for("journal_detail", slug=j.slug) for j in Journal.query.filter_by(published=True).all()] + [url_for("article", slug=a.slug) for a in Article.public_query().all()]
-    article_updates = {url_for("article", slug=a.slug): a.updated_at.strftime("%Y-%m-%d") for a in Article.public_query().all()}
-    urls = "".join(f"<url><loc>{SITE_URL}{path}</loc>{f'<lastmod>{article_updates[path]}</lastmod>' if path in article_updates else ''}</url>" for path in paths)
-    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
+    public_articles = Article.public_query().order_by(Article.updated_at.desc()).all()
+    public_journals = Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).all()
+    static_paths = [
+        url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"),
+        url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"),
+        url_for("terms"), url_for("privacy"), url_for("editorial_policy"),
+        url_for("corrections_policy"), url_for("accessibility"), url_for("services"),
+        url_for("scientific_editing"), url_for("journals"),
+    ]
+    entries = [(path, None) for path in static_paths]
+    entries.extend(
+        (url_for("journal_detail", slug=journal.slug), journal.updated_at)
+        for journal in public_journals
+    )
+    entries.extend(
+        (url_for("article", slug=article.slug), article.updated_at)
+        for article in public_articles
+    )
+    urls = "".join(
+        f"<url><loc>{SITE_URL}{path}</loc>"
+        + (f"<lastmod>{updated_at.strftime('%Y-%m-%d')}</lastmod>" if updated_at else "")
+        + "</url>"
+        for path, updated_at in entries
+    )
+    response = Response(
+        f'<?xml version="1.0" encoding="UTF-8"?>'
+        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>',
+        mimetype="application/xml",
+    )
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
 
 @app.get("/robots.txt")
 def robots():

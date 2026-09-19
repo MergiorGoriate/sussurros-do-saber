@@ -10,5 +10,7 @@ services:
         value: 3.11.11
       - key: SITE_URL
         value: https://www.sussurrosdosaber.com
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false
       - key: ADMIN_TIMEZONE
         value: Africa/Maputo
