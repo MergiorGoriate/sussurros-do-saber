@@ -196,6 +196,20 @@ class PlatformTests(unittest.TestCase):
         response = self.client.get("/api/artigos?limit=1")
         self.assertEqual(response.status_code, 200)
         self.assertLessEqual(len(response.get_json()), 1)
+        self.assertIn("stale-while-revalidate", response.headers["Cache-Control"])
+
+    def test_api_articles_can_fetch_only_saved_ids(self):
+        with app.app_context():
+            article = Article.public_query().first()
+            article_id = article.id
+        response = self.client.get(f"/api/artigos?ids={article_id},999999")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.get_json()], [article_id])
+
+    def test_resources_api_has_shared_cache_policy(self):
+        response = self.client.get("/api/recursos")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("max-age=600", response.headers["Cache-Control"])
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
