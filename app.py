@@ -306,7 +306,7 @@ def cloudinary_cloud_name():
 @app.template_filter("safe_image_url")
 def safe_image_url(url):
     """Normaliza URLs de imagem sem as encaminhar por proxies externos."""
-    value = html_unescape(str(url or "")).strip().strip("'\\"")
+    value = html_unescape(str(url or "")).strip().strip(chr(34) + chr(39))
     if value.startswith("//"):
         value = "https:" + value
     parsed = urlparse(value)
@@ -338,7 +338,7 @@ def responsive_image_url(url, width=1200):
 
 @app.template_filter("absolute_url")
 def absolute_url(value):
-    address = html_unescape(str(value or "")).strip().strip("'\\"")
+    address = html_unescape(str(value or "")).strip().strip(chr(34) + chr(39))
     if address.startswith(("http://", "https://")):
         return address
     if address.startswith("//"):
