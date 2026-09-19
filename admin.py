@@ -386,8 +386,8 @@ def administrators():
             flash("Informe o nome do administrador.", "error")
         elif email and (len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)):
             flash("Informe um endereço de e-mail válido.", "error")
-        elif len(password) < 12:
-            flash("A palavra-passe deve ter pelo menos 12 caracteres.", "error")
+        elif len(password) < 14:
+            flash("A palavra-passe deve ter pelo menos 14 caracteres.", "error")
         elif password != password_confirmation:
             flash("A confirmação da palavra-passe não corresponde.", "error")
         elif duplicate_username or duplicate_email:
@@ -436,8 +436,8 @@ def edit_administrator(administrator_id):
         flash("Informe o nome do administrador.", "error")
     elif email and (len(email) > 180 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)):
         flash("Informe um endereço de e-mail válido.", "error")
-    elif password and len(password) < 12:
-        flash("A nova palavra-passe deve ter pelo menos 12 caracteres.", "error")
+    elif password and len(password) < 14:
+        flash("A nova palavra-passe deve ter pelo menos 14 caracteres.", "error")
     elif password != password_confirmation:
         flash("A confirmação da palavra-passe não corresponde.", "error")
     elif duplicate_username or duplicate_email:
