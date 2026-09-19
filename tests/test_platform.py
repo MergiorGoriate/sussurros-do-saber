@@ -9,7 +9,7 @@ database_file.close()
 os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
-os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
+os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"\nos.environ["ADMIN_TOTP_SECRET"] = "JBSWY3DPEHPK3PXP"
 
 from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
 from admin import generate_recovery_codes, totp_code, verify_totp  # noqa: E402
