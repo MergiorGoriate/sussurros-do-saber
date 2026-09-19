@@ -7,7 +7,7 @@
   {% for author in authors %}
   <article class="author-profile">
     {% if author.photo %}
-    <img class="author-profile-photo" src="{{ author.photo }}" alt="Fotografia de {{ author.name }}" loading="lazy" decoding="async">
+    <img class="author-profile-photo" src="{{ author.photo|safe_image_url }}" alt="Fotografia de {{ author.name }}" loading="lazy" decoding="async">
     {% else %}
     <div class="author-profile-photo author-monogram" aria-hidden="true">{{ author.name[:2]|upper }}</div>
     {% endif %}
