@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 import re
+import time
 
 
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
