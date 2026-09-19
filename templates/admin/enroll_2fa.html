@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Configurar autenticação em dois fatores</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}">
+</head>
+<body class="login-page">
+  <form method="post" class="login-card" autocomplete="off">
+    <img src="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}" alt="Sussurros do Saber">
+    <span class="eyebrow">Proteção obrigatória</span>
+    <h1>Configure o segundo fator</h1>
+    <p>Antes de entrar no painel, adicione esta conta ao Google Authenticator, Microsoft Authenticator, Authy ou outra aplicação TOTP.</p>
+    {% with messages=get_flashed_messages(with_categories=true) %}
+      {% for category,message in messages %}<div class="alert {{ category }}">{{ message }}</div>{% endfor %}
+    {% endwith %}
+    <ol class="setup-steps">
+      <li>Abra a aplicação autenticadora e escolha adicionar uma conta manualmente.</li>
+      <li>Introduza a chave abaixo como TOTP, 6 dígitos, período de 30 segundos.</li>
+      <li>Introduza o código gerado para concluir.</li>
+    </ol>
+    <div class="totp-secret"><span>Chave de configuração</span><code>{{ setup_secret }}</code></div>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Código de 6 dígitos<input name="code" required inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" pattern="[0-9]{6}" autofocus></label>
+    <button class="admin-primary">Ativar 2FA e entrar</button>
+    <small class="security-caption">O painel permanecerá bloqueado até o segundo fator ser confirmado.</small>
+    <a href="{{ url_for('admin.login') }}">← Recomeçar o acesso</a>
+  </form>
+</body>
+</html>

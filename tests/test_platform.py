@@ -9,7 +9,7 @@ database_file.close()
 os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
-os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
+os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"\nos.environ["ADMIN_TOTP_SECRET"] = "JBSWY3DPEHPK3PXP"
 
 from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
 from admin import generate_recovery_codes, totp_code, verify_totp  # noqa: E402
@@ -72,7 +72,7 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("max-age=3600", sitemap.headers.get("Cache-Control", ""))
 
         robots = self.client.get("/robots.txt")
-        self.assertIn(b"Sitemap: https://sussurrosdosaber.com/sitemap.xml", robots.data)
+        self.assertIn(b"Sitemap: https://www.sussurrosdosaber.com/sitemap.xml", robots.data)
         self.assertIn(b"Disallow: /admin", robots.data)
 
     def test_google_tag_manager_consent_mode_and_events(self):
@@ -141,6 +141,13 @@ class PlatformTests(unittest.TestCase):
         )
         self.assertEqual(safe_image_url("javascript:alert(1)"), "")
         self.assertEqual(responsive_image_url("not-a-url", 480), "")
+
+    def test_production_uses_compiled_tailwind_and_strict_csp(self):
+        response = self.client.get("/")
+        self.assertIn(b"tailwind.min.css", response.data)
+        self.assertNotIn(b"cdn.tailwindcss.com", response.data)
+        self.assertNotIn("unsafe-eval", response.headers["Content-Security-Policy"])
+        self.assertIn("www.googletagmanager.com", response.headers["Content-Security-Policy"])
 
     def test_static_assets_have_long_immutable_cache(self):
         response = self.client.get("/static/css/style.css")
@@ -217,9 +224,19 @@ class PlatformTests(unittest.TestCase):
             session["csrf_token"] = "login-csrf"
         response = self.client.post("/admin/login", data={"csrf_token": "login-csrf", "username": "editor.cientifico", "password": "uma-palavra-passe-segura"})
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.location.endswith("/admin"))
+        self.assertTrue(response.location.endswith("/admin/configurar-2fa-inicial"))
+        with self.client.session_transaction() as session:
+            enrollment_secret = session["totp_setup_secret"]
+            enrollment_csrf = session["csrf_token"]
+        response = self.client.post("/admin/configurar-2fa-inicial", data={
+            "csrf_token": enrollment_csrf,
+            "code": totp_code(enrollment_secret),
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/admin/seguranca/2fa"))
         with self.client.session_transaction() as session:
             self.assertFalse(session["admin_superuser"])
+            self.assertTrue(session["admin_2fa_verified"])
             session.clear()
             session["admin_authenticated"] = True
             session["admin_superuser"] = True
