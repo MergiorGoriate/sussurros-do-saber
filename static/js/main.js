@@ -141,3 +141,15 @@ window.sdsTrack=pushAnalyticsEvent;
     });
   },{passive:true});
 })();
+
+
+// Substitui imagens remotas indisponíveis sem criar ciclos de erro.
+document.addEventListener('error',event=>{
+  const image=event.target;
+  if(!(image instanceof HTMLImageElement)||image.dataset.fallbackApplied==='true')return;
+  image.dataset.fallbackApplied='true';
+  image.removeAttribute('srcset');
+  image.removeAttribute('sizes');
+  image.src='/static/img/image-placeholder.svg';
+  if(!image.alt)image.alt='Imagem temporariamente indisponível';
+},{capture:true});
