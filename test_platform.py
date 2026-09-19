@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 import unittest
 from werkzeug.security import generate_password_hash
 
@@ -52,7 +53,7 @@ class PlatformTests(unittest.TestCase):
                 db.session.add(owner); db.session.commit()
             owner_id, owner_version = owner.id, owner.session_version
         with self.client.session_transaction() as session:
-            session.clear(); session["admin_authenticated"] = True; session["admin_id"] = owner_id; session["admin_session_version"] = owner_version; session["admin_role"] = "superadmin"; session["csrf_token"] = "journal-csrf"
+            session.clear(); session["admin_authenticated"] = True; session["admin_last_activity_at"] = time.time(); session["admin_id"] = owner_id; session["admin_session_version"] = owner_version; session["admin_role"] = "superadmin"; session["csrf_token"] = "journal-csrf"
         response = self.client.post("/admin/revistas/nova", data={
             "csrf_token": "journal-csrf", "title": "Revista Teste", "abbreviation": "RT",
             "field": "Biologia", "description": "Descrição científica suficientemente completa para teste.",
@@ -79,11 +80,36 @@ class PlatformTests(unittest.TestCase):
 
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
             session["admin_id"] = 999999
             session["admin_session_version"] = 1
         response = self.client.get("/admin")
         self.assertEqual(response.status_code, 302)
         self.assertIn("/admin/login", response.location)
+
+    def test_admin_api_rejects_unauthenticated_requests_with_json(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+        response = self.client.post("/admin/api/imagens")
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(response.get_json()["ok"])
+        self.assertIn("Autenticação", response.get_json()["error"])
+        self.assertEqual(response.headers["Cache-Control"], "no-store, no-cache, must-revalidate, private, max-age=0")
+
+    def test_admin_gate_protects_routes_without_relying_on_visibility(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+        for path in ["/admin", "/admin/artigos", "/admin/autores", "/admin/revistas", "/admin/contactos"]:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 302)
+                self.assertIn("/admin/login", response.location)
+
+    def test_admin_login_disables_password_autofill(self):
+        response = self.client.get("/admin/login")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'autocomplete="off"', response.data)
+        self.assertIn(b'autocomplete="new-password"', response.data)
 
     def test_administrator_can_be_created_and_sign_in(self):
         with app.app_context():
@@ -95,6 +121,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
             session["admin_id"] = owner_id
             session["admin_session_version"] = owner_version
             session["admin_role"] = "superadmin"
@@ -123,13 +150,13 @@ class PlatformTests(unittest.TestCase):
             owner = AdminUser.query.filter_by(username="owner").first()
             owner_id, owner_version = owner.id, owner.session_version
         with self.client.session_transaction() as session:
-            session["admin_authenticated"] = True; session["admin_id"] = owner_id; session["admin_session_version"] = owner_version; session["admin_role"] = "superadmin"; session["csrf_token"] = "x"
+            session["admin_authenticated"] = True; session["admin_last_activity_at"] = time.time(); session["admin_id"] = owner_id; session["admin_session_version"] = owner_version; session["admin_role"] = "superadmin"; session["csrf_token"] = "x"
         self.assertEqual(self.client.post("/admin/logout", data={}).status_code, 400)
         with app.app_context():
             editor = AdminUser.query.filter_by(username="editor.cientifico").first()
             editor_id, editor_version = editor.id, editor.session_version
         with self.client.session_transaction() as session:
-            session.clear(); session["admin_authenticated"] = True; session["admin_id"] = editor_id; session["admin_session_version"] = editor_version; session["admin_role"] = "editor"; session["csrf_token"] = "x"
+            session.clear(); session["admin_authenticated"] = True; session["admin_last_activity_at"] = time.time(); session["admin_id"] = editor_id; session["admin_session_version"] = editor_version; session["admin_role"] = "editor"; session["csrf_token"] = "x"
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
 
     def test_disabled_admin_session_is_revoked(self):
@@ -139,7 +166,7 @@ class PlatformTests(unittest.TestCase):
             db.session.commit()
             account_id, version = account.id, account.session_version
         with self.client.session_transaction() as session:
-            session.clear(); session["admin_authenticated"] = True; session["admin_id"] = account_id; session["admin_session_version"] = version
+            session.clear(); session["admin_authenticated"] = True; session["admin_last_activity_at"] = time.time(); session["admin_id"] = account_id; session["admin_session_version"] = version
         self.assertEqual(self.client.get("/admin").status_code, 302)
 
     def test_slug_route_and_legacy_redirect(self):
