@@ -249,7 +249,7 @@ class PlatformTests(unittest.TestCase):
 
     def test_totp_algorithm_and_recovery_code_format(self):
         secret = "JBSWY3DPEHPK3PXP"
-        code = totp_code(secret, timestamp=1_600_000_000)
+        code = totp_code(secret)
         self.assertEqual(len(code), 6)
         self.assertTrue(verify_totp(secret, code, window=0))
         recovery_codes = generate_recovery_codes()
