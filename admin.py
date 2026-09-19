@@ -75,6 +75,15 @@ def enforce_admin_authentication():
     if request.endpoint in PUBLIC_ADMIN_ENDPOINTS:
         return None
     if admin_session_valid():
+        administrator_id = session.get("admin_id")
+        administrator = db.session.get(AdminUser, administrator_id) if administrator_id else None
+        if (
+            administrator is not None
+            and not administrator.two_factor_enabled
+            and request.endpoint not in {"admin.two_factor_settings", "admin.logout"}
+        ):
+            flash("A autenticação de dois fatores é obrigatória. Conclua a configuração para continuar.", "warning")
+            return redirect(url_for("admin.two_factor_settings"))
         return None
     session.clear()
     if request.path.startswith("/admin/api/"):
@@ -369,18 +378,7 @@ def two_factor_settings():
                 db.session.commit()
                 flash("Novos códigos de recuperação criados. Os anteriores foram invalidados.", "success")
         elif action == "disable":
-            valid_second_factor = verify_totp(administrator.totp_secret, code) or consume_recovery_code(administrator, code)
-            if not administrator.two_factor_enabled or not valid_second_factor:
-                flash("Confirme a desativação com um código válido.", "error")
-            else:
-                administrator.two_factor_enabled = False
-                administrator.totp_secret = None
-                administrator.recovery_code_hashes = ""
-                db.session.commit()
-                session["admin_2fa_verified"] = False
-                setup_secret = generate_totp_secret()
-                session["totp_setup_secret"] = setup_secret
-                flash("Autenticação de dois fatores desativada.", "warning")
+            flash("A autenticação de dois fatores é obrigatória para todas as contas administrativas e não pode ser desativada.", "error")
 
     issuer = "Sussurros do Saber"
     account_label = administrator.email or administrator.username
