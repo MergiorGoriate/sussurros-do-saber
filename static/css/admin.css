@@ -541,3 +541,28 @@ input,textarea,select,button{font-size:16px}
 .markdown-preview .preview-chart text{font:12px system-ui,sans-serif;fill:#334155}
 .preview-error{color:#a12622}
 @media(max-width:620px){.editor-generator-fields{grid-template-columns:1fr}.editor-generator-fields .generator-wide{grid-column:auto}}
+
+
+/* Autenticação em dois fatores */
+.security-caption{display:block;margin:-4px 0 12px;color:#647472;line-height:1.45}
+.security-step{display:inline-block;margin-bottom:6px;color:#087f72;font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.security-panel{max-width:780px}
+.two-factor-status{display:grid;gap:4px;margin-bottom:22px;padding:16px 18px;border-radius:12px;border:1px solid}
+.two-factor-status.enabled{border-color:#9dd6c8;background:#eefaf6;color:#155e51}
+.two-factor-status.warning{border-color:#ebcd89;background:#fff9e9;color:#76520b}
+.two-factor-inline{display:inline-block!important;width:max-content;margin-top:8px!important;padding:3px 8px;border-radius:999px;font-weight:800}
+.two-factor-inline.enabled{background:#e5f7f1;color:#0a6b5d}
+.two-factor-inline.warning{background:#fff3d2;color:#805b0c}
+.setup-steps{padding-left:22px;line-height:1.7}
+.totp-secret{display:grid;gap:7px;margin:18px 0;padding:16px;border:1px dashed #7aa9a2;border-radius:10px;background:#f3f8f7}
+.totp-secret span{font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.totp-secret code{font-size:1.05rem;font-weight:800;overflow-wrap:anywhere;user-select:all}
+.security-form{max-width:520px;margin-top:18px}
+.danger-zone{margin-top:30px;border-top:1px solid #e3e9e8;padding-top:16px}
+.danger-zone>summary{color:#a62b24;font-weight:800;cursor:pointer}
+.recovery-panel{max-width:780px;margin-top:22px;border:2px solid #087f72}
+.recovery-panel ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0;list-style:none}
+.recovery-panel li{padding:10px;border-radius:8px;background:#eef4f3;text-align:center}
+.recovery-panel code{font-size:1rem;font-weight:800;letter-spacing:.05em}
+@media(max-width:560px){.recovery-panel ul{grid-template-columns:1fr}}
+@media print{.admin-sidebar,.admin-header,.recovery-panel button,.security-panel{display:none!important}.admin-main{margin:0!important;padding:20px!important}.recovery-panel{border:0!important}}
