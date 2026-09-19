@@ -9,7 +9,7 @@
   {% if turnstile_site_key %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
 </head>
 <body class="login-page">
-  <form method="post" class="login-card">
+  <form method="post" class="login-card" autocomplete="off">
     <img src="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}" alt="Sussurros do Saber">
     <h1>Área administrativa</h1>
     <p>Acesso protegido por palavra-passe e autenticação em dois fatores.</p>
@@ -17,11 +17,11 @@
       {% for category,message in messages %}<div class="alert {{ category }}">{{ message }}</div>{% endfor %}
     {% endwith %}
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Utilizador<input name="username" required autocomplete="username" autofocus></label>
-    <label>Palavra-passe<input name="password" type="password" required autocomplete="current-password"></label>
+    <label>Utilizador<input name="username" required autocomplete="off" autocapitalize="none" spellcheck="false" autofocus></label>
+    <label>Palavra-passe<input name="password" type="password" required autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore></label>
     {% if turnstile_site_key %}<div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>{% endif %}
     <button class="admin-primary">Continuar</button>
-    <small class="security-caption">Depois da palavra-passe, contas com 2FA devem informar o código temporário.</small>
+    <small class="security-caption">A palavra-passe não será memorizada por este formulário. Em cada novo acesso, o código 2FA será obrigatório.</small>
     <a href="/">← Voltar ao site</a>
   </form>
 </body>
