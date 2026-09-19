@@ -265,11 +265,25 @@ def security_headers(response):
     return response
 
 
+def google_site_verification_token():
+    default_token = "MBbrCatBKLtKz2UmAJQsYlJ95ZEpNQ3CJvRMTo6aGwE"
+    raw_value = os.getenv("GOOGLE_SITE_VERIFICATION", default_token).strip()
+    content_match = re.search(
+        r"""content\s*=\s*["']([^"']+)["']""",
+        raw_value,
+        re.I,
+    )
+    if content_match:
+        raw_value = content_match.group(1)
+    token = raw_value.strip().strip(chr(34) + chr(39))
+    return token if re.fullmatch(r"[A-Za-z0-9_-]{20,}", token) else default_token
+
+
 @app.context_processor
 def site_context():
     return {
         "site_url": SITE_URL,
-        "google_site_verification": os.getenv("GOOGLE_SITE_VERIFICATION", "MBbrCatBKLtKz2UmAJQsYlJ95ZEpNQ3CJvRMTo6aGwE").strip(),
+        "google_site_verification": google_site_verification_token(),
         "social_links": {
             "facebook": os.getenv("SOCIAL_FACEBOOK_URL", "https://www.facebook.com/"),
             "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/"),
