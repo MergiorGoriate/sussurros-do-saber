@@ -24,13 +24,13 @@ jobs:
           cache: pip
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
       - name: Install frontend dependencies
         run: npm install --no-audit --no-fund
       - name: Compile production CSS
         run: npm run build:css
       - name: Install Python dependencies
-        run: python -m pip install --upgrade pip setuptools && pip install -r requirements.txt pip-audit
+        run: pip install -r requirements.txt pip-audit
       - name: Audit Python dependencies
         run: pip-audit
       - name: Run platform tests
