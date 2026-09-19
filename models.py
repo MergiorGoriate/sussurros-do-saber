@@ -19,6 +19,9 @@ class AdminUser(db.Model):
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime)
+    two_factor_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    totp_secret = db.Column(db.String(64))
+    recovery_code_hashes = db.Column(db.Text, default="", nullable=False)
 
 
 class Author(db.Model):
