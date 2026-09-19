@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+import re
 
 
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
@@ -11,6 +12,7 @@ os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
+from admin import generate_recovery_codes, totp_code, verify_totp  # noqa: E402
 from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Journal, db  # noqa: E402
 
@@ -244,6 +246,58 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         with app.app_context():
             self.assertIsNone(db.session.get(AdminUser, administrator_id))
+
+    def test_totp_algorithm_and_recovery_code_format(self):
+        secret = "JBSWY3DPEHPK3PXP"
+        code = totp_code(secret, timestamp=1_600_000_000)
+        self.assertEqual(len(code), 6)
+        self.assertTrue(verify_totp(secret, code, window=0))
+        recovery_codes = generate_recovery_codes()
+        self.assertEqual(len(recovery_codes), 8)
+        self.assertTrue(all(re.fullmatch(r"[A-Z2-9]{4}(?:-[A-Z2-9]{4}){2}", item) for item in recovery_codes))
+
+    def test_two_factor_login_requires_second_step(self):
+        from werkzeug.security import generate_password_hash
+
+        secret = "JBSWY3DPEHPK3PXP"
+        with app.app_context():
+            administrator = AdminUser.query.filter_by(username="dois.fatores").first()
+            if administrator is None:
+                administrator = AdminUser(
+                    username="dois.fatores",
+                    display_name="Administrador 2FA",
+                    email="dois.fatores@example.org",
+                    password_hash=generate_password_hash("palavra-passe-2fa-segura"),
+                    active=True,
+                    two_factor_enabled=True,
+                    totp_secret=secret,
+                )
+                db.session.add(administrator)
+                db.session.commit()
+
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["csrf_token"] = "first-step-csrf"
+        first = self.client.post("/admin/login", data={
+            "csrf_token": "first-step-csrf",
+            "username": "dois.fatores",
+            "password": "palavra-passe-2fa-segura",
+        })
+        self.assertEqual(first.status_code, 302)
+        self.assertTrue(first.location.endswith("/admin/verificar-2fa"))
+        with self.client.session_transaction() as session:
+            self.assertFalse(session.get("admin_authenticated", False))
+            second_csrf = session["csrf_token"]
+
+        second = self.client.post("/admin/verificar-2fa", data={
+            "csrf_token": second_csrf,
+            "code": totp_code(secret),
+        })
+        self.assertEqual(second.status_code, 302)
+        self.assertTrue(second.location.endswith("/admin"))
+        with self.client.session_transaction() as session:
+            self.assertTrue(session["admin_authenticated"])
+            self.assertTrue(session["admin_2fa_verified"])
 
     def test_author_photo_url_is_saved_and_rendered(self):
         with self.client.session_transaction() as session:
