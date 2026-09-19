@@ -269,7 +269,7 @@ def security_headers(response):
 def site_context():
     return {
         "site_url": SITE_URL,
-        "google_site_verification": os.getenv("GOOGLE_SITE_VERIFICATION", "").strip(),
+        "google_site_verification": os.getenv("GOOGLE_SITE_VERIFICATION", "MBbrCatBKLtKz2UmAJQsYlJ95ZEpNQ3CJvRMTo6aGwE").strip(),
         "social_links": {
             "facebook": os.getenv("SOCIAL_FACEBOOK_URL", "https://www.facebook.com/"),
             "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/"),
