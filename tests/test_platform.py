@@ -73,6 +73,24 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b"Sitemap: https://sussurrosdosaber.com/sitemap.xml", robots.data)
         self.assertIn(b"Disallow: /admin", robots.data)
 
+    def test_google_tag_manager_consent_mode_and_events(self):
+        previous = os.environ.get("GTM_CONTAINER_ID")
+        os.environ["GTM_CONTAINER_ID"] = "GTM-TEST123"
+        try:
+            response = self.client.get("/")
+            self.assertIn(b"https://www.googletagmanager.com/gtm.js?id=", response.data)
+            self.assertIn(b"GTM-TEST123", response.data)
+            self.assertIn(b"analytics_storage:'denied'", response.data)
+            self.assertIn(b"googletagmanager.com", response.headers["Content-Security-Policy"])
+            javascript = self.client.get("/static/js/main.js").data
+            for event in [b"article_view", b"search", b"share", b"scroll_depth", b"outbound_click", b"consent_update"]:
+                self.assertIn(event, javascript)
+        finally:
+            if previous is None:
+                os.environ.pop("GTM_CONTAINER_ID", None)
+            else:
+                os.environ["GTM_CONTAINER_ID"] = previous
+
     def test_footer_contains_accessible_social_links(self):
         response = self.client.get("/")
         for network in ["Facebook", "Instagram", "YouTube", "LinkedIn", "X", "WhatsApp"]:

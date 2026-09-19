@@ -24,7 +24,13 @@ document.querySelectorAll('.article-markdown table').forEach(table=>{if(table.pa
 
 
 
-// Consentimento de cookies
+// Google Tag Manager, Consent Mode v2 e eventos essenciais
+const pushAnalyticsEvent=(event,parameters={})=>{
+  window.dataLayer=window.dataLayer||[];
+  window.dataLayer.push({event,...parameters});
+};
+window.sdsTrack=pushAnalyticsEvent;
+
 (()=>{
   const banner=document.querySelector('#cookieConsent');
   if(!banner)return;
@@ -35,11 +41,23 @@ document.querySelectorAll('.article-markdown table').forEach(table=>{if(table.pa
   const reject=document.querySelector('#cookieReject');
   const save=document.querySelector('#cookieSave');
   const settings=document.querySelector('#cookieSettingsLink');
-  const cookieName='cookie_consent_v1';
+  const cookieName='cookie_consent_v2';
   const read=()=>{
     const item=document.cookie.split('; ').find(value=>value.startsWith(cookieName+'='));
     if(!item)return null;
     try{return JSON.parse(decodeURIComponent(item.split('=').slice(1).join('=')))}catch{return null}
+  };
+  const updateGoogleConsent=consent=>{
+    const state=consent.analytics?'granted':'denied';
+    if(typeof window.gtag==='function')window.gtag('consent','update',{
+      analytics_storage:state,
+      ad_storage:'denied',
+      ad_user_data:'denied',
+      ad_personalization:'denied',
+      functionality_storage:'granted',
+      security_storage:'granted'
+    });
+    pushAnalyticsEvent('consent_update',{analytics_consent:state});
   };
   const activateOptionalScripts=consent=>{
     document.querySelectorAll('script[type="text/plain"][data-cookie-category]').forEach(source=>{
@@ -56,6 +74,7 @@ document.querySelectorAll('.article-markdown table').forEach(table=>{if(table.pa
   const persist=consent=>{
     const secure=location.protocol==='https:'?'; Secure':'';
     document.cookie=cookieName+'='+encodeURIComponent(JSON.stringify(consent))+'; Max-Age=15552000; Path=/; SameSite=Lax'+secure;
+    updateGoogleConsent(consent);
     banner.hidden=true;
     activateOptionalScripts(consent);
     dispatchEvent(new CustomEvent('cookieconsentchange',{detail:consent}));
@@ -82,5 +101,43 @@ document.querySelectorAll('.article-markdown table').forEach(table=>{if(table.pa
   save.addEventListener('click',()=>persist({essential:true,analytics:analytics.checked,updatedAt:new Date().toISOString()}));
   settings?.addEventListener('click',open);
   const current=read();
-  if(current)activateOptionalScripts(current);else open();
+  if(current){updateGoogleConsent(current);activateOptionalScripts(current)}else open();
+})();
+
+(()=>{
+  const pagePath=location.pathname;
+  const pageType=pagePath.startsWith('/artigo/')?'article':pagePath==='/'?'home':pagePath.split('/').filter(Boolean)[0]||'home';
+  pushAnalyticsEvent('page_context',{page_type:pageType});
+  if(pageType==='article'){
+    pushAnalyticsEvent('article_view',{
+      article_title:document.querySelector('h1')?.textContent?.trim().slice(0,150)||document.title.slice(0,150),
+      article_path:pagePath
+    });
+  }
+  document.querySelector('#searchPanel')?.addEventListener('submit',()=>pushAnalyticsEvent('search',{search_location:'header'}));
+  document.querySelector('#shareArticle')?.addEventListener('click',()=>pushAnalyticsEvent('share',{method:navigator.share?'native':'copy_link',content_type:'article'}));
+  document.querySelector('#newsletterForm')?.addEventListener('submit',()=>pushAnalyticsEvent('newsletter_submit',{form_location:'site'}));
+  document.querySelector('#contactForm')?.addEventListener('submit',()=>pushAnalyticsEvent('contact_submit',{form_location:'contact_page'}));
+  document.addEventListener('click',event=>{
+    const bookmark=event.target.closest('.bookmark');
+    if(bookmark)pushAnalyticsEvent('bookmark_toggle',{article_id:String(bookmark.dataset.id||'')});
+    const link=event.target.closest('a[href]');
+    if(!link)return;
+    try{
+      const target=new URL(link.href,location.href);
+      if(target.origin!==location.origin)pushAnalyticsEvent('outbound_click',{link_domain:target.hostname,link_url:target.href.slice(0,300)});
+    }catch{}
+  });
+  const sent=new Set();
+  addEventListener('scroll',()=>{
+    const total=document.documentElement.scrollHeight-innerHeight;
+    if(total<=0)return;
+    const percent=Math.round(scrollY/total*100);
+    [25,50,75,90].forEach(depth=>{
+      if(percent>=depth&&!sent.has(depth)){
+        sent.add(depth);
+        pushAnalyticsEvent('scroll_depth',{percent_scrolled:depth,page_type:pageType});
+      }
+    });
+  },{passive:true});
 })();
