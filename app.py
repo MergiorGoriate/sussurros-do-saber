@@ -524,11 +524,11 @@ def favorites():
 @app.get("/api/artigos")
 def api_articles():
     query = request.args.get("q", "").strip().lower()[:120]
-    requested_ids = {
-        int(value) for value in request.args.get("ids", "").split(",")
+    raw_ids = request.args.get("ids", "")[:512]
+    requested_ids = list(dict.fromkeys(
+        int(value) for value in raw_ids.split(",")
         if value.strip().isdigit()
-    }
-    requested_ids = set(list(requested_ids)[:50])
+    ))[:50]
     limit = max(1, min(50, request.args.get("limit", 24, type=int)))
 
     items = Article.public_card_query()
