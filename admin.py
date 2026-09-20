@@ -154,7 +154,12 @@ def production_mode():
 def turnstile_valid():
     secret = os.getenv("TURNSTILE_SECRET_KEY", "").strip()
     site_key = os.getenv("TURNSTILE_SITE_KEY", "").strip()
-    required = production_mode() or os.getenv("REQUIRE_TURNSTILE", "false").lower() == "true"
+    # Produção continua segura por omissão, mas permite recuperação controlada
+    # quando REQUIRE_TURNSTILE=false for definido explicitamente.
+    required = os.getenv(
+        "REQUIRE_TURNSTILE",
+        "true" if production_mode() else "false",
+    ).lower() == "true"
     if not secret or not site_key:
         return not required
     try:
