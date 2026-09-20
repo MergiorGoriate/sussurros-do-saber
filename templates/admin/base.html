@@ -40,5 +40,6 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js') }}" defer></script>
 </body>
 </html>
