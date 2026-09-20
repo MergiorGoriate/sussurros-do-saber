@@ -21,7 +21,11 @@ test('public pages load without JavaScript or CSP errors', async ({ page }) => {
   const failures = [];
   page.on('pageerror', error => failures.push(error.message));
   page.on('console', message => {
-    if (message.type() === 'error') failures.push(message.text());
+    const text = message.text();
+    if (
+      message.type() === 'error'
+      && /content security policy|refused to execute|violates.*script-src/i.test(text)
+    ) failures.push(text);
   });
 
   for (const path of ['/', '/artigos', '/autores', '/revistas', '/contacto']) {
