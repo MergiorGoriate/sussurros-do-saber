@@ -67,5 +67,5 @@
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
   </aside>
-</form><script src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
 {% endblock %}
