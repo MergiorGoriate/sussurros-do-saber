@@ -16,3 +16,17 @@ services:
         value: MBbrCatBKLtKz2UmAJQsYlJ95ZEpNQ3CJvRMTo6aGwE
       - key: ADMIN_TIMEZONE
         value: Africa/Maputo
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: ADMIN_TOTP_SECRET
+        sync: false
+      - key: TURNSTILE_SITE_KEY
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: REQUIRE_TURNSTILE
+        value: "true"
+      - key: RATELIMIT_STORAGE_URI
+        sync: false
