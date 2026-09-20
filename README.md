@@ -100,3 +100,10 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No R
 - Limites de utilização no login, assistente, contacto e newsletter
 - Turnstile opcional e segredo privado entre Flask e Cloudflare Worker
 - Política Editorial, Política de Correções e Declaração de Acessibilidade
+
+
+## Frontend e resiliência de imagens
+
+O Tailwind é compilado durante o build e servido localmente em `/static/css/tailwind.css`; o navegador não depende de `cdn.tailwindcss.com`. Execute `npm run build:css` depois de alterar classes nos templates ou scripts.
+
+Imagens editoriais devem, de preferência, ser carregadas no Cloudinary pelo painel. Quando uma imagem externa falha ou bloqueia hotlinking, o frontend substitui-a automaticamente pelo ativo local `/static/img/image-fallback.svg`.
