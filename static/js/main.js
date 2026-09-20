@@ -144,16 +144,20 @@ window.sdsTrack=pushAnalyticsEvent;
 
 
 // Mantém cartões e artigos legíveis quando uma origem externa remove ou bloqueia a imagem.
-document.addEventListener('error', (event) => {
-  const image = event.target;
+const applyImageFallback = (image) => {
   if (!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied === 'true') return;
   image.dataset.fallbackApplied = 'true';
   image.removeAttribute('srcset');
   image.removeAttribute('sizes');
   image.src = '/static/img/image-fallback.svg';
   if (!image.alt) image.alt = 'Imagem temporariamente indisponível';
+};
+
+document.addEventListener('error', (event) => {
+  applyImageFallback(event.target);
 }, true);
 
-document.querySelectorAll('img[src^="http"]').forEach((image) => {
-  image.referrerPolicy = 'no-referrer';
+document.querySelectorAll('img').forEach((image) => {
+  if (/^https?:/.test(image.currentSrc || image.src)) image.referrerPolicy = 'no-referrer';
+  if (image.complete && image.naturalWidth === 0) applyImageFallback(image);
 });
