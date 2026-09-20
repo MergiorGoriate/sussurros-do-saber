@@ -2,9 +2,11 @@
   "name": "sussurros-do-saber",
   "private": true,
   "scripts": {
-    "build:css": "tailwindcss -c tailwind.config.js -i static/css/tailwind.input.css -o static/css/tailwind.css --minify"
+    "build:css": "tailwindcss -c tailwind.config.js -i static/css/tailwind.input.css -o static/css/tailwind.css --minify",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "tailwindcss": "3.4.17"
+    "tailwindcss": "3.4.17",
+    "@playwright/test": "1.55.0"
   }
 }
