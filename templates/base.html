@@ -6,7 +6,7 @@
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% if gtm_container_id %}
-<script>
+<script nonce="{{ csp_nonce }}">
 window.dataLayer=window.dataLayer||[];
 function gtag(){dataLayer.push(arguments);}
 gtag('consent','default',{
@@ -20,7 +20,7 @@ gtag('consent','default',{
 });
 window.dataLayer.push({event:'default_consent'});
 </script>
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+<script nonce="{{ csp_nonce }}">(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
@@ -57,7 +57,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260918-6') }}">
 <link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}"></noscript>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
+<script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 </head>
 <body class="bg-white text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
 {% if gtm_container_id %}<noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ gtm_container_id|e }}" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>{% endif %}
@@ -176,9 +176,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     </div>
   </div>
 </section>
-<script src="{{ url_for('static',filename='js/main.js',v='20260919-2') }}" defer></script>
-<script src="{{ url_for('static',filename='js/pages.js',v='20260918-3') }}" defer></script>
-<script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20260919-2') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260918-3') }}" defer></script>
+<script nonce="{{ csp_nonce }}">
 (()=>{let done=false;const load=()=>{if(done)return;done=true;['assistant.js','animations.js'].forEach(name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260918-3';script.defer=true;document.body.appendChild(script)})};if('requestIdleCallback'in window)requestIdleCallback(load,{timeout:2500});else setTimeout(load,1500)})();
 </script>
 </body>
