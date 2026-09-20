@@ -55,9 +55,23 @@ class PlatformTests(unittest.TestCase):
             response.data,
         )
 
+    def test_tailwind_is_local_and_cdn_is_not_loaded(self):
+        response = self.client.get("/")
+        self.assertIn(b"/static/css/tailwind.css", response.data)
+        self.assertNotIn(b"cdn.tailwindcss.com", response.data)
+
+    def test_local_image_fallback_is_available(self):
+        response = self.client.get("/static/img/image-fallback.svg")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Imagem temporariamente indispon", response.data)
+        script = self.client.get("/static/js/main.js")
+        self.assertIn(b"image-fallback.svg", script.data)
+
     def test_security_headers(self):
         response = self.client.get("/", base_url="https://www.sussurrosdosaber.com")
         self.assertIn("default-src 'self'", response.headers["Content-Security-Policy"])
+        self.assertNotIn("cdn.tailwindcss.com", response.headers["Content-Security-Policy"])
+        self.assertNotIn("'unsafe-eval'", response.headers["Content-Security-Policy"])
         self.assertIn("max-age=31536000", response.headers["Strict-Transport-Security"])
         self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
 

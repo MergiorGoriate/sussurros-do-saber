@@ -248,7 +248,7 @@ def security_headers(response):
         "object-src 'none'; img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
         "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com; upgrade-insecure-requests",
     )
     if request.is_secure:
