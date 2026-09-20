@@ -58,6 +58,12 @@ jobs:
       - run: pip install -r requirements.txt
       - run: npm install --no-audit --no-fund
       - run: npm run build:css
+      - name: Upload compiled Tailwind CSS
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-tailwind-css
+          path: static/css/tailwind.css
+          retention-days: 7
       - run: npx playwright install --with-deps chromium
       - name: Start Flask application
         run: |
