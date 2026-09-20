@@ -1,9 +1,10 @@
-from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Response, g, jsonify, redirect, render_template, request, url_for
 from xml.sax.saxutils import escape
 import requests
 import gzip
 import os
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from html import escape as html_escape, unescape as html_unescape
@@ -44,6 +45,12 @@ SITE_URL = CANONICAL_ORIGIN if _configured_host == "sussurrosdosaber.com" else _
 db.init_app(app)
 limiter.init_app(app)
 app.register_blueprint(admin_bp)
+
+
+@app.before_request
+def assign_csp_nonce():
+    """Cria um nonce imprevisível e exclusivo para cada resposta."""
+    g.csp_nonce = secrets.token_urlsafe(24)
 
 
 @app.before_request
@@ -248,7 +255,8 @@ def security_headers(response):
         "object-src 'none'; img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
+        f"script-src 'nonce-{getattr(g, 'csp_nonce', '')}' 'strict-dynamic' 'self' https:; "
+        "script-src-attr 'none'; "
         "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com; upgrade-insecure-requests",
     )
     if request.is_secure:
@@ -300,6 +308,7 @@ def google_site_verification_token():
 def site_context():
     return {
         "site_url": SITE_URL,
+        "csp_nonce": getattr(g, "csp_nonce", ""),
         "google_site_verification": google_site_verification_token(),
         "gtm_container_id": os.getenv("GTM_CONTAINER_ID", "GTM-PQSZGPQQ").strip(),
         "social_links": {
