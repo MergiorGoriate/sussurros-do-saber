@@ -214,6 +214,26 @@ class PlatformTests(unittest.TestCase):
         script = self.client.get("/static/js/main.js")
         self.assertIn(b"image-fallback.svg", script.data)
 
+    def test_strict_csp_uses_unique_nonce_and_no_inline_handlers(self):
+        first = self.client.get("/")
+        second = self.client.get("/")
+        first_policy = first.headers["Content-Security-Policy"]
+        second_policy = second.headers["Content-Security-Policy"]
+        first_nonce = re.search(r"script-src 'nonce-([^']+)'", first_policy)
+        second_nonce = re.search(r"script-src 'nonce-([^']+)'", second_policy)
+        self.assertIsNotNone(first_nonce)
+        self.assertIsNotNone(second_nonce)
+        self.assertNotEqual(first_nonce.group(1), second_nonce.group(1))
+        self.assertIn("'strict-dynamic'", first_policy)
+        self.assertIn("script-src-attr 'none'", first_policy)
+        self.assertNotIn("'unsafe-inline'", first_policy.split("script-src", 1)[1].split(";", 1)[0])
+        self.assertIn(
+            f'nonce="{first_nonce.group(1)}"'.encode(),
+            first.data,
+        )
+        self.assertNotIn(b"onclick=", first.data)
+        self.assertNotIn(b"onload=", first.data)
+
     def test_security_headers(self):
         response = self.client.get("/", base_url="https://www.sussurrosdosaber.com")
         self.assertIn("default-src 'self'", response.headers["Content-Security-Policy"])
