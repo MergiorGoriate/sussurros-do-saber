@@ -52,7 +52,7 @@
   <h2 id="recovery-title">Guarde estes códigos de recuperação agora</h2>
   <p>Cada código só pode ser utilizado uma vez. Eles não serão mostrados novamente.</p>
   <ul>{% for code in recovery_codes %}<li><code>{{ code }}</code></li>{% endfor %}</ul>
-  <button type="button" class="admin-primary" onclick="window.print()">Imprimir códigos</button>
+  <button type="button" class="admin-primary" data-print-recovery>Imprimir códigos</button>
 </section>
 {% endif %}
 {% endblock %}
