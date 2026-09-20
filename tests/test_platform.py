@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 import re
+import time
 
 
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
@@ -72,7 +73,7 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("max-age=3600", sitemap.headers.get("Cache-Control", ""))
 
         robots = self.client.get("/robots.txt")
-        self.assertIn(b"Sitemap: https://sussurrosdosaber.com/sitemap.xml", robots.data)
+        self.assertIn(b"Sitemap: https://www.sussurrosdosaber.com/sitemap.xml", robots.data)
         self.assertIn(b"Disallow: /admin", robots.data)
 
     def test_google_tag_manager_consent_mode_and_events(self):
@@ -180,8 +181,29 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.headers.get("Content-Encoding"), "gzip")
         self.assertIn("Accept-Encoding", response.headers.get("Vary", ""))
 
+    def test_bare_domain_redirects_permanently_to_www(self):
+        response = self.client.get(
+            "/artigos?page=2",
+            base_url="https://sussurrosdosaber.com",
+        )
+        self.assertEqual(response.status_code, 308)
+        self.assertEqual(
+            response.location,
+            "https://www.sussurrosdosaber.com/artigos?page=2",
+        )
+
+    def test_canonical_metadata_uses_www(self):
+        response = self.client.get(
+            "/",
+            base_url="https://www.sussurrosdosaber.com",
+        )
+        self.assertIn(
+            b'<link rel="canonical" href="https://www.sussurrosdosaber.com/">',
+            response.data,
+        )
+
     def test_security_headers(self):
-        response = self.client.get("/", base_url="https://sussurrosdosaber.com")
+        response = self.client.get("/", base_url="https://www.sussurrosdosaber.com")
         self.assertIn("default-src 'self'", response.headers["Content-Security-Policy"])
         self.assertIn("max-age=31536000", response.headers["Strict-Transport-Security"])
         self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
@@ -246,6 +268,35 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         with app.app_context():
             self.assertIsNone(db.session.get(AdminUser, administrator_id))
+
+    def test_secondary_admin_without_2fa_is_forced_to_enrol(self):
+        from werkzeug.security import generate_password_hash
+
+        with app.app_context():
+            administrator = AdminUser.query.filter_by(username="sem.2fa").first()
+            if administrator is None:
+                administrator = AdminUser(
+                    username="sem.2fa",
+                    display_name="Administrador sem 2FA",
+                    email="sem.2fa@example.org",
+                    password_hash=generate_password_hash("palavra-passe-2fa-obrigatoria"),
+                    active=True,
+                    two_factor_enabled=False,
+                )
+                db.session.add(administrator)
+                db.session.commit()
+            administrator_id = administrator.id
+
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_id"] = administrator_id
+            session["admin_superuser"] = False
+            session["admin_2fa_verified"] = False
+            session["admin_last_activity_at"] = time.time()
+        response = self.client.get("/admin")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("/admin/seguranca/2fa"))
 
     def test_totp_algorithm_and_recovery_code_format(self):
         secret = "JBSWY3DPEHPK3PXP"

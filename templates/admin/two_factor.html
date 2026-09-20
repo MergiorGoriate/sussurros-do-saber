@@ -25,20 +25,11 @@
     <label>Código do autenticador<input name="code" required inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
     <button class="admin-primary">Gerar novos códigos</button>
   </form>
-  <details class="danger-zone">
-    <summary>Desativar autenticação em dois fatores</summary>
-    <form method="post" class="compact-form security-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="action" value="disable">
-      <label>Palavra-passe atual<input name="password" type="password" required autocomplete="current-password"></label>
-      <label>Código do autenticador ou recuperação<input name="code" required autocomplete="one-time-code" maxlength="14"></label>
-      <button class="danger-button">Desativar 2FA</button>
-    </form>
-  </details>
+  <p class="field-help">Por segurança, o 2FA é obrigatório para todas as contas administrativas e não pode ser desativado.</p>
 </section>
 {% else %}
 <section class="admin-panel security-panel">
-  <div class="two-factor-status warning"><strong>2FA inativo</strong><span>Ative-o para impedir o acesso apenas com uma palavra-passe.</span></div>
+  <div class="two-factor-status warning"><strong>Configuração obrigatória</strong><span>Conclua o 2FA antes de aceder às restantes funções administrativas.</span></div>
   <ol class="setup-steps">
     <li>Abra Google Authenticator, Microsoft Authenticator, Authy ou outra aplicação TOTP.</li>
     <li>Escolha adicionar uma conta manualmente e introduza a chave abaixo.</li>

@@ -34,8 +34,29 @@ class PlatformTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 200)
 
+    def test_bare_domain_redirects_permanently_to_www(self):
+        response = self.client.get(
+            "/artigos?page=2",
+            base_url="https://sussurrosdosaber.com",
+        )
+        self.assertEqual(response.status_code, 308)
+        self.assertEqual(
+            response.location,
+            "https://www.sussurrosdosaber.com/artigos?page=2",
+        )
+
+    def test_canonical_metadata_uses_www(self):
+        response = self.client.get(
+            "/",
+            base_url="https://www.sussurrosdosaber.com",
+        )
+        self.assertIn(
+            b'<link rel="canonical" href="https://www.sussurrosdosaber.com/">',
+            response.data,
+        )
+
     def test_security_headers(self):
-        response = self.client.get("/", base_url="https://sussurrosdosaber.com")
+        response = self.client.get("/", base_url="https://www.sussurrosdosaber.com")
         self.assertIn("default-src 'self'", response.headers["Content-Security-Policy"])
         self.assertIn("max-age=31536000", response.headers["Strict-Transport-Security"])
         self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")

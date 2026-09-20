@@ -21,7 +21,7 @@ A área editorial está disponível em `/admin`. Antes de publicar, configure:
 - `ADMIN_PASSWORD_HASH`: hash seguro da palavra-passe administrativa (recomendado).
 - `ADMIN_PASSWORD`: alternativa compatível; mantenha apenas enquanto migra para o hash.
 - `DATABASE_URL`: ligação PostgreSQL fornecida pelo serviço de base de dados.
-- `SITE_URL`: endereço canónico, por exemplo `https://sussurrosdosaber.com`.
+- `SITE_URL`: endereço canónico, por exemplo `https://www.sussurrosdosaber.com`.
 - `ASSISTANT_SHARED_KEY`: segredo igual no Render e no Cloudflare Worker.
 - `ASSISTANT_WORKER_URL`: URL do Worker (opcional se mantiver o endereço actual).
 - `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`: protecção Cloudflare Turnstile no login (recomendado).
@@ -57,6 +57,7 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No R
 - Active backups automáticos da base PostgreSQL e faça um teste de restauração antes do lançamento público.
 - Use Redis em `RATELIMIT_STORAGE_URI` quando executar mais de um processo ou instância.
 - Mantenha Cloudinary, Render e Cloudflare com autenticação de dois fatores.
+- Todas as contas administrativas secundárias são obrigadas a configurar 2FA no primeiro acesso; não podem usar o restante painel antes da ativação.
 - Teste localmente com `python -m unittest discover -s tests -v` antes de cada publicação.
 
 ## Funcionalidades
