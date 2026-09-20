@@ -141,3 +141,19 @@ window.sdsTrack=pushAnalyticsEvent;
     });
   },{passive:true});
 })();
+
+
+// Mantém cartões e artigos legíveis quando uma origem externa remove ou bloqueia a imagem.
+document.addEventListener('error', (event) => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied === 'true') return;
+  image.dataset.fallbackApplied = 'true';
+  image.removeAttribute('srcset');
+  image.removeAttribute('sizes');
+  image.src = '/static/img/image-fallback.svg';
+  if (!image.alt) image.alt = 'Imagem temporariamente indisponível';
+}, true);
+
+document.querySelectorAll('img[src^="http"]').forEach((image) => {
+  image.referrerPolicy = 'no-referrer';
+});
