@@ -21,13 +21,25 @@ from models import AdminUser, Article, Author, Category, ContactMessage, Journal
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+IS_PRODUCTION = (
+    os.getenv("RENDER", "").lower() == "true"
+    or os.getenv("FLASK_ENV", "").lower() == "production"
+)
+DEVELOPMENT_SECRET_KEY = "local-development-only-change-me"
+secret_key = os.getenv("SECRET_KEY", "").strip()
+if IS_PRODUCTION and (not secret_key or secret_key == DEVELOPMENT_SECRET_KEY):
+    raise RuntimeError("SECRET_KEY forte e exclusiva é obrigatória em produção.")
+if not secret_key:
+    secret_key = DEVELOPMENT_SECRET_KEY
+
 database_url = os.getenv("DATABASE_URL", "sqlite:///sussurros.db")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 app.config.update(
     SQLALCHEMY_DATABASE_URI=database_url,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    SECRET_KEY=os.getenv("SECRET_KEY", "local-development-only-change-me"),
+    SECRET_KEY=secret_key,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("RENDER", "").lower() == "true" or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
@@ -883,4 +895,8 @@ with app.app_context():
     seed_database()
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(
+        debug=(not IS_PRODUCTION and os.getenv("FLASK_DEBUG", "").lower() == "true"),
+        host="127.0.0.1",
+        port=5000,
+    )

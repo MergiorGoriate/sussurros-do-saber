@@ -144,10 +144,19 @@ def admin_context():
     }
 
 
+def production_mode():
+    return (
+        os.getenv("RENDER", "").lower() == "true"
+        or os.getenv("FLASK_ENV", "").lower() == "production"
+    )
+
+
 def turnstile_valid():
-    secret = os.getenv("TURNSTILE_SECRET_KEY")
-    if not secret:
-        return os.getenv("REQUIRE_TURNSTILE", "false").lower() != "true"
+    secret = os.getenv("TURNSTILE_SECRET_KEY", "").strip()
+    site_key = os.getenv("TURNSTILE_SITE_KEY", "").strip()
+    required = production_mode() or os.getenv("REQUIRE_TURNSTILE", "false").lower() == "true"
+    if not secret or not site_key:
+        return not required
     try:
         response = requests.post(
             "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -263,7 +272,8 @@ def login():
             AdminUser.active.is_(True),
         ).first()
         configured_user = os.getenv("ADMIN_USERNAME")
-        configured_password = os.getenv("ADMIN_PASSWORD")
+        # Palavra-passe simples é aceite apenas no desenvolvimento local.
+        configured_password = None if production_mode() else os.getenv("ADMIN_PASSWORD")
         configured_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
         if not turnstile_valid():
             flash("A verificação de segurança falhou. Actualize a página e tente novamente.", "error")
@@ -279,16 +289,16 @@ def login():
             or (configured_password and hmac.compare_digest(password, configured_password))
         ):
             env_totp_secret = os.getenv("ADMIN_TOTP_SECRET", "").strip()
-            if env_totp_secret:
+            if not env_totp_secret:
+                flash(
+                    "A conta principal exige 2FA. Configure ADMIN_TOTP_SECRET no Render.",
+                    "error",
+                )
+            else:
                 return begin_two_factor_challenge(
                     username=configured_user,
                     superuser=True,
                 )
-            flash(
-                "A conta principal ainda não possui 2FA. Configure ADMIN_TOTP_SECRET no Render.",
-                "warning",
-            )
-            return complete_admin_login(username=configured_user, superuser=True)
         else:
             flash("Utilizador ou palavra-passe inválidos.", "error")
     return render_template("admin/login.html")
