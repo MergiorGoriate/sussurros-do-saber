@@ -37,7 +37,7 @@
       {% if author.photo %}<label class="check"><input name="remove_photo" type="checkbox"> Remover fotografia atual</label>{% endif %}
       <label>Biografia<textarea name="bio" rows="3">{{ author.bio }}</textarea></label>
       <button class="admin-primary">Guardar alterações</button>
-      <button formmethod="post" formaction="{{ url_for('admin.delete_author',author_id=author.id) }}" onclick="return confirm('Eliminar este autor?')" class="danger-button">Eliminar</button>
+      <button formmethod="post" formaction="{{ url_for('admin.delete_author',author_id=author.id) }}" data-confirm="Eliminar este autor?" class="danger-button">Eliminar</button>
     </form>
     {% else %}
     <p>Ainda não existem autores cadastrados.</p>
