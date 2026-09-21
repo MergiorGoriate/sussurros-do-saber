@@ -435,7 +435,7 @@ LEARNING_RESOURCES = [
 
 @app.get("/")
 def home():
-    items = Article.public_card_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(7).all()
+    items = Article.public_card_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(10).all()
     return render_template("index.html", articles=items, journals=Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).limit(3).all())
 
 @app.get("/artigos")
