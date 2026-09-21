@@ -647,8 +647,13 @@ def authors():
         validate_csrf()
         name = request.form.get("name", "").strip()
         author_id = request.form.get("author_id")
-        author = db.session.get(Author, int(author_id)) if author_id else Author()
-        if author_id and not author:
+        try:
+            parsed_author_id = int(author_id) if author_id else None
+        except (TypeError, ValueError):
+            flash("Identificador de autor inválido.", "error")
+            return redirect(url_for("admin.authors"))
+        author = db.session.get(Author, parsed_author_id) if parsed_author_id else Author()
+        if parsed_author_id and not author:
             abort(404)
 
         email = request.form.get("email", "").strip() or None
@@ -700,7 +705,14 @@ def categories():
         validate_csrf()
         name = request.form.get("name", "").strip()
         category_id = request.form.get("category_id")
-        category = db.session.get(Category, int(category_id)) if category_id else Category()
+        try:
+            parsed_category_id = int(category_id) if category_id else None
+        except (TypeError, ValueError):
+            flash("Identificador de categoria inválido.", "error")
+            return redirect(url_for("admin.categories"))
+        category = db.session.get(Category, parsed_category_id) if parsed_category_id else Category()
+        if parsed_category_id and not category:
+            abort(404)
         duplicate = Category.query.filter(Category.name == name, Category.id != category.id).first()
         if name and not duplicate:
             category.name = name; category.slug = slugify(name)
@@ -835,7 +847,10 @@ def comments():
 def update_comment_status(comment_id):
     validate_csrf()
     comment = db.get_or_404(Comment, comment_id)
-    comment.approved = request.form.get("action") == "approve"
+    action = request.form.get("action")
+    if action not in {"approve", "reject"}:
+        abort(400)
+    comment.approved = action == "approve"
     db.session.commit()
     flash("Estado do comentário atualizado.", "success")
     return redirect(url_for("admin.comments", estado=request.form.get("return_status", "pendentes")))
@@ -888,12 +903,21 @@ def toggle_subscriber(subscriber_id):
     return redirect(url_for("admin.subscribers"))
 
 
+def csv_safe_cell(value):
+    """Impede execução de fórmulas ao abrir exportações em folhas de cálculo."""
+    text_value = str(value if value is not None else "")
+    return "'" + text_value if text_value.startswith(("=", "+", "-", "@", "\t", "\r")) else text_value
+
+
 def csv_download(filename, headers, rows):
     stream = io.StringIO()
     writer = csv.writer(stream)
     writer.writerow(headers)
-    writer.writerows(rows)
-    return Response("\ufeff" + stream.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    writer.writerows(tuple(csv_safe_cell(value) for value in row) for row in rows)
+    response = Response("\ufeff" + stream.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @admin_bp.get("/contactos/exportar.csv")
