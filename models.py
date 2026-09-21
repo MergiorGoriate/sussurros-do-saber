@@ -82,6 +82,7 @@ class Article(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=False)
     author_rel = db.relationship("Author", back_populates="articles")
     category_rel = db.relationship("Category", back_populates="articles")
+    comments = db.relationship("Comment", back_populates="article", cascade="all, delete-orphan")
 
     @property
     def author(self):
@@ -120,6 +121,17 @@ class Article(db.Model):
             joinedload(cls.author_rel).load_only(Author.id, Author.name, Author.photo),
             joinedload(cls.category_rel).load_only(Category.id, Category.name, Category.slug),
         )
+
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    article_id = db.Column(db.Integer, db.ForeignKey("article.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    email = db.Column(db.String(254), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    approved = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
+    article = db.relationship("Article", back_populates="comments")
 
 
 class ContactMessage(db.Model):
