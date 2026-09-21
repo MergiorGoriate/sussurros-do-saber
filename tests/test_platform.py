@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 import re
 import time
 
@@ -492,6 +493,26 @@ class PlatformTests(unittest.TestCase):
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "secondary-csrf"
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
+
+    def test_homepage_loads_featured_article_and_six_discoveries(self):
+        class QuerySpy:
+            limit_value = None
+
+            def order_by(self, *args):
+                return self
+
+            def limit(self, value):
+                self.limit_value = value
+                return self
+
+            def all(self):
+                return []
+
+        query = QuerySpy()
+        with patch.object(Article, "public_card_query", return_value=query):
+            response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(query.limit_value, 7)
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
