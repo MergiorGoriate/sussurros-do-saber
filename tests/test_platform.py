@@ -136,6 +136,7 @@ class PlatformTests(unittest.TestCase):
         for address in [
             "https://x.com/sussurrodosaber",
             "https://www.instagram.com/sussurrodosaber?stkn=djl2d2s5cmJnZzE5",
+            "https://www.youtube.com/channel/UCMxbh7jSRUxxX48JSWszc8g",
             "https://wa.me/258852130099",
             "https://web.facebook.com/profile.php?id=61584597102517",
         ]:
