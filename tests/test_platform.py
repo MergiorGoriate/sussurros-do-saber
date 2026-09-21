@@ -17,7 +17,7 @@ os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
 from admin import generate_recovery_codes, totp_code, verify_totp  # noqa: E402
 from sqlalchemy import inspect
-from models import AdminUser, Article, Author, Journal, db  # noqa: E402
+from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E402
 
 
 class PlatformTests(unittest.TestCase):
@@ -162,6 +162,63 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(f'<meta name="twitter:image" content="{escaped_image}">'.encode(), response.data)
         self.assertIn(b'<meta name="twitter:card" content="summary_large_image">', response.data)
         self.assertIn(b'?share=', response.data)
+
+    def test_article_comments_are_moderated_and_escaped(self):
+        with app.app_context():
+            article = Article.public_query().first()
+            slug = article.slug
+            article_id = article.id
+
+        page = self.client.get(f"/artigo/{slug}")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b'id="comentarios"', page.data)
+        token_match = re.search(rb'name="csrf_token" value="([^"]+)"', page.data)
+        self.assertIsNotNone(token_match)
+
+        response = self.client.post(
+            f"/artigo/{slug}/comentarios",
+            data={
+                "csrf_token": token_match.group(1).decode(),
+                "name": "Leitor Teste",
+                "email": "leitor@example.com",
+                "body": "<script>alert(1)</script> Comentário científico válido.",
+                "website": "",
+            },
+        )
+        self.assertEqual(response.status_code, 303)
+
+        with app.app_context():
+            comment = Comment.query.filter_by(article_id=article_id, email="leitor@example.com").first()
+            self.assertIsNotNone(comment)
+            self.assertFalse(comment.approved)
+            comment.approved = True
+            db.session.commit()
+
+        published = self.client.get(f"/artigo/{slug}")
+        self.assertIn(b"Leitor Teste", published.data)
+        self.assertIn(b"&lt;script&gt;alert(1)&lt;/script&gt;", published.data)
+        self.assertNotIn(b"<script>alert(1)</script>", published.data)
+
+        with app.app_context():
+            Comment.query.filter_by(article_id=article_id, email="leitor@example.com").delete()
+            db.session.commit()
+
+    def test_comment_submission_rejects_invalid_csrf(self):
+        with app.app_context():
+            slug = Article.public_query().first().slug
+        response = self.client.post(
+            f"/artigo/{slug}/comentarios",
+            data={"csrf_token": "invalid", "name": "Teste", "email": "teste@example.com", "body": "Comentário suficientemente longo."},
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("comentario=invalido", response.location)
+
+    def test_comment_moderation_requires_admin_authentication(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+        response = self.client.get("/admin/comentarios")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/admin/login", response.location)
 
     def test_external_images_keep_their_original_reliable_url(self):
         previous = os.environ.get("CLOUDINARY_CLOUD_NAME")

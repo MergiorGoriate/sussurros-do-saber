@@ -17,7 +17,7 @@ import requests
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
 from storage import ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -813,6 +813,43 @@ def delete_journal(journal_id):
     db.session.commit()
     flash("Revista eliminada.", "success")
     return redirect(url_for("admin.journals"))
+
+
+@admin_bp.get("/comentarios")
+@login_required
+def comments():
+    status = request.args.get("estado", "pendentes")
+    query = Comment.query.join(Article).order_by(Comment.created_at.desc())
+    if status == "publicados":
+        query = query.filter(Comment.approved.is_(True))
+    elif status == "todos":
+        pass
+    else:
+        status = "pendentes"
+        query = query.filter(Comment.approved.is_(False))
+    return render_template("admin/comments.html", comments=query.all(), status=status)
+
+
+@admin_bp.post("/comentarios/<int:comment_id>/estado")
+@login_required
+def update_comment_status(comment_id):
+    validate_csrf()
+    comment = db.get_or_404(Comment, comment_id)
+    comment.approved = request.form.get("action") == "approve"
+    db.session.commit()
+    flash("Estado do comentário atualizado.", "success")
+    return redirect(url_for("admin.comments", estado=request.form.get("return_status", "pendentes")))
+
+
+@admin_bp.post("/comentarios/<int:comment_id>/eliminar")
+@login_required
+def delete_comment(comment_id):
+    validate_csrf()
+    comment = db.get_or_404(Comment, comment_id)
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Comentário eliminado.", "success")
+    return redirect(url_for("admin.comments", estado=request.form.get("return_status", "pendentes")))
 
 
 @admin_bp.get("/contactos")

@@ -1,0 +1,42 @@
+{% extends 'admin/base.html' %}
+{% block title %}Comentários{% endblock %}
+{% block content %}
+<header class="admin-header">
+  <div><span>Comunidade</span><h1>Comentários dos artigos</h1></div>
+</header>
+<nav class="admin-tabs" aria-label="Filtrar comentários">
+  <a href="{{ url_for('admin.comments', estado='pendentes') }}" {% if status == 'pendentes' %}aria-current="page"{% endif %}>Pendentes</a>
+  <a href="{{ url_for('admin.comments', estado='publicados') }}" {% if status == 'publicados' %}aria-current="page"{% endif %}>Publicados</a>
+  <a href="{{ url_for('admin.comments', estado='todos') }}" {% if status == 'todos' %}aria-current="page"{% endif %}>Todos</a>
+</nav>
+<section class="message-grid">
+  {% for comment in comments %}
+  <article class="admin-panel">
+    <header>
+      <div><strong>{{ comment.name }}</strong><a href="mailto:{{ comment.email }}">{{ comment.email }}</a></div>
+      <time datetime="{{ comment.created_at.isoformat() }}">{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</time>
+    </header>
+    <p><strong>Artigo:</strong> <a href="{{ url_for('article', slug=comment.article.slug) }}" target="_blank" rel="noopener">{{ comment.article.title }}</a></p>
+    <p>{{ comment.body }}</p>
+    <div class="admin-actions">
+      <form action="{{ url_for('admin.update_comment_status', comment_id=comment.id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_status" value="{{ status }}">
+        {% if comment.approved %}
+        <button name="action" value="reject" class="admin-secondary">Ocultar</button>
+        {% else %}
+        <button name="action" value="approve" class="admin-primary">Aprovar e publicar</button>
+        {% endif %}
+      </form>
+      <form action="{{ url_for('admin.delete_comment', comment_id=comment.id) }}" method="post" onsubmit="return confirm('Eliminar definitivamente este comentário?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_status" value="{{ status }}">
+        <button class="danger-link">Eliminar</button>
+      </form>
+    </div>
+  </article>
+  {% else %}
+  <p>Nenhum comentário nesta categoria.</p>
+  {% endfor %}
+</section>
+{% endblock %}
