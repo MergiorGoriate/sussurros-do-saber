@@ -4,7 +4,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
 <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"></noscript>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css', v='20260921-1') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css', v='20260921-2') }}" />
 <article class="article-page">
   <header class="article-header max-w-4xl mx-auto px-4 pt-14 text-center">
     <span class="eyebrow">{{ article.category }}</span>
@@ -110,48 +110,83 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
     </aside>
   </div>
 </article>
-<section id="comentarios" class="article-comments max-w-4xl mx-auto px-4 py-12" aria-labelledby="comments-title">
-  <div class="section-rule"><span>Comentários</span></div>
-  <div class="comments-layout">
-    <div class="comment-form-panel">
-      <span class="eyebrow">Participe da conversa</span>
-      <h2 id="comments-title">Deixe o seu comentário</h2>
-      <p>O comentário será publicado depois da revisão da equipa editorial.</p>
-      {% if request.args.get('comentario') == 'recebido' %}
-      <div class="comment-notice success" role="status">Comentário recebido. Obrigado por participar.</div>
-      {% elif request.args.get('comentario') == 'invalido' %}
-      <div class="comment-notice error" role="alert">Não foi possível enviar. Verifique os campos e tente novamente.</div>
-      {% endif %}
-      <form action="{{ url_for('submit_comment', slug=article.slug) }}" method="post" class="comment-form">
-        <input type="hidden" name="csrf_token" value="{{ comment_csrf_token }}">
-        <div class="comment-honeypot" aria-hidden="true">
-          <label for="comment-website">Website</label>
-          <input id="comment-website" name="website" type="text" tabindex="-1" autocomplete="off">
+<section id="comentarios" class="article-comments" aria-labelledby="comments-title">
+  <div class="article-comments-inner">
+    <header class="comments-heading">
+      <div>
+        <span class="eyebrow">Comunidade</span>
+        <h2 id="comments-title">Converse sobre este artigo</h2>
+        <p>Partilhe dúvidas, ideias e perspectivas com outros leitores.</p>
+      </div>
+      <span class="comments-count" aria-label="{{ comments|length }} comentário{% if comments|length != 1 %}s{% endif %}">
+        <i class="fa-regular fa-comment" aria-hidden="true"></i>
+        {{ comments|length }}
+      </span>
+    </header>
+    <div class="comments-layout">
+      <div class="comment-form-panel">
+        <div class="comment-form-intro">
+          <span class="comment-form-icon" aria-hidden="true"><i class="fa-regular fa-pen-to-square"></i></span>
+          <div>
+            <h3>Deixe o seu comentário</h3>
+            <p>Após uma breve revisão editorial, o seu comentário aparecerá nesta página.</p>
+          </div>
         </div>
-        <label for="comment-name">Nome</label>
-        <input id="comment-name" name="name" type="text" minlength="2" maxlength="80" autocomplete="name" required>
-        <label for="comment-email">E-mail <span>(não será publicado)</span></label>
-        <input id="comment-email" name="email" type="email" maxlength="254" autocomplete="email" required>
-        <label for="comment-body">Comentário</label>
-        <textarea id="comment-body" name="body" rows="6" minlength="10" maxlength="2000" required></textarea>
-        <button type="submit">Enviar comentário</button>
-      </form>
-    </div>
-    <div class="comments-list" aria-live="polite">
-      <h2>{{ comments|length }} comentário{% if comments|length != 1 %}s{% endif %}</h2>
-      {% if comments %}
-        {% for comment in comments %}
-        <article class="comment-card">
-          <header>
-            <span class="comment-avatar" aria-hidden="true">{{ comment.name[:1]|upper }}</span>
-            <div><strong>{{ comment.name }}</strong><time datetime="{{ comment.created_at.isoformat() }}">{{ comment.created_at.strftime('%d/%m/%Y às %H:%M') }}</time></div>
-          </header>
-          <p>{{ comment.body }}</p>
-        </article>
-        {% endfor %}
-      {% else %}
-      <p class="comments-empty">Ainda não há comentários publicados. Seja o primeiro a participar.</p>
-      {% endif %}
+        {% if request.args.get('comentario') == 'recebido' %}
+        <div class="comment-notice success" role="status"><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>Comentário recebido. Obrigado por participar.</span></div>
+        {% elif request.args.get('comentario') == 'invalido' %}
+        <div class="comment-notice error" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>Não foi possível enviar. Verifique os campos e tente novamente.</span></div>
+        {% endif %}
+        <form action="{{ url_for('submit_comment', slug=article.slug) }}" method="post" class="comment-form">
+          <input type="hidden" name="csrf_token" value="{{ comment_csrf_token }}">
+          <div class="comment-honeypot" aria-hidden="true">
+            <label for="comment-website">Website</label>
+            <input id="comment-website" name="website" type="text" tabindex="-1" autocomplete="off">
+          </div>
+          <div class="comment-form-row">
+            <div class="comment-field">
+              <label for="comment-name">Nome</label>
+              <input id="comment-name" name="name" type="text" minlength="2" maxlength="80" autocomplete="name" placeholder="O seu nome" required>
+            </div>
+            <div class="comment-field">
+              <label for="comment-email">E-mail <span>Privado</span></label>
+              <input id="comment-email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="nome@exemplo.com" required>
+            </div>
+          </div>
+          <div class="comment-field">
+            <label for="comment-body">Comentário</label>
+            <textarea id="comment-body" name="body" rows="6" minlength="10" maxlength="2000" placeholder="Escreva uma contribuição respeitosa e relacionada com o artigo…" required></textarea>
+            <small>Entre 10 e 2000 caracteres.</small>
+          </div>
+          <button type="submit"><i class="fa-regular fa-paper-plane" aria-hidden="true"></i><span>Enviar para revisão</span></button>
+        </form>
+      </div>
+      <div class="comments-list" aria-live="polite">
+        <div class="comments-list-heading">
+          <h3>Comentários publicados</h3>
+          <span>{{ comments|length }}</span>
+        </div>
+        {% if comments %}
+          {% for comment in comments %}
+          <article class="comment-card">
+            <header>
+              <span class="comment-avatar" aria-hidden="true">{{ comment.name[:1]|upper }}</span>
+              <div class="comment-author">
+                <strong>{{ comment.name }}</strong>
+                <time datetime="{{ comment.created_at.isoformat() }}"><i class="fa-regular fa-clock" aria-hidden="true"></i>{{ comment.created_at.strftime('%d/%m/%Y às %H:%M') }}</time>
+              </div>
+            </header>
+            <p>{{ comment.body }}</p>
+          </article>
+          {% endfor %}
+        {% else %}
+        <div class="comments-empty">
+          <span aria-hidden="true"><i class="fa-regular fa-comments"></i></span>
+          <h3>A conversa começa consigo</h3>
+          <p>Ainda não há comentários publicados. Partilhe a primeira reflexão sobre este artigo.</p>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 </section>
