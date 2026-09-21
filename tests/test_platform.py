@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 import re
 import time
+from pathlib import Path
 
 
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
@@ -493,6 +494,14 @@ class PlatformTests(unittest.TestCase):
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "secondary-csrf"
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
+
+    def test_homepage_uses_four_most_read_and_six_latest_discoveries(self):
+        template = Path(app.root_path, "templates", "index.html").read_text(encoding="utf-8")
+        self.assertIn("articles[1:5]", template)
+        self.assertIn("articles[1:7]", template)
+        response = self.client.get("/")
+        self.assertLessEqual(response.data.count(b'class="number-story group"'), 4)
+        self.assertLessEqual(response.data.count(b'class="story-card group"'), 6)
 
     def test_homepage_loads_featured_article_and_six_discoveries(self):
         class QuerySpy:
