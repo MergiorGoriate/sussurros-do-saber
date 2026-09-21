@@ -62,7 +62,7 @@
             </div>
           </form>
           {% if not administrator.is_superadmin and current_admin_id != administrator.id %}
-          <form method="post" action="{{ url_for('admin.delete_administrator', administrator_id=administrator.id) }}" onsubmit="return confirm('Eliminar definitivamente este administrador?')">
+          <form method="post" action="{{ url_for('admin.delete_administrator', administrator_id=administrator.id) }}" data-confirm="Eliminar definitivamente este administrador?">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="danger-button">Eliminar administrador</button>
           </form>
