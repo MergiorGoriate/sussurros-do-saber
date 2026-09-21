@@ -28,7 +28,7 @@
         <button name="action" value="approve" class="admin-primary">Aprovar e publicar</button>
         {% endif %}
       </form>
-      <form action="{{ url_for('admin.delete_comment', comment_id=comment.id) }}" method="post" onsubmit="return confirm('Eliminar definitivamente este comentário?')">
+      <form action="{{ url_for('admin.delete_comment', comment_id=comment.id) }}" method="post" data-confirm="Eliminar definitivamente este comentário?">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="return_status" value="{{ status }}">
         <button class="danger-link">Eliminar</button>
