@@ -11,7 +11,7 @@
     </a>
     <aside class="lg:col-span-4 lg:border-l lg:border-black/15 lg:pl-7">
       <h2 class="text-xs uppercase tracking-[.22em] font-bold text-signal mb-2">Mais lidos</h2>
-      {% for item in articles[1:4] %}<a href="{{ url_for('article', slug=item.slug) }}" class="number-story group"><span>0{{ loop.index }}</span><div><small>{{ item.category }}</small><h3>{{ item.title }}</h3></div></a>{% endfor %}
+      {% for item in articles[1:7] %}<a href="{{ url_for('article', slug=item.slug) }}" class="number-story group"><span>0{{ loop.index }}</span><div><small>{{ item.category }}</small><h3>{{ item.title }}</h3></div></a>{% endfor %}
     </aside>
   </div>
   {% else %}
