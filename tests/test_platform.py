@@ -135,6 +135,7 @@ class PlatformTests(unittest.TestCase):
             self.assertIn(network.encode(), response.data)
         for address in [
             "https://x.com/sussurrodosaber",
+            "https://www.instagram.com/sussurrodosaber?stkn=djl2d2s5cmJnZzE5",
             "https://wa.me/258852130099",
             "https://web.facebook.com/profile.php?id=61584597102517",
         ]:
