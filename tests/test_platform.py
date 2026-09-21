@@ -15,7 +15,7 @@ os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
-from admin import generate_recovery_codes, totp_code, verify_totp  # noqa: E402
+from admin import csv_safe_cell, generate_recovery_codes, totp_code, verify_totp  # noqa: E402
 from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E402
 
@@ -247,6 +247,43 @@ class PlatformTests(unittest.TestCase):
         )
         self.assertEqual(safe_image_url("javascript:alert(1)"), "")
         self.assertEqual(responsive_image_url("not-a-url", 480), "")
+
+    def test_accented_category_links_are_url_encoded(self):
+        homepage = self.client.get("/")
+        self.assertIn(b"categoria=Sa%C3%BAde", homepage.data)
+        self.assertIn(b"categoria=Educa%C3%A7%C3%A3o", homepage.data)
+        self.assertIn(b"categoria=Espa%C3%A7o", homepage.data)
+        self.assertNotIn("categoria=Saúde".encode(), homepage.data)
+
+    def test_cache_policy_separates_public_pages_from_comment_tokens(self):
+        homepage = self.client.get("/")
+        self.assertIn("public", homepage.headers.get("Cache-Control", ""))
+        with app.app_context():
+            slug = Article.public_query().first().slug
+        article = self.client.get(f"/artigo/{slug}")
+        self.assertEqual(article.headers.get("Cache-Control"), "no-store")
+
+    def test_admin_templates_do_not_use_csp_blocked_inline_handlers(self):
+        templates = [
+            "articles.html",
+            "journals.html",
+            "contacts.html",
+            "comments.html",
+            "administrators.html",
+        ]
+        for filename in templates:
+            source = Path(app.root_path, "templates", "admin", filename).read_text(encoding="utf-8")
+            self.assertNotIn("onsubmit=", source)
+            self.assertNotIn("onclick=", source)
+        self.assertIn(
+            "data-confirm=",
+            Path(app.root_path, "templates", "admin", "comments.html").read_text(encoding="utf-8"),
+        )
+
+    def test_csv_exports_neutralize_spreadsheet_formulas(self):
+        self.assertEqual(csv_safe_cell("=HYPERLINK(\"https://example.test\")"), "'=HYPERLINK(\"https://example.test\")")
+        self.assertEqual(csv_safe_cell("+123"), "'+123")
+        self.assertEqual(csv_safe_cell("texto normal"), "texto normal")
 
     def test_static_assets_have_long_immutable_cache(self):
         response = self.client.get("/static/css/style.css")
