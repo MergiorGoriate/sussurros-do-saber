@@ -495,15 +495,15 @@ class PlatformTests(unittest.TestCase):
             session["csrf_token"] = "secondary-csrf"
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
 
-    def test_homepage_uses_four_most_read_and_six_latest_discoveries(self):
+    def test_homepage_uses_four_most_read_and_nine_latest_discoveries(self):
         template = Path(app.root_path, "templates", "index.html").read_text(encoding="utf-8")
         self.assertIn("articles[1:5]", template)
-        self.assertIn("articles[1:7]", template)
+        self.assertIn("articles[1:10]", template)
         response = self.client.get("/")
         self.assertLessEqual(response.data.count(b'class="number-story group"'), 4)
-        self.assertLessEqual(response.data.count(b'class="story-card group"'), 6)
+        self.assertLessEqual(response.data.count(b'class="story-card group"'), 9)
 
-    def test_homepage_loads_featured_article_and_six_discoveries(self):
+    def test_homepage_loads_featured_article_and_nine_discoveries(self):
         class QuerySpy:
             limit_value = None
 
@@ -521,7 +521,7 @@ class PlatformTests(unittest.TestCase):
         with patch.object(Article, "public_card_query", return_value=query):
             response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(query.limit_value, 7)
+        self.assertEqual(query.limit_value, 10)
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
