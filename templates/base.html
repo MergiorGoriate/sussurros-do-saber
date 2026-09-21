@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="pt">
+<html lang="pt-MZ">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
+<meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% if gtm_container_id %}
 <script nonce="{{ csp_nonce }}">
@@ -26,7 +27,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','{{ gtm_container_id|e }}');</script>
 {% endif %}
-<title>{% block title %}Sussurros do Saber{% endblock %}</title>
+<title>{% block title %}Sussurros do Saber — Ciência, educação e investigação{% endblock %}</title>
 <link rel="canonical" href="{% block canonical %}{{ site_url }}{{ request.path }}{% endblock %}">
 {% block resource_hints %}{% endblock %}
 <meta property="og:type" content="{% block og_type %}website{% endblock %}">
@@ -58,6 +59,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}">
 <noscript><link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}"></noscript>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
+<script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 </head>
 <body class="bg-white text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
 {% if gtm_container_id %}<noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ gtm_container_id|e }}" height="0" width="0" style="display:none;visibility:hidden" title="Google Tag Manager"></iframe></noscript>{% endif %}
