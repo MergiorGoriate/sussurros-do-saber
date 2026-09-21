@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Erro temporário — Sussurros do Saber{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-24 text-center">
+  <span class="eyebrow">Erro temporário</span>
+  <h1 class="font-serif text-5xl md:text-7xl mt-3">Não foi possível concluir o pedido</h1>
+  <p class="text-lg opacity-65 mt-5">A nossa equipa foi informada. Aguarde alguns instantes e tente novamente.</p>
+  <div class="mt-8 flex flex-wrap justify-center gap-3">
+    <a class="primary-btn" href="/">Voltar à página inicial</a>
+    <a class="secondary-btn" href="/contacto">Contactar a equipa</a>
+  </div>
+</section>
+{% endblock %}
