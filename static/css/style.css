@@ -155,3 +155,4 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .article-pagination a:hover{background:#087f73;color:#fff}
 .article-pagination span[aria-disabled="true"]{opacity:.45}
 @media(max-width:640px){.story-card{contain-intrinsic-size:1px 460px}.article-pagination{justify-content:space-between}.article-pagination>span:not([aria-disabled]){order:-1;width:100%;justify-content:center;border:0;padding:0}}
+@media(min-width:768px){#menuToggle{display:none!important}}
