@@ -172,6 +172,9 @@ class PlatformTests(unittest.TestCase):
         page = self.client.get(f"/artigo/{slug}")
         self.assertEqual(page.status_code, 200)
         self.assertIn(b'id="comentarios"', page.data)
+        self.assertIn(b'class="comments-heading"', page.data)
+        self.assertIn(b'class="comment-form-row"', page.data)
+        self.assertIn(b'class="comments-list-heading"', page.data)
         token_match = re.search(rb'name="csrf_token" value="([^"]+)"', page.data)
         self.assertIsNotNone(token_match)
 
