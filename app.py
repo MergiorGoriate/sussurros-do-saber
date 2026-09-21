@@ -261,6 +261,7 @@ def security_headers(response):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("Content-Language", "pt-MZ")
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; "
@@ -278,8 +279,10 @@ def security_headers(response):
     else:
         private_response = request.method != "GET" or request.path.startswith(("/admin", "/api/"))
         response.headers.setdefault("Cache-Control", "no-store" if private_response else "public, max-age=60")
-    if request.path.startswith("/admin"):
+    if request.path.startswith("/admin") or response.status_code >= 400:
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
+    elif request.path == "/favoritos" or (request.path == "/artigos" and request.args):
+        response.headers.setdefault("X-Robots-Tag", "noindex, follow")
 
     compressible = {
         "text/html", "text/css", "text/plain", "text/xml",
@@ -617,24 +620,35 @@ def sitemap():
         url_for("corrections_policy"), url_for("accessibility"), url_for("services"),
         url_for("scientific_editing"), url_for("journals"),
     ]
-    entries = [(path, None) for path in static_paths]
-    entries.extend(
-        (url_for("journal_detail", slug=journal.slug), journal.updated_at)
+    static_urls = "".join(
+        f"<url><loc>{escape(SITE_URL + path)}</loc></url>"
+        for path in static_paths
+    )
+    journal_urls = "".join(
+        f"<url><loc>{escape(SITE_URL + url_for('journal_detail', slug=journal.slug))}</loc>"
+        f"<lastmod>{journal.updated_at.strftime('%Y-%m-%d')}</lastmod></url>"
         for journal in public_journals
     )
-    entries.extend(
-        (url_for("article", slug=article.slug), article.updated_at)
-        for article in public_articles
-    )
-    urls = "".join(
-        f"<url><loc>{SITE_URL}{path}</loc>"
-        + (f"<lastmod>{updated_at.strftime('%Y-%m-%d')}</lastmod>" if updated_at else "")
-        + "</url>"
-        for path, updated_at in entries
-    )
+    article_entries = []
+    for article in public_articles:
+        article_url = escape(SITE_URL + url_for("article", slug=article.slug))
+        cover_url = safe_image_url(article.image)
+        image_xml = ""
+        if cover_url:
+            image_xml = (
+                f"<image:image><image:loc>{escape(cover_url)}</image:loc>"
+                f"<image:title>{escape(article.title)}</image:title></image:image>"
+            )
+        article_entries.append(
+            f"<url><loc>{article_url}</loc>"
+            f"<lastmod>{article.updated_at.strftime('%Y-%m-%d')}</lastmod>"
+            f"{image_xml}</url>"
+        )
     response = Response(
-        f'<?xml version="1.0" encoding="UTF-8"?>'
-        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>',
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+        'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">'
+        + static_urls + journal_urls + "".join(article_entries) + "</urlset>",
         mimetype="application/xml",
     )
     response.headers["Cache-Control"] = "public, max-age=3600"
