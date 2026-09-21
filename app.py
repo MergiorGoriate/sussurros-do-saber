@@ -1,4 +1,4 @@
-from flask import Flask, Response, g, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Response, g, jsonify, redirect, render_template, request, session, url_for
 from xml.sax.saxutils import escape
 import requests
 import gzip
@@ -17,7 +17,7 @@ from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from admin import admin_bp, slugify
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, ContactMessage, Journal, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -457,6 +457,14 @@ def articles():
         query=request.args.get("q", ""),
     )
 
+def comment_csrf_token():
+    token = session.get("comment_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["comment_csrf_token"] = token
+    return token
+
+
 @app.get("/artigo/<slug>")
 def article(slug):
     selected = Article.public_query().filter_by(slug=slug).first()
@@ -467,7 +475,42 @@ def article(slug):
             return redirect(url_for("article", slug=legacy.slug), code=301)
         return render_template("404.html"), 404
     related = Article.public_card_query().filter(Article.id != selected.id).order_by(Article.published_at.desc()).limit(3).all()
-    return render_template("article.html", article=selected, related=related)
+    comments = Comment.query.filter_by(article_id=selected.id, approved=True).order_by(Comment.created_at.desc()).limit(100).all()
+    return render_template(
+        "article.html",
+        article=selected,
+        related=related,
+        comments=comments,
+        comment_csrf_token=comment_csrf_token(),
+    )
+
+
+@app.post("/artigo/<slug>/comentarios")
+@limiter.limit("5 per hour")
+def submit_comment(slug):
+    selected = Article.public_query().filter_by(slug=slug).first()
+    if not selected:
+        return render_template("404.html"), 404
+
+    success_url = url_for("article", slug=selected.slug, comentario="recebido") + "#comentarios"
+    if request.form.get("website", "").strip():
+        return redirect(success_url, code=303)
+
+    sent_token = request.form.get("csrf_token", "")
+    expected_token = session.get("comment_csrf_token", "")
+    if not expected_token or not secrets.compare_digest(sent_token, expected_token):
+        return redirect(url_for("article", slug=selected.slug, comentario="invalido") + "#comentarios", code=303)
+
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    body = request.form.get("body", "").strip()
+    if not 2 <= len(name) <= 80 or not valid_email(email) or not 10 <= len(body) <= 2000:
+        return redirect(url_for("article", slug=selected.slug, comentario="invalido") + "#comentarios", code=303)
+
+    db.session.add(Comment(article_id=selected.id, name=name, email=email, body=body))
+    db.session.commit()
+    session["comment_csrf_token"] = secrets.token_urlsafe(32)
+    return redirect(success_url, code=303)
 
 
 @app.get("/artigo/<int:article_id>")
