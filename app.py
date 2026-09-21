@@ -277,8 +277,17 @@ def security_headers(response):
     if request.path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     else:
-        private_response = request.method != "GET" or request.path.startswith(("/admin", "/api/"))
-        response.headers.setdefault("Cache-Control", "no-store" if private_response else "public, max-age=60")
+        # Páginas de artigos contêm um token CSRF individual do formulário de
+        # comentários e nunca podem ser guardadas por caches partilhadas.
+        private_response = (
+            request.method != "GET"
+            or request.path.startswith(("/admin", "/api/", "/artigo/"))
+            or response.status_code >= 400
+        )
+        if private_response:
+            response.headers["Cache-Control"] = "no-store"
+        elif not response.headers.get("Cache-Control") or response.headers["Cache-Control"] == "no-store":
+            response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
     if request.path.startswith("/admin") or response.status_code >= 400:
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
     elif request.path == "/favoritos" or (request.path == "/artigos" and request.args):
@@ -401,6 +410,12 @@ def social_image_url(url):
     # muitas origens bloqueiam o fetch e algumas contas não o têm ativado.
     return value
 
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    db.session.rollback()
+    return render_template("500.html"), 500
 
 
 @app.errorhandler(429)

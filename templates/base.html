@@ -86,9 +86,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </div>
 <nav id="mainNav" aria-label="Navegação principal" class="hidden md:flex border-t border-black/10 dark:border-white/10 items-center gap-5 h-12 text-sm font-semibold">
 <a href="/artigos">Últimos</a>
-<a href="/artigos?categoria=Biologia">Biologia</a>
-<a href="/artigos?categoria=Saúde">Saúde</a>
-<a href="/artigos?categoria=Ambiente">Ambiente</a>
+<a href="{{ url_for('articles', categoria='Biologia') }}">Biologia</a>
+<a href="{{ url_for('articles', categoria='Saúde') }}">Saúde</a>
+<a href="{{ url_for('articles', categoria='Ambiente') }}">Ambiente</a>
 <a href="/revistas">Revistas</a>
 <a href="/recursos" class="nav-feature">Recursos</a>
 <a href="/servicos">Serviços</a>

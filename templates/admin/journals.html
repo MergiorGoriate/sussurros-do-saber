@@ -10,7 +10,7 @@
   <a href="{{ url_for('admin.journal_form', journal_id=journal.id) }}">Editar</a>
   {% if journal.published %}<a href="{{ url_for('journal_detail', slug=journal.slug) }}" target="_blank" rel="noopener">Ver</a>{% endif %}
   <form method="post" action="{{ url_for('admin.toggle_journal', journal_id=journal.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>{{ 'Ocultar' if journal.published else 'Publicar' }}</button></form>
-  <form method="post" action="{{ url_for('admin.delete_journal', journal_id=journal.id) }}" onsubmit="return confirm('Eliminar esta revista permanentemente?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger">Eliminar</button></form>
+  <form method="post" action="{{ url_for('admin.delete_journal', journal_id=journal.id) }}" data-confirm="Eliminar esta revista permanentemente?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger">Eliminar</button></form>
 </article>{% else %}<p>Nenhuma revista cadastrada.</p>{% endfor %}
 </div></section>
 {% endblock %}
