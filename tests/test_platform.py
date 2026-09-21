@@ -133,6 +133,12 @@ class PlatformTests(unittest.TestCase):
         for network in ["Facebook", "Instagram", "YouTube", "LinkedIn", "X", "WhatsApp"]:
             self.assertIn(f'aria-label="'.encode(), response.data)
             self.assertIn(network.encode(), response.data)
+        for address in [
+            "https://x.com/sussurrodosaber",
+            "https://wa.me/258852130099",
+            "https://web.facebook.com/profile.php?id=61584597102517",
+        ]:
+            self.assertIn(address.replace("&", "&amp;").encode(), response.data)
 
     def test_public_routes_and_discovery_files(self):
         for path in ["/", "/artigos", "/autores", "/revistas", "/contacto", "/feed.xml", "/sitemap.xml", "/robots.txt", "/healthz"]:
