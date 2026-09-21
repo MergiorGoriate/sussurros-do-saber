@@ -76,6 +76,40 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b"Sitemap: https://www.sussurrosdosaber.com/sitemap.xml", robots.data)
         self.assertIn(b"Disallow: /admin", robots.data)
 
+    def test_indexing_directives_distinguish_public_and_duplicate_pages(self):
+        homepage = self.client.get("/")
+        self.assertIn(
+            b'<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">',
+            homepage.data,
+        )
+        filtered = self.client.get("/artigos?categoria=Biologia")
+        self.assertIn(b'<meta name="robots" content="noindex,follow">', filtered.data)
+        self.assertEqual(filtered.headers["X-Robots-Tag"], "noindex, follow")
+        favorites = self.client.get("/favoritos")
+        self.assertIn(b'<meta name="robots" content="noindex,follow">', favorites.data)
+        missing = self.client.get("/artigo/nao-existe")
+        self.assertEqual(missing.status_code, 404)
+        self.assertEqual(missing.headers["X-Robots-Tag"], "noindex, nofollow")
+
+    def test_sitemap_contains_canonical_articles_and_cover_images(self):
+        with app.app_context():
+            article = Article.public_card_query().filter(Article.image != "").first()
+            self.assertIsNotNone(article)
+            article_url = f"https://www.sussurrosdosaber.com/artigo/{article.slug}"
+            cover_url = safe_image_url(article.image)
+        response = self.client.get("/sitemap.xml")
+        self.assertIn(b'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"', response.data)
+        self.assertIn(article_url.encode(), response.data)
+        self.assertIn(b"<image:image>", response.data)
+        self.assertIn(cover_url.replace("&", "&amp;").encode(), response.data)
+
+    def test_website_schema_and_content_language_are_present(self):
+        response = self.client.get("/")
+        self.assertEqual(response.headers["Content-Language"], "pt-MZ")
+        self.assertIn(b'"@type":"WebSite"', response.data)
+        self.assertIn(b'"@type":"SearchAction"', response.data)
+        self.assertIn(b'<html lang="pt-MZ">', response.data)
+
     def test_google_tag_manager_consent_mode_and_events(self):
         previous = os.environ.get("GTM_CONTAINER_ID")
         os.environ["GTM_CONTAINER_ID"] = "GTM-TEST123"
