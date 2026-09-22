@@ -18,7 +18,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       {% else %}
       <span class="article-author-avatar article-author-fallback" aria-hidden="true">{{ article.author[:2]|upper }}</span>
       {% endif %}
-      <span>Por {{ article.author }}</span>
+      <a class="article-author-link" href="{{ url_for('author_detail', slug=article.author_rel.slug) }}">Por {{ article.author }}</a>
     </div>
     <p class="article-meta article-byline justify-center">
       <span>Publicado em {{ article.date }}</span>
