@@ -656,11 +656,29 @@ def authors():
         if parsed_author_id and not author:
             abort(404)
 
+        requested_slug = slugify(request.form.get("slug", "").strip() or name)
         email = request.form.get("email", "").strip() or None
+        headline = request.form.get("headline", "").strip()
+        orcid = request.form.get("orcid", "").strip()
+        if orcid:
+            orcid = re.sub(r"^https?://orcid\.org/", "", orcid, flags=re.I)
         photo_url = request.form.get("photo_url", "").strip()
         photo_file = request.files.get("photo_file")
+        duplicate_slug = Author.query.filter(Author.slug == requested_slug, Author.id != author.id).first()
+        duplicate_email = email and Author.query.filter(Author.email == email, Author.id != author.id).first()
+
         if not name:
             flash("Informe o nome do autor.", "error")
+        elif not requested_slug:
+            flash("Informe uma URL válida para o perfil.", "error")
+        elif duplicate_slug:
+            flash("Esta URL de autor já está em uso.", "error")
+        elif duplicate_email:
+            flash("Este e-mail já pertence a outro autor.", "error")
+        elif email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            flash("Informe um e-mail válido.", "error")
+        elif orcid and not re.fullmatch(r"\d{4}-\d{4}-\d{4}-[\dX]{4}", orcid, re.I):
+            flash("Informe o ORCID no formato 0000-0000-0000-0000.", "error")
         elif photo_url and not re.fullmatch(r"https?://[^\s]+", photo_url, re.I):
             flash("Informe um endereço válido para a fotografia.", "error")
         else:
@@ -676,12 +694,18 @@ def authors():
                 return redirect(url_for("admin.authors"))
 
             author.name = name
+            author.slug = requested_slug
             author.email = email
+            author.headline = headline[:220]
             author.bio = request.form.get("bio", "").strip()
+            author.interests = request.form.get("interests", "").strip()
+            author.projects = request.form.get("projects", "").strip()
+            author.orcid = orcid.upper()
+            author.publications = request.form.get("publications", "").strip()
             if not author.id:
                 db.session.add(author)
             db.session.commit()
-            flash("Autor guardado com sucesso.", "success")
+            flash("Perfil do autor guardado com sucesso.", "success")
             return redirect(url_for("admin.authors"))
     return render_template("admin/authors.html", authors=Author.query.order_by(Author.name).all())
 

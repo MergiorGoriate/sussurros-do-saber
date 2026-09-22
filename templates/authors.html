@@ -6,12 +6,14 @@
 <section class="max-w-6xl mx-auto px-4 py-12 space-y-6">
   {% for author in authors %}
   <article class="author-profile">
-    {% if author.photo %}
-    <img class="author-profile-photo" src="{{ author.photo|safe_image_url }}" alt="Fotografia de {{ author.name }}" loading="lazy" decoding="async">
-    {% else %}
-    <div class="author-profile-photo author-monogram" aria-hidden="true">{{ author.name[:2]|upper }}</div>
-    {% endif %}
-    <div><span class="eyebrow">Autor · {{ author.articles|length }} artigo{% if author.articles|length != 1 %}s{% endif %}</span><h2>{{ author.name }}</h2><p>{{ author.bio or 'Autor do Sussurros do Saber.' }}</p><a class="modern-link inline-block mt-4" href="{{ url_for('articles', q=author.name) }}">Ver artigos deste autor →</a></div>
+    <a href="{{ url_for('author_detail', slug=author.slug) }}" aria-label="Ver perfil de {{ author.name }}">
+      {% if author.photo %}
+      <img class="author-profile-photo" src="{{ author.photo|safe_image_url }}" alt="Fotografia de {{ author.name }}" loading="lazy" decoding="async">
+      {% else %}
+      <div class="author-profile-photo author-monogram" aria-hidden="true">{{ author.name[:2]|upper }}</div>
+      {% endif %}
+    </a>
+    <div><span class="eyebrow">Autor · {{ author.articles|length }} artigo{% if author.articles|length != 1 %}s{% endif %}</span><h2><a href="{{ url_for('author_detail', slug=author.slug) }}">{{ author.name }}</a></h2><p class="author-card-headline">{{ author.headline or author.bio or 'Autor do Sussurros do Saber.' }}</p><a class="modern-link inline-block mt-4" href="{{ url_for('author_detail', slug=author.slug) }}">Ver perfil e artigos →</a></div>
   </article>
   {% else %}
   <div class="empty-state"><h2>Perfis em preparação</h2><p>Os autores serão apresentados aqui assim que os perfis forem publicados.</p></div>

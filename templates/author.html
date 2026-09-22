@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}{{ author.name }} — Autor | Sussurros do Saber{% endblock %}
+{% block meta_description %}{{ (author.headline or author.bio or ('Perfil e artigos de ' ~ author.name ~ ' no Sussurros do Saber.'))|striptags|truncate(155, True, '…') }}{% endblock %}
+{% block canonical %}{{ site_url }}{{ url_for('author_detail', slug=author.slug) }}{% endblock %}
+{% block head_extra %}
+<script nonce="{{ csp_nonce }}" type="application/ld+json">{{ {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  "mainEntity": {
+    "@type": "Person",
+    "name": author.name,
+    "description": author.headline or author.bio,
+    "image": (author.photo|safe_image_url) if author.photo else none,
+    "url": site_url ~ url_for('author_detail', slug=author.slug),
+    "sameAs": (["https://orcid.org/" ~ author.orcid] if author.orcid else [])
+  }
+}|tojson }}</script>
+{% endblock %}
+{% block content %}
+<main class="author-page">
+  <section class="author-hero">
+    <div class="author-hero-inner">
+      {% if author.photo %}
+      <img class="author-hero-photo" src="{{ author.photo|safe_image_url }}" alt="Fotografia de {{ author.name }}" width="240" height="240" fetchpriority="high">
+      {% else %}
+      <div class="author-hero-photo author-monogram" aria-hidden="true">{{ author.name[:2]|upper }}</div>
+      {% endif %}
+      <div>
+        <span class="eyebrow">Perfil de autor</span>
+        <h1>{{ author.name }}</h1>
+        <p class="author-headline">{{ author.headline or 'Autor do Sussurros do Saber.' }}</p>
+        {% if author.orcid or author.email %}
+        <div class="author-actions">
+          {% if author.orcid %}<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="me noopener">ORCID {{ author.orcid }} ↗</a>{% endif %}
+          {% if author.email %}<a href="mailto:{{ author.email }}">Contacto</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="author-content">
+    {% if author.bio %}<section class="author-section"><span class="eyebrow">Biografia</span><h2>Sobre {{ author.name }}</h2><p class="author-bio">{{ author.bio }}</p></section>{% endif %}
+    {% if interests or projects or publications %}
+    <div class="author-details-grid">
+      {% if interests %}<section class="author-section"><span class="eyebrow">Temas</span><h2>Áreas de interesse</h2><ul>{% for item in interests %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+      {% if projects %}<section class="author-section"><span class="eyebrow">Trabalho</span><h2>Projectos</h2><ul>{% for item in projects %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+      {% if publications %}<section class="author-section"><span class="eyebrow">Produção</span><h2>Publicações</h2><ul>{% for item in publications %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+    </div>
+    {% endif %}
+
+    <section class="author-articles">
+      <div class="section-heading"><div><span class="eyebrow">Arquivo</span><h2>Artigos de {{ author.name }}</h2></div><span>{{ pagination.total }} artigo{% if pagination.total != 1 %}s{% endif %}</span></div>
+      <div class="author-article-grid">
+        {% for article in articles %}
+        <article class="author-article-card">
+          <a href="{{ url_for('article', slug=article.slug) }}">
+            {% if article.image %}<img src="{{ article.image|safe_image_url }}" alt="{{ article.image_alt or ('Imagem de capa: ' ~ article.title) }}" loading="lazy" decoding="async">{% endif %}
+            <div><span class="eyebrow">{{ article.category }}</span><h3>{{ article.title }}</h3><p>{{ article.summary }}</p><span class="modern-link">Ler artigo →</span></div>
+          </a>
+        </article>
+        {% else %}
+        <div class="empty-state"><h3>Sem artigos publicados</h3><p>Os artigos deste autor aparecerão aqui quando forem publicados.</p></div>
+        {% endfor %}
+      </div>
+      {% if pagination.pages > 1 %}
+      <nav class="author-pagination" aria-label="Paginação dos artigos">
+        {% if pagination.has_prev %}<a href="{{ url_for('author_detail', slug=author.slug, pagina=pagination.prev_num) }}">← Anteriores</a>{% endif %}
+        <span>Página {{ pagination.page }} de {{ pagination.pages }}</span>
+        {% if pagination.has_next %}<a href="{{ url_for('author_detail', slug=author.slug, pagina=pagination.next_num) }}">Seguintes →</a>{% endif %}
+      </nav>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}

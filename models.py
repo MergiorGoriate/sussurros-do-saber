@@ -28,8 +28,14 @@ class AdminUser(db.Model):
 class Author(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
+    slug = db.Column(db.String(160), unique=True, nullable=False, index=True)
     email = db.Column(db.String(180), unique=True)
+    headline = db.Column(db.String(220), default="")
     bio = db.Column(db.Text, default="")
+    interests = db.Column(db.Text, default="")
+    projects = db.Column(db.Text, default="")
+    orcid = db.Column(db.String(19), default="")
+    publications = db.Column(db.Text, default="")
     photo = db.Column(db.String(600), default="")
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
@@ -118,7 +124,7 @@ class Article(db.Model):
                 cls.read_minutes, cls.featured, cls.published_at, cls.scheduled_at,
                 cls.created_at, cls.updated_at, cls.author_id, cls.category_id,
             ),
-            joinedload(cls.author_rel).load_only(Author.id, Author.name, Author.photo),
+            joinedload(cls.author_rel).load_only(Author.id, Author.name, Author.slug, Author.photo),
             joinedload(cls.category_rel).load_only(Category.id, Category.name, Category.slug),
         )
 

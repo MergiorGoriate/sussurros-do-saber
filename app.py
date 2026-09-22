@@ -543,6 +543,42 @@ def about():
 def authors():
     return render_template("authors.html", authors=Author.query.filter_by(active=True).order_by(Author.name).all())
 
+
+def profile_lines(value):
+    return [line.strip().lstrip("-• ").strip() for line in (value or "").splitlines() if line.strip()]
+
+
+@app.get("/autor/<slug>")
+def author_detail(slug):
+    author = Author.query.filter_by(slug=slug, active=True).first()
+    if not author:
+        return render_template("404.html"), 404
+    page = max(request.args.get("pagina", 1, type=int) or 1, 1)
+    pagination = (
+        Article.public_card_query()
+        .filter(Article.author_id == author.id)
+        .order_by(Article.published_at.desc(), Article.id.desc())
+        .paginate(page=page, per_page=9, error_out=False)
+    )
+    return render_template(
+        "author.html",
+        author=author,
+        articles=pagination.items,
+        pagination=pagination,
+        interests=profile_lines(author.interests),
+        projects=profile_lines(author.projects),
+        publications=profile_lines(author.publications),
+    )
+
+
+@app.get("/autor/<int:author_id>")
+def legacy_author(author_id):
+    author = db.session.get(Author, author_id)
+    if not author or not author.active:
+        return render_template("404.html"), 404
+    return redirect(url_for("author_detail", slug=author.slug), code=301)
+
+
 @app.get("/contacto")
 def contact():
     return render_template("contact.html")
@@ -671,6 +707,7 @@ def feed():
 def sitemap():
     public_articles = Article.public_card_query().order_by(Article.updated_at.desc()).all()
     public_journals = Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).all()
+    public_authors = Author.query.filter_by(active=True).order_by(Author.name).all()
     static_paths = [
         url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"),
         url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"),
@@ -686,6 +723,10 @@ def sitemap():
         f"<url><loc>{escape(SITE_URL + url_for('journal_detail', slug=journal.slug))}</loc>"
         f"<lastmod>{journal.updated_at.strftime('%Y-%m-%d')}</lastmod></url>"
         for journal in public_journals
+    )
+    author_urls = "".join(
+        f"<url><loc>{escape(SITE_URL + url_for('author_detail', slug=author.slug))}</loc></url>"
+        for author in public_authors if author.slug
     )
     article_entries = []
     for article in public_articles:
@@ -706,7 +747,7 @@ def sitemap():
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
         'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">'
-        + static_urls + journal_urls + "".join(article_entries) + "</urlset>",
+        + static_urls + journal_urls + author_urls + "".join(article_entries) + "</urlset>",
         mimetype="application/xml",
     )
     response.headers["Cache-Control"] = "public, max-age=3600"
@@ -840,12 +881,46 @@ def ensure_author_columns():
     inspector = inspect(db.engine)
     if "author" not in inspector.get_table_names():
         return
+
     existing = {column["name"] for column in inspector.get_columns("author")}
-    if "photo" not in existing:
-        db.session.execute(text(
-            'ALTER TABLE author ADD COLUMN photo VARCHAR(600) DEFAULT \'\''
-        ))
+    additions = {
+        "slug": "VARCHAR(160)",
+        "headline": "VARCHAR(220) DEFAULT ''",
+        "bio": "TEXT DEFAULT ''",
+        "interests": "TEXT DEFAULT ''",
+        "projects": "TEXT DEFAULT ''",
+        "orcid": "VARCHAR(19) DEFAULT ''",
+        "publications": "TEXT DEFAULT ''",
+        "photo": "VARCHAR(600) DEFAULT ''",
+    }
+    changed = False
+    for column, definition in additions.items():
+        if column not in existing:
+            db.session.execute(text(f'ALTER TABLE author ADD COLUMN {column} {definition}'))
+            changed = True
+    if changed:
         db.session.commit()
+
+    used_slugs = set()
+    profiles_changed = False
+    for author in Author.query.order_by(Author.id).all():
+        base = slugify(author.slug or author.name) or f"autor-{author.id}"
+        candidate, number = base, 2
+        while candidate in used_slugs:
+            candidate, number = f"{base}-{number}", number + 1
+        if author.slug != candidate:
+            author.slug = candidate
+            profiles_changed = True
+        used_slugs.add(candidate)
+        if author.name.casefold() == "mergior alfredo goriate" and not author.headline:
+            author.headline = "Investigador, autor e fundador do Sussurros do Saber."
+            profiles_changed = True
+    if profiles_changed:
+        db.session.commit()
+    db.session.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_author_slug ON author (slug)"
+    ))
+    db.session.commit()
 
 
 
@@ -940,7 +1015,16 @@ def seed_database():
     author_names = sorted({item["author"] for item in SEED_ARTICLES})
     authors = {}
     for name in author_names:
-        author = Author(name=name, bio="Autor do Sussurros do Saber.")
+        author = Author(
+            name=name,
+            slug=slugify(name),
+            headline=(
+                "Investigador, autor e fundador do Sussurros do Saber."
+                if name.casefold() == "mergior alfredo goriate"
+                else "Autor do Sussurros do Saber."
+            ),
+            bio="Autor do Sussurros do Saber.",
+        )
         db.session.add(author)
         authors[name] = author
     category_names = sorted({item["category"] for item in SEED_ARTICLES})
