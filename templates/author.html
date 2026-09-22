@@ -3,7 +3,7 @@
 {% block meta_description %}{{ (author.headline or author.bio or ('Perfil e artigos de ' ~ author.name ~ ' no Sussurros do Saber.'))|striptags|truncate(155, True, '…') }}{% endblock %}
 {% block canonical %}{{ site_url }}{{ url_for('author_detail', slug=author.slug) }}{% endblock %}
 {% block head_extra %}
-<script type="application/ld+json">{{ {
+<script nonce="{{ csp_nonce }}" type="application/ld+json">{{ {
   "@context": "https://schema.org",
   "@type": "ProfilePage",
   "mainEntity": {
