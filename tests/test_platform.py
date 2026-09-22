@@ -558,28 +558,42 @@ class PlatformTests(unittest.TestCase):
             "csrf_token": "author-profile-csrf",
             "name": "Investigadora Perfil",
             "slug": "investigadora-perfil",
+            "role": "Editora Científica — Biologia",
             "headline": "Investigadora e autora do Sussurros do Saber.",
+            "academic_background": "Licenciatura em Ensino de Biologia",
+            "institution": "Universidade de Teste",
             "email": "perfil@example.org",
             "bio": "Biografia pública da investigadora.",
             "interests": "Ciência aberta\nEducação",
             "projects": "Projecto Saber",
             "orcid": "0000-0002-1825-0097",
+            "google_scholar": "https://scholar.google.com/citations?user=teste",
+            "researchgate": "https://www.researchgate.net/profile/Investigadora-Perfil",
             "publications": "Uma publicação científica",
+            "editorial_experience": "Revisão científica e edição de conteúdos",
+            "display_order": "2",
+            "active_present": "1",
+            "active": "on",
         })
         self.assertEqual(response.status_code, 302)
 
         profile = self.client.get("/autor/investigadora-perfil")
         self.assertEqual(profile.status_code, 200)
         for expected in [
-            b"Investigadora Perfil", b"Investigadora e autora",
-            b"Biografia p\xc3\xbablica", b"Ci\xc3\xaancia aberta",
-            b"Projecto Saber", b"0000-0002-1825-0097",
+            b"Investigadora Perfil", b"Editora Cient\xc3\xadfica",
+            b"Investigadora e autora", b"Licenciatura em Ensino de Biologia",
+            b"Universidade de Teste", b"Biografia p\xc3\xbablica",
+            b"Ci\xc3\xaancia aberta", b"Projecto Saber",
+            b"0000-0002-1825-0097", b"Google Scholar", b"ResearchGate",
             b"Uma publica\xc3\xa7\xc3\xa3o cient\xc3\xadfica",
+            b"Experi\xc3\xaancia editorial",
             b'"@type": "ProfilePage"',
         ]:
             self.assertIn(expected, profile.data)
 
         directory = self.client.get("/autores")
+        self.assertIn(b"Equipa editorial", directory.data)
+        self.assertIn(b"Editora Cient\xc3\xadfica", directory.data)
         self.assertIn(b'href="/autor/investigadora-perfil"', directory.data)
 
         sitemap = self.client.get("/sitemap.xml")
