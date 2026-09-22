@@ -548,6 +548,69 @@ class PlatformTests(unittest.TestCase):
         response = self.client.get("/autores")
         self.assertIn(b"https://images.example.org/autora.webp", response.data)
 
+    def test_author_profile_is_public_clickable_and_indexed(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "author-profile-csrf"
+        response = self.client.post("/admin/autores", data={
+            "csrf_token": "author-profile-csrf",
+            "name": "Investigadora Perfil",
+            "slug": "investigadora-perfil",
+            "headline": "Investigadora e autora do Sussurros do Saber.",
+            "email": "perfil@example.org",
+            "bio": "Biografia pública da investigadora.",
+            "interests": "Ciência aberta\nEducação",
+            "projects": "Projecto Saber",
+            "orcid": "0000-0002-1825-0097",
+            "publications": "Uma publicação científica",
+        })
+        self.assertEqual(response.status_code, 302)
+
+        profile = self.client.get("/autor/investigadora-perfil")
+        self.assertEqual(profile.status_code, 200)
+        for expected in [
+            b"Investigadora Perfil", b"Investigadora e autora",
+            b"Biografia p\xc3\xbablica", b"Ci\xc3\xaancia aberta",
+            b"Projecto Saber", b"0000-0002-1825-0097",
+            b"Uma publica\xc3\xa7\xc3\xa3o cient\xc3\xadfica",
+            b'"@type": "ProfilePage"',
+        ]:
+            self.assertIn(expected, profile.data)
+
+        directory = self.client.get("/autores")
+        self.assertIn(b'href="/autor/investigadora-perfil"', directory.data)
+
+        sitemap = self.client.get("/sitemap.xml")
+        self.assertIn(
+            b"https://www.sussurrosdosaber.com/autor/investigadora-perfil",
+            sitemap.data,
+        )
+
+        with app.app_context():
+            article = Article.public_query().filter(
+                Article.author_id.is_not(None)
+            ).first()
+            article_slug = article.slug
+            author_slug = article.author_rel.slug
+        article_page = self.client.get(f"/artigo/{article_slug}")
+        self.assertIn(f'href="/autor/{author_slug}"'.encode(), article_page.data)
+
+    def test_author_profile_rejects_duplicate_slug_and_invalid_orcid(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "author-validation-csrf"
+        response = self.client.post("/admin/autores", data={
+            "csrf_token": "author-validation-csrf",
+            "name": "Perfil ORCID inválido",
+            "slug": "investigadora-perfil",
+            "orcid": "orcid-invalido",
+        }, follow_redirects=True)
+        self.assertIn(b"Esta URL de autor j\xc3\xa1 est\xc3\xa1 em uso.", response.data)
+
     def test_journal_schema_contains_all_management_columns(self):
         with app.app_context():
             columns = {column["name"] for column in inspect(db.engine).get_columns("journal")}
