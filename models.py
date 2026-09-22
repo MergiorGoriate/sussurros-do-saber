@@ -124,7 +124,7 @@ class Article(db.Model):
                 cls.read_minutes, cls.featured, cls.published_at, cls.scheduled_at,
                 cls.created_at, cls.updated_at, cls.author_id, cls.category_id,
             ),
-            joinedload(cls.author_rel).load_only(Author.id, Author.name, Author.photo),
+            joinedload(cls.author_rel).load_only(Author.id, Author.name, Author.slug, Author.photo),
             joinedload(cls.category_rel).load_only(Category.id, Category.name, Category.slug),
         )
 
