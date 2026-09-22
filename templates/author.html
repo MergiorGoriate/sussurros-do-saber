@@ -12,7 +12,9 @@
     "description": author.headline or author.bio,
     "image": (author.photo|safe_image_url) if author.photo else none,
     "url": site_url ~ url_for('author_detail', slug=author.slug),
-    "sameAs": (["https://orcid.org/" ~ author.orcid] if author.orcid else [])
+    "jobTitle": author.role,
+    "affiliation": ({"@type": "Organization", "name": author.institution} if author.institution else none),
+    "sameAs": ((["https://orcid.org/" ~ author.orcid] if author.orcid else []) + ([author.google_scholar] if author.google_scholar else []) + ([author.researchgate] if author.researchgate else []))
   }
 }|tojson }}</script>
 {% endblock %}
@@ -26,13 +28,16 @@
       <div class="author-hero-photo author-monogram" aria-hidden="true">{{ author.name[:2]|upper }}</div>
       {% endif %}
       <div>
-        <span class="eyebrow">Perfil de autor</span>
+        <span class="eyebrow">{{ author.role or 'Perfil de autor' }}</span>
         <h1>{{ author.name }}</h1>
         <p class="author-headline">{{ author.headline or 'Autor do Sussurros do Saber.' }}</p>
+        {% if author.institution %}<p class="author-institution">{{ author.institution }}</p>{% endif %}
         {% if author.orcid or author.email %}
         <div class="author-actions">
           {% if author.orcid %}<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="me noopener">ORCID {{ author.orcid }} ↗</a>{% endif %}
-          {% if author.email %}<a href="mailto:{{ author.email }}">Contacto</a>{% endif %}
+          {% if author.google_scholar %}<a href="{{ author.google_scholar }}" target="_blank" rel="me noopener">Google Scholar ↗</a>{% endif %}
+          {% if author.researchgate %}<a href="{{ author.researchgate }}" target="_blank" rel="me noopener">ResearchGate ↗</a>{% endif %}
+          {% if author.email %}<a href="mailto:{{ author.email }}">Contacto profissional</a>{% endif %}
         </div>
         {% endif %}
       </div>
@@ -41,11 +46,13 @@
 
   <div class="author-content">
     {% if author.bio %}<section class="author-section"><span class="eyebrow">Biografia</span><h2>Sobre {{ author.name }}</h2><p class="author-bio">{{ author.bio }}</p></section>{% endif %}
-    {% if interests or projects or publications %}
+    {% if academic_background or interests or projects or publications or editorial_experience %}
     <div class="author-details-grid">
-      {% if interests %}<section class="author-section"><span class="eyebrow">Temas</span><h2>Áreas de interesse</h2><ul>{% for item in interests %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+      {% if academic_background %}<section class="author-section"><span class="eyebrow">Percurso</span><h2>Formação académica</h2><ul>{% for item in academic_background %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+      {% if interests %}<section class="author-section"><span class="eyebrow">Ciência</span><h2>Áreas de investigação</h2><ul>{% for item in interests %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
       {% if projects %}<section class="author-section"><span class="eyebrow">Trabalho</span><h2>Projectos</h2><ul>{% for item in projects %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
       {% if publications %}<section class="author-section"><span class="eyebrow">Produção</span><h2>Publicações</h2><ul>{% for item in publications %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+      {% if editorial_experience %}<section class="author-section"><span class="eyebrow">Editoria</span><h2>Experiência editorial</h2><ul>{% for item in editorial_experience %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
     </div>
     {% endif %}
 

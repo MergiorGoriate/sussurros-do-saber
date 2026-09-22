@@ -659,6 +659,10 @@ def authors():
         requested_slug = slugify(request.form.get("slug", "").strip() or name)
         email = request.form.get("email", "").strip() or None
         headline = request.form.get("headline", "").strip()
+        role = request.form.get("role", "").strip()
+        institution = request.form.get("institution", "").strip()
+        google_scholar = request.form.get("google_scholar", "").strip()
+        researchgate = request.form.get("researchgate", "").strip()
         orcid = request.form.get("orcid", "").strip()
         if orcid:
             orcid = re.sub(r"^https?://orcid\.org/", "", orcid, flags=re.I)
@@ -679,6 +683,10 @@ def authors():
             flash("Informe um e-mail válido.", "error")
         elif orcid and not re.fullmatch(r"\d{4}-\d{4}-\d{4}-[\dX]{4}", orcid, re.I):
             flash("Informe o ORCID no formato 0000-0000-0000-0000.", "error")
+        elif google_scholar and not re.fullmatch(r"https?://[^\s]+", google_scholar, re.I):
+            flash("Informe um endereço válido do Google Scholar.", "error")
+        elif researchgate and not re.fullmatch(r"https?://[^\s]+", researchgate, re.I):
+            flash("Informe um endereço válido do ResearchGate.", "error")
         elif photo_url and not re.fullmatch(r"https?://[^\s]+", photo_url, re.I):
             flash("Informe um endereço válido para a fotografia.", "error")
         else:
@@ -696,12 +704,23 @@ def authors():
             author.name = name
             author.slug = requested_slug
             author.email = email
+            author.role = role[:140]
             author.headline = headline[:220]
+            author.academic_background = request.form.get("academic_background", "").strip()
+            author.institution = institution[:220]
             author.bio = request.form.get("bio", "").strip()
             author.interests = request.form.get("interests", "").strip()
             author.projects = request.form.get("projects", "").strip()
             author.orcid = orcid.upper()
+            author.google_scholar = google_scholar
+            author.researchgate = researchgate
             author.publications = request.form.get("publications", "").strip()
+            author.editorial_experience = request.form.get("editorial_experience", "").strip()
+            author.display_order = max(0, request.form.get("display_order", 100, type=int) or 100)
+            if request.form.get("active_present") == "1":
+                author.active = request.form.get("active") == "on"
+            elif not author.id:
+                author.active = True
             if not author.id:
                 db.session.add(author)
             db.session.commit()

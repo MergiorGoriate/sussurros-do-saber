@@ -541,7 +541,12 @@ def about():
 
 @app.get("/autores")
 def authors():
-    return render_template("authors.html", authors=Author.query.filter_by(active=True).order_by(Author.name).all())
+    editorial_team = (
+        Author.query.filter_by(active=True)
+        .order_by(Author.display_order.asc(), Author.name.asc())
+        .all()
+    )
+    return render_template("authors.html", authors=editorial_team)
 
 
 def profile_lines(value):
@@ -568,6 +573,8 @@ def author_detail(slug):
         interests=profile_lines(author.interests),
         projects=profile_lines(author.projects),
         publications=profile_lines(author.publications),
+        academic_background=profile_lines(author.academic_background),
+        editorial_experience=profile_lines(author.editorial_experience),
     )
 
 
@@ -885,13 +892,20 @@ def ensure_author_columns():
     existing = {column["name"] for column in inspector.get_columns("author")}
     additions = {
         "slug": "VARCHAR(160)",
+        "role": "VARCHAR(140) DEFAULT ''",
         "headline": "VARCHAR(220) DEFAULT ''",
+        "academic_background": "TEXT DEFAULT ''",
+        "institution": "VARCHAR(220) DEFAULT ''",
         "bio": "TEXT DEFAULT ''",
         "interests": "TEXT DEFAULT ''",
         "projects": "TEXT DEFAULT ''",
         "orcid": "VARCHAR(19) DEFAULT ''",
+        "google_scholar": "VARCHAR(600) DEFAULT ''",
+        "researchgate": "VARCHAR(600) DEFAULT ''",
         "publications": "TEXT DEFAULT ''",
+        "editorial_experience": "TEXT DEFAULT ''",
         "photo": "VARCHAR(600) DEFAULT ''",
+        "display_order": "INTEGER DEFAULT 100",
     }
     changed = False
     for column, definition in additions.items():
@@ -912,9 +926,19 @@ def ensure_author_columns():
             author.slug = candidate
             profiles_changed = True
         used_slugs.add(candidate)
-        if author.name.casefold() == "mergior alfredo goriate" and not author.headline:
-            author.headline = "Investigador, autor e fundador do Sussurros do Saber."
+        if author.display_order is None:
+            author.display_order = 100
             profiles_changed = True
+        if author.name.casefold() == "mergior alfredo goriate":
+            if not author.role:
+                author.role = "Fundador e Editor-Chefe"
+                profiles_changed = True
+            if not author.headline:
+                author.headline = "Investigador, autor e fundador do Sussurros do Saber."
+                profiles_changed = True
+            if author.display_order != 1:
+                author.display_order = 1
+                profiles_changed = True
     if profiles_changed:
         db.session.commit()
     db.session.execute(text(
@@ -1018,11 +1042,13 @@ def seed_database():
         author = Author(
             name=name,
             slug=slugify(name),
+            role=("Fundador e Editor-Chefe" if name.casefold() == "mergior alfredo goriate" else "Autor"),
             headline=(
                 "Investigador, autor e fundador do Sussurros do Saber."
                 if name.casefold() == "mergior alfredo goriate"
                 else "Autor do Sussurros do Saber."
             ),
+            display_order=(1 if name.casefold() == "mergior alfredo goriate" else 100),
             bio="Autor do Sussurros do Saber.",
         )
         db.session.add(author)
