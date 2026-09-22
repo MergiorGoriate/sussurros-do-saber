@@ -717,7 +717,10 @@ def authors():
             author.publications = request.form.get("publications", "").strip()
             author.editorial_experience = request.form.get("editorial_experience", "").strip()
             author.display_order = max(0, request.form.get("display_order", 100, type=int) or 100)
-            author.active = request.form.get("active") == "on"
+            if request.form.get("active_present") == "1":
+                author.active = request.form.get("active") == "on"
+            elif not author.id:
+                author.active = True
             if not author.id:
                 db.session.add(author)
             db.session.commit()
