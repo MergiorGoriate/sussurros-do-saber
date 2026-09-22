@@ -26,6 +26,7 @@
     <label>Publicações<textarea name="publications" rows="4" placeholder="Uma publicação por linha"></textarea></label>
     <label>Experiência editorial<textarea name="editorial_experience" rows="4" placeholder="Uma experiência ou responsabilidade por linha"></textarea></label>
     <label>Ordem na equipa<input name="display_order" type="number" min="0" value="100"></label>
+    <input type="hidden" name="active_present" value="1">
     <label class="check"><input name="active" type="checkbox" checked> Mostrar no site</label>
     <button class="admin-primary">Adicionar autor</button>
   </form>
@@ -59,6 +60,7 @@
       <label>Publicações<textarea name="publications" rows="4" placeholder="Uma publicação por linha">{{ author.publications or '' }}</textarea></label>
       <label>Experiência editorial<textarea name="editorial_experience" rows="4" placeholder="Uma experiência ou responsabilidade por linha">{{ author.editorial_experience or '' }}</textarea></label>
       <label>Ordem na equipa<input name="display_order" type="number" min="0" value="{{ author.display_order if author.display_order is not none else 100 }}"></label>
+      <input type="hidden" name="active_present" value="1">
       <label class="check"><input name="active" type="checkbox" {% if author.active %}checked{% endif %}> Mostrar no site</label>
       <button class="admin-primary">Guardar alterações</button>
       <button formmethod="post" formaction="{{ url_for('admin.delete_author',author_id=author.id) }}" data-confirm="Eliminar este autor?" class="danger-button">Eliminar</button>
