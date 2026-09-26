@@ -144,6 +144,14 @@ class PlatformTests(unittest.TestCase):
         ]:
             self.assertIn(address.replace("&", "&amp;").encode(), response.data)
 
+    def test_about_page_does_not_duplicate_founder_profile(self):
+        response = self.client.get("/sobre")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"A miss\xc3\xa3o", response.data)
+        self.assertIn(b"A vis\xc3\xa3o editorial", response.data)
+        self.assertNotIn(b"Fundador e editor", response.data)
+        self.assertNotIn(b"Estudante de Ensino de Biologia", response.data)
+
     def test_public_routes_and_discovery_files(self):
         for path in ["/", "/artigos", "/autores", "/revistas", "/contacto", "/feed.xml", "/sitemap.xml", "/robots.txt", "/healthz"]:
             with self.subTest(path=path):
