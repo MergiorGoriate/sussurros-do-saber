@@ -766,6 +766,7 @@ def robots():
 
 
 @app.get("/healthz")
+@limiter.exempt
 def healthcheck():
     db.session.execute(text("SELECT 1"))
     return jsonify({"ok": True})
