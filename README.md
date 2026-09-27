@@ -1,6 +1,6 @@
 # Sussurros do Saber
 
-Portal editorial científico criado com Python (Flask), Tailwind CSS e JavaScript.
+Portal editorial científico criado com Python (Flask), Tailwind CSS e JavaScript. Produção no OVHcloud VPS-2, administrada pelo Coolify, com PostgreSQL 18 e backups para Cloudflare R2. O Coolify acompanha a branch `deploy/coolify-vps` até à integração do PR de migração em `main`.
 
 ## Executar no Windows
 
@@ -22,7 +22,7 @@ A área editorial está disponível em `/admin`. Antes de publicar, configure:
 - `ADMIN_PASSWORD`: alternativa compatível; mantenha apenas enquanto migra para o hash.
 - `DATABASE_URL`: ligação PostgreSQL fornecida pelo serviço de base de dados.
 - `SITE_URL`: endereço canónico, por exemplo `https://www.sussurrosdosaber.com`.
-- `ASSISTANT_SHARED_KEY`: segredo igual no Render e no Cloudflare Worker.
+- `ASSISTANT_SHARED_KEY`: segredo igual no Coolify e no Cloudflare Worker.
 - `ASSISTANT_WORKER_URL`: URL do Worker (opcional se mantiver o endereço actual).
 - `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY`: protecção Cloudflare Turnstile no login (recomendado).
 - `REQUIRE_TURNSTILE=true`: impede o login quando o Turnstile não está corretamente configurado.
@@ -32,11 +32,11 @@ Para gerar o hash da palavra-passe no Prompt de Comando do Windows, execute:
 
 `python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash(input('Palavra-passe: ')))"`
 
-Copie o resultado completo para `ADMIN_PASSWORD_HASH` no Render e remova `ADMIN_PASSWORD` depois de confirmar o login.
+Copie o resultado completo para `ADMIN_PASSWORD_HASH` no Coolify e remova `ADMIN_PASSWORD` depois de confirmar o login.
 
 ### Upload de imagens com Cloudinary
 
-Crie uma conta Cloudinary e configure no Render:
+Crie uma conta Cloudinary e configure no Coolify:
 
 - `CLOUDINARY_CLOUD_NAME`: nome da cloud mostrado no painel
 - `CLOUDINARY_API_KEY`: chave da API
@@ -49,14 +49,18 @@ As imagens são verificadas, reduzidas para até 2000 × 2000 px, convertidas em
 
 O código pronto e as instruções do assistente estão em `cloudflare-worker/`. Nunca coloque `ASSISTANT_SHARED_KEY` no JavaScript público.
 
-Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. No Render, utilize PostgreSQL para manter artigos, contactos e subscritores após reinicializações.
+Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. Em produção no Coolify, configure a ligação ao PostgreSQL do VPS; confirme a ligação antes de cada mudança de branch ou implantação.
 
 ## Operação e recuperação
+
+- A base de produção `sussurros-postgresql` usa backups agendados locais e no R2. Verifique cada execução e teste periodicamente a restauração num ambiente isolado.
+- Configure notificações para falhas de backup, deploy e disponibilidade. Documente a retenção e o procedimento de recuperação.
+- O antigo serviço e base do Render foram eliminados após a migração. Não implante novamente usando a configuração legada.
 
 - Configure o monitor de disponibilidade para `GET /healthz`.
 - Active backups automáticos da base PostgreSQL e faça um teste de restauração antes do lançamento público.
 - Use Redis em `RATELIMIT_STORAGE_URI` quando executar mais de um processo ou instância.
-- Mantenha Cloudinary, Render e Cloudflare com autenticação de dois fatores.
+- Mantenha Cloudinary, Coolify, GitHub e Cloudflare com autenticação de dois fatores.
 - Todas as contas administrativas secundárias são obrigadas a configurar 2FA no primeiro acesso; não podem usar o restante painel antes da ativação.
 - Teste localmente com `python -m unittest discover -s tests -v` antes de cada publicação.
 

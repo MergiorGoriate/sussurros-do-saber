@@ -132,9 +132,21 @@ class PlatformTests(unittest.TestCase):
 
     def test_footer_contains_accessible_social_links(self):
         response = self.client.get("/")
-        for network in ["Facebook", "Instagram", "YouTube", "LinkedIn", "X", "WhatsApp"]:
+        for network in ["Facebook", "Instagram", "YouTube", "X", "WhatsApp"]:
             self.assertIn(f'aria-label="'.encode(), response.data)
             self.assertIn(network.encode(), response.data)
+        self.assertNotIn(b'aria-label="Siga-nos no LinkedIn"', response.data)
+        previous = os.environ.get("SOCIAL_LINKEDIN_URL")
+        os.environ["SOCIAL_LINKEDIN_URL"] = "https://www.linkedin.com/company/sussurros-do-saber/"
+        try:
+            configured_response = self.client.get("/")
+            self.assertIn(b'aria-label="Siga-nos no LinkedIn"', configured_response.data)
+            self.assertIn(b"https://www.linkedin.com/company/sussurros-do-saber/", configured_response.data)
+        finally:
+            if previous is None:
+                os.environ.pop("SOCIAL_LINKEDIN_URL", None)
+            else:
+                os.environ["SOCIAL_LINKEDIN_URL"] = previous
         for address in [
             "https://x.com/sussurrodosaber",
             "https://www.instagram.com/sussurrodosaber?stkn=djl2d2s5cmJnZzE5",
@@ -238,6 +250,11 @@ class PlatformTests(unittest.TestCase):
             source = "https://commons.wikimedia.org/wiki/Special:FilePath/Neuron_Hand-tuned.svg"
             self.assertEqual(social_image_url(source), source)
             self.assertEqual(responsive_image_url(source, 480), source)
+            raster = "https://commons.wikimedia.org/wiki/Special:FilePath/E._coli_Bacteria_%287316101966%29.jpg"
+            self.assertEqual(
+                responsive_image_url(raster, 480),
+                "https://commons.wikimedia.org/wiki/Special:Redirect/file/E._coli_Bacteria_%287316101966%29.jpg?width=480",
+            )
         finally:
             if previous is None:
                 os.environ.pop("CLOUDINARY_CLOUD_NAME", None)

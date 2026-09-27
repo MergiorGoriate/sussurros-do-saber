@@ -339,7 +339,7 @@ def site_context():
             "facebook": os.getenv("SOCIAL_FACEBOOK_URL", "https://web.facebook.com/profile.php?id=61584597102517"),
             "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/sussurrodosaber?stkn=djl2d2s5cmJnZzE5"),
             "youtube": os.getenv("SOCIAL_YOUTUBE_URL", "https://www.youtube.com/channel/UCMxbh7jSRUxxX48JSWszc8g"),
-            "linkedin": os.getenv("SOCIAL_LINKEDIN_URL", "https://www.linkedin.com/"),
+            "linkedin": os.getenv("SOCIAL_LINKEDIN_URL", "").strip(),
             "x": os.getenv("SOCIAL_X_URL", "https://x.com/sussurrodosaber"),
             "whatsapp": os.getenv("SOCIAL_WHATSAPP_URL", "https://wa.me/258852130099"),
         },
@@ -367,9 +367,9 @@ def safe_image_url(url):
 
 @app.template_filter("image_variant")
 def responsive_image_url(url, width=1200):
-    """Otimiza apenas imagens alojadas no Cloudinary.
+    """Otimiza imagens do Cloudinary e redimensiona raster do Wikimedia Commons.
 
-    Imagens externas permanecem no endereço original. Encaminhá-las pelo
+    As outras imagens externas permanecem no endereço original. Encaminhá-las pelo
     image/fetch do Cloudinary fazia capas e imagens do corpo quebrarem quando
     o fetch remoto estava desativado ou a origem recusava o crawler.
     """
@@ -383,6 +383,14 @@ def responsive_image_url(url, width=1200):
     transformation = f"f_auto,q_auto:eco,w_{requested_width},c_limit"
     if "res.cloudinary.com/" in value and "/upload/" in value:
         return value.replace("/upload/", f"/upload/{transformation}/", 1)
+    parsed = urlparse(value)
+    if (
+        parsed.hostname == "commons.wikimedia.org"
+        and parsed.path.startswith("/wiki/Special:FilePath/")
+        and re.search(r"\.(?:jpe?g|png|webp)$", parsed.path, re.I)
+    ):
+        filename = parsed.path.split("/wiki/Special:FilePath/", 1)[1]
+        return f"https://commons.wikimedia.org/wiki/Special:Redirect/file/{filename}?width={requested_width}"
     return value
 
 
@@ -766,6 +774,7 @@ def robots():
 
 
 @app.get("/healthz")
+@limiter.exempt
 def healthcheck():
     db.session.execute(text("SELECT 1"))
     return jsonify({"ok": True})
