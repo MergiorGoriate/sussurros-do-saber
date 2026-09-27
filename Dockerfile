@@ -13,7 +13,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000
 WORKDIR /app
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir -r requirements.txt \
     && useradd --create-home --shell /usr/sbin/nologin appuser
 COPY . .
 COPY --from=assets /app/static/css/tailwind.css ./static/css/tailwind.css
