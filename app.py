@@ -367,9 +367,9 @@ def safe_image_url(url):
 
 @app.template_filter("image_variant")
 def responsive_image_url(url, width=1200):
-    """Otimiza apenas imagens alojadas no Cloudinary.
+    """Otimiza imagens do Cloudinary e redimensiona raster do Wikimedia Commons.
 
-    Imagens externas permanecem no endereço original. Encaminhá-las pelo
+    As outras imagens externas permanecem no endereço original. Encaminhá-las pelo
     image/fetch do Cloudinary fazia capas e imagens do corpo quebrarem quando
     o fetch remoto estava desativado ou a origem recusava o crawler.
     """
@@ -383,6 +383,14 @@ def responsive_image_url(url, width=1200):
     transformation = f"f_auto,q_auto:eco,w_{requested_width},c_limit"
     if "res.cloudinary.com/" in value and "/upload/" in value:
         return value.replace("/upload/", f"/upload/{transformation}/", 1)
+    parsed = urlparse(value)
+    if (
+        parsed.hostname == "commons.wikimedia.org"
+        and parsed.path.startswith("/wiki/Special:FilePath/")
+        and re.search(r"\.(?:jpe?g|png|webp)$", parsed.path, re.I)
+    ):
+        filename = parsed.path.split("/wiki/Special:FilePath/", 1)[1]
+        return f"https://commons.wikimedia.org/wiki/Special:Redirect/file/{filename}?width={requested_width}"
     return value
 
 
