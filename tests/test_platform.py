@@ -250,6 +250,11 @@ class PlatformTests(unittest.TestCase):
             source = "https://commons.wikimedia.org/wiki/Special:FilePath/Neuron_Hand-tuned.svg"
             self.assertEqual(social_image_url(source), source)
             self.assertEqual(responsive_image_url(source, 480), source)
+            raster = "https://commons.wikimedia.org/wiki/Special:FilePath/E._coli_Bacteria_%287316101966%29.jpg"
+            self.assertEqual(
+                responsive_image_url(raster, 480),
+                "https://commons.wikimedia.org/wiki/Special:Redirect/file/E._coli_Bacteria_%287316101966%29.jpg?width=480",
+            )
         finally:
             if previous is None:
                 os.environ.pop("CLOUDINARY_CLOUD_NAME", None)
