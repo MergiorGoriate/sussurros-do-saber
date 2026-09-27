@@ -10,7 +10,7 @@ module.exports = {
       colors: {
         ink: '#101820',
         science: '#087F73',
-        signal: '#FF5A4F',
+        signal: '#B2352B',
         paper: '#F5F7F8'
       },
       fontFamily: {
