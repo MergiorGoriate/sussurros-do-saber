@@ -392,7 +392,7 @@ def responsive_image_url(url, width=1200):
         parsed.hostname == "commons.wikimedia.org"
         and unquote(parsed.path).endswith("/E._coli_Bacteria_(7316101966).jpg")
     ):
-        return url_for("static", filename="img/e-coli-niaid-960.jpg", v="1a529a99b76b")
+        return "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b"
     if (
         parsed.hostname == "commons.wikimedia.org"
         and parsed.path.startswith("/wiki/Special:FilePath/")
