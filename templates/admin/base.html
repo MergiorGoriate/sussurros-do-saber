@@ -7,7 +7,7 @@
   <meta name="referrer" content="same-origin">
   <title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title>
   <link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}">
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20260928-docs') }}">
 </head>
 <body>
   <aside class="admin-sidebar">
@@ -27,6 +27,7 @@
       {% endif %}
       <a href="{{ url_for('admin.contacts') }}">Contactos</a>
       <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>
+      <a href="{{ url_for('admin.docs') }}">Docs</a>
       <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a>
       <a href="/" target="_blank" rel="noopener">Ver site ↗</a>
     </nav>
