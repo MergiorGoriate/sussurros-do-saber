@@ -255,7 +255,8 @@ class PlatformTests(unittest.TestCase):
                 responsive_image_url(raster, 480),
                 "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b",
             )
-            self.assertEqual(image_srcset(raster, [480, 768, 1200]), "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b 960w")
+            self.assertEqual(responsive_image_url(raster, 330), "/static/img/e-coli-niaid-330.jpg?v=d52ba80e29c6")
+            self.assertEqual(image_srcset(raster, [480, 768, 1200]), "/static/img/e-coli-niaid-330.jpg?v=d52ba80e29c6 330w, /static/img/e-coli-niaid-960.jpg?v=1a529a99b76b 960w")
             other_raster = "https://commons.wikimedia.org/wiki/Special:FilePath/Other_photo.jpg"
             self.assertEqual(responsive_image_url(other_raster, 480), "https://commons.wikimedia.org/wiki/Special:Redirect/file/Other_photo.jpg?width=480")
         finally:
