@@ -103,3 +103,20 @@ jobs:
             /tmp/sussurros-server.log
           if-no-files-found: ignore
           retention-days: 7
+
+  sitemap-diagnostic:
+    name: Diagnose public sitemap response
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe public sitemap and robots
+        run: |
+          for path in sitemap.xml robots.txt; do
+            echo "=== ${path} ==="
+            curl --location --silent --show-error --max-time 20 \
+              --output "/tmp/${path}" \
+              --write-out 'HTTP %{http_code}; type %{content_type}; redirect %{redirect_url}; bytes %{size_download}\n' \
+              "https://www.sussurrosdosaber.com/${path}" || true
+            head -c 300 "/tmp/${path}" 2>/dev/null || true
+            echo
+          done
