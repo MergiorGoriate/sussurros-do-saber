@@ -4,14 +4,14 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 />
 <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"></noscript>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css', v='20260921-2') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css', v='20260928-dark-mobile') }}" />
 <article class="article-page">
   <header class="article-header max-w-4xl mx-auto px-4 pt-14 text-center">
     <span class="eyebrow">{{ article.category }}</span>
     <h1 class="article-title font-serif leading-tight mt-4">
       {{ article.title }}
     </h1>
-    <p class="article-summary opacity-60 mt-5">{{ article.summary }}</p>
+    <p class="article-summary mt-5">{{ article.summary }}</p>
     <div class="article-author-line">
       {% if article.author_rel.photo %}
       <img src="{{ article.author_rel.photo|safe_image_url }}" alt="" class="article-author-avatar" loading="lazy" decoding="async">
