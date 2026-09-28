@@ -14,7 +14,7 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
-from app import app, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
+from app import app, image_srcset, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
 from admin import csv_safe_cell, generate_recovery_codes, totp_code, verify_totp  # noqa: E402
 from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E402
@@ -62,6 +62,9 @@ class PlatformTests(unittest.TestCase):
                 b'<meta name="google-site-verification" content="google-complete-tag-verification">',
                 response.data,
             )
+            self.assertEqual(image_srcset(raster, [480, 768, 1200]), "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b 960w")
+            other_raster = "https://commons.wikimedia.org/wiki/Special:FilePath/Other_photo.jpg"
+            self.assertEqual(responsive_image_url(other_raster, 480), "https://commons.wikimedia.org/wiki/Special:Redirect/file/Other_photo.jpg?width=480")
         finally:
             if previous is None:
                 os.environ.pop("GOOGLE_SITE_VERIFICATION", None)
@@ -253,7 +256,7 @@ class PlatformTests(unittest.TestCase):
             raster = "https://commons.wikimedia.org/wiki/Special:FilePath/E._coli_Bacteria_%287316101966%29.jpg"
             self.assertEqual(
                 responsive_image_url(raster, 480),
-                "https://commons.wikimedia.org/wiki/Special:Redirect/file/E._coli_Bacteria_%287316101966%29.jpg?width=480",
+                "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b",
             )
         finally:
             if previous is None:
