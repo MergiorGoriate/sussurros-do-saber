@@ -226,10 +226,14 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 
 /* Mascote do Sussurros do Saber */
 .mascot-showcase{max-width:80rem;margin:0 auto;padding:clamp(2.5rem,6vw,5rem) 1rem}
-.mascot-showcase-inner{display:grid;grid-template-columns:minmax(0,1fr) 180px;align-items:center;gap:clamp(1rem,5vw,5rem);overflow:hidden;border:1px solid var(--line);border-radius:24px;background:linear-gradient(125deg,#eaf5f8,#f8fbff);padding:clamp(1.25rem,4vw,3rem)}
+.mascot-showcase-inner{display:grid;grid-template-columns:minmax(0,1fr) 130px;align-items:center;gap:clamp(1rem,5vw,5rem);overflow:hidden;border:1px solid var(--line);border-radius:24px;background:linear-gradient(125deg,#eaf5f8,#f8fbff);padding:clamp(1.25rem,4vw,3rem)}
 .mascot-copy h2{max-width:13ch;margin:.65rem 0 1rem;font:700 clamp(2.2rem,5vw,4.5rem)/1.05 Georgia,serif}
 .mascot-copy p{max-width:33rem;margin:0 0 1.6rem;color:#425569;font-size:clamp(1rem,1.8vw,1.2rem);line-height:1.65}
-.mascot-hero{display:block;width:min(100%,180px);height:auto;max-height:220px;object-fit:contain;justify-self:center;align-self:end}
+.mascot-hero{display:block;width:min(100%,130px);height:auto;max-height:160px;transform-origin:center bottom;animation:mascot-float 4s ease-in-out infinite;object-fit:contain;justify-self:center;align-self:end}
 .dark .mascot-showcase-inner{background:linear-gradient(125deg,#0e2634,#122044)}
 .dark .mascot-copy p{color:#d4e3e8}
-@media(max-width:640px){.mascot-showcase-inner{grid-template-columns:1fr;text-align:center}.mascot-copy h2,.mascot-copy p{max-width:none}.mascot-copy .primary-btn{justify-content:center}.mascot-hero{width:130px;max-height:165px}}
+@media(max-width:640px){.mascot-showcase-inner{grid-template-columns:1fr;text-align:center}.mascot-copy h2,.mascot-copy p{max-width:none}.mascot-copy .primary-btn{justify-content:center}.mascot-hero{width:80px;max-height:100px}}
+
+@keyframes mascot-float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+.mascot-showcase-inner:hover .mascot-hero{animation-duration:2.5s}
+@media(prefers-reduced-motion:reduce){.mascot-hero{animation:none!important}}
