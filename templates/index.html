@@ -27,7 +27,7 @@
       <p>Conheça a mascote do Sussurros do Saber: uma companhia para explorar ciência, aprender e partilhar ideias.</p>
       <a class="primary-btn" href="{{ url_for('learn') }}">Explorar recursos de aprendizagem →</a>
     </div>
-    <img class="mascot-hero" src="{{ url_for('static',filename='img/mascote-oficial.webp') }}" alt="Mascote do Sussurros do Saber com óculos azuis e um livro, a convidar à descoberta" width="560" height="684" loading="lazy" decoding="async">
+    <img class="mascot-hero" src="{{ url_for('static',filename='img/mascote-3d.webp') }}" alt="Mascote 3D do Sussurros do Saber com óculos azuis e um livro, a convidar à descoberta" width="320" height="391" loading="lazy" decoding="async">
   </div>
 </section>
 <section class="max-w-7xl mx-auto px-4 py-16"><div class="grid lg:grid-cols-3 gap-10"><div class="lg:col-span-1"><span class="eyebrow">Acesso aberto</span><h2 class="font-serif text-4xl mt-2">Periódicos e cadernos científicos</h2><p class="mt-4 opacity-60">Uma área preparada para divulgar investigação, chamadas e edições temáticas.</p><a href="/recursos" class="modern-link">Usar ferramentas de estudo →</a></div><div class="lg:col-span-2 grid sm:grid-cols-3 gap-4">{% for journal in journals %}<article class="journal-card"><span>{{ journal.abbreviation }}</span><h3>{{ journal.title }}</h3><p>{{ journal.field }}</p><a href="{{ url_for('journal_detail', slug=journal.slug) }}">Ver publicação →</a></article>{% endfor %}</div></div></section>
