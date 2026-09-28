@@ -65,7 +65,7 @@ window.dataLayer.push({event:'default_consent'});
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260928-audit-mobile') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260928-dark-logo') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 {% block head_extra %}{% endblock %}
@@ -85,7 +85,7 @@ window.dataLayer.push({event:'default_consent'});
 <div class="max-w-7xl mx-auto px-4">
 <div class="h-20 flex items-center justify-between">
 <a href="/" class="brand-link" aria-label="Sussurros do Saber — página inicial">
-<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Sussurros do Saber" width="304" height="52" decoding="async"></picture>
+<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Sussurros do Saber" width="304" height="52" decoding="async"></picture>
 </a>
 <div class="flex gap-2">
 <button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
@@ -189,7 +189,7 @@ window.dataLayer.push({event:'default_consent'});
     </div>
   </div>
 </section>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20260921-3') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20260928-dark-logo') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260918-3') }}" defer></script>
 <script nonce="{{ csp_nonce }}">
 (()=>{let done=false;const load=()=>{if(done)return;done=true;['assistant.js','animations.js'].forEach(name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260918-3';script.defer=true;document.body.appendChild(script)})};if('requestIdleCallback'in window)requestIdleCallback(load,{timeout:2500});else setTimeout(load,1500)})();
