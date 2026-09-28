@@ -2,6 +2,7 @@ from flask import Flask, Response, g, jsonify, redirect, render_template, reques
 from xml.sax.saxutils import escape
 import requests
 import gzip
+import hashlib
 import os
 import re
 import secrets
@@ -21,6 +22,8 @@ from models import AdminUser, Article, Author, Category, Comment, ContactMessage
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+with open(os.path.join(app.static_folder, 'css', 'tailwind.css'), 'rb') as built_css:
+    TAILWIND_VERSION = hashlib.sha256(built_css.read()).hexdigest()[:12]
 
 IS_PRODUCTION = (
     os.getenv("RENDER", "").lower() == "true"
@@ -42,7 +45,7 @@ app.config.update(
     SECRET_KEY=secret_key,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.getenv("RENDER", "").lower() == "true" or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
+    SESSION_COOKIE_SECURE=IS_PRODUCTION or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
     SESSION_REFRESH_EACH_REQUEST=False,
     MAX_CONTENT_LENGTH=9 * 1024 * 1024,
@@ -332,6 +335,7 @@ def google_site_verification_token():
 def site_context():
     return {
         "site_url": SITE_URL,
+        "tailwind_version": TAILWIND_VERSION,
         "csp_nonce": getattr(g, "csp_nonce", ""),
         "google_site_verification": google_site_verification_token(),
         "gtm_container_id": os.getenv("GTM_CONTAINER_ID", "GTM-PQSZGPQQ").strip(),
