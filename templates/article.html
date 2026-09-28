@@ -40,7 +40,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
   <figure class="article-cover max-w-6xl mx-auto mt-8">
     <img
       src="{{ article.image|image_variant(1200) }}"
-      srcset="{{ article.image|image_variant(480) }} 480w, {{ article.image|image_variant(768) }} 768w, {{ article.image|image_variant(1200) }} 1200w"
+      srcset="{{ article.image|image_srcset([480, 768, 1200]) }}"
       alt="Imagem de apoio: {{ article.title }}"
       fetchpriority="high"
       decoding="async"
@@ -50,6 +50,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       class="article-cover-image"
     />
   </figure>
+  {% if article.image|image_variant(960) is string and "e-coli-niaid-960.jpg" in article.image|image_variant(960) %}<p class="max-w-6xl mx-auto px-4 mt-2 text-xs text-slate-600 dark:text-slate-300">Imagem: <a href="https://commons.wikimedia.org/wiki/File:E._coli_Bacteria_(7316101966).jpg" rel="external noopener" class="underline">NIAID, via Wikimedia Commons</a> (domínio público).</p>{% endif %}
   {% endif %}
   <div class="prose-article">
     <div class="article-markdown">{{ article.body|markdown }}</div>
