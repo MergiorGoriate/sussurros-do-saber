@@ -62,9 +62,6 @@ class PlatformTests(unittest.TestCase):
                 b'<meta name="google-site-verification" content="google-complete-tag-verification">',
                 response.data,
             )
-            self.assertEqual(image_srcset(raster, [480, 768, 1200]), "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b 960w")
-            other_raster = "https://commons.wikimedia.org/wiki/Special:FilePath/Other_photo.jpg"
-            self.assertEqual(responsive_image_url(other_raster, 480), "https://commons.wikimedia.org/wiki/Special:Redirect/file/Other_photo.jpg?width=480")
         finally:
             if previous is None:
                 os.environ.pop("GOOGLE_SITE_VERIFICATION", None)
@@ -258,6 +255,9 @@ class PlatformTests(unittest.TestCase):
                 responsive_image_url(raster, 480),
                 "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b",
             )
+            self.assertEqual(image_srcset(raster, [480, 768, 1200]), "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b 960w")
+            other_raster = "https://commons.wikimedia.org/wiki/Special:FilePath/Other_photo.jpg"
+            self.assertEqual(responsive_image_url(other_raster, 480), "https://commons.wikimedia.org/wiki/Special:Redirect/file/Other_photo.jpg?width=480")
         finally:
             if previous is None:
                 os.environ.pop("CLOUDINARY_CLOUD_NAME", None)
