@@ -7,7 +7,7 @@
   <div class="grid lg:grid-cols-12 gap-7 mt-7">
     <a href="{{ url_for('article', slug=hero.slug) }}" class="lg:col-span-8 group block">
       <div class="relative overflow-hidden aspect-[16/9] bg-gray-200"><img src="{{ hero.image|image_variant(1200) }}" srcset="{{ hero.image|image_variant(480) }} 480w, {{ hero.image|image_variant(768) }} 768w, {{ hero.image|image_variant(1200) }} 1200w" sizes="(max-width: 1023px) 100vw, 66vw" width="1200" height="675" alt="Imagem de apoio: {{ hero.title }}" fetchpriority="high" decoding="async" class="w-full h-full object-cover transition duration-700 group-hover:scale-105"><span class="absolute top-4 left-4 bg-signal text-white px-3 py-1 text-xs font-bold uppercase tracking-widest">{{ hero.category }}</span></div>
-      <h1 class="font-serif text-4xl md:text-6xl leading-[1.02] mt-5 group-hover:text-science transition">{{ hero.title }}</h1><p class="mt-4 text-lg text-black/65 max-w-3xl">{{ hero.summary }}</p><p class="article-meta">Por {{ hero.author }} · {{ hero.date }} · {{ hero.read_time }}</p>
+      <h1 class="font-serif text-4xl md:text-6xl leading-[1.02] mt-5 group-hover:text-science transition">{{ hero.title }}</h1><p class="mt-4 hero-summary text-lg max-w-3xl">{{ hero.summary }}</p><p class="article-meta">Por {{ hero.author }} · {{ hero.date }} · {{ hero.read_time }}</p>
     </a>
     <aside class="lg:col-span-4 lg:border-l lg:border-black/15 lg:pl-7">
       <h2 class="text-xs uppercase tracking-[.22em] font-bold text-signal mb-2">Mais lidos</h2>
