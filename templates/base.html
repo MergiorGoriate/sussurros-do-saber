@@ -21,11 +21,20 @@ gtag('consent','default',{
 });
 window.dataLayer.push({event:'default_consent'});
 </script>
-<script nonce="{{ csp_nonce }}">(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','{{ gtm_container_id|e }}');</script>
+<script nonce="{{ csp_nonce }}">
+(()=>{let loaded=false;
+  const loadGtm=()=>{if(loaded)return;loaded=true;
+    window.dataLayer.push({'gtm.start':Date.now(),event:'gtm.js'});
+    const script=document.createElement('script');
+    script.async=true;
+    script.src='https://www.googletagmanager.com/gtm.js?id={{ gtm_container_id|e }}';
+    document.head.appendChild(script);
+  };
+  // A análise aguarda o primeiro carregamento; uma escolha afirmativa inicia-a logo.
+  window.addEventListener('load',()=>setTimeout(loadGtm,2500),{once:true});
+  window.addEventListener('cookieconsentchange',event=>{if(event.detail?.analytics)loadGtm()});
+})();
+</script>
 {% endif %}
 <title>{% block title %}Sussurros do Saber — Ciência, educação e investigação{% endblock %}</title>
 <link rel="canonical" href="{% block canonical %}{{ site_url }}{{ request.path }}{% endblock %}">
