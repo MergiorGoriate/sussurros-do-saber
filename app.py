@@ -9,7 +9,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from html import escape as html_escape, unescape as html_unescape
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 import bleach
 import markdown
 import math
@@ -390,12 +390,26 @@ def responsive_image_url(url, width=1200):
     parsed = urlparse(value)
     if (
         parsed.hostname == "commons.wikimedia.org"
+        and unquote(parsed.path).endswith("/E._coli_Bacteria_(7316101966).jpg")
+    ):
+        return "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b"
+    if (
+        parsed.hostname == "commons.wikimedia.org"
         and parsed.path.startswith("/wiki/Special:FilePath/")
         and re.search(r"\.(?:jpe?g|png|webp)$", parsed.path, re.I)
     ):
         filename = parsed.path.split("/wiki/Special:FilePath/", 1)[1]
         return f"https://commons.wikimedia.org/wiki/Special:Redirect/file/{filename}?width={requested_width}"
     return value
+
+
+@app.template_filter("image_srcset")
+def image_srcset(url, widths):
+    """Descreve a largura real da imagem local e variantes das outras origens."""
+    value = responsive_image_url(url, 960)
+    if value.startswith("/static/img/e-coli-niaid-960.jpg"):
+        return f"{value} 960w"
+    return ", ".join(f"{responsive_image_url(url, width)} {width}w" for width in widths)
 
 
 @app.template_filter("absolute_url")
