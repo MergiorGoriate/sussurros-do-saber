@@ -439,6 +439,8 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b'href="/admin/docs"', response.data)
         self.assertIn("Documentação do site".encode(), response.data)
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow")
+        with self.client.session_transaction() as session:
+            session.clear()
 
     def test_administrator_can_be_created_and_sign_in(self):
         with self.client.session_transaction() as session:
