@@ -172,3 +172,16 @@
   .comments-list-heading, .comment-card { padding: 1.15rem; }
   .comment-card > p { margin-left: 0; }
 }
+
+/* Cores de leitura adaptadas ao modo escuro. */
+.article-summary{color:#46545b}
+.dark .article-summary{color:#cbd5d8}
+.dark .prose-article,.dark .article-markdown{color:#e2e8e9}
+.dark .article-markdown blockquote{color:#bdc9cb;border-left-color:#4dd0bf}
+.dark .article-markdown a,.dark .article-identifiers a{color:#78e4d5}
+.dark .article-markdown th,.dark .article-markdown td,.dark .article-markdown .table-wrapper{border-color:#425558}
+.dark .article-markdown th{background:#182b2e}
+.dark .article-markdown blockquote,.dark .article-markdown tbody tr:nth-child(even){background:#102023}
+.dark .article-markdown figcaption{color:#b8c5c8}
+.dark .article-markdown hr,.dark .article-identifiers,.dark .article-references{border-color:rgba(255,255,255,.2)}
+.dark .article-markdown code:not(pre code){background:#1b3033;color:#d7f5ef}
