@@ -296,7 +296,7 @@ def login():
             env_totp_secret = os.getenv("ADMIN_TOTP_SECRET", "").strip()
             if not env_totp_secret:
                 flash(
-                    "A conta principal exige 2FA. Configure ADMIN_TOTP_SECRET no Render.",
+                    "A conta principal exige 2FA. Configure ADMIN_TOTP_SECRET no Coolify.",
                     "error",
                 )
             else:

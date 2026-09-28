@@ -48,16 +48,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta name="twitter:image" content="{% block twitter_image %}{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}{% endblock %}">
 <meta name="twitter:image:alt" content="{% block twitter_image_alt %}Logotipo do Sussurros do Saber{% endblock %}">
 <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css',v=tailwind_version) }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link id="siteFont" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print">
+<script nonce="{{ csp_nonce }}">document.getElementById("siteFont").addEventListener("load",function(){this.media="all"});</script>
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260928-dark-mobile-mascot') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}">
-<noscript><link rel="stylesheet" href="{{ url_for('static',filename='css/animations.css',v='20260918-3') }}"></noscript>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260928-audit-mobile') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 {% block head_extra %}{% endblock %}
