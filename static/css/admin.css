@@ -574,3 +574,18 @@ input,textarea,select,button{font-size:16px}
 .admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: 1rem; }
 .admin-actions form { margin: 0; }
 .admin-secondary { border: 1px solid var(--line); border-radius: .55rem; background: transparent; color: inherit; cursor: pointer; padding: .7rem 1rem; font-weight: 700; }
+
+/* Documentação interna */
+.docs-intro{max-width:64rem;margin:-10px 0 22px;color:#4d6064}
+.docs-toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.docs-toc a{display:inline-flex;align-items:center;min-height:44px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#12665d;text-decoration:none;font-weight:700}
+.docs-toc a:hover,.docs-toc a:focus-visible{border-color:var(--green);background:#eaf6f2;outline-offset:2px}
+.docs-content{display:grid;gap:18px;max-width:70rem}
+.docs-section{scroll-margin-top:24px;line-height:1.65}
+.docs-section h2{margin:0 0 12px}
+.docs-section ol,.docs-section ul{margin:0 0 12px;padding-left:1.5rem}
+.docs-section li+li{margin-top:8px}
+.docs-section p{margin:0 0 12px}
+.docs-section p:last-child,.docs-section ol:last-child,.docs-section ul:last-child{margin-bottom:0}
+.docs-section a{color:#075f57;text-underline-offset:2px}
+@media(max-width:850px){.docs-section{scroll-margin-top:125px}}

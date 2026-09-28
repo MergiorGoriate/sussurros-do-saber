@@ -1,0 +1,79 @@
+{% extends 'admin/base.html' %}
+{% block title %}Docs{% endblock %}
+{% block content %}
+<header class="admin-header">
+  <div><span>Guia interno</span><h1>Documentação do site</h1></div>
+</header>
+<p class="docs-intro">Consulte os procedimentos para publicar conteúdos e manter o Sussurros do Saber. Esta página é acessível apenas após iniciar sessão no painel.</p>
+<nav class="docs-toc" aria-label="Índice da documentação">
+  <a href="#primeiros-passos">Primeiros passos</a>
+  <a href="#artigos">Artigos</a>
+  <a href="#autores-revistas">Autores e revistas</a>
+  <a href="#comunidade">Comunidade</a>
+  <a href="#seo">SEO</a>
+  <a href="#seguranca">Segurança</a>
+  <a href="#operacao">Operação</a>
+</nav>
+<div class="docs-content">
+  <section id="primeiros-passos" class="admin-panel docs-section" aria-labelledby="docs-start">
+    <h2 id="docs-start">Primeiros passos</h2>
+    <ol>
+      <li>Abra a <a href="{{ url_for('admin.dashboard') }}">Visão geral</a> para ver artigos, rascunhos, contactos e subscritores.</li>
+      <li>Complete a configuração em <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a> antes de trabalhar no painel.</li>
+      <li>Use os links do menu para gerir cada tipo de conteúdo. As alterações editoriais só aparecem publicamente depois da publicação.</li>
+    </ol>
+  </section>
+
+  <section id="artigos" class="admin-panel docs-section" aria-labelledby="docs-articles">
+    <h2 id="docs-articles">Artigos</h2>
+    <ol>
+      <li>Em <a href="{{ url_for('admin.articles') }}">Artigos</a>, escolha <a href="{{ url_for('admin.article_form') }}">Novo artigo</a>.</li>
+      <li>Preencha título, resumo, conteúdo em Markdown, autor, categoria, imagem de capa e descrição da imagem. Use a pré-visualização para rever o resultado.</li>
+      <li>Insira imagens, vídeos, tabelas e gráficos com os botões do editor. Indique fonte, autoria e licença das imagens quando aplicável.</li>
+      <li>Revise referências, DOI, palavras-chave e URL do artigo. Guarde como rascunho, publique ou indique a data para programar a publicação.</li>
+      <li>Abra o artigo público após publicar e confirme texto, imagens, ligações e leitura em telemóvel.</li>
+    </ol>
+    <p><strong>Nota:</strong> rascunhos e artigos programados ainda não fazem parte da publicação pública.</p>
+  </section>
+
+  <section id="autores-revistas" class="admin-panel docs-section" aria-labelledby="docs-authors">
+    <h2 id="docs-authors">Autores, categorias e revistas</h2>
+    <p>Crie o perfil em <a href="{{ url_for('admin.authors') }}">Autores</a> antes de associar uma pessoa a um artigo. Acrescente biografia, fotografia, área de investigação e ligações profissionais apenas quando tiver informação confirmada.</p>
+    <p>Organize temas em <a href="{{ url_for('admin.categories') }}">Categorias</a>. Em <a href="{{ url_for('admin.journals') }}">Revistas</a>, preencha os dados editoriais, guarde e use <strong>Publicar</strong> quando o registo estiver pronto; uma revista oculta não aparece no catálogo público.</p>
+  </section>
+
+  <section id="comunidade" class="admin-panel docs-section" aria-labelledby="docs-community">
+    <h2 id="docs-community">Comentários, contactos e subscritores</h2>
+    <p>Em <a href="{{ url_for('admin.comments') }}">Comentários</a>, reveja as mensagens pendentes antes de as aprovar; também pode ocultar as já publicadas. Em <a href="{{ url_for('admin.contacts') }}">Contactos</a>, acompanhe mensagens recebidas. Em <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>, consulte o estado das subscrições.</p>
+    <p>Trate dados pessoais somente para a finalidade da mensagem ou subscrição. Evite exportá-los ou partilhá-los sem necessidade operacional.</p>
+  </section>
+
+  <section id="seo" class="admin-panel docs-section" aria-labelledby="docs-seo">
+    <h2 id="docs-seo">SEO e indexação</h2>
+    <ul>
+      <li>Escreva títulos e resumos específicos; escolha uma URL curta e estável antes de publicar.</li>
+      <li>Confirme as imagens de capa e o texto alternativo. Verifique as ligações internas e referências científicas.</li>
+      <li>O site disponibiliza <a href="/sitemap.xml" target="_blank" rel="noopener">sitemap.xml ↗</a>, <a href="/robots.txt" target="_blank" rel="noopener">robots.txt ↗</a> e <a href="/feed.xml" target="_blank" rel="noopener">feed.xml ↗</a>. O painel administrativo está excluído da indexação.</li>
+    </ul>
+  </section>
+
+  <section id="seguranca" class="admin-panel docs-section" aria-labelledby="docs-security">
+    <h2 id="docs-security">Segurança e acesso</h2>
+    <ul>
+      <li>Ative o 2FA em <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a> e guarde os códigos de recuperação num local privado.</li>
+      <li>A conta principal pode gerir outras contas em <a href="{{ url_for('admin.administrators') }}">Administradores</a>, se essa opção aparecer no menu.</li>
+      <li>Termine a sessão com <strong>Sair</strong> em computadores partilhados. Não inclua palavras-passe, chaves de API, URLs privadas da base de dados ou códigos de recuperação em artigos ou nesta documentação.</li>
+    </ul>
+  </section>
+
+  <section id="operacao" class="admin-panel docs-section" aria-labelledby="docs-operation">
+    <h2 id="docs-operation">Publicação técnica e recuperação</h2>
+    <ul>
+      <li>O código está no GitHub; a aplicação de produção funciona no VPS da OVHcloud com Coolify e PostgreSQL. Alterações de código só aparecem depois de um deploy bem-sucedido.</li>
+      <li>Antes de mudanças na base de dados, confirme no Coolify o estado do backup local e do Cloudflare R2. Teste a restauração num ambiente isolado.</li>
+      <li>Depois de um deploy, verifique a página inicial, o login, um artigo publicado e o endereço <a href="/healthz" target="_blank" rel="noopener">/healthz ↗</a>. Consulte os registos no Coolify se houver falhas.</li>
+      <li>As configurações sensíveis ficam nas variáveis de ambiente do Coolify; esta página não mostra os seus valores.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

@@ -423,6 +423,23 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow")
 
+    def test_admin_docs_requires_login_and_is_available_to_editors(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+        unauthenticated = self.client.get("/admin/docs")
+        self.assertEqual(unauthenticated.status_code, 302)
+        self.assertIn("/admin/login", unauthenticated.location)
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["admin_superuser"] = False
+        response = self.client.get("/admin/docs")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'<meta name="robots" content="noindex,nofollow">', response.data)
+        self.assertIn(b'href="/admin/docs"', response.data)
+        self.assertIn("Documentação do site".encode(), response.data)
+        self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow")
+
     def test_administrator_can_be_created_and_sign_in(self):
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True

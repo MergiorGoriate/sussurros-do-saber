@@ -421,6 +421,12 @@ def logout():
     return redirect(url_for("admin.login"))
 
 
+@admin_bp.get("/docs")
+@login_required
+def docs():
+    return render_template("admin/docs.html")
+
+
 @admin_bp.get("")
 @login_required
 def dashboard():
