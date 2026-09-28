@@ -392,6 +392,8 @@ def responsive_image_url(url, width=1200):
         parsed.hostname == "commons.wikimedia.org"
         and unquote(parsed.path).endswith("/E._coli_Bacteria_(7316101966).jpg")
     ):
+        if requested_width <= 330:
+            return "/static/img/e-coli-niaid-330.jpg?v=d52ba80e29c6"
         return "/static/img/e-coli-niaid-960.jpg?v=1a529a99b76b"
     if (
         parsed.hostname == "commons.wikimedia.org"
@@ -408,7 +410,7 @@ def image_srcset(url, widths):
     """Descreve a largura real da imagem local e variantes das outras origens."""
     value = responsive_image_url(url, 960)
     if value.startswith("/static/img/e-coli-niaid-960.jpg"):
-        return f"{value} 960w"
+        return "/static/img/e-coli-niaid-330.jpg?v=d52ba80e29c6 330w, " + f"{value} 960w"
     return ", ".join(f"{responsive_image_url(url, width)} {width}w" for width in widths)
 
 
