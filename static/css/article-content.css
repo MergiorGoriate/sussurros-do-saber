@@ -1,7 +1,7 @@
 .article-markdown { font-size: 1.08rem; line-height: 1.85; }
 .article-markdown h2, .article-markdown h3 { font-family: Georgia, serif; line-height: 1.25; margin: 2rem 0 .8rem; }
-.article-markdown blockquote { border-left: 4px solid #087b70; margin: 1.5rem 0; padding: .2rem 0 .2rem 1.2rem; color: #52615f; }
-.article-markdown a, .article-identifiers a { color: #087b70; text-decoration: underline; text-underline-offset: 3px; }
+.article-markdown blockquote { border-left: 4px solid #1e4e8c; margin: 1.5rem 0; padding: .2rem 0 .2rem 1.2rem; color: #52615f; }
+.article-markdown a, .article-identifiers a { color: #1e4e8c; text-decoration: underline; text-underline-offset: 3px; }
 .article-markdown table { width:100%; border-collapse:collapse; }
 .article-markdown th, .article-markdown td { border: 1px solid #d8dfde; padding: .65rem; }
 .article-identifiers, .article-references { border-top: 1px solid rgba(0,0,0,.14); margin-top: 2rem; padding-top: 1.5rem; }
@@ -90,7 +90,7 @@
 .article-chart figcaption{text-align:center;margin-top:.75rem;color:#52615f;font-size:.95rem;font-weight:600}
 .article-chart .chart-axis{stroke:#64748b;stroke-width:1.5}
 .article-chart .chart-grid{stroke:#e2e8f0;stroke-width:1}
-.article-chart .chart-line{fill:none;stroke:#087f72;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}
+.article-chart .chart-line{fill:none;stroke:#1e4e8c;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}
 .article-chart .chart-value,.article-chart .chart-label,.article-chart .chart-legend{font-family:system-ui,sans-serif;fill:#334155}
 .article-chart .chart-value{font-size:12px}.article-chart .chart-label{font-size:11px}.article-chart .chart-legend{font-size:13px}
 @media(max-width:640px){.article-chart{margin-inline:-.5rem}.article-chart svg{min-width:32rem}}
@@ -101,60 +101,60 @@
   scroll-margin-top: 6rem;
   border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
   background:
-    radial-gradient(circle at 8% 5%, rgba(8, 139, 126, .08), transparent 28rem),
-    color-mix(in srgb, #eef5f4 72%, white);
+    radial-gradient(circle at 8% 5%, rgba(30, 78, 140, .08), transparent 28rem),
+    color-mix(in srgb, #eaf1fa 72%, white);
   padding: clamp(3.5rem, 7vw, 6rem) 1rem;
 }
 .article-comments-inner { width: min(1180px, 100%); margin: 0 auto; }
 .comments-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; padding-bottom: 1.6rem; border-bottom: 2px solid currentColor; }
 .comments-heading h2 { max-width: 720px; margin: .55rem 0 .45rem; font: 700 clamp(2.3rem, 5vw, 4.25rem)/.98 Georgia, serif; letter-spacing: -.035em; }
 .comments-heading p { margin: 0; color: color-mix(in srgb, currentColor 62%, transparent); font-size: 1.05rem; }
-.comments-count { display: inline-flex; align-items: center; gap: .55rem; flex: 0 0 auto; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 999px; background: color-mix(in srgb, white 78%, transparent); padding: .7rem 1rem; color: #067c70; font-weight: 900; }
+.comments-count { display: inline-flex; align-items: center; gap: .55rem; flex: 0 0 auto; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 999px; background: color-mix(in srgb, white 78%, transparent); padding: .7rem 1rem; color: #1e4e8c; font-weight: 900; }
 .comments-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); align-items: start; gap: clamp(1.25rem, 3vw, 2.25rem); margin-top: 2rem; }
 .comment-form-panel, .comments-list { min-width: 0; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 1.15rem; background: color-mix(in srgb, white 92%, transparent); box-shadow: 0 18px 55px rgba(16, 24, 32, .07); }
 .comment-form-panel { padding: clamp(1.25rem, 3vw, 2rem); }
 .comment-form-intro { display: flex; align-items: flex-start; gap: 1rem; }
-.comment-form-icon { display: grid; place-items: center; width: 3rem; height: 3rem; flex: 0 0 auto; border-radius: .85rem; background: #078b7e; color: white; font-size: 1.2rem; }
+.comment-form-icon { display: grid; place-items: center; width: 3rem; height: 3rem; flex: 0 0 auto; border-radius: .85rem; background: #1e4e8c; color: white; font-size: 1.2rem; }
 .comment-form-intro h3, .comments-list-heading h3, .comments-empty h3 { margin: 0; font: 700 1.55rem/1.15 Georgia, serif; }
 .comment-form-intro p { margin: .45rem 0 0; color: color-mix(in srgb, currentColor 62%, transparent); line-height: 1.55; }
 .comment-form { display: grid; gap: 1rem; margin-top: 1.5rem; }
 .comment-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .comment-field { display: grid; gap: .45rem; }
 .comment-form label { font-size: .85rem; font-weight: 800; letter-spacing: .02em; }
-.comment-form label span { margin-left: .35rem; border-radius: 999px; background: #e1f2ef; color: #067c70; padding: .16rem .45rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; }
+.comment-form label span { margin-left: .35rem; border-radius: 999px; background: #e8f0fa; color: #1e4e8c; padding: .16rem .45rem; font-size: .68rem; font-weight: 800; text-transform: uppercase; }
 .comment-form input, .comment-form textarea { width: 100%; border: 1px solid #ccd8d7; border-radius: .72rem; background: #fbfdfd; color: #101820; padding: .9rem 1rem; font: inherit; transition: border-color .18s, box-shadow .18s, background .18s; }
 .comment-form input::placeholder, .comment-form textarea::placeholder { color: #7a8787; }
 .comment-form textarea { resize: vertical; min-height: 10rem; line-height: 1.55; }
 .comment-form input:hover, .comment-form textarea:hover { border-color: #91aaa7; }
-.comment-form input:focus, .comment-form textarea:focus { outline: 0; border-color: #078b7e; background: white; box-shadow: 0 0 0 4px rgba(7, 139, 126, .13); }
+.comment-form input:focus, .comment-form textarea:focus { outline: 0; border-color: #1e4e8c; background: white; box-shadow: 0 0 0 4px rgba(30, 78, 140, .13); }
 .comment-field small { color: color-mix(in srgb, currentColor 54%, transparent); font-size: .76rem; }
-.comment-form button { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; justify-self: start; border: 0; border-radius: .72rem; background: #078b7e; color: white; padding: .9rem 1.2rem; font: 800 .92rem/1 Arial, sans-serif; cursor: pointer; box-shadow: 0 8px 20px rgba(7, 139, 126, .2); transition: transform .18s, background .18s, box-shadow .18s; }
-.comment-form button:hover { background: #056f65; transform: translateY(-1px); box-shadow: 0 11px 24px rgba(7, 139, 126, .27); }
+.comment-form button { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; justify-self: start; border: 0; border-radius: .72rem; background: #1e4e8c; color: white; padding: .9rem 1.2rem; font: 800 .92rem/1 Arial, sans-serif; cursor: pointer; box-shadow: 0 8px 20px rgba(30, 78, 140, .2); transition: transform .18s, background .18s, box-shadow .18s; }
+.comment-form button:hover { background: #173d6e; transform: translateY(-1px); box-shadow: 0 11px 24px rgba(30, 78, 140, .27); }
 .comment-form button:active { transform: translateY(0); }
 .comment-honeypot { position: absolute !important; left: -10000px !important; width: 1px; height: 1px; overflow: hidden; }
 .comment-notice { display: flex; align-items: center; gap: .65rem; margin-top: 1rem; border-radius: .72rem; padding: .85rem 1rem; font-weight: 700; }
-.comment-notice.success { background: #d9f7ed; color: #075e54; }
+.comment-notice.success { background: #e6f1fe; color: #173d6e; }
 .comment-notice.error { background: #fee2e2; color: #991b1b; }
 .comments-list { overflow: hidden; }
 .comments-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); padding: 1.35rem 1.5rem; }
-.comments-list-heading span { display: grid; place-items: center; min-width: 2rem; height: 2rem; border-radius: 999px; background: #e1f2ef; color: #067c70; font-size: .82rem; font-weight: 900; }
+.comments-list-heading span { display: grid; place-items: center; min-width: 2rem; height: 2rem; border-radius: 999px; background: #e8f0fa; color: #1e4e8c; font-size: .82rem; font-weight: 900; }
 .comment-card { padding: 1.35rem 1.5rem; }
 .comment-card + .comment-card { border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
 .comment-card header { display: flex; align-items: center; gap: .85rem; }
-.comment-avatar { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; flex: 0 0 auto; border-radius: 50%; background: linear-gradient(135deg, #078b7e, #075a53); color: white; box-shadow: 0 4px 12px rgba(7, 139, 126, .18); font-weight: 900; }
+.comment-avatar { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; flex: 0 0 auto; border-radius: 50%; background: linear-gradient(135deg, #1e4e8c, #14355f); color: white; box-shadow: 0 4px 12px rgba(30, 78, 140, .18); font-weight: 900; }
 .comment-author { display: grid; gap: .16rem; min-width: 0; }
 .comment-author strong { overflow-wrap: anywhere; }
 .comment-card time { display: inline-flex; align-items: center; gap: .35rem; color: color-mix(in srgb, currentColor 50%, transparent); font-size: .75rem; }
 .comment-card > p { margin: 1rem 0 0 3.6rem; white-space: pre-wrap; overflow-wrap: anywhere; color: color-mix(in srgb, currentColor 82%, transparent); line-height: 1.68; }
 .comments-empty { display: grid; justify-items: center; padding: clamp(2.5rem, 6vw, 4rem) 1.5rem; text-align: center; }
-.comments-empty > span { display: grid; place-items: center; width: 4.25rem; height: 4.25rem; margin-bottom: 1rem; border-radius: 50%; background: #e1f2ef; color: #067c70; font-size: 1.55rem; }
+.comments-empty > span { display: grid; place-items: center; width: 4.25rem; height: 4.25rem; margin-bottom: 1rem; border-radius: 50%; background: #e8f0fa; color: #1e4e8c; font-size: 1.55rem; }
 .comments-empty p { max-width: 34ch; margin: .65rem 0 0; color: color-mix(in srgb, currentColor 58%, transparent); line-height: 1.55; }
-.dark .article-comments { background: radial-gradient(circle at 8% 5%, rgba(8, 139, 126, .12), transparent 28rem), #0c1719; }
+.dark .article-comments { background: radial-gradient(circle at 8% 5%, rgba(30, 78, 140, .12), transparent 28rem), #0c1719; }
 .dark .comment-form-panel, .dark .comments-list, .dark .comments-count { background: #111f22; border-color: rgba(255,255,255,.1); box-shadow: 0 18px 55px rgba(0,0,0,.2); }
 .dark .comment-form input, .dark .comment-form textarea { background: #0c1719; border-color: #344547; color: #f5f7f7; }
-.dark .comment-form input:focus, .dark .comment-form textarea:focus { background: #101d20; border-color: #2ab8aa; }
-.dark .comment-form label span, .dark .comments-list-heading span, .dark .comments-empty > span { background: #123c36; color: #9de7dc; }
-.dark .comment-notice.success { background: #123c36; color: #baf4e8; }
+.dark .comment-form input:focus, .dark .comment-form textarea:focus { background: #101d20; border-color: #8db9ed; }
+.dark .comment-form label span, .dark .comments-list-heading span, .dark .comments-empty > span { background: #18365c; color: #c4dcfb; }
+.dark .comment-notice.success { background: #18365c; color: #d8e8ff; }
 .dark .comment-notice.error { background: #4b1f24; color: #fecaca; }
 @media (max-width: 900px) {
   .comments-layout { grid-template-columns: 1fr; }
@@ -177,11 +177,13 @@
 .article-summary{color:#46545b}
 .dark .article-summary{color:#cbd5d8}
 .dark .prose-article,.dark .article-markdown{color:#e2e8e9}
-.dark .article-markdown blockquote{color:#bdc9cb;border-left-color:#4dd0bf}
-.dark .article-markdown a,.dark .article-identifiers a{color:#78e4d5}
+.dark .article-markdown blockquote{color:#bdc9cb;border-left-color:#8db9ed}
+.dark .article-markdown a,.dark .article-identifiers a{color:#a8ccf7}
 .dark .article-markdown th,.dark .article-markdown td,.dark .article-markdown .table-wrapper{border-color:#425558}
 .dark .article-markdown th{background:#182b2e}
 .dark .article-markdown blockquote,.dark .article-markdown tbody tr:nth-child(even){background:#102023}
 .dark .article-markdown figcaption{color:#b8c5c8}
 .dark .article-markdown hr,.dark .article-identifiers,.dark .article-references{border-color:rgba(255,255,255,.2)}
-.dark .article-markdown code:not(pre code){background:#1b3033;color:#d7f5ef}
+.dark .article-markdown code:not(pre code){background:#1b3033;color:#d8e8ff}
+
+.dark .comments-count{color:#a8ccf7}
