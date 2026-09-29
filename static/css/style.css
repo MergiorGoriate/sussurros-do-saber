@@ -273,3 +273,6 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .back-to-top:focus-visible{outline:3px solid #a8ccf7;outline-offset:3px}
 .assistant-open .back-to-top{visibility:hidden;pointer-events:none}
 @media(max-width:500px){.back-to-top{right:19px;bottom:84px}}
+
+/* O símbolo da nova assinatura horizontal ocupa o espaço compacto no telemóvel. */
+@media(max-width:639px){.brand-logo{object-fit:cover;object-position:left center}}
