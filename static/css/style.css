@@ -264,3 +264,12 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .dark .nav-feature,.dark .section-rule a,.dark .modern-link,.dark .journal-card a,.dark .number-story>span,.dark .author-pagination a,.dark .editorial-institution,.dark .author-institution,.dark .text-science,.dark .author-monogram,.dark .article-author-fallback{color:#a8ccf7}
 .dark .article-author-link:hover,.dark .article-author-link:focus-visible{color:#a8ccf7}
 .dark #readingProgress{background:linear-gradient(90deg,#8db9ed,#c4dcfb)}
+
+/* Atalho de leitura acima do Assistente Sussurros. */
+.back-to-top{position:fixed;right:27px;bottom:92px;z-index:81;display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(255,255,255,.35);border-radius:16px 16px 5px 16px;background:#1e4e8c;color:#fff;box-shadow:0 10px 28px rgba(16,44,80,.3);cursor:pointer;transition:transform .2s,background-color .2s,box-shadow .2s}
+.back-to-top[hidden]{display:none!important}
+.back-to-top svg{width:24px;height:24px}
+.back-to-top:hover{background:#153967;transform:translateY(-3px);box-shadow:0 14px 32px rgba(16,44,80,.35)}
+.back-to-top:focus-visible{outline:3px solid #a8ccf7;outline-offset:3px}
+.assistant-open .back-to-top{visibility:hidden;pointer-events:none}
+@media(max-width:500px){.back-to-top{right:19px;bottom:84px}}

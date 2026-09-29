@@ -9,6 +9,14 @@ document.documentElement.classList.toggle('dark',sessionTheme==='dark');
 updateBrandLogo(sessionTheme==='dark');
 const themeToggle=$('#themeToggle');themeToggle?.setAttribute('aria-pressed',String(sessionTheme==='dark'));themeToggle?.addEventListener('click',()=>{document.documentElement.classList.toggle('dark');const dark=document.documentElement.classList.contains('dark');updateBrandLogo(dark);try{sessionStorage.setItem('theme',dark?'dark':'light')}catch{}themeToggle.setAttribute('aria-pressed',String(dark))});
 let scrollFrame=0;addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{const h=document.documentElement,total=h.scrollHeight-h.clientHeight,p=total>0?h.scrollTop/total*100:0,progress=$('#readingProgress');if(progress)progress.style.width=`${p}%`;scrollFrame=0})},{passive:true});
+const backToTop=$('#backToTop');
+if(backToTop){
+  const updateBackToTop=()=>{backToTop.hidden=window.scrollY<320};
+  updateBackToTop();
+  addEventListener('scroll',updateBackToTop,{passive:true});
+  backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
+}
+
 const savedIds=()=>{try{const value=JSON.parse(localStorage.savedArticles||'[]');return Array.isArray(value)?value.map(String):[]}catch{return[]}};function wireBookmarks(){document.querySelectorAll('.bookmark').forEach(btn=>{const render=()=>{const saved=savedIds().includes(btn.dataset.id);btn.textContent=saved?'♥':'♡';btn.classList.toggle('saved',saved);btn.setAttribute('aria-pressed',String(saved))};render();btn.addEventListener('click',()=>{let ids=savedIds();ids=ids.includes(btn.dataset.id)?ids.filter(id=>id!==btn.dataset.id):[...ids,btn.dataset.id];localStorage.savedArticles=JSON.stringify(ids);render()})})}wireBookmarks();
 $('#newsletterForm')?.addEventListener('submit',async e=>{e.preventDefault();const m=$('#newsletterMessage'),email=e.currentTarget.querySelector('input').value;m.textContent='A confirmar...';try{const r=await fetch('/api/newsletter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}),d=await r.json();m.textContent=d.message;if(d.ok)e.currentTarget.reset()}catch{m.textContent='Não foi possível concluir agora.'}});
 $('#calculateStats')?.addEventListener('click',()=>{const v=$('#dataValues').value.split(/[,;\s]+/).map(Number).filter(Number.isFinite).sort((a,b)=>a-b),o=$('#statsResult');if(!v.length){o.innerHTML='<p>Introduza valores válidos.</p>';return}const m=Math.floor(v.length/2),med=v.length%2?v[m]:(v[m-1]+v[m])/2,avg=v.reduce((a,b)=>a+b,0)/v.length;o.innerHTML=`<div><strong>${v.length}</strong><span>N</span></div><div><strong>${avg.toFixed(2)}</strong><span>Média</span></div><div><strong>${med}</strong><span>Mediana</span></div><div><strong>${v[0]}–${v.at(-1)}</strong><span>Amplitude</span></div>`});

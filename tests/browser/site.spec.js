@@ -71,3 +71,20 @@ test('admin login remains protected and free of inline handlers', async ({ page 
   await expect(page.locator('form')).toBeVisible();
   expect(await page.locator('[onclick], [onload], [onerror]').count()).toBe(0);
 });
+
+test('back-to-top stays above the assistant and returns to the start', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const button = page.getByRole('button', { name: 'Voltar ao topo' });
+  await expect(button).toBeHidden();
+  await page.evaluate(() => window.scrollTo(0, 700));
+  await expect(button).toBeVisible();
+  const launcher = page.getByRole('button', { name: 'Abrir assistente' });
+  await expect(launcher).toBeVisible();
+  const boxes = await Promise.all([button.boundingBox(), launcher.boundingBox()]);
+  expect(boxes[0].y + boxes[0].height).toBeLessThan(boxes[1].y);
+  await button.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(20);
+  await page.evaluate(() => window.scrollTo(0, 700));
+  await launcher.click();
+  await expect(button).toBeHidden();
+});
