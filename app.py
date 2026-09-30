@@ -62,6 +62,28 @@ limiter.init_app(app)
 app.register_blueprint(admin_bp)
 
 
+@app.get("/ads.txt")
+def ads_txt():
+    """Publica a declaração Authorized Digital Sellers do Google AdSense."""
+    publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "").strip()
+    if publisher_id.startswith("ca-pub-"):
+        publisher_id = publisher_id[3:]
+    if not re.fullmatch(r"pub-\\d{16}", publisher_id):
+        return Response(
+            "# AdSense publisher ID ainda não configurado.\\n",
+            status=503,
+            mimetype="text/plain",
+            headers={"Cache-Control": "no-store"},
+        )
+    body = f"google.com, {publisher_id}, DIRECT, f08c47fec0942fa0\\n"
+    return Response(
+        body,
+        status=200,
+        mimetype="text/plain",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
 @app.before_request
 def assign_csp_nonce():
     """Cria um nonce imprevisível e exclusivo para cada resposta."""
