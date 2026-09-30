@@ -13,7 +13,26 @@ gtag('consent','default',{
   wait_for_update:500
 });
 </script>
-<script async nonce="{{ csp_nonce }}" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7920973591685812" crossorigin="anonymous"></script>
+<script nonce="{{ csp_nonce }}">
+// Mantém a verificação do AdSense no HTML, mas evita trabalho publicitário
+// na primeira renderização enquanto o visitante decide o consentimento.
+(()=>{let loaded=false;
+  const loadAds=()=>{if(loaded)return;loaded=true;
+    const script=document.createElement('script');
+    script.async=true;
+    script.crossOrigin='anonymous';
+    script.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7920973591685812';
+    document.head.appendChild(script);
+  };
+  const readAds=()=>{
+    const raw=document.cookie.split('; ').find(part=>part.startsWith('cookie_consent_v3='));
+    if(!raw)return false;
+    try{return JSON.parse(decodeURIComponent(raw.slice('cookie_consent_v3='.length))).ads===true}catch{return false}
+  };
+  if(readAds())loadAds();
+  window.addEventListener('cookieconsentchange',event=>{if(event.detail?.ads)loadAds()});
+})();
+</script>
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
