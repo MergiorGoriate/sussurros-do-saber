@@ -65,24 +65,12 @@ app.register_blueprint(admin_bp)
 @app.get("/ads.txt")
 def ads_txt():
     """Publica a declaração Authorized Digital Sellers do Google AdSense."""
-    publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7920973591685812").strip()
-    if publisher_id.startswith("ca-pub-"):
-        publisher_id = publisher_id[3:]
-    if not re.fullmatch(r"pub-\\d{16}", publisher_id):
-        return Response(
-            "# AdSense publisher ID ainda não configurado.\\n",
-            status=503,
-            mimetype="text/plain",
-            headers={"Cache-Control": "no-store"},
-        )
-    body = f"google.com, {publisher_id}, DIRECT, f08c47fec0942fa0\\n"
     return Response(
-        body,
+        "google.com, pub-7920973591685812, DIRECT, f08c47fec0942fa0\n",
         status=200,
         mimetype="text/plain",
         headers={"Cache-Control": "public, max-age=3600"},
     )
-
 
 @app.before_request
 def assign_csp_nonce():
