@@ -288,7 +288,5 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   .story-card:hover img,.journal-card:hover,.learning-card:hover{transform:none}
 }
 
-/* Skip offscreen homepage layout/paint on mobile without hiding its content. */
-@media(max-width:767px){
-  .home-deferred{content-visibility:auto;contain-intrinsic-size:auto 650px}
-}
+/* Keep mobile section geometry predictable while investigating Lighthouse CLS.
+   The previous fixed intrinsic-size estimate could change as sections entered view. */
