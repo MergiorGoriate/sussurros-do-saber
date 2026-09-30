@@ -276,3 +276,14 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 
 /* O símbolo da nova assinatura horizontal ocupa o espaço compacto no telemóvel. */
 @media(max-width:639px){.brand-logo{object-fit:cover;object-position:left center}}
+
+/* Mobile: avoid costly backdrop filters and entrance animations on slow devices.
+   Desktop motion and reduced-motion accessibility remain unchanged. */
+@media(max-width:767px){
+  .site-header{backdrop-filter:none;-webkit-backdrop-filter:none;background:#fff}
+  .dark .site-header{background:#081012}
+  .brand-logo{animation:none}
+  .motion-enabled [data-reveal]{opacity:1;transform:none;transition:none}
+  .story-card img,.journal-card,.learning-card{transition:none}
+  .story-card:hover img,.journal-card:hover,.learning-card:hover{transform:none}
+}
