@@ -8,12 +8,15 @@ const updateBrandLogo=dark=>{if(brandLogoSource)brandLogoSource.srcset=dark?bran
 document.documentElement.classList.toggle('dark',sessionTheme==='dark');
 updateBrandLogo(sessionTheme==='dark');
 const themeToggle=$('#themeToggle');themeToggle?.setAttribute('aria-pressed',String(sessionTheme==='dark'));themeToggle?.addEventListener('click',()=>{document.documentElement.classList.toggle('dark');const dark=document.documentElement.classList.contains('dark');updateBrandLogo(dark);try{sessionStorage.setItem('theme',dark?'dark':'light')}catch{}themeToggle.setAttribute('aria-pressed',String(dark))});
-let scrollFrame=0;addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{const h=document.documentElement,total=h.scrollHeight-h.clientHeight,p=total>0?h.scrollTop/total*100:0,progress=$('#readingProgress');if(progress)progress.style.width=`${p}%`;scrollFrame=0})},{passive:true});
+let scrollFrame=0;
+const scrollTasks=[];
+const scheduleScrollUpdate=()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;const h=document.documentElement,total=h.scrollHeight-h.clientHeight,top=h.scrollTop,percent=total>0?top/total*100:0;const progress=$('#readingProgress');if(progress)progress.style.width=`${percent}%`;scrollTasks.forEach(task=>task(top,percent))})};
+addEventListener('scroll',scheduleScrollUpdate,{passive:true});
 const backToTop=$('#backToTop');
 if(backToTop){
   const updateBackToTop=()=>{backToTop.hidden=window.scrollY<320};
   updateBackToTop();
-  addEventListener('scroll',updateBackToTop,{passive:true});
+  scrollTasks.push(updateBackToTop);
   backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
 }
 
@@ -144,17 +147,16 @@ window.sdsTrack=pushAnalyticsEvent;
     }catch{}
   });
   const sent=new Set();
-  addEventListener('scroll',()=>{
-    const total=document.documentElement.scrollHeight-innerHeight;
-    if(total<=0)return;
-    const percent=Math.round(scrollY/total*100);
+  scrollTasks.push((_top,scrollPercent)=>{
+    if(document.documentElement.scrollHeight-innerHeight<=0)return;
+    const percent=Math.round(scrollPercent);
     [25,50,75,90].forEach(depth=>{
       if(percent>=depth&&!sent.has(depth)){
         sent.add(depth);
         pushAnalyticsEvent('scroll_depth',{percent_scrolled:depth,page_type:pageType});
       }
     });
-  },{passive:true});
+  });
 })();
 
 
