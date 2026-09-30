@@ -3,23 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script nonce="{{ csp_nonce }}">
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{
+  ad_storage:'denied', analytics_storage:'denied',
+  ad_user_data:'denied', ad_personalization:'denied',
+  functionality_storage:'granted', security_storage:'granted',
+  wait_for_update:500
+});
+</script>
 <script async nonce="{{ csp_nonce }}" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7920973591685812" crossorigin="anonymous"></script>
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% if gtm_container_id %}
 <script nonce="{{ csp_nonce }}">
-window.dataLayer=window.dataLayer||[];
-function gtag(){dataLayer.push(arguments);}
-gtag('consent','default',{
-  ad_storage:'denied',
-  analytics_storage:'denied',
-  ad_user_data:'denied',
-  ad_personalization:'denied',
-  functionality_storage:'granted',
-  security_storage:'granted',
-  wait_for_update:500
-});
 window.dataLayer.push({event:'default_consent'});
 </script>
 <script nonce="{{ csp_nonce }}">
@@ -175,12 +174,13 @@ window.dataLayer.push({event:'default_consent'});
       <span class="cookie-icon" aria-hidden="true">◔</span>
       <div>
         <h2 id="cookieTitle">A sua privacidade importa</h2>
-        <p id="cookieDescription">Utilizamos armazenamento essencial para guardar preferências e proteger o funcionamento do site. Cookies opcionais só serão ativados com a sua autorização. <a href="{{ url_for('privacy') }}">Política de Privacidade</a>.</p>
+        <p id="cookieDescription">Utilizamos armazenamento essencial para guardar preferências e proteger o funcionamento do site. As opções de análise e publicidade podem ser geridas separadamente. <a href="{{ url_for('privacy') }}">Política de Privacidade</a>.</p>
       </div>
     </div>
     <div id="cookiePreferences" class="cookie-preferences" hidden>
       <label><span><strong>Essenciais</strong><small>Necessários para segurança, sessão e preferências.</small></span><input type="checkbox" checked disabled></label>
       <label><span><strong>Análise e desempenho</strong><small>Ajuda a compreender a utilização do site de forma agregada.</small></span><input id="analyticsConsent" type="checkbox"></label>
+      <label><span><strong>Publicidade</strong><small>Permite armazenamento e utilização de dados para anúncios. Pode recusar sem perder o acesso ao conteúdo.</small></span><input id="adsConsent" type="checkbox"></label>
     </div>
     <div class="cookie-actions">
       <button id="cookieReject" class="cookie-secondary" type="button">Recusar não essenciais</button>
