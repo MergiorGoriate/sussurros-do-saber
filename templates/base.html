@@ -30,8 +30,14 @@ window.dataLayer.push({event:'default_consent'});
     script.src='https://www.googletagmanager.com/gtm.js?id={{ gtm_container_id|e }}';
     document.head.appendChild(script);
   };
-  // A análise aguarda o primeiro carregamento; uma escolha afirmativa inicia-a logo.
-  window.addEventListener('load',()=>setTimeout(loadGtm,2500),{once:true});
+  // Carrega GTM apenas quando existe consentimento de análise, reduzindo
+  // pedidos externos e execução de JavaScript na primeira visita.
+  const hasAnalyticsConsent=()=>{
+    const raw=document.cookie.split('; ').find(part=>part.startsWith('cookie_consent_v3='));
+    if(!raw)return false;
+    try{return JSON.parse(decodeURIComponent(raw.slice('cookie_consent_v3='.length))).analytics===true}catch{return false}
+  };
+  if(hasAnalyticsConsent())loadGtm();
   window.addEventListener('cookieconsentchange',event=>{if(event.detail?.analytics)loadGtm()});
 })();
 </script>
