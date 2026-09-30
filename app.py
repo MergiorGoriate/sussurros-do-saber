@@ -65,7 +65,7 @@ app.register_blueprint(admin_bp)
 @app.get("/ads.txt")
 def ads_txt():
     """Publica a declaração Authorized Digital Sellers do Google AdSense."""
-    publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "").strip()
+    publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7920973591685812").strip()
     if publisher_id.startswith("ca-pub-"):
         publisher_id = publisher_id[3:]
     if not re.fullmatch(r"pub-\\d{16}", publisher_id):
