@@ -48,12 +48,13 @@ window.sdsTrack=pushAnalyticsEvent;
   if(!banner)return;
   const preferences=document.querySelector('#cookiePreferences');
   const analytics=document.querySelector('#analyticsConsent');
+  const ads=document.querySelector('#adsConsent');
   const customize=document.querySelector('#cookieCustomize');
   const accept=document.querySelector('#cookieAccept');
   const reject=document.querySelector('#cookieReject');
   const save=document.querySelector('#cookieSave');
   const settings=document.querySelector('#cookieSettingsLink');
-  const cookieName='cookie_consent_v2';
+  const cookieName='cookie_consent_v3';
   const read=()=>{
     const item=document.cookie.split('; ').find(value=>value.startsWith(cookieName+'='));
     if(!item)return null;
@@ -61,15 +62,16 @@ window.sdsTrack=pushAnalyticsEvent;
   };
   const updateGoogleConsent=consent=>{
     const state=consent.analytics?'granted':'denied';
+    const advertising=consent.ads?'granted':'denied';
     if(typeof window.gtag==='function')window.gtag('consent','update',{
       analytics_storage:state,
-      ad_storage:'denied',
-      ad_user_data:'denied',
-      ad_personalization:'denied',
+      ad_storage:advertising,
+      ad_user_data:advertising,
+      ad_personalization:advertising,
       functionality_storage:'granted',
       security_storage:'granted'
     });
-    pushAnalyticsEvent('consent_update',{analytics_consent:state});
+    pushAnalyticsEvent('consent_update',{analytics_consent:state,ads_consent:advertising});
   };
   const activateOptionalScripts=consent=>{
     document.querySelectorAll('script[type="text/plain"][data-cookie-category]').forEach(source=>{
@@ -94,6 +96,7 @@ window.sdsTrack=pushAnalyticsEvent;
   const open=()=>{
     const current=read();
     analytics.checked=Boolean(current?.analytics);
+    ads.checked=Boolean(current?.ads);
     preferences.hidden=true;
     save.hidden=true;
     accept.hidden=false;
@@ -108,9 +111,9 @@ window.sdsTrack=pushAnalyticsEvent;
     accept.hidden=expanded;
     customize.setAttribute('aria-expanded',String(expanded));
   });
-  accept.addEventListener('click',()=>persist({essential:true,analytics:true,updatedAt:new Date().toISOString()}));
-  reject.addEventListener('click',()=>persist({essential:true,analytics:false,updatedAt:new Date().toISOString()}));
-  save.addEventListener('click',()=>persist({essential:true,analytics:analytics.checked,updatedAt:new Date().toISOString()}));
+  accept.addEventListener('click',()=>persist({essential:true,analytics:true,ads:true,updatedAt:new Date().toISOString()}));
+  reject.addEventListener('click',()=>persist({essential:true,analytics:false,ads:false,updatedAt:new Date().toISOString()}));
+  save.addEventListener('click',()=>persist({essential:true,analytics:analytics.checked,ads:ads.checked,updatedAt:new Date().toISOString()}));
   settings?.addEventListener('click',open);
   const current=read();
   if(current){updateGoogleConsent(current);activateOptionalScripts(current)}else open();
