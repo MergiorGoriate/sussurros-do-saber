@@ -55,6 +55,12 @@ O guia operacional completo está em `/admin/docs`. Para arquivos de backup cust
 
 A ferramenta cria uma base nova com nome aleatório, verifica oito tabelas e relações entre artigos/autores/categorias/comentários, e grava um relatório privado. Nunca substitui nem elimina bases existentes. A revisão dos conteúdos, a comparação com contagens do momento do backup e a recuperação dos ativos Cloudinary precisam de validação separada. A execução CI usa uma cópia sintética PostgreSQL 18, não o backup de produção.
 
+### Migrações versionadas
+
+O Alembic usa `DATABASE_URL` sem importar a aplicação nem criar conteúdo. Após validar o backup, teste `alembic upgrade head` em staging. A baseline `20260930_01` cria o esquema numa base vazia ou valida tabelas, colunas, tipos e relações de uma base existente antes de registar a versão. Se houver divergência, interrompe a operação para reconciliação em staging; não use `stamp` para contornar a validação.
+
+Depois da baseline validada, configure `AUTO_SCHEMA_UPGRADE=false` no Coolify para impedir alterações de esquema na inicialização, e execute as futuras migrações antes do deploy. A configuração fica por padrão em `true` para compatibilidade até essa validação. Crie revisões com `alembic revision --autogenerate -m "descrição"`, reveja o SQL e teste antes de aplicar. O downgrade da baseline é bloqueado para preservar dados; recuperação usa uma base restaurada e um commit compatível.
+
 Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. Em produção no Coolify, configure a ligação ao PostgreSQL do VPS; confirme a ligação antes de cada mudança de branch ou implantação.
 
 ## Operação e recuperação

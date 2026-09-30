@@ -37,7 +37,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-venv
-      - run: python3 -m venv /tmp/drill && /tmp/drill/bin/pip install 'psycopg[binary]>=3.2,<4'
+      - run: python3 -m venv /tmp/drill && /tmp/drill/bin/pip install -r requirements.txt
+      - name: Validate versioned schema on PostgreSQL 18
+        env:
+          DATABASE_URL: postgresql://postgres:fixture-only-password@postgres/migrations_fixture
+        run: |
+          createdb migrations_fixture
+          /tmp/drill/bin/alembic upgrade head
+          psql -v ON_ERROR_STOP=1 -d migrations_fixture -c "INSERT INTO category (id, name, slug) VALUES (7, 'Biologia', 'biologia')"
+          /tmp/drill/bin/alembic upgrade head
+          test "$(psql -At -d migrations_fixture -c 'SELECT name FROM category WHERE id=7')" = Biologia
       - name: Restore synthetic archive and verify production fixture is unchanged
         run: |
           createdb sussurros_fixture

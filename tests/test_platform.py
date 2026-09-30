@@ -22,6 +22,38 @@ from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E40
 
 
 class PlatformTests(unittest.TestCase):
+    def test_review_and_approved_articles_remain_private_until_publication(self):
+        client = app.test_client()
+        with app.app_context():
+            author = Author.query.first()
+            from models import Category
+            category = Category.query.first()
+            form = {"title": "Ensaio do fluxo editorial", "summary": "Resumo para verificar a revisão editorial.",
+                    "body": "Conteúdo científico revisto e completo. " * 4,
+                    "author_id": author.id, "category_id": category.id, "csrf_token": "editorial-csrf"}
+        with client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "editorial-csrf"
+        response = client.post("/admin/artigos/novo", data=dict(form, status="review"))
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            article = Article.query.filter_by(title=form["title"]).one()
+            identifier, slug = article.id, article.slug
+            self.assertEqual(article.status, "review")
+        for state in ["review", "approved"]:
+            response = client.post(f"/admin/artigos/{identifier}/editar", data=dict(form, status=state))
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(client.get(f"/artigo/{slug}").status_code, 404)
+            self.assertNotIn(slug.encode(), client.get("/sitemap.xml").data)
+            self.assertNotIn(slug.encode(), client.get("/feed.xml").data)
+        client.post(f"/admin/artigos/{identifier}/editar", data=dict(form, status="published"))
+        self.assertEqual(client.get(f"/artigo/{slug}").status_code, 200)
+        with app.app_context():
+            db.session.delete(db.session.get(Article, identifier))
+            db.session.commit()
+
     def test_primary_session_requires_configured_and_verified_2fa(self):
         client = app.test_client()
         with client.session_transaction() as session:

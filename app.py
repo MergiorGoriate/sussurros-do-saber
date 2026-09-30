@@ -1044,11 +1044,12 @@ def ensure_article_slugs():
 
 
 def seed_database():
-    db.create_all()
-    ensure_admin_columns()
-    ensure_author_columns()
-    ensure_journal_columns()
-    ensure_article_columns()
+    if os.getenv("AUTO_SCHEMA_UPGRADE", "true").lower() == "true":
+        db.create_all()
+        ensure_admin_columns()
+        ensure_author_columns()
+        ensure_journal_columns()
+        ensure_article_columns()
     if not Journal.query.first():
         default_guidelines = (
             "Aceitamos manuscritos originais, revisões e relatos fundamentados. "

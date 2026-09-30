@@ -596,11 +596,11 @@ def article_form(article_id=None):
             except (TypeError, ValueError):
                 flash("Revise autor, categoria, tempo de leitura e data programada.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
-            if not 10 <= len(summary) <= 2000 or status not in {"draft", "published", "scheduled"}:
+            if not 10 <= len(summary) <= 2000 or status not in {"draft", "review", "approved", "published", "scheduled"}:
                 flash("O resumo deve ter entre 10 e 2000 caracteres e o estado deve ser válido.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
-            if status in {"published", "scheduled"} and len(body) < 50:
-                flash("Artigos publicados ou programados precisam de conteúdo completo.", "error")
+            if status in {"approved", "published", "scheduled"} and len(body) < 50:
+                flash("Artigos aprovados, publicados ou programados precisam de conteúdo completo.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")

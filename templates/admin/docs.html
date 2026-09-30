@@ -117,10 +117,10 @@
       <li>Crie um PR para <code>main</code>. Exija testes Python, auditoria de dependências, testes de navegador, build Docker e ensaio PostgreSQL aprovados antes da integração.</li>
       <li>Configure proteção de <code>main</code> no GitHub com os checks efetivamente apresentados pelo CI e bloqueio de force-push. As permissões da integração podem não permitir configurar esta proteção automaticamente.</li>
       <li>No Coolify, confirme branch <code>main</code>, guarde as alterações pendentes e confira o commit do deploy. Evite deploy automático de commits que ainda não terminaram os checks; valide a configuração do gatilho no painel.</li>
-      <li>Antes de mudar o esquema, faça backup e restauração. O projeto ainda usa funções <code>ensure_*_columns</code> e criação automática na inicialização; a adoção de migrações versionadas requer baseline do esquema real em staging antes de substituir esse mecanismo.</li>
+      <li>Antes de mudar o esquema, faça backup e restauração. Em staging, execute <code>alembic upgrade head</code>: a baseline valida o esquema existente antes de registar a versão. Depois de validar em produção, configure <code>AUTO_SCHEMA_UPGRADE=false</code> no Coolify e aplique futuras migrações antes do deploy. Até essa validação, o mecanismo de compatibilidade mantém-se ativo. Não use <code>stamp</code> para ignorar divergências.</li>
       <li>Depois do deploy, confirme healthcheck, login 2FA, publicação, imagens, modo escuro e sitemap. Registe o commit e o resultado.</li>
     </ol>
-    <p><strong>Fluxo editorial:</strong> prepare um rascunho, verifique fontes, referências, imagens e acessibilidade, faça revisão e aprovação editorial, depois publique ou programe. O sistema guarda rascunho/publicado/programado; revisão e aprovação são etapas humanas e ainda não têm estados ou permissões separados no software.</p>
+    <p><strong>Fluxo editorial:</strong> prepare um rascunho, verifique fontes, referências, imagens e acessibilidade, marque <strong>Em revisão</strong> e, após a revisão editorial, <strong>Aprovado para publicação</strong>. Só <strong>Publicado</strong> ou <strong>Programado</strong> com data já alcançada torna o artigo público. Todos os administradores com acesso editorial podem alterar estes estados; a aprovação não implementa uma permissão separada de revisor.</p>
   </section>
   <section id="marca" class="admin-panel docs-section" aria-labelledby="docs-brand">
     <h2 id="docs-brand">Guia de identidade visual</h2>
