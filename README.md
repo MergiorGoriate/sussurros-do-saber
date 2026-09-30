@@ -49,6 +49,12 @@ As imagens são verificadas, reduzidas para até 2000 × 2000 px, convertidas em
 
 O código pronto e as instruções do assistente estão em `cloudflare-worker/`. Nunca coloque `ASSISTANT_SHARED_KEY` no JavaScript público.
 
+### Ensaio de recuperação
+
+O guia operacional completo está em `/admin/docs`. Para arquivos de backup custom/tar do PostgreSQL, use `scripts/restore_drill.py` com cliente PostgreSQL 18 e as dependências Python do projeto. Configure `RESTORE_ADMIN_URL` num ambiente privado, apontando para a base de manutenção `postgres`, e execute `python scripts/restore_drill.py backup.dump --report restore-report.json`.
+
+A ferramenta cria uma base nova com nome aleatório, verifica oito tabelas e relações entre artigos/autores/categorias/comentários, e grava um relatório privado. Nunca substitui nem elimina bases existentes. A revisão dos conteúdos, a comparação com contagens do momento do backup e a recuperação dos ativos Cloudinary precisam de validação separada. A execução CI usa uma cópia sintética PostgreSQL 18, não o backup de produção.
+
 Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. Em produção no Coolify, configure a ligação ao PostgreSQL do VPS; confirme a ligação antes de cada mudança de branch ou implantação.
 
 ## Operação e recuperação

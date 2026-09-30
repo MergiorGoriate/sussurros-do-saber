@@ -15,6 +15,7 @@ import markdown
 import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from admin import admin_bp, slugify
 from extensions import limiter
@@ -796,7 +797,12 @@ def robots():
 @app.get("/healthz")
 @limiter.exempt
 def healthcheck():
-    db.session.execute(text("SELECT 1"))
+    try:
+        db.session.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.error("Healthcheck: database unavailable")
+        return jsonify({"ok": False}), 503
     return jsonify({"ok": True})
 
 

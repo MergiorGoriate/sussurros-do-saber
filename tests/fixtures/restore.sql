@@ -1,0 +1,12 @@
+CREATE TABLE author (id integer PRIMARY KEY);
+CREATE TABLE category (id integer PRIMARY KEY);
+CREATE TABLE article (id integer PRIMARY KEY, author_id integer REFERENCES author, category_id integer REFERENCES category);
+CREATE TABLE comment (id integer PRIMARY KEY, article_id integer REFERENCES article);
+CREATE TABLE journal (id integer PRIMARY KEY);
+CREATE TABLE admin_user (id integer PRIMARY KEY);
+CREATE TABLE contact_message (id integer PRIMARY KEY);
+CREATE TABLE subscriber (id integer PRIMARY KEY);
+INSERT INTO author VALUES (1);
+INSERT INTO category VALUES (1);
+INSERT INTO article VALUES (1, 1, 1);
+INSERT INTO comment VALUES (1, 1);

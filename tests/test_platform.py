@@ -12,6 +12,7 @@ database_file.close()
 os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["ADMIN_USERNAME"] = "admin"
+os.environ["ADMIN_TOTP_SECRET"] = "JBSWY3DPEHPK3PXP"
 os.environ["ADMIN_PASSWORD"] = "a-strong-test-password"
 
 from app import app, image_srcset, render_markdown, responsive_image_url, safe_image_url, social_image_url  # noqa: E402
@@ -21,6 +22,39 @@ from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E40
 
 
 class PlatformTests(unittest.TestCase):
+    def test_primary_session_requires_configured_and_verified_2fa(self):
+        client = app.test_client()
+        with client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_superuser"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["admin_2fa_verified"] = False
+        self.assertIn("/admin/login", client.get("/admin").location)
+        with client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["admin_2fa_verified"] = True
+        with patch.dict(os.environ, {"ADMIN_TOTP_SECRET": ""}):
+            self.assertIn("/admin/login", client.get("/admin").location)
+
+    def test_expired_two_factor_challenge_is_cleared(self):
+        client = app.test_client()
+        with client.session_transaction() as session:
+            session["pending_2fa_username"] = "admin"
+            session["pending_2fa_started_at"] = time.time() - 301
+        response = client.get("/admin/verificar-2fa")
+        self.assertIn("/admin/login", response.location)
+        with client.session_transaction() as session:
+            self.assertNotIn("pending_2fa_username", session)
+
+    def test_database_outage_healthcheck_returns_503_without_details(self):
+        from sqlalchemy.exc import OperationalError
+        with patch.object(db.session, "execute", side_effect=OperationalError("SELECT 1", {}, Exception("private database details"))):
+            response = app.test_client().get("/healthz")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json(), {"ok": False})
+        self.assertNotIn(b"private database", response.data)
+
     @classmethod
     def setUpClass(cls):
         app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
@@ -431,6 +465,7 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("/admin/login", unauthenticated.location)
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_last_activity_at"] = time.time()
             session["admin_superuser"] = False
         response = self.client.get("/admin/docs")
@@ -445,6 +480,7 @@ class PlatformTests(unittest.TestCase):
     def test_administrator_can_be_created_and_sign_in(self):
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_superuser"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "test-csrf"
@@ -469,6 +505,7 @@ class PlatformTests(unittest.TestCase):
             self.assertFalse(session["admin_superuser"])
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_superuser"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "manage-csrf"
@@ -516,6 +553,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_id"] = administrator_id
             session["admin_superuser"] = False
             session["admin_2fa_verified"] = False
@@ -580,6 +618,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-csrf"
         response = self.client.post("/admin/autores", data={
@@ -600,6 +639,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-profile-csrf"
         response = self.client.post("/admin/autores", data={
@@ -663,6 +703,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-validation-csrf"
         response = self.client.post("/admin/autores", data={
@@ -685,6 +726,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "journal-csrf"
         response = self.client.post("/admin/revistas/nova", data={
@@ -712,6 +754,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_2fa_verified"] = True
             session["admin_superuser"] = False
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "secondary-csrf"

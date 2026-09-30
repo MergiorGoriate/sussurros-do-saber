@@ -59,7 +59,7 @@ def admin_session_valid():
             return False
     else:
         configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
-        if configured_totp and not session.get("admin_2fa_verified"):
+        if not configured_totp or not session.get("admin_2fa_verified"):
             return False
 
     session["admin_last_activity_at"] = now
@@ -259,6 +259,7 @@ def begin_two_factor_challenge(*, administrator=None, username=None, superuser=F
     session["pending_2fa_admin_id"] = administrator.id if administrator is not None else None
     session["pending_2fa_username"] = username
     session["pending_2fa_superuser"] = superuser
+    session["pending_2fa_started_at"] = time.time()
     session["csrf_token"] = secrets.token_urlsafe(32)
     return redirect(url_for("admin.verify_two_factor"))
 
@@ -312,6 +313,11 @@ def login():
 @admin_bp.route("/verificar-2fa", methods=["GET", "POST"])
 @limiter.limit("6 per minute; 20 per hour")
 def verify_two_factor():
+    started_at = session.get("pending_2fa_started_at")
+    if not isinstance(started_at, (int, float)) or not 0 <= time.time() - started_at <= 300:
+        session.clear()
+        flash("O pedido de autenticação expirou. Inicie sessão novamente.", "warning")
+        return redirect(url_for("admin.login"))
     pending_id = session.get("pending_2fa_admin_id")
     pending_username = session.get("pending_2fa_username")
     if pending_id is None and not pending_username:
