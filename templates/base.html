@@ -57,6 +57,7 @@ window.dataLayer.push({event:'default_consent'});
 <meta name="twitter:image" content="{% block twitter_image %}{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}{% endblock %}">
 <meta name="twitter:image:alt" content="{% block twitter_image_alt %}Logotipo do Sussurros do Saber{% endblock %}">
 <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+<link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css',v=tailwind_version) }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,7 +86,7 @@ window.dataLayer.push({event:'default_consent'});
 <div class="max-w-7xl mx-auto px-4">
 <div class="h-20 flex items-center justify-between">
 <a href="/" class="brand-link" aria-label="Sussurros do Saber — página inicial">
-<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async"></picture>
+<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async" fetchpriority="high"></picture>
 </a>
 <div class="flex gap-2">
 <button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
@@ -194,7 +195,14 @@ window.dataLayer.push({event:'default_consent'});
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20260929-back-to-top') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260918-3') }}" defer></script>
 <script nonce="{{ csp_nonce }}">
-(()=>{let done=false;const load=()=>{if(done)return;done=true;['assistant.js','animations.js'].forEach(name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260929-back-to-top';script.defer=true;document.body.appendChild(script)})};if('requestIdleCallback'in window)requestIdleCallback(load,{timeout:2500});else setTimeout(load,1500)})();
+(()=>{let assistantLoaded=false,animationsLoaded=false;
+const loadScript=name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260930-performance';script.defer=true;document.body.appendChild(script)};
+const loadAssistant=()=>{if(assistantLoaded)return;assistantLoaded=true;loadScript('assistant.js')};
+const loadAnimations=()=>{if(animationsLoaded)return;animationsLoaded=true;loadScript('animations.js')};
+document.addEventListener('pointerdown',event=>{if(event.target.closest('[aria-label="Abrir assistente"]'))loadAssistant()},{passive:true,capture:true});
+window.addEventListener('load',()=>{if('requestIdleCallback'in window)requestIdleCallback(loadAnimations,{timeout:4000});else setTimeout(loadAnimations,2500)},{once:true});
+if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:6500});else window.addEventListener('load',()=>setTimeout(loadAssistant,3500),{once:true});
+})();
 </script>
 </body>
 </html>
