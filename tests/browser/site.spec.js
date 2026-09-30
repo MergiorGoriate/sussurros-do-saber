@@ -18,6 +18,11 @@ test('strict CSP authorizes scripts with a per-response nonce', async ({ request
 });
 
 test('public pages load without JavaScript or CSP errors', async ({ page }) => {
+  // Third-party advertising is tested separately; avoid external network and
+  // consent-dependent noise in the first-party CSP regression test.
+  await page.route('https://pagead2.googlesyndication.com/**', route =>
+    route.fulfill({ status: 200, contentType: 'application/javascript', body: '' })
+  );
   const failures = [];
   page.on('pageerror', error => failures.push(error.message));
   page.on('console', message => {
