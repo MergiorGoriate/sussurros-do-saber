@@ -842,6 +842,17 @@ def journal_form(journal_id=None):
             journal.frequency = request.form.get("frequency", "").strip()
             journal.current_issue = request.form.get("current_issue", "").strip()
             journal.guidelines = request.form.get("guidelines", "").strip()
+            journal.aims_scope = request.form.get("aims_scope", "").strip()
+            journal.editorial_policy = request.form.get("editorial_policy", "").strip()
+            journal.peer_review = request.form.get("peer_review", "").strip()
+            journal.publication_ethics = request.form.get("publication_ethics", "").strip()
+            journal.submission_guidelines = request.form.get("submission_guidelines", "").strip()
+            journal.article_types = request.form.get("article_types", "").strip()
+            journal.open_access_policy = request.form.get("open_access_policy", "").strip()
+            journal.copyright_policy = request.form.get("copyright_policy", "").strip()
+            journal.fees_policy = request.form.get("fees_policy", "").strip()
+            journal.editorial_board = request.form.get("editorial_board", "").strip()
+            journal.contact_info = request.form.get("contact_info", "").strip()
             journal.cover_image = cover_url
             journal.cover_alt = request.form.get("cover_alt", "").strip()
             journal.published = request.form.get("published") == "on"
