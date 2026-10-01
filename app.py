@@ -73,6 +73,12 @@ def ads_txt():
     )
 
 @app.before_request
+def publish_due_scheduled_articles():
+    """Sincroniza o estado de publicações cujo horário programado já chegou."""
+    Article.publish_due_scheduled()
+
+
+@app.before_request
 def assign_csp_nonce():
     """Cria um nonce imprevisível e exclusivo para cada resposta."""
     g.csp_nonce = secrets.token_urlsafe(24)
