@@ -106,6 +106,14 @@ class Article(db.Model):
         return self.category_rel.name
 
     @property
+    def published_article_count(self):
+        """Número de artigos efetivamente publicados deste autor."""
+        return Article.query.filter(
+            Article.author_id == self.id,
+            Article.status == "published",
+        ).count()
+
+    @property
     def date(self):
         value = self.published_at or self.scheduled_at or self.created_at
         return value.strftime("%d/%m/%Y")
@@ -114,13 +122,40 @@ class Article(db.Model):
     def read_time(self):
         return f"{self.read_minutes} min"
 
+    @property
+    def is_public(self):
+        return self.status == "published"
+
+    @classmethod
+    def publish_due_scheduled(cls):
+        """Promove artigos programados vencidos para publicados.
+
+        O agendamento é guardado em UTC sem timezone, tal como utcnow().
+        A atualização em lote mantém o estado persistido coerente no /admin.
+        """
+        now = utcnow()
+        due = cls.query.filter(
+            cls.status == "scheduled",
+            cls.scheduled_at.isnot(None),
+            cls.scheduled_at <= now,
+        )
+        changed = due.update(
+            {
+                cls.status: "published",
+                cls.published_at: db.func.coalesce(cls.published_at, cls.scheduled_at),
+                cls.updated_at: now,
+            },
+            synchronize_session=False,
+        )
+        if changed:
+            db.session.commit()
+        return changed
+
     @classmethod
     def public_query(cls):
-        now = utcnow()
-        return cls.query.filter(or_(
-            cls.status == "published",
-            and_(cls.status == "scheduled", cls.scheduled_at.isnot(None), cls.scheduled_at <= now),
-        ))
+        # Artigos futuros/programados nunca entram nas consultas públicas.
+        # publish_due_scheduled() converte os vencidos antes de cada pedido.
+        return cls.query.filter(cls.status == "published")
 
     @classmethod
     def public_card_query(cls):
