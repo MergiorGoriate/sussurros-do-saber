@@ -48,6 +48,14 @@ class Author(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     articles = db.relationship("Article", back_populates="author_rel")
 
+    @property
+    def published_article_count(self):
+        """Número de artigos efetivamente publicados deste autor."""
+        return Article.query.filter(
+            Article.author_id == self.id,
+            Article.status == "published",
+        ).count()
+
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -104,14 +112,6 @@ class Article(db.Model):
     @property
     def category(self):
         return self.category_rel.name
-
-    @property
-    def published_article_count(self):
-        """Número de artigos efetivamente publicados deste autor."""
-        return Article.query.filter(
-            Article.author_id == self.id,
-            Article.status == "published",
-        ).count()
 
     @property
     def date(self):
