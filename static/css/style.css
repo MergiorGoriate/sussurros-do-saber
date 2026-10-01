@@ -637,3 +637,119 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
  .journal-page .journal-toc{padding-bottom:.8rem}
  .journal-page .journal-toc a{border:1px solid var(--line);border-radius:2px;padding:.55rem .75rem}
 }
+
+
+/* Revistas v7 — conteúdo editorial em padrão de artigo científico */
+.journal-page .journal-information{
+  grid-template-columns:minmax(0,780px) minmax(260px,330px);
+  justify-content:center;
+  gap:clamp(3rem,6vw,6rem);
+  align-items:start;
+}
+.journal-page .journal-sections{grid-column:1;grid-row:1;min-width:0}
+.journal-page .journal-toc{
+  grid-column:2;grid-row:1;
+  position:sticky;top:5rem;
+  padding:1.15rem 1.25rem;
+  border:1px solid var(--line);
+  border-top:4px solid #1e4e8c;
+  background:#f5f6f7!important;
+}
+.dark .journal-page .journal-toc{background:#10191c!important}
+.journal-page .journal-toc strong{font-family:Arial,Helvetica,sans-serif;font-size:.78rem}
+.journal-page .journal-info-section{
+  padding:0 0 3.75rem;
+  margin:0 0 3.75rem;
+  border-bottom:1px solid #d9dde0;
+}
+.journal-page .journal-info-section>h2{
+  margin:0 0 1.7rem;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:clamp(2rem,3vw,2.75rem);
+  line-height:1.08;
+  letter-spacing:-.025em;
+}
+.journal-page .journal-info-section .article-markdown{
+  max-width:740px;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:1.08rem;
+  line-height:1.72;
+  color:#202124;
+}
+.dark .journal-page .journal-info-section .article-markdown{color:#e1e6e8}
+.journal-page .journal-info-section .article-markdown p{
+  margin:0 0 1.15rem;
+}
+.journal-page .journal-info-section .article-markdown h2,
+.journal-page .journal-info-section .article-markdown h3,
+.journal-page .journal-info-section .article-markdown h4{
+  font-family:Arial,Helvetica,sans-serif;
+  color:#16191c;
+  font-weight:750;
+  letter-spacing:-.015em;
+}
+.dark .journal-page .journal-info-section .article-markdown h2,
+.dark .journal-page .journal-info-section .article-markdown h3,
+.dark .journal-page .journal-info-section .article-markdown h4{color:#f2f5f6}
+.journal-page .journal-info-section .article-markdown h2{
+  margin:2.5rem 0 1rem;
+  padding-top:0;
+  border:0;
+  font-size:1.55rem;
+}
+.journal-page .journal-info-section .article-markdown h3{
+  margin:2.1rem 0 .85rem;
+  padding-top:0;
+  border:0;
+  font-size:1.18rem;
+}
+.journal-page .journal-info-section .article-markdown h4{
+  margin:1.8rem 0 .7rem;
+  font-size:1.04rem;
+}
+.journal-page .journal-info-section .article-markdown ul,
+.journal-page .journal-info-section .article-markdown ol{
+  margin:.9rem 0 1.5rem;
+  padding-left:1.65rem;
+}
+.journal-page .journal-info-section .article-markdown li{
+  margin:.38rem 0;
+  padding-left:.18rem;
+}
+.journal-page .journal-info-section .article-markdown li::marker{color:#1e4e8c;font-weight:700}
+.journal-page .journal-info-section .article-markdown strong{font-family:Arial,Helvetica,sans-serif}
+.journal-page .journal-info-section .article-markdown blockquote{
+  margin:2rem 0;
+  padding:1.25rem 1.5rem;
+  border-left:4px solid #1597d5;
+  background:#f4f5f6;
+  font-size:1.04rem;
+}
+.dark .journal-page .journal-info-section .article-markdown blockquote{background:#111c20}
+.journal-page .journal-info-section .article-markdown table{
+  width:100%;
+  margin:2rem 0;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:.9rem;
+  line-height:1.5;
+}
+.journal-page .journal-info-section .article-markdown th{
+  border-top:2px solid #222;
+  border-bottom:1px solid #777;
+  background:transparent;
+}
+.journal-page .journal-info-section .article-markdown td{border-bottom:1px solid #d8dcdf}
+.journal-page .journal-info-section .article-markdown a{color:#0b63b6}
+@media(max-width:900px){
+ .journal-page .journal-information{grid-template-columns:1fr;gap:2rem}
+ .journal-page .journal-sections{grid-column:1;grid-row:2}
+ .journal-page .journal-toc{grid-column:1;grid-row:1;position:static;display:flex;overflow-x:auto;gap:.45rem;padding:.7rem;border:1px solid var(--line);border-top:3px solid #1e4e8c}
+ .journal-page .journal-toc strong{display:none}
+ .journal-page .journal-toc a{flex:0 0 auto;border:1px solid var(--line);border-radius:2px;padding:.55rem .75rem}
+}
+@media(max-width:600px){
+ .journal-page .journal-info-section .article-markdown{font-size:1.02rem;line-height:1.68}
+ .journal-page .journal-info-section>h2{font-size:2rem}
+ .journal-page .journal-info-section .article-markdown h2{font-size:1.4rem}
+ .journal-page .journal-info-section .article-markdown h3{font-size:1.12rem}
+}
