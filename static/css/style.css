@@ -753,3 +753,13 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
  .journal-page .journal-info-section .article-markdown h2{font-size:1.4rem}
  .journal-page .journal-info-section .article-markdown h3{font-size:1.12rem}
 }
+
+
+/* Ferramentas da barra editorial — referência Science */
+.journal-nav-tools{display:flex;align-items:center;gap:.25rem;margin-left:auto;margin-right:.65rem;padding-left:.8rem;border-left:1px solid var(--line)}
+.journal-tool{display:inline-grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:transparent;color:#59656b;font:700 1rem/1 Arial,sans-serif;cursor:pointer;text-decoration:none}
+.journal-tool:hover,.journal-tool:focus-visible{background:#edf2f6;color:#1e4e8c;outline:none}
+.dark .journal-tool{color:#c2cccf}
+.dark .journal-tool:hover,.dark .journal-tool:focus-visible{background:rgba(255,255,255,.08);color:#fff}
+.journal-nav-strip .journal-nav-submit{margin-left:0}
+@media(max-width:767px){.journal-nav-tools{margin-left:auto;margin-right:.25rem;padding-left:.35rem}.journal-tool{width:34px;height:34px}}
