@@ -31,6 +31,10 @@
 <label>ISSN<input name="issn" maxlength="9" pattern="[0-9]{4}-[0-9]{3}[0-9Xx]" value="{{ journal.issn or '' }}" placeholder="1234-567X"></label>
 <label>Periodicidade<input name="frequency" maxlength="80" value="{{ journal.frequency or '' }}" placeholder="Semestral"></label>
 <label>Edição atual<input name="current_issue" maxlength="120" value="{{ journal.current_issue or '' }}" placeholder="Vol. 1 · N.º 1"></label>
+<div class="journal-editor-note"><strong>Metadados científicos</strong><p>Informação apresentada na barra editorial pública da revista.</p></div>
+<label>Autores / ORCID<textarea name="authors_orcid" rows="5" placeholder="Nome do autor — https://orcid.org/0000-0000-0000-0000&#10;Um autor por linha.">{{ journal.authors_orcid or '' }}</textarea><small>Inclua apenas autores ou responsáveis confirmados e respetivos ORCID.</small></label>
+<label>DOI<input name="doi" maxlength="180" value="{{ journal.doi or '' }}" placeholder="10.xxxx/xxxxx"></label>
+<label>Data de publicação<input name="publication_date" type="date" value="{{ journal.publication_date.isoformat() if journal.publication_date else '' }}"></label>
 <label>Slug<input name="slug" maxlength="200" value="{{ journal.slug or '' }}" placeholder="gerado automaticamente"></label>
 <label class="check"><input name="published" type="checkbox" {% if journal.published %}checked{% endif %}> Publicada no catálogo</label>
 <button class="admin-primary">Guardar revista</button>
