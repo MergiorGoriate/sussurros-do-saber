@@ -10,7 +10,14 @@
 <dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
 <div class="journal-actions mt-8 flex gap-3"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
 </header>
-<section class="journal-nav-strip" aria-label="Navegação da revista"><a href="#sobre-revista">Sobre</a>{% if journal.guidelines %}<a href="#diretrizes-editoriais">Diretrizes</a>{% endif %}{% if journal.peer_review %}<a href="#revisao-pares">Revisão por pares</a>{% endif %}{% if journal.publication_ethics %}<a href="#etica">Ética</a>{% endif %}{% if journal.editorial_board %}<a href="#equipa-editorial">Equipa editorial</a>{% endif %}<div class="journal-nav-tools" aria-label="Partilhar revista">
+<section class="journal-nav-strip journal-meta-strip" aria-label="Metadados e ações da revista">
+<div class="journal-publication-meta">
+  <span><strong>REVISTA</strong> {{ journal.title }}</span>
+  <span><strong>AUTORES / ORCID</strong> {% if journal.editorial_board %}<a href="#equipa-editorial">Equipa editorial</a>{% else %}A indicar{% endif %}</span>
+  <span><strong>DOI</strong> Em atribuição</span>
+  <span><strong>DATA</strong> {{ journal.updated_at.strftime('%d %b %Y') if journal.updated_at else journal.created_at.strftime('%d %b %Y') }}</span>
+</div>
+<div class="journal-nav-tools" aria-label="Partilhar revista">
 <a class="journal-tool" href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Facebook" aria-label="Partilhar no Facebook"><span aria-hidden="true">f</span></a>
 <a class="journal-tool journal-tool-x" href="https://twitter.com/intent/tweet?url={{ request.url|urlencode }}&text={{ journal.title|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no X" aria-label="Partilhar no X"><span aria-hidden="true">𝕏</span></a>
 <a class="journal-tool journal-tool-bsky" href="https://bsky.app/intent/compose?text={{ (journal.title ~ ' ' ~ request.url)|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Bluesky" aria-label="Partilhar no Bluesky"><span aria-hidden="true">🦋</span></a>
@@ -19,7 +26,9 @@
 <a class="journal-tool" href="https://api.whatsapp.com/send?text={{ (journal.title ~ ' ' ~ request.url)|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no WhatsApp" aria-label="Partilhar no WhatsApp"><span aria-hidden="true">◉</span></a>
 <a class="journal-tool" href="mailto:?subject={{ journal.title|urlencode }}&body={{ request.url|urlencode }}" title="Partilhar por e-mail" aria-label="Partilhar por e-mail"><span aria-hidden="true">✉</span></a>
 <button type="button" class="journal-tool" data-journal-share title="Mais opções de partilha" aria-label="Mais opções de partilha"><span aria-hidden="true">↗</span></button>
-</div><a class="journal-nav-submit" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter manuscrito</a></section>
+</div>
+<a class="journal-nav-submit" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter manuscrito</a>
+</section>
 <div class="journal-information mt-14">
 <nav class="journal-toc" aria-label="Informações da revista"><strong>Nesta página</strong>
 {% if journal.aims_scope %}<a href="#objetivos-escopo">Objetivos e escopo</a>{% endif %}
