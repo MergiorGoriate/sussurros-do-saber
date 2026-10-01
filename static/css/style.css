@@ -763,3 +763,14 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .dark .journal-tool:hover,.dark .journal-tool:focus-visible{background:rgba(255,255,255,.08);color:#fff}
 .journal-nav-strip .journal-nav-submit{margin-left:0}
 @media(max-width:767px){.journal-nav-tools{margin-left:auto;margin-right:.25rem;padding-left:.35rem}.journal-tool{width:34px;height:34px}}
+
+
+/* Partilha social das revistas */
+.journal-nav-tools{gap:.08rem}
+.journal-tool{width:30px;height:34px;border-radius:3px;color:#6a7175;font:700 14px/1 Arial,sans-serif;transition:color .15s,background .15s}
+.journal-tool span{display:block;line-height:1}
+.journal-tool-x{font-size:15px}
+.journal-tool-bsky{font-size:13px;filter:grayscale(1)}
+.journal-tool-in{font-size:12px;text-transform:lowercase}
+.journal-tool:hover,.journal-tool:focus-visible{background:#edf2f6;color:#1e4e8c}
+@media(max-width:900px){.journal-nav-tools{order:3;width:100%;margin:.25rem 0 0;padding:.35rem 0 0;border-left:0;border-top:1px solid var(--line)}.journal-tool{width:34px}}
