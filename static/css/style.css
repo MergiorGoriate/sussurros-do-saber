@@ -774,3 +774,16 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-tool-in{font-size:12px;text-transform:lowercase}
 .journal-tool:hover,.journal-tool:focus-visible{background:#edf2f6;color:#1e4e8c}
 @media(max-width:900px){.journal-nav-tools{order:3;width:100%;margin:.25rem 0 0;padding:.35rem 0 0;border-left:0;border-top:1px solid var(--line)}.journal-tool{width:34px}}
+
+
+/* Metadados editoriais na barra da revista */
+.journal-meta-strip{gap:1rem}
+.journal-publication-meta{display:flex;align-items:center;flex-wrap:wrap;gap:.45rem 1rem;min-width:0;font:500 .72rem/1.45 Arial,Helvetica,sans-serif;color:#667176}
+.journal-publication-meta span{display:inline-flex;gap:.35rem;white-space:nowrap}
+.journal-publication-meta span+span:before{content:"·";margin-right:.55rem;color:#a1a8ac}
+.journal-publication-meta strong{font-size:.65rem;letter-spacing:.06em;color:#222}
+.journal-publication-meta a{color:#1e4e8c;text-decoration:underline;text-underline-offset:2px}
+.dark .journal-publication-meta{color:#b8c1c4}.dark .journal-publication-meta strong{color:#edf2f3}
+.journal-meta-strip .journal-nav-tools{margin-left:auto}
+@media(max-width:1050px){.journal-meta-strip{align-items:flex-start;flex-wrap:wrap}.journal-publication-meta{width:100%}.journal-meta-strip .journal-nav-tools{margin-left:0}.journal-meta-strip .journal-nav-submit{margin-left:auto}}
+@media(max-width:650px){.journal-publication-meta{display:grid;grid-template-columns:1fr;gap:.35rem}.journal-publication-meta span+span:before{display:none}.journal-publication-meta span{white-space:normal}}
