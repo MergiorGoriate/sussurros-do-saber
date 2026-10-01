@@ -587,3 +587,53 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
  .journal-page .journal-toc a{border:1px solid var(--line);border-radius:999px;padding:.55rem .75rem}
  .journal-page .journal-info-section{padding-bottom:2.5rem;margin-bottom:2.5rem}
 }
+
+
+/* Revistas v6 — Science × eLife */
+.journal-page{max-width:1380px!important;padding-top:0!important}
+.journal-page .journal-hero{grid-template-columns:minmax(180px,240px) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);padding:clamp(2.5rem,5vw,5rem) 0 3rem;border-bottom:4px solid #1e4e8c}
+.journal-page .journal-hero>img{max-height:340px;border:1px solid #d8dde2;box-shadow:0 12px 30px rgba(15,23,42,.12)}
+.journal-kicker .eyebrow{padding:0;background:transparent!important;border:0!important;color:#b52b24;font-size:.72rem;letter-spacing:.15em}
+.journal-open-badge{padding:.32rem .55rem;border-radius:2px;background:#eaf2fb;color:#1e4e8c}
+.journal-page .journal-hero h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(3rem,5.5vw,5.6rem);font-weight:700;line-height:.96;letter-spacing:-.045em}
+.journal-description{max-width:900px;font-family:Georgia,"Times New Roman",serif;font-size:clamp(1.15rem,1.8vw,1.45rem)!important;line-height:1.55!important;color:#4d565c}
+.journal-page .journal-hero dl{max-width:900px;grid-template-columns:repeat(3,1fr);margin-top:1.8rem;padding:.8rem 0;border-top:1px solid #bfc7cc;border-bottom:1px solid #bfc7cc}
+.journal-page .journal-hero dt{font-size:.67rem;letter-spacing:.11em}
+.journal-page .journal-hero dd{font-size:.92rem}
+.journal-actions{margin-top:1.4rem!important}
+.journal-actions .primary-btn{padding:.7rem 1rem;background:#1e4e8c;border-radius:2px}
+.journal-actions .secondary-btn{padding:.7rem 1rem}
+.journal-nav-strip{top:0;margin:0;padding:.35rem 0;border-bottom:1px solid #cbd2d6;background:rgba(248,248,248,.97)}
+.dark .journal-nav-strip{background:rgba(9,18,21,.97)}
+.journal-nav-strip a{padding:.7rem .85rem;border-bottom:3px solid transparent;font-size:.78rem}
+.journal-nav-strip a:hover{background:transparent;border-bottom-color:#1e4e8c}
+.journal-nav-strip .journal-nav-submit{border-radius:2px;border-bottom-color:transparent}
+.journal-overview{padding:clamp(3.5rem,7vw,6.5rem) 0}
+.journal-overview h2{font-size:clamp(2.2rem,4.2vw,3.8rem);line-height:1;letter-spacing:-.04em}
+.journal-overview p{font-size:clamp(1.08rem,1.65vw,1.3rem);line-height:1.68}
+.journal-page .journal-information{grid-template-columns:220px minmax(0,820px);gap:clamp(3rem,7vw,7rem);padding:4.5rem 0}
+.journal-page .journal-toc{top:4.5rem;border-left:0;padding:0}
+.journal-page .journal-toc strong{padding:0 0 .8rem;margin-bottom:.25rem;border-bottom:3px solid #1e4e8c;font-size:.7rem;letter-spacing:.14em}
+.journal-page .journal-toc a{padding:.62rem 0;border-bottom:1px solid #e0e4e6;color:#465259;font-weight:650}
+.dark .journal-page .journal-toc a{border-color:rgba(255,255,255,.1)}
+.journal-page .journal-toc a:hover{color:#1e4e8c}
+.journal-page .journal-info-section{padding-bottom:4rem;margin-bottom:4rem}
+.journal-page .journal-info-section>h2{font-family:Georgia,"Times New Roman",serif;font-size:clamp(2.1rem,3.5vw,3.2rem);font-weight:700;line-height:1.04;letter-spacing:-.035em}
+.journal-page .journal-info-section .article-markdown{max-width:760px;font-family:Arial,Helvetica,sans-serif;font-size:1.02rem;line-height:1.78}
+.journal-page .journal-info-section .article-markdown h2,.journal-page .journal-info-section .article-markdown h3{font-family:Georgia,"Times New Roman",serif}
+.journal-page .journal-info-section .article-markdown h3{font-size:1.4rem;border-top:1px solid var(--line);padding-top:1.4rem}
+.journal-page .journal-info-section .article-markdown a{color:#1e4e8c;text-decoration-thickness:1px}
+.journal-page .journal-info-section .article-markdown blockquote{padding:1.2rem 1.4rem;border-left:5px solid #1e4e8c;background:#f1f5f8}
+.dark .journal-page .journal-info-section .article-markdown blockquote{background:rgba(30,78,140,.1)}
+@media(max-width:767px){
+ .journal-page{padding-inline:1rem!important}
+ .journal-page .journal-hero{grid-template-columns:1fr;padding:2rem 0;border-bottom-width:3px}
+ .journal-page .journal-hero>img{max-width:190px}
+ .journal-page .journal-hero h1{font-size:clamp(2.6rem,13vw,4rem)}
+ .journal-page .journal-hero dl{grid-template-columns:1fr}
+ .journal-nav-strip{margin-inline:-1rem;padding-inline:.5rem}
+ .journal-overview{padding:3.2rem 0}
+ .journal-page .journal-information{padding:2.5rem 0;gap:2.2rem}
+ .journal-page .journal-toc{padding-bottom:.8rem}
+ .journal-page .journal-toc a{border:1px solid var(--line);border-radius:2px;padding:.55rem .75rem}
+}
