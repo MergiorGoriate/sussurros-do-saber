@@ -841,6 +841,14 @@ def journal_form(journal_id=None):
             journal.issn = issn
             journal.frequency = request.form.get("frequency", "").strip()
             journal.current_issue = request.form.get("current_issue", "").strip()
+            journal.doi = request.form.get("doi", "").strip()
+            journal.authors_orcid = request.form.get("authors_orcid", "").strip()
+            publication_date_raw = request.form.get("publication_date", "").strip()
+            try:
+                journal.publication_date = datetime.strptime(publication_date_raw, "%Y-%m-%d").date() if publication_date_raw else None
+            except ValueError:
+                flash("Informe uma data de publicação válida.", "error")
+                return render_template("admin/journal_form.html", journal=journal)
             journal.guidelines = request.form.get("guidelines", "").strip()
             journal.aims_scope = request.form.get("aims_scope", "").strip()
             journal.editorial_policy = request.form.get("editorial_policy", "").strip()
