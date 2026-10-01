@@ -7,7 +7,19 @@
 <section class="editor-main">
 <label>Título<input name="title" required minlength="3" maxlength="180" value="{{ journal.title or '' }}"></label>
 <label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="6">{{ journal.description or '' }}</textarea></label>
-<label>Diretrizes editoriais<textarea name="guidelines" rows="14" placeholder="Escopo, critérios, formato, ética, revisão e submissão...">{{ journal.guidelines or '' }}</textarea><small>Aceita Markdown.</small></label>
+<div class="journal-editor-note"><strong>Informação editorial completa</strong><p>Estes campos aceitam Markdown e foram preparados para conteúdos extensos. Pode usar títulos, listas, ligações, tabelas e referências.</p></div>
+<label>Objetivos e escopo<textarea name="aims_scope" rows="10" placeholder="Missão, objetivos, escopo temático, público e áreas abrangidas...">{{ journal.aims_scope or '' }}</textarea></label>
+<label>Diretrizes editoriais<textarea name="guidelines" rows="18" placeholder="Princípios editoriais, critérios gerais, preparação dos manuscritos...">{{ journal.guidelines or '' }}</textarea><small>Aceita Markdown e conteúdo extenso.</small></label>
+<label>Política editorial<textarea name="editorial_policy" rows="12" placeholder="Independência editorial, critérios de decisão, transparência, correções...">{{ journal.editorial_policy or '' }}</textarea></label>
+<label>Processo de revisão por pares<textarea name="peer_review" rows="12" placeholder="Modelo de revisão, etapas, prazos, critérios e decisões editoriais...">{{ journal.peer_review or '' }}</textarea></label>
+<label>Ética e integridade científica<textarea name="publication_ethics" rows="12" placeholder="Plágio, autoria, conflitos de interesse, dados, consentimento, retratações...">{{ journal.publication_ethics or '' }}</textarea></label>
+<label>Diretrizes de submissão<textarea name="submission_guidelines" rows="14" placeholder="Formato, estrutura, ficheiros, referências, figuras, tabelas e processo de submissão...">{{ journal.submission_guidelines or '' }}</textarea></label>
+<label>Tipos de artigos aceites<textarea name="article_types" rows="8" placeholder="Artigos originais, revisões, comunicações breves, ensaios, etc.">{{ journal.article_types or '' }}</textarea></label>
+<label>Política de acesso aberto<textarea name="open_access_policy" rows="8" placeholder="Condições de acesso, licenças e reutilização...">{{ journal.open_access_policy or '' }}</textarea></label>
+<label>Direitos de autor e licenciamento<textarea name="copyright_policy" rows="8" placeholder="Titularidade, licença, reutilização e atribuição...">{{ journal.copyright_policy or '' }}</textarea></label>
+<label>Taxas e custos de publicação<textarea name="fees_policy" rows="6" placeholder="APC, taxas de submissão ou declaração de ausência de taxas...">{{ journal.fees_policy or '' }}</textarea></label>
+<label>Conselho / equipa editorial<textarea name="editorial_board" rows="10" placeholder="Editor-chefe, editores associados, conselho científico e afiliações...">{{ journal.editorial_board or '' }}</textarea></label>
+<label>Contacto editorial<textarea name="contact_info" rows="6" placeholder="E-mail, endereço institucional e outros canais oficiais...">{{ journal.contact_info or '' }}</textarea></label>
 <label>Capa via Cloudinary<input name="cover_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
 <label>Ou URL da capa<input name="cover_image" type="url" value="{{ journal.cover_image or '' }}" placeholder="https://..."></label>
 <label>Texto alternativo da capa<input name="cover_alt" maxlength="300" value="{{ journal.cover_alt or '' }}"></label>
