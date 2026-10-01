@@ -787,3 +787,13 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-meta-strip .journal-nav-tools{margin-left:auto}
 @media(max-width:1050px){.journal-meta-strip{align-items:flex-start;flex-wrap:wrap}.journal-publication-meta{width:100%}.journal-meta-strip .journal-nav-tools{margin-left:0}.journal-meta-strip .journal-nav-submit{margin-left:auto}}
 @media(max-width:650px){.journal-publication-meta{display:grid;grid-template-columns:1fr;gap:.35rem}.journal-publication-meta span+span:before{display:none}.journal-publication-meta span{white-space:normal}}
+
+
+/* Ícones sociais maiores — revistas */
+.journal-nav-tools{gap:.22rem}
+.journal-tool{width:42px;height:42px;font-size:18px}
+.journal-tool-x{font-size:19px}
+.journal-tool-bsky{font-size:18px}
+.journal-tool-in{font-size:16px}
+.journal-tool span{transform:scale(1.08)}
+@media(max-width:767px){.journal-tool{width:39px;height:39px;font-size:17px}.journal-tool-x{font-size:18px}.journal-tool-bsky{font-size:17px}.journal-tool-in{font-size:15px}}
