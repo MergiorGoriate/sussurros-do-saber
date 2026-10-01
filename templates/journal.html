@@ -13,9 +13,9 @@
 <section class="journal-nav-strip journal-meta-strip" aria-label="Metadados e ações da revista">
 <div class="journal-publication-meta">
   <span><strong>REVISTA</strong> {{ journal.title }}</span>
-  <span><strong>AUTORES / ORCID</strong> {% if journal.editorial_board %}<a href="#equipa-editorial">Equipa editorial</a>{% else %}A indicar{% endif %}</span>
-  <span><strong>DOI</strong> Em atribuição</span>
-  <span><strong>DATA</strong> {{ journal.updated_at.strftime('%d %b %Y') if journal.updated_at else journal.created_at.strftime('%d %b %Y') }}</span>
+  <span><strong>AUTORES / ORCID</strong> {% if journal.authors_orcid %}{{ journal.authors_orcid|replace('\n', ' · ') }}{% else %}A indicar{% endif %}</span>
+  <span><strong>DOI</strong> {{ journal.doi or 'Em atribuição' }}</span>
+  <span><strong>DATA</strong> {{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'A definir' }}</span>
 </div>
 <div class="journal-nav-tools" aria-label="Partilhar revista">
 <a class="journal-tool" href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Facebook" aria-label="Partilhar no Facebook"><span aria-hidden="true">f</span></a>
