@@ -10,6 +10,8 @@
 <dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
 <div class="journal-actions mt-8 flex gap-3"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
 </header>
+<section class="journal-nav-strip" aria-label="Navegação da revista"><a href="#sobre-revista">Sobre</a>{% if journal.guidelines %}<a href="#diretrizes-editoriais">Diretrizes</a>{% endif %}{% if journal.peer_review %}<a href="#revisao-pares">Revisão por pares</a>{% endif %}{% if journal.publication_ethics %}<a href="#etica">Ética</a>{% endif %}{% if journal.editorial_board %}<a href="#equipa-editorial">Equipa editorial</a>{% endif %}<a class="journal-nav-submit" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter manuscrito</a></section>
+<section id="sobre-revista" class="journal-overview"><div><span class="eyebrow">Sobre a revista</span><h2>Conhecimento científico aberto e acessível</h2></div><p>{{ journal.description }}</p></section>
 <div class="journal-information mt-14">
 <nav class="journal-toc" aria-label="Informações da revista"><strong>Nesta página</strong>
 {% if journal.aims_scope %}<a href="#objetivos-escopo">Objetivos e escopo</a>{% endif %}
