@@ -263,7 +263,7 @@ def render_markdown(value):
     rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
     # Torna URLs HTTP(S) escritas como texto em links clicáveis, sem alterar
     # URLs que já estejam dentro de atributos HTML ou links Markdown.
-    url_pattern = re.compile(r'(?<!["\\'=])(https?://[^\\s<]+)', re.I)
+    url_pattern = re.compile(r"(?<![\\\"'=])(https?://[^\\s<]+)", re.I)
     parts = re.split(r'(<[^>]+>)', rendered)
     inside_anchor = False
     for index, part in enumerate(parts):
