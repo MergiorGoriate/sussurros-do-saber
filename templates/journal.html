@@ -18,14 +18,13 @@
   <span>{{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'A definir' }}</span>
 </div>
 
-<div class="journal-nav-tools" aria-label="Partilhar revista">
-<a class="journal-tool" href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Facebook" aria-label="Partilhar no Facebook"><span aria-hidden="true">f</span></a>
+<div class="journal-nav-tools journal-social-circles" aria-label="Partilhar revista">
+<a class="journal-tool journal-tool-whatsapp" href="https://api.whatsapp.com/send?text={{ (journal.title ~ ' ' ~ request.url)|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no WhatsApp" aria-label="Partilhar no WhatsApp"><span aria-hidden="true">◔</span></a>
+<a class="journal-tool journal-tool-facebook" href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Facebook" aria-label="Partilhar no Facebook"><span aria-hidden="true">f</span></a>
 <a class="journal-tool journal-tool-x" href="https://twitter.com/intent/tweet?url={{ request.url|urlencode }}&text={{ journal.title|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no X" aria-label="Partilhar no X"><span aria-hidden="true">𝕏</span></a>
-<a class="journal-tool journal-tool-bsky" href="https://bsky.app/intent/compose?text={{ (journal.title ~ ' ' ~ request.url)|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Bluesky" aria-label="Partilhar no Bluesky"><span aria-hidden="true">🦋</span></a>
 <a class="journal-tool journal-tool-in" href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no LinkedIn" aria-label="Partilhar no LinkedIn"><span aria-hidden="true">in</span></a>
-<a class="journal-tool" href="https://www.reddit.com/submit?url={{ request.url|urlencode }}&title={{ journal.title|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Reddit" aria-label="Partilhar no Reddit"><span aria-hidden="true">●</span></a>
-<a class="journal-tool" href="https://api.whatsapp.com/send?text={{ (journal.title ~ ' ' ~ request.url)|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no WhatsApp" aria-label="Partilhar no WhatsApp"><span aria-hidden="true">◉</span></a>
-<a class="journal-tool" href="mailto:?subject={{ journal.title|urlencode }}&body={{ request.url|urlencode }}" title="Partilhar por e-mail" aria-label="Partilhar por e-mail"><span aria-hidden="true">✉</span></a>
+<a class="journal-tool journal-tool-telegram" href="https://t.me/share/url?url={{ request.url|urlencode }}&text={{ journal.title|urlencode }}" target="_blank" rel="noopener noreferrer" title="Partilhar no Telegram" aria-label="Partilhar no Telegram"><span aria-hidden="true">➤</span></a>
+<a class="journal-tool journal-tool-mail" href="mailto:?subject={{ journal.title|urlencode }}&body={{ request.url|urlencode }}" title="Partilhar por e-mail" aria-label="Partilhar por e-mail"><span aria-hidden="true">✉</span></a>
 </div>
 </section>
 <div class="journal-information mt-14">
