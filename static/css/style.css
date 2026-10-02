@@ -1535,3 +1535,38 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     padding:4px 5px!important;
   }
 }
+
+
+/* Revistas — índice móvel ainda mais compacto */
+@media (max-width:480px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    width:calc(100vw - 6px)!important;
+    max-width:none!important;
+    padding:3px 4px!important;
+    border-radius:6px!important;
+  }
+  .journal-page #journal-toc strong{
+    padding:4px 1px!important;
+    margin:0!important;
+  }
+  .journal-page #journal-toc .journal-content-index>a{
+    min-height:28px!important;
+    padding:3px 2px!important;
+    font-size:.68rem!important;
+    line-height:1.16!important;
+  }
+  .journal-page #journal-toc .journal-content-index .journal-index-sub{
+    padding-left:6px!important;
+    font-size:.66rem!important;
+  }
+}
+@media (max-width:360px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    width:calc(100vw - 4px)!important;
+    padding:2px 3px!important;
+  }
+  .journal-page #journal-toc .journal-content-index>a{
+    min-height:27px!important;
+    font-size:.66rem!important;
+  }
+}
