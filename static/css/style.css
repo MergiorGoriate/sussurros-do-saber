@@ -843,3 +843,13 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-social-circles .journal-tool-telegram i{font-size:19px}
 .journal-social-circles .journal-tool-mail i{font-size:18px}
 @media(max-width:767px){.journal-social-circles{gap:7px}.journal-social-circles .journal-tool{width:38px;height:38px;flex-basis:38px}.journal-social-circles .journal-tool i{font-size:17px}}
+
+
+/* Revistas: ícones sociais extra compactos */
+.journal-social-circles{gap:7px}
+.journal-social-circles .journal-tool{width:34px;height:34px;flex-basis:34px}
+.journal-social-circles .journal-tool i{font-size:15px}
+.journal-social-circles .journal-tool-x i,.journal-social-circles .journal-tool-in i{font-size:14px}
+.journal-social-circles .journal-tool-telegram i{font-size:15px}
+.journal-social-circles .journal-tool-mail i{font-size:14px}
+@media(max-width:767px){.journal-social-circles{gap:5px}.journal-social-circles .journal-tool{width:32px;height:32px;flex-basis:32px}.journal-social-circles .journal-tool i{font-size:14px}}
