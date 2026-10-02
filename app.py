@@ -1028,13 +1028,17 @@ def ensure_journal_columns():
     inspector = inspect(db.engine)
     if "journal" not in inspector.get_table_names():
         return
-    # Executa cada DDL numa transação explícita e idempotente. Assim uma coluna
-    # nova fica disponível antes de o ORM construir SELECTs com o modelo atual.
+    existing = {column["name"] for column in inspector.get_columns("journal")}
+    # Compatível com PostgreSQL em produção e SQLite nos testes. A verificação
+    # prévia pelo Inspector torna o DDL idempotente sem depender de
+    # "ADD COLUMN IF NOT EXISTS", que não é suportado por todas as versões SQLite.
     with db.engine.begin() as connection:
         for name, definition in additions.items():
-            connection.execute(text(
-                f'ALTER TABLE journal ADD COLUMN IF NOT EXISTS "{name}" {definition}'
-            ))
+            if name not in existing:
+                connection.execute(text(
+                    f'ALTER TABLE journal ADD COLUMN "{name}" {definition}'
+                ))
+                existing.add(name)
     db.session.remove()
 
 
