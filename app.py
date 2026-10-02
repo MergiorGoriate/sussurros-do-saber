@@ -261,6 +261,29 @@ def render_markdown(value):
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
     rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
+    # Torna URLs HTTP(S) escritas como texto em links clicáveis, sem alterar
+    # URLs que já estejam dentro de atributos HTML ou links Markdown.
+    url_pattern = re.compile(r'(?<!["\\'=])(https?://[^\\s<]+)', re.I)
+    parts = re.split(r'(<[^>]+>)', rendered)
+    inside_anchor = False
+    for index, part in enumerate(parts):
+        if part.startswith("<"):
+            if re.match(r'<a\\b', part, re.I):
+                inside_anchor = True
+            elif re.match(r'</a\\s*>', part, re.I):
+                inside_anchor = False
+            continue
+        if inside_anchor:
+            continue
+        def linkify(match):
+            raw = match.group(1)
+            url = raw.rstrip('.,;:!?)]}')
+            suffix = raw[len(url):]
+            safe_url = html_escape(url, quote=True)
+            safe_label = html_escape(url)
+            return f'<a href="{safe_url}" rel="noopener noreferrer">{safe_label}</a>{html_escape(suffix)}'
+        parts[index] = url_pattern.sub(linkify, part)
+    rendered = "".join(parts)
     allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
     cleaned = bleach.clean(
         rendered,
