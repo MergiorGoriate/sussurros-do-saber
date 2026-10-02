@@ -77,6 +77,8 @@ class Journal(db.Model):
     doi = db.Column(db.String(180), default="")
     publication_date = db.Column(db.Date)
     authors_orcid = db.Column(db.Text, default="")
+    content_markdown = db.Column(db.Text, default="")
+    references = db.Column(db.Text, default="")
     guidelines = db.Column(db.Text, default="")
     aims_scope = db.Column(db.Text, default="")
     editorial_policy = db.Column(db.Text, default="")
