@@ -1437,3 +1437,40 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 @media (min-width:900px){
   .journal-page .journal-mobile-toc>summary{display:none!important}
 }
+
+
+/* Correção definitiva: índice da revista não pode ultrapassar o viewport móvel */
+@media (max-width:899px){
+  html:has(.journal-page),body:has(.journal-page){max-width:100%!important;overflow-x:hidden!important}
+  .journal-page,.journal-page *{box-sizing:border-box}
+  .journal-page{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:clip!important}
+  .journal-page .journal-information,
+  .journal-page .journal-sections,
+  .journal-page .journal-info-section,
+  .journal-page .article-markdown{min-width:0!important;max-width:100%!important}
+
+  .journal-page .journal-mobile-toc[open]{
+    position:fixed!important;inset:0!important;width:100dvw!important;max-width:100dvw!important;height:100dvh!important;
+    margin:0!important;padding:0!important;overflow:hidden!important
+  }
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    position:fixed!important;
+    left:8px!important;right:auto!important;top:64px!important;bottom:10px!important;
+    width:calc(100dvw - 16px)!important;max-width:calc(100dvw - 16px)!important;min-width:0!important;
+    margin:0!important;padding:6px!important;transform:none!important;overflow:hidden!important
+  }
+  .journal-page #journal-toc .journal-content-index{
+    width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:hidden!important
+  }
+  .journal-page #journal-toc .journal-content-index>a{
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    margin:0!important;padding:7px 8px!important;
+    white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important
+  }
+}
+@media (max-width:480px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    left:5px!important;width:calc(100dvw - 10px)!important;max-width:calc(100dvw - 10px)!important
+  }
+  .journal-page #journal-toc .journal-content-index>a{padding:6px!important;font-size:.74rem!important}
+}
