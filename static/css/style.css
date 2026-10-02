@@ -1371,3 +1371,64 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     line-height:1.28!important;
   }
 }
+
+
+/* HOTFIX mobile TOC v3: impedir overflow/corte horizontal e manter índice fechado */
+@media (max-width:899px){
+  html,body{max-width:100%;overflow-x:hidden!important}
+
+  .journal-page .journal-mobile-toc:not([open]){
+    position:static!important;
+    width:0!important;
+    height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+  .journal-page .journal-mobile-toc:not([open]) #journal-toc,
+  .journal-page .journal-mobile-toc:not([open]) .journal-content-index{
+    display:none!important;
+  }
+
+  .journal-page .journal-mobile-toc[open]{
+    position:fixed!important;
+    inset:0!important;
+    width:100vw!important;
+    height:100dvh!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    z-index:9998!important;
+  }
+  .journal-page .journal-mobile-toc[open] #journal-toc{
+    position:fixed!important;
+    left:12px!important;
+    right:12px!important;
+    top:calc(env(safe-area-inset-top,0px) + 72px)!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 76px)!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:calc(100vw - 24px)!important;
+    height:auto!important;
+    max-height:none!important;
+    box-sizing:border-box!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    margin:0!important;
+  }
+  .journal-page .journal-mobile-toc[open] #journal-toc,
+  .journal-page .journal-mobile-toc[open] #journal-toc *{
+    box-sizing:border-box!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  .journal-page .journal-mobile-toc[open] #journal-toc a{
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+  }
+}
