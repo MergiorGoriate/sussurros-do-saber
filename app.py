@@ -994,10 +994,7 @@ def ensure_author_columns():
 
 
 def ensure_journal_columns():
-    inspector = inspect(db.engine)
-    if "journal" not in inspector.get_table_names():
-        return
-    existing = {column["name"] for column in inspector.get_columns("journal")}
+    """Mantém o schema Journal compatível antes de qualquer consulta ORM."""
     additions = {
         "abbreviation": "VARCHAR(30) DEFAULT ''",
         "field": "VARCHAR(140) DEFAULT '' NOT NULL",
@@ -1028,19 +1025,17 @@ def ensure_journal_columns():
         "created_at": "TIMESTAMP",
         "updated_at": "TIMESTAMP",
     }
-    changed = False
-    for name, definition in additions.items():
-        if name not in existing:
-            # IF NOT EXISTS makes startup migration idempotent across redeploys.
-            db.session.execute(text(
+    inspector = inspect(db.engine)
+    if "journal" not in inspector.get_table_names():
+        return
+    # Executa cada DDL numa transação explícita e idempotente. Assim uma coluna
+    # nova fica disponível antes de o ORM construir SELECTs com o modelo atual.
+    with db.engine.begin() as connection:
+        for name, definition in additions.items():
+            connection.execute(text(
                 f'ALTER TABLE journal ADD COLUMN IF NOT EXISTS "{name}" {definition}'
             ))
-            changed = True
-    if changed:
-        db.session.commit()
-        # Ensure SQLAlchemy's connection sees the committed schema before the
-        # first Journal ORM query in seed_database().
-        db.session.expire_all()
+    db.session.remove()
 
 
 def ensure_article_columns():
