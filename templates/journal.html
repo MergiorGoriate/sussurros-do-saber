@@ -28,7 +28,8 @@
 </div>
 </section>
 <div class="journal-information mt-14">
-<nav class="journal-toc" aria-label="Índice do conteúdo"><strong>Índice do conteúdo</strong>
+<button class="journal-toc-toggle" id="journal-toc-toggle" type="button" aria-expanded="false" aria-controls="journal-toc" aria-label="Abrir índice do conteúdo" title="Índice do conteúdo"><i class="fa-solid fa-list-ul" aria-hidden="true"></i></button>
+<nav class="journal-toc" id="journal-toc" aria-label="Índice do conteúdo"><strong>Índice do conteúdo</strong>
 {% if journal.content_markdown %}<a href="#conteudo-revista">Conteúdo da revista</a><div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
 {% if journal.references %}<a href="#referencias">Referências bibliográficas</a>{% endif %}
 </nav>
@@ -51,6 +52,12 @@
 </article>
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded',()=>{
+ const toggle=document.getElementById('journal-toc-toggle');
+ const toc=document.getElementById('journal-toc');
+ if(toggle&&toc){
+   toggle.addEventListener('click',()=>{const open=toc.classList.toggle('is-open');toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'Fechar índice do conteúdo':'Abrir índice do conteúdo');});
+   toc.addEventListener('click',e=>{if(e.target.closest('a')&&window.matchMedia('(max-width: 767px)').matches){toc.classList.remove('is-open');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-label','Abrir índice do conteúdo');}});
+ }
  const box=document.getElementById('journal-content-index');
  const root=document.querySelector('#conteudo-revista .article-markdown');
  if(!box||!root)return;
