@@ -1432,3 +1432,82 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     word-break:break-word!important;
   }
 }
+
+
+/* HOTFIX mobile TOC v4 — modal realmente responsivo */
+@media (max-width:899px){
+  .journal-page .journal-mobile-toc[open]{
+    display:block!important;
+    position:fixed!important;
+    inset:0!important;
+    z-index:10000!important;
+    background:rgba(0,0,0,.32)!important;
+    overflow:hidden!important;
+  }
+
+  .journal-page .journal-mobile-toc[open] > summary{
+    position:fixed!important;
+    right:16px!important;
+    bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;
+    z-index:10002!important;
+  }
+
+  .journal-page .journal-mobile-toc[open] #journal-toc{
+    display:block!important;
+    position:fixed!important;
+    top:calc(env(safe-area-inset-top,0px) + 70px)!important;
+    left:16px!important;
+    right:16px!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 90px)!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:14px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    background:#fff!important;
+    border:1px solid #d7dee5!important;
+    border-radius:12px!important;
+    box-shadow:0 16px 44px rgba(0,0,0,.2)!important;
+    z-index:10001!important;
+  }
+
+  .journal-page .journal-mobile-toc[open] #journal-toc .journal-content-index,
+  .journal-page .journal-mobile-toc[open] #journal-toc nav,
+  .journal-page .journal-mobile-toc[open] #journal-toc ul,
+  .journal-page .journal-mobile-toc[open] #journal-toc li{
+    display:block!important;
+    position:static!important;
+    float:none!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:auto!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    transform:none!important;
+  }
+
+  .journal-page .journal-mobile-toc[open] #journal-toc ul{
+    padding:0!important;
+    margin:0!important;
+  }
+
+  .journal-page .journal-mobile-toc[open] #journal-toc a{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    padding:12px 10px!important;
+    margin:0!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+    line-height:1.35!important;
+  }
+}
