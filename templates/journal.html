@@ -31,8 +31,8 @@
 <details class="journal-mobile-toc" id="journal-mobile-toc">
 <summary aria-label="Abrir índice do conteúdo" title="Índice do conteúdo"><i class="fa-solid fa-list-ul" aria-hidden="true"></i><span class="sr-only">Índice do conteúdo</span></summary>
 <nav class="journal-toc" id="journal-toc" aria-label="Índice do conteúdo"><strong>Índice do conteúdo</strong>
-{% if journal.content_markdown %}<a href="#conteudo-revista">Conteúdo da revista</a><div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
-{% if journal.references %}<a href="#referencias">Referências bibliográficas</a>{% endif %}
+{% if journal.references %}<a class="journal-references-link" href="#referencias">Referências bibliográficas</a>{% endif %}
+{% if journal.content_markdown %}<div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
 </nav>
 </details>
 <div class="journal-sections">
