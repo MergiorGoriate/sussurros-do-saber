@@ -813,3 +813,15 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-orcid-id{font:500 .72rem/1.2 Arial,Helvetica,sans-serif}
 .journal-orcid-link:hover,.journal-orcid-link:focus-visible{color:#1e4e8c!important;text-decoration-color:#1e4e8c!important;outline:none}
 .journal-orcid-link:hover .journal-orcid-icon,.journal-orcid-link:focus-visible .journal-orcid-icon{background:#86ad20}
+
+
+/* Redes sociais das revistas — botões circulares */
+.journal-social-circles{display:flex;align-items:center;gap:14px;padding:6px 0}
+.journal-social-circles .journal-tool{display:inline-flex!important;align-items:center;justify-content:center;width:54px;height:54px;flex:0 0 54px;border:1px solid #d7dde2;border-radius:50%;background:#fff;color:#0879ae!important;box-shadow:0 1px 2px rgba(16,24,40,.04);text-decoration:none!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.journal-social-circles .journal-tool span{display:flex;align-items:center;justify-content:center;transform:none;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;line-height:1}
+.journal-social-circles .journal-tool-x span{font-size:23px;font-weight:500}
+.journal-social-circles .journal-tool-in span{font-size:22px}
+.journal-social-circles .journal-tool-telegram span{font-size:23px;transform:rotate(-18deg)}
+.journal-social-circles .journal-tool-mail span{font-size:22px}
+.journal-social-circles .journal-tool:hover,.journal-social-circles .journal-tool:focus-visible{transform:translateY(-2px);border-color:#aebbc5;box-shadow:0 5px 14px rgba(16,24,40,.10);outline:none}
+@media(max-width:767px){.journal-social-circles{gap:8px;overflow-x:auto}.journal-social-circles .journal-tool{width:44px;height:44px;flex-basis:44px}.journal-social-circles .journal-tool span{font-size:20px}}
