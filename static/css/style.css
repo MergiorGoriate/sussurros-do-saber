@@ -1562,3 +1562,24 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   .journal-page .journal-mobile-toc[open]>#journal-toc{max-height:82dvh!important;padding-left:14px!important;padding-right:14px!important}
   .journal-page #journal-toc .journal-content-index>a{font-size:.9rem!important;padding-top:10px!important;padding-bottom:10px!important}
 }
+
+
+/* Revistas — TOC mobile v6: painel mais estreito */
+@media (max-width:899px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    left:12px!important;
+    right:12px!important;
+    width:calc(100% - 24px)!important;
+    max-width:560px!important;
+    margin:0 auto!important;
+    border-radius:16px 16px 0 0!important;
+  }
+}
+@media (max-width:480px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    left:16px!important;
+    right:16px!important;
+    width:calc(100% - 32px)!important;
+    max-width:none!important;
+  }
+}
