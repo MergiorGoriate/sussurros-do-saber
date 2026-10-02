@@ -904,3 +904,14 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     pointer-events:none;
   }
 }
+
+
+/* Revistas: remove definitivamente o separador vertical antes das redes sociais */
+.journal-meta-strip .journal-nav-tools.journal-social-circles{
+  border-left:0!important;
+  padding-left:0!important;
+}
+.journal-meta-strip .journal-nav-tools.journal-social-circles::before{
+  content:none!important;
+  display:none!important;
+}
