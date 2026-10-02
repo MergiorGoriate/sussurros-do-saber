@@ -1029,12 +1029,16 @@ def ensure_journal_columns():
     changed = False
     for name, definition in additions.items():
         if name not in existing:
+            # IF NOT EXISTS makes startup migration idempotent across redeploys.
             db.session.execute(text(
-                f'ALTER TABLE journal ADD COLUMN "{name}" {definition}'
+                f'ALTER TABLE journal ADD COLUMN IF NOT EXISTS "{name}" {definition}'
             ))
             changed = True
     if changed:
         db.session.commit()
+        # Ensure SQLAlchemy's connection sees the committed schema before the
+        # first Journal ORM query in seed_database().
+        db.session.expire_all()
 
 
 def ensure_article_columns():
@@ -1068,6 +1072,9 @@ def ensure_article_slugs():
 
 
 def seed_database():
+    # IMPORTANTE: db.create_all() só cria tabelas; não adiciona colunas a tabelas
+    # existentes. As migrações leves precisam ocorrer antes de qualquer SELECT
+    # ORM de Journal/Article que já inclua colunas recém-adicionadas.
     db.create_all()
     ensure_admin_columns()
     ensure_author_columns()
