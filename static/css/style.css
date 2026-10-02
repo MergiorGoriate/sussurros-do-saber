@@ -1278,3 +1278,96 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     word-break:normal!important;
   }
 }
+
+
+/* FIX definitivo: TOC de revistas no mobile — drawer compacto, completo e recolhível */
+@media (max-width:899px){
+  .journal-page .journal-mobile-toc{
+    position:relative!important;
+    display:block!important;
+    width:auto!important;
+    max-width:none!important;
+  }
+
+  .journal-page .journal-mobile-toc>summary{
+    position:fixed!important;
+    right:16px!important;
+    bottom:112px!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    padding:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:50%!important;
+    z-index:2002!important;
+    cursor:pointer!important;
+  }
+
+  .journal-page .journal-mobile-toc:not([open])>#journal-toc{
+    display:none!important;
+  }
+
+  .journal-page .journal-mobile-toc[open]{
+    position:fixed!important;
+    inset:0!important;
+    z-index:2000!important;
+    background:rgba(0,0,0,.28)!important;
+  }
+
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    display:block!important;
+    position:absolute!important;
+    top:auto!important;
+    left:12px!important;
+    right:12px!important;
+    bottom:76px!important;
+    width:auto!important;
+    height:auto!important;
+    max-height:min(72vh,620px)!important;
+    margin:0!important;
+    padding:14px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+    overscroll-behavior:contain!important;
+    background:#fff!important;
+    border:1px solid #d7dde3!important;
+    border-top:4px solid #1e4e8c!important;
+    border-radius:12px!important;
+    box-shadow:0 14px 40px rgba(0,0,0,.22)!important;
+  }
+
+  .journal-page .journal-mobile-toc[open]>summary{
+    bottom:16px!important;
+  }
+
+  .journal-page #journal-toc .journal-content-index{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+
+  .journal-page #journal-toc>a,
+  .journal-page #journal-toc .journal-content-index>a{
+    display:block!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    min-height:44px!important;
+    height:auto!important;
+    margin:0!important;
+    padding:11px 10px!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+    line-height:1.28!important;
+  }
+}
