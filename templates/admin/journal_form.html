@@ -1,14 +1,5 @@
 {% extends 'admin/base.html' %}
-{% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}<script nonce="{{ csp_nonce }}">
-(()=>{
- const area=document.getElementById('journal-content-md'), preview=document.querySelector('[data-md-preview]');
- if(!area||!preview)return;
- const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
- const render=()=>{let x=esc(area.value);x=x.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^> (.*)$/gm,'<blockquote>$1</blockquote>').replace(/\n/g,'<br>');preview.innerHTML=x};
- document.querySelectorAll('[data-md]').forEach(b=>b.addEventListener('click',()=>{const m={heading:'# Título',bold:'**texto**',italic:'*texto*',quote:'> Citação',list:'- Item',reference:'[Referência](https://)',image:'![Descrição](https://)',video:'[Vídeo](https://)',table:'| Coluna | Coluna |\n|---|---|\n| Valor | Valor |',chart:'![Gráfico](URL-da-imagem)'};const v=m[b.dataset.md]||'';const p=area.selectionStart;area.setRangeText(v,p,area.selectionEnd,'end');area.focus();render()}));
- area.addEventListener('input',render);render();
-})();
-</script>
+{% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}
 {% endblock %}
 {% block content %}
 
@@ -45,4 +36,14 @@
 <label class="check"><input name="published" type="checkbox" {% if journal.published %}checked{% endif %}> Publicada no catálogo</label>
 <button class="admin-primary">Guardar revista</button>
 </aside></form>
+<script nonce="{{ csp_nonce }}">
+(()=>{
+ const area=document.getElementById('journal-content-md'), preview=document.querySelector('[data-md-preview]');
+ if(!area||!preview)return;
+ const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+ const render=()=>{let x=esc(area.value);x=x.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^> (.*)$/gm,'<blockquote>$1</blockquote>').replace(/\n/g,'<br>');preview.innerHTML=x};
+ document.querySelectorAll('[data-md]').forEach(b=>b.addEventListener('click',()=>{const m={heading:'# Título',bold:'**texto**',italic:'*texto*',quote:'> Citação',list:'- Item',reference:'[Referência](https://)',image:'![Descrição](https://)',video:'[Vídeo](https://)',table:'| Coluna | Coluna |\n|---|---|\n| Valor | Valor |',chart:'![Gráfico](URL-da-imagem)'};const v=m[b.dataset.md]||'';const p=area.selectionStart;area.setRangeText(v,p,area.selectionEnd,'end');area.focus();render()}));
+ area.addEventListener('input',render);render();
+})();
+</script>
 {% endblock %}
