@@ -93,3 +93,23 @@ test('back-to-top stays above the assistant and returns to the start', async ({ 
   await launcher.click();
   await expect(button).toBeHidden();
 });
+
+
+test('journal mobile index stays inside the viewport and can be collapsed', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  const response = await page.goto('/revistas/revista-de-teste-cientifico', { waitUntil: 'domcontentloaded' });
+  if (response.status() === 404) test.skip(true, 'No published CI journal fixture is available');
+  const details = page.locator('#journal-mobile-toc');
+  const summary = details.locator('summary');
+  await expect(summary).toBeVisible();
+  await summary.click();
+  await expect(details).toHaveAttribute('open', '');
+  const toc = page.locator('#journal-toc');
+  await expect(toc).toBeVisible();
+  const box = await toc.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(360);
+  expect(box.width).toBeLessThanOrEqual(360);
+  await summary.click();
+  await expect(details).not.toHaveAttribute('open', '');
+});
