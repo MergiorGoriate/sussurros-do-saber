@@ -347,6 +347,26 @@ class PlatformTests(unittest.TestCase):
         chart = render_markdown("[chart: pie|Teste|A=texto]")
         self.assertNotIn('class="article-chart"', str(chart))
 
+    def test_markdown_linkifies_bare_http_urls_without_nesting_links(self):
+        rendered = str(render_markdown(
+            "Fonte: https://example.org/estudo.\n\n"
+            "[DOI](https://doi.org/10.1000/teste)"
+        ))
+        self.assertIn(
+            '<a href="https://example.org/estudo" rel="noopener noreferrer">https://example.org/estudo</a>.',
+            rendered,
+        )
+        self.assertEqual(rendered.count('href="https://doi.org/10.1000/teste"'), 1)
+        self.assertNotIn("<a href=\"<a", rendered)
+
+    def test_journal_template_uses_references_and_notes_after_content(self):
+        template = Path(app.root_path, "templates", "journal.html").read_text(encoding="utf-8")
+        content_position = template.index('id="conteudo-revista"')
+        references_position = template.index('id="referencias"')
+        self.assertGreater(references_position, content_position)
+        self.assertIn("<h2>Referências e Notas</h2>", template)
+        self.assertNotIn("<h2>Referências bibliográficas</h2>", template)
+
     def test_gzip_compression_for_public_html(self):
         response = self.client.get("/", headers={"Accept-Encoding": "gzip"})
         self.assertEqual(response.headers.get("Content-Encoding"), "gzip")
