@@ -28,33 +28,25 @@
 </div>
 </section>
 <div class="journal-information mt-14">
-<nav class="journal-toc" aria-label="Informações da revista"><strong>Nesta página</strong>
-{% if journal.aims_scope %}<a href="#objetivos-escopo">Objetivos e escopo</a>{% endif %}
-{% if journal.guidelines %}<a href="#diretrizes-editoriais">Diretrizes editoriais</a>{% endif %}
-{% if journal.editorial_policy %}<a href="#politica-editorial">Política editorial</a>{% endif %}
-{% if journal.peer_review %}<a href="#revisao-pares">Revisão por pares</a>{% endif %}
-{% if journal.publication_ethics %}<a href="#etica">Ética e integridade</a>{% endif %}
-{% if journal.submission_guidelines %}<a href="#submissao">Submissão</a>{% endif %}
-{% if journal.article_types %}<a href="#tipos-artigos">Tipos de artigos</a>{% endif %}
-{% if journal.open_access_policy %}<a href="#acesso-aberto">Acesso aberto</a>{% endif %}
-{% if journal.copyright_policy %}<a href="#direitos-autor">Direitos de autor</a>{% endif %}
-{% if journal.fees_policy %}<a href="#taxas">Taxas</a>{% endif %}
-{% if journal.editorial_board %}<a href="#equipa-editorial">Equipa editorial</a>{% endif %}
-{% if journal.contact_info %}<a href="#contacto-editorial">Contacto</a>{% endif %}
+<nav class="journal-toc" aria-label="Nesta página"><strong>Nesta página</strong>
+{% if journal.content_markdown %}<a href="#conteudo-revista">Conteúdo da revista</a>{% endif %}
+{% if journal.references %}<a href="#referencias">Referências bibliográficas</a>{% endif %}
 </nav>
 <div class="journal-sections">
-{% if journal.aims_scope %}<section id="objetivos-escopo" class="journal-info-section"><h2>Objetivos e escopo</h2><div class="article-markdown">{{ journal.aims_scope|markdown }}</div></section>{% endif %}
-{% if journal.guidelines %}<section id="diretrizes-editoriais" class="journal-info-section"><h2>Diretrizes editoriais</h2><div class="article-markdown">{{ journal.guidelines|markdown }}</div></section>{% endif %}
-{% if journal.editorial_policy %}<section id="politica-editorial" class="journal-info-section"><h2>Política editorial</h2><div class="article-markdown">{{ journal.editorial_policy|markdown }}</div></section>{% endif %}
-{% if journal.peer_review %}<section id="revisao-pares" class="journal-info-section"><h2>Processo de revisão por pares</h2><div class="article-markdown">{{ journal.peer_review|markdown }}</div></section>{% endif %}
-{% if journal.publication_ethics %}<section id="etica" class="journal-info-section"><h2>Ética e integridade científica</h2><div class="article-markdown">{{ journal.publication_ethics|markdown }}</div></section>{% endif %}
-{% if journal.submission_guidelines %}<section id="submissao" class="journal-info-section"><h2>Diretrizes de submissão</h2><div class="article-markdown">{{ journal.submission_guidelines|markdown }}</div></section>{% endif %}
-{% if journal.article_types %}<section id="tipos-artigos" class="journal-info-section"><h2>Tipos de artigos aceites</h2><div class="article-markdown">{{ journal.article_types|markdown }}</div></section>{% endif %}
-{% if journal.open_access_policy %}<section id="acesso-aberto" class="journal-info-section"><h2>Política de acesso aberto</h2><div class="article-markdown">{{ journal.open_access_policy|markdown }}</div></section>{% endif %}
-{% if journal.copyright_policy %}<section id="direitos-autor" class="journal-info-section"><h2>Direitos de autor e licenciamento</h2><div class="article-markdown">{{ journal.copyright_policy|markdown }}</div></section>{% endif %}
-{% if journal.fees_policy %}<section id="taxas" class="journal-info-section"><h2>Taxas e custos de publicação</h2><div class="article-markdown">{{ journal.fees_policy|markdown }}</div></section>{% endif %}
-{% if journal.editorial_board %}<section id="equipa-editorial" class="journal-info-section"><h2>Conselho e equipa editorial</h2><div class="article-markdown">{{ journal.editorial_board|markdown }}</div></section>{% endif %}
-{% if journal.contact_info %}<section id="contacto-editorial" class="journal-info-section"><h2>Contacto editorial</h2><div class="article-markdown">{{ journal.contact_info|markdown }}</div></section>{% endif %}
+{% if journal.content_markdown %}
+<section id="conteudo-revista" class="journal-info-section">
+<div class="article-markdown">{{ journal.content_markdown|markdown }}</div>
+</section>
+{% elif journal.guidelines %}
+<section id="conteudo-revista" class="journal-info-section">
+<h2>Diretrizes editoriais</h2><div class="article-markdown">{{ journal.guidelines|markdown }}</div>
+</section>
+{% endif %}
+{% if journal.references %}
+<section id="referencias" class="journal-info-section">
+<h2>Referências bibliográficas</h2><div class="article-markdown">{{ journal.references|markdown }}</div>
+</section>
+{% endif %}
 </div></div>
 </article>
 {% endblock %}
