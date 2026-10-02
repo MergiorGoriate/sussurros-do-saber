@@ -1229,3 +1229,52 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   .journal-page .article-markdown{font-size:.98rem!important;line-height:1.68!important}
   .journal-page .article-markdown h2{font-size:1.35rem!important}
 }
+
+
+/* Revistas — índice móvel completo em painel modal rolável */
+@media (max-width:899px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    position:fixed!important;
+    top:calc(env(safe-area-inset-top, 0px) + 16px)!important;
+    right:12px!important;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 16px)!important;
+    left:12px!important;
+    width:auto!important;
+    max-width:none!important;
+    height:auto!important;
+    max-height:none!important;
+    box-sizing:border-box!important;
+    padding:16px 14px 72px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    border-radius:14px!important;
+    z-index:1300!important;
+  }
+  .journal-page .journal-mobile-toc[open]>summary{
+    position:fixed!important;
+    top:auto!important;
+    right:26px!important;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 28px)!important;
+    z-index:1301!important;
+  }
+  .journal-page #journal-toc .journal-content-index{
+    display:block!important;
+    width:100%!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  .journal-page #journal-toc>a,
+  .journal-page #journal-toc .journal-content-index>a{
+    width:100%!important;
+    max-width:100%!important;
+    min-height:44px!important;
+    height:auto!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+  }
+}
