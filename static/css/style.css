@@ -1445,3 +1445,61 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   .journal-page #journal-toc .journal-content-index>a{font-size:.69rem!important}
   .journal-page .journal-mobile-toc[open]>summary{bottom:calc(50dvh + 90px)!important}
 }
+
+
+/* Revistas — correção definitiva de corte do índice móvel */
+@media (max-width:899px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    box-sizing:border-box!important;
+    width:min(86vw,340px)!important;
+    max-width:calc(100vw - 32px)!important;
+    max-height:calc(100dvh - 150px)!important;
+    left:50%!important;
+    right:auto!important;
+    bottom:72px!important;
+    transform:translateX(-50%)!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  .journal-page #journal-toc,
+  .journal-page #journal-toc .journal-content-index{
+    min-width:0!important;
+    overflow-x:hidden!important;
+  }
+  .journal-page #journal-toc .journal-content-index>a{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+    text-overflow:clip!important;
+  }
+  .journal-page .journal-mobile-toc[open]>summary{
+    right:16px!important;
+    bottom:auto!important;
+    top:72px!important;
+  }
+}
+@media (max-width:480px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    width:calc(100vw - 28px)!important;
+    max-width:320px!important;
+    max-height:calc(100dvh - 138px)!important;
+    bottom:64px!important;
+  }
+  .journal-page #journal-toc .journal-content-index>a{
+    font-size:.74rem!important;
+    line-height:1.25!important;
+  }
+}
+@media (max-width:360px){
+  .journal-page .journal-mobile-toc[open]>#journal-toc{
+    width:calc(100vw - 20px)!important;
+    max-width:none!important;
+    max-height:calc(100dvh - 128px)!important;
+  }
+}
