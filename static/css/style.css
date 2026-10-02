@@ -1389,184 +1389,51 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 }
 
 
-/* Revistas — índice móvel compacto (override final) */
+/* Revistas — índice mobile reconstruído: fonte única de verdade */
 @media (max-width:899px){
+  .journal-page .journal-mobile-toc{display:block!important;width:0!important;height:0!important;margin:0!important;padding:0!important}
+  .journal-page .journal-mobile-toc>summary{
+    position:fixed!important;right:16px!important;bottom:112px!important;z-index:13002!important;
+    display:grid!important;place-items:center!important;width:48px!important;height:48px!important;
+    padding:0!important;border:0!important;border-radius:50%!important;background:#1E4E8C!important;color:#fff!important;
+    box-shadow:0 8px 24px rgba(0,0,0,.2)!important;cursor:pointer!important;list-style:none!important
+  }
+  .journal-page .journal-mobile-toc>summary::-webkit-details-marker{display:none!important}
+  .journal-page .journal-mobile-toc[open]{position:fixed!important;inset:0!important;z-index:13000!important;width:100%!important;height:100dvh!important;background:rgba(15,23,42,.38)!important}
+  .journal-page .journal-mobile-toc[open]>summary{top:calc(env(safe-area-inset-top) + 12px)!important;right:12px!important;bottom:auto!important}
+  .journal-page .journal-mobile-toc[open]>summary i::before{content:"\\f00d"!important}
+  .journal-page .journal-mobile-toc:not([open])>#journal-toc{display:none!important}
   .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:min(82vw,320px)!important;
-    max-width:320px!important;
-    max-height:56dvh!important;
-    padding:8px 10px!important;
-    border-radius:10px!important;
+    display:flex!important;flex-direction:column!important;position:fixed!important;
+    top:calc(env(safe-area-inset-top) + 70px)!important;left:8px!important;right:8px!important;bottom:calc(env(safe-area-inset-bottom) + 12px)!important;
+    width:auto!important;max-width:none!important;height:auto!important;max-height:none!important;margin:0!important;padding:8px!important;
+    box-sizing:border-box!important;border:1px solid #d7dde3!important;border-top:4px solid #1E4E8C!important;border-radius:8px!important;
+    background:#fff!important;overflow:hidden!important;transform:none!important;box-shadow:0 18px 50px rgba(0,0,0,.24)!important;z-index:13001!important
   }
-  .journal-page #journal-toc strong{
-    padding:8px 3px!important;
-    font-size:.72rem!important;
+  .journal-page #journal-toc>strong{
+    position:static!important;flex:0 0 auto!important;margin:0!important;padding:5px 6px 8px!important;
+    background:#fff!important;color:#374151!important;font-size:.78rem!important;line-height:1.2!important;letter-spacing:.08em!important;text-transform:uppercase!important
   }
-  .journal-page #journal-toc .journal-content-index>a{
-    min-height:34px!important;
-    padding:6px 4px!important;
-    font-size:.76rem!important;
-    line-height:1.22!important;
-  }
-  .journal-page #journal-toc .journal-content-index .journal-index-sub{
-    padding-left:10px!important;
-    font-size:.73rem!important;
-  }
-  .journal-page .journal-mobile-toc[open]>summary{
-    bottom:calc(56dvh + 90px)!important;
-  }
-}
-@media (max-width:480px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:min(78vw,290px)!important;
-    max-width:290px!important;
-    max-height:52dvh!important;
-    padding:7px 9px!important;
-  }
-  .journal-page #journal-toc .journal-content-index>a{
-    min-height:32px!important;
-    padding:5px 3px!important;
-    font-size:.72rem!important;
-  }
-  .journal-page #journal-toc .journal-content-index .journal-index-sub{
-    padding-left:9px!important;
-    font-size:.69rem!important;
-  }
-  .journal-page .journal-mobile-toc[open]>summary{
-    bottom:calc(52dvh + 90px)!important;
-  }
-}
-@media (max-width:360px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:76vw!important;
-    max-width:270px!important;
-    max-height:50dvh!important;
-  }
-  .journal-page #journal-toc .journal-content-index>a{font-size:.69rem!important}
-  .journal-page .journal-mobile-toc[open]>summary{bottom:calc(50dvh + 90px)!important}
-}
-
-
-/* Revistas — correção definitiva de corte do índice móvel */
-@media (max-width:899px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    box-sizing:border-box!important;
-    width:min(86vw,340px)!important;
-    max-width:calc(100vw - 32px)!important;
-    max-height:calc(100dvh - 150px)!important;
-    left:50%!important;
-    right:auto!important;
-    bottom:72px!important;
-    transform:translateX(-50%)!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    overscroll-behavior:contain!important;
-    -webkit-overflow-scrolling:touch!important;
-  }
-  .journal-page #journal-toc,
   .journal-page #journal-toc .journal-content-index{
-    min-width:0!important;
-    overflow-x:hidden!important;
+    display:block!important;flex:1 1 auto!important;width:100%!important;min-width:0!important;max-width:100%!important;
+    height:auto!important;min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;
+    overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important
   }
   .journal-page #journal-toc .journal-content-index>a{
-    box-sizing:border-box!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    white-space:normal!important;
-    overflow-wrap:anywhere!important;
-    word-break:normal!important;
-    text-overflow:clip!important;
+    display:block!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:100%!important;
+    min-height:0!important;height:auto!important;margin:0!important;padding:7px 7px!important;border:0!important;border-bottom:1px solid #dde2e7!important;border-radius:0!important;
+    color:#3f4d56!important;background:transparent!important;font-size:.82rem!important;font-weight:650!important;line-height:1.25!important;
+    white-space:normal!important;overflow:visible!important;overflow-wrap:anywhere!important;word-break:normal!important;text-overflow:clip!important
   }
-  .journal-page .journal-mobile-toc[open]>summary{
-    right:16px!important;
-    bottom:auto!important;
-    top:72px!important;
-  }
+  .journal-page #journal-toc .journal-content-index>a:last-child{border-bottom:0!important}
+  .journal-page #journal-toc .journal-content-index .journal-index-sub{padding-left:16px!important;font-size:.78rem!important;font-weight:500!important}
 }
 @media (max-width:480px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:calc(100vw - 28px)!important;
-    max-width:320px!important;
-    max-height:calc(100dvh - 138px)!important;
-    bottom:64px!important;
-  }
-  .journal-page #journal-toc .journal-content-index>a{
-    font-size:.74rem!important;
-    line-height:1.25!important;
-  }
+  .journal-page .journal-mobile-toc[open]>#journal-toc{left:4px!important;right:4px!important;padding:5px!important}
+  .journal-page #journal-toc>strong{padding:4px 4px 6px!important;font-size:.72rem!important}
+  .journal-page #journal-toc .journal-content-index>a{padding:6px 5px!important;font-size:.76rem!important;line-height:1.2!important}
+  .journal-page #journal-toc .journal-content-index .journal-index-sub{padding-left:12px!important;font-size:.73rem!important}
 }
-@media (max-width:360px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:calc(100vw - 20px)!important;
-    max-width:none!important;
-    max-height:calc(100dvh - 128px)!important;
-  }
-}
-
-
-/* Revistas — margens mínimas no índice móvel */
-@media (max-width:899px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:calc(100vw - 16px)!important;
-    max-width:340px!important;
-    padding:6px 7px!important;
-  }
-  .journal-page #journal-toc strong{
-    margin-bottom:2px!important;
-    padding:6px 2px!important;
-  }
-  .journal-page #journal-toc .journal-content-index>a{
-    margin:0!important;
-    padding:5px 2px!important;
-  }
-}
-@media (max-width:480px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:calc(100vw - 12px)!important;
-    max-width:320px!important;
-    padding:5px 6px!important;
-  }
-}
-@media (max-width:360px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:calc(100vw - 8px)!important;
-    max-width:none!important;
-    padding:4px 5px!important;
-  }
-}
-
-
-/* Revistas — índice móvel ainda mais compacto */
-@media (max-width:480px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:calc(100vw - 6px)!important;
-    max-width:none!important;
-    padding:3px 4px!important;
-    border-radius:6px!important;
-  }
-  .journal-page #journal-toc strong{
-    padding:4px 1px!important;
-    margin:0!important;
-  }
-  .journal-page #journal-toc .journal-content-index>a{
-    min-height:28px!important;
-    padding:3px 2px!important;
-    font-size:.68rem!important;
-    line-height:1.16!important;
-  }
-  .journal-page #journal-toc .journal-content-index .journal-index-sub{
-    padding-left:6px!important;
-    font-size:.66rem!important;
-  }
-}
-@media (max-width:360px){
-  .journal-page .journal-mobile-toc[open]>#journal-toc{
-    width:calc(100vw - 4px)!important;
-    padding:2px 3px!important;
-  }
-  .journal-page #journal-toc .journal-content-index>a{
-    min-height:27px!important;
-    font-size:.66rem!important;
-  }
+@media (min-width:900px){
+  .journal-page .journal-mobile-toc>summary{display:none!important}
 }
