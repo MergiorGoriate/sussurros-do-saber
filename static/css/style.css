@@ -915,3 +915,24 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   content:none!important;
   display:none!important;
 }
+
+
+/* Revistas: mantém separador com pequeno respiro antes do primeiro ícone */
+@media(min-width:1051px){
+  .journal-meta-strip .journal-nav-tools.journal-social-circles{
+    position:relative;
+    border-left:0!important;
+    padding-left:12px!important;
+  }
+  .journal-meta-strip .journal-nav-tools.journal-social-circles::before{
+    content:""!important;
+    display:block!important;
+    position:absolute;
+    left:0;
+    top:4px;
+    bottom:4px;
+    width:1px;
+    background:var(--line);
+    pointer-events:none;
+  }
+}
