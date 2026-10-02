@@ -1008,6 +1008,8 @@ def ensure_journal_columns():
         "doi": "VARCHAR(180) DEFAULT ''",
         "publication_date": "DATE",
         "authors_orcid": "TEXT DEFAULT ''",
+        "content_markdown": "TEXT DEFAULT ''",
+        "references": "TEXT DEFAULT ''",
         "guidelines": "TEXT DEFAULT ''",
         "aims_scope": "TEXT DEFAULT ''",
         "editorial_policy": "TEXT DEFAULT ''",
