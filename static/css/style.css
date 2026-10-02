@@ -805,3 +805,11 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-author-sep{color:#a1a8ac}
 .journal-orcid{display:inline-flex!important;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#a6ce39;color:#fff!important;text-decoration:none!important;font:700 9px/1 Arial,sans-serif;letter-spacing:-.03em}
 .journal-orcid:hover,.journal-orcid:focus-visible{background:#86ad20;outline:2px solid rgba(166,206,57,.28);outline-offset:2px}
+
+
+/* Link ORCID completo: ícone + identificador */
+.journal-orcid-link{display:inline-flex!important;align-items:center;gap:.3rem;color:#5f686d!important;text-decoration:underline!important;text-decoration-color:#a8afb2!important;text-underline-offset:2px}
+.journal-orcid-icon{display:inline-flex!important;align-items:center;justify-content:center;width:18px;height:18px;flex:0 0 18px;border-radius:50%;background:#a6ce39;color:#fff!important;text-decoration:none!important;font:700 9px/1 Arial,sans-serif;letter-spacing:-.04em}
+.journal-orcid-id{font:500 .72rem/1.2 Arial,Helvetica,sans-serif}
+.journal-orcid-link:hover,.journal-orcid-link:focus-visible{color:#1e4e8c!important;text-decoration-color:#1e4e8c!important;outline:none}
+.journal-orcid-link:hover .journal-orcid-icon,.journal-orcid-link:focus-visible .journal-orcid-icon{background:#86ad20}
