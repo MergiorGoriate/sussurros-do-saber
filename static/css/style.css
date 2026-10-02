@@ -797,3 +797,11 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-tool-in{font-size:16px}
 .journal-tool span{transform:scale(1.08)}
 @media(max-width:767px){.journal-tool{width:39px;height:39px;font-size:17px}.journal-tool-x{font-size:18px}.journal-tool-bsky{font-size:17px}.journal-tool-in{font-size:15px}}
+
+
+/* Autores e ORCID — padrão editorial científico */
+.journal-publication-meta .journal-authors{display:inline-flex;align-items:center;flex-wrap:wrap;gap:.25rem;white-space:normal}
+.journal-author{display:inline-flex!important;align-items:center;gap:.28rem;white-space:nowrap;text-decoration:underline;text-decoration-color:#9aa2a6;text-underline-offset:2px}
+.journal-author-sep{color:#a1a8ac}
+.journal-orcid{display:inline-flex!important;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#a6ce39;color:#fff!important;text-decoration:none!important;font:700 9px/1 Arial,sans-serif;letter-spacing:-.03em}
+.journal-orcid:hover,.journal-orcid:focus-visible{background:#86ad20;outline:2px solid rgba(166,206,57,.28);outline-offset:2px}
