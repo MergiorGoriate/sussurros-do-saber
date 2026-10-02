@@ -13,7 +13,7 @@
 <section class="journal-nav-strip journal-meta-strip" aria-label="Metadados e ações da revista">
 <div class="journal-publication-meta">
   <span><strong>REVISTA</strong> {{ journal.title }}</span>
-  <span><strong>AUTORES / ORCID</strong> {% if journal.authors_orcid %}{{ journal.authors_orcid|replace('\n', ' · ') }}{% else %}A indicar{% endif %}</span>
+  <span class="journal-authors"><strong>AUTORES / ORCID</strong>{% if journal.authors_orcid %}{% for line in journal.authors_orcid.splitlines() if line.strip() %}{% set parts = line.split('—', 1) %}{% set author_name = parts[0].strip() %}{% set orcid_value = parts[1].strip() if parts|length > 1 else '' %}<span class="journal-author">{{ author_name }}{% if orcid_value %}{% set orcid_url = orcid_value if orcid_value.startswith('http') else 'https://orcid.org/' ~ orcid_value %}<a class="journal-orcid" href="{{ orcid_url }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID de {{ author_name }}" title="ORCID de {{ author_name }}">iD</a>{% endif %}</span>{% if not loop.last %}<span class="journal-author-sep">·</span>{% endif %}{% endfor %}{% else %}<span>A indicar</span>{% endif %}</span>
   <span><strong>DOI</strong> {{ journal.doi or 'Em atribuição' }}</span>
   <span><strong>DATA</strong> {{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'A definir' }}</span>
 </div>
