@@ -883,3 +883,24 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   }
   .journal-meta-strip .journal-social-circles{margin-left:0}
 }
+
+
+/* Revistas: separador social com distância real dos botões */
+@media(min-width:1051px){
+  .journal-meta-strip .journal-nav-tools.journal-social-circles{
+    position:relative;
+    border-left:0!important;
+    margin-left:auto!important;
+    padding-left:24px!important;
+  }
+  .journal-meta-strip .journal-nav-tools.journal-social-circles::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:4px;
+    bottom:4px;
+    width:1px;
+    background:var(--line);
+    pointer-events:none;
+  }
+}
