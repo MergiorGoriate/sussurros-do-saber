@@ -936,3 +936,28 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     pointer-events:none;
   }
 }
+
+
+/* Revista — UX móvel e índice recolhível */
+.journal-toc-toggle{display:none}
+@media(max-width:767px){
+  .journal-page{overflow-x:hidden}
+  .journal-information{display:block!important;position:relative}
+  .journal-sections{width:100%;min-width:0}
+  .journal-page .journal-info-section{max-width:100%;padding-left:0;padding-right:0}
+  .journal-page .article-markdown{font-size:1rem;line-height:1.72;overflow-wrap:anywhere}
+  .journal-page .article-markdown img,.journal-page .article-markdown video,.journal-page .article-markdown iframe{max-width:100%;height:auto}
+  .journal-page .article-markdown table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .journal-toc-toggle{display:grid;place-items:center;position:fixed;right:18px;bottom:164px;z-index:44;width:46px;height:46px;border:1px solid #d6dee5;border-radius:50%;background:#fff;color:#1e4e8c;box-shadow:0 8px 24px rgba(16,24,40,.14);font-size:18px;cursor:pointer}
+  .dark .journal-toc-toggle{background:#172027;color:#fff;border-color:#39454d}
+  .journal-page .journal-toc{display:none!important;position:fixed!important;left:16px!important;right:16px!important;bottom:84px!important;top:auto!important;z-index:43!important;width:auto!important;max-height:min(62vh,520px);overflow-y:auto;margin:0!important;padding:20px!important;background:#fff;box-shadow:0 18px 48px rgba(16,24,40,.24);border:1px solid #d6dee5;border-top:4px solid #1e4e8c}
+  .journal-page .journal-toc.is-open{display:block!important}
+  .dark .journal-page .journal-toc{background:#172027;border-color:#39454d;border-top-color:#6ea7e6}
+  .journal-page .journal-toc strong{display:block;margin-bottom:10px}
+  .journal-page .journal-toc a{padding:10px 0}
+  .journal-page .journal-content-index{display:block}
+  .journal-meta-strip{padding-left:0;padding-right:0}
+  .journal-publication-meta{font-size:.75rem}
+  .journal-social-circles{max-width:100%;overflow-x:auto;scrollbar-width:none}
+  .journal-social-circles::-webkit-scrollbar{display:none}
+}
