@@ -202,7 +202,7 @@ window.dataLayer.push({event:'default_consent'});
 {% if request.path == '/contacto' %}<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260930-contact') }}" defer></script>{% endif %}
 <script nonce="{{ csp_nonce }}">
 (()=>{let assistantLoaded=false,animationsLoaded=false;
-const loadScript=name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260930-performance';script.defer=true;document.body.appendChild(script)};
+const loadScript=name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20261002-reveal-fix';script.defer=true;document.body.appendChild(script)};
 const loadAssistant=()=>{if(assistantLoaded)return;assistantLoaded=true;loadScript('assistant.js')};
 const loadAnimations=()=>{if(animationsLoaded)return;animationsLoaded=true;loadScript('animations.js')};
 document.addEventListener('pointerdown',event=>{if(event.target.closest('[aria-label="Abrir assistente"]'))loadAssistant()},{passive:true,capture:true});
