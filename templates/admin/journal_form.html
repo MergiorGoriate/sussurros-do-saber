@@ -1,7 +1,5 @@
 {% extends 'admin/base.html' %}
-{% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}{% endblock %}
-{% block content %}
-<script nonce="{{ csp_nonce }}">
+{% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}<script nonce="{{ csp_nonce }}">
 (()=>{
  const area=document.getElementById('journal-content-md'), preview=document.querySelector('[data-md-preview]');
  if(!area||!preview)return;
@@ -11,6 +9,9 @@
  area.addEventListener('input',render);render();
 })();
 </script>
+{% endblock %}
+{% block content %}
+
 <header class="admin-header"><div><span>Catálogo científico</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
 <form method="post" enctype="multipart/form-data" class="editor-form">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
