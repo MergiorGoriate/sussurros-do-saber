@@ -853,3 +853,14 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-social-circles .journal-tool-telegram i{font-size:15px}
 .journal-social-circles .journal-tool-mail i{font-size:14px}
 @media(max-width:767px){.journal-social-circles{gap:5px}.journal-social-circles .journal-tool{width:32px;height:32px;flex-basis:32px}.journal-social-circles .journal-tool i{font-size:14px}}
+
+
+/* Índice automático das secções Markdown das revistas */
+.journal-content-index{display:flex;flex-direction:column;gap:.08rem;margin:.05rem 0 .45rem .75rem;padding-left:.65rem;border-left:1px solid var(--line)}
+.journal-page .journal-toc .journal-content-index a{padding:.34rem .45rem;color:#536067;font-size:.79rem;font-weight:550;line-height:1.35}
+.journal-page .journal-toc .journal-content-index a:before{display:none}
+.journal-page .journal-toc .journal-content-index a:hover{background:rgba(30,78,140,.06);color:#1e4e8c}
+.journal-page .journal-toc .journal-content-index .journal-index-sub{padding-left:1rem;font-size:.75rem}
+.dark .journal-page .journal-toc .journal-content-index a{color:#aebcc1}
+.dark .journal-page .journal-toc .journal-content-index a:hover{color:#b8d7fb}
+@media(max-width:767px){.journal-content-index{display:none}}
