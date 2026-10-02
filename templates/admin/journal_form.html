@@ -9,7 +9,6 @@
 <section class="editor-main">
 <label>Título<input name="title" required minlength="3" maxlength="180" value="{{ journal.title or '' }}"></label>
 <label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="6">{{ journal.description or '' }}</textarea></label>
-<div class="journal-editor-note"><strong>Conteúdo editorial</strong><p>Escreva o conteúdo principal da revista em Markdown e mantenha as referências bibliográficas num campo próprio.</p></div>
 <label>Conteúdo em Markdown
 <div class="markdown-toolbar" data-md-toolbar>
 <button type="button" data-md="heading">Título</button><button type="button" data-md="bold"><strong>Negrito</strong></button><button type="button" data-md="italic"><em>Itálico</em></button><button type="button" data-md="quote">Citação</button><button type="button" data-md="list">Lista</button><button type="button" data-md="reference">Referência</button><button type="button" data-md="image">Imagem</button><button type="button" data-md="video">Vídeo</button><button type="button" data-md="table">Tabela</button><button type="button" data-md="chart">Gráfico</button>
