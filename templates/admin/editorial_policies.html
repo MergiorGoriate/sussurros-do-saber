@@ -1,7 +1,7 @@
 {% extends 'admin/base.html' %}
 {% block title %}Políticas Editoriais{% endblock %}
 {% block content %}
-<header class="admin-header"><div><span>Governança editorial</span><h1>Políticas Editoriais</h1><p>Edite as políticas institucionais da publicação. Os campos aceitam Markdown.</p></div><a href="/diretrizes-para-autores" target="_blank" rel="noopener">Ver Diretrizes ↗</a></header>
+<header class="admin-header"><div><span>Governança editorial</span><h1>Políticas Editoriais</h1><p>Edite as políticas institucionais da publicação. Os campos aceitam Markdown.</p></div><a href="{{ url_for('editorial_policy') }}" target="_blank" rel="noopener">Ver Políticas Editoriais ↗</a></header>
 <form method="post" class="editor-form editorial-policy-editor" data-preview-url="{{ url_for('admin.preview_author_guidelines') }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <section class="editor-main">
@@ -9,7 +9,7 @@
 <div class="policy-preview-actions"><button type="button" class="admin-secondary" id="preview-guidelines">Pré-visualizar diretrizes</button><span id="guidelines-preview-status" role="status" aria-live="polite"></span></div>
 <section id="guidelines-preview" class="policy-preview" aria-label="Pré-visualização das diretrizes" hidden></section>
 <button class="admin-primary" type="submit">Guardar políticas</button>
-<details class="policy-other"><summary>Outras políticas editoriais</summary>
+<details class="policy-other" open><summary>Outras políticas editoriais</summary>
 <label>Diretrizes para Revisores<textarea name="reviewer_guidelines" rows="12" maxlength="100000">{{ request.form.get('reviewer_guidelines', (policy.reviewer_guidelines or '') if policy else '') }}</textarea></label>
 <label>Ética e Integridade Científica<textarea name="ethics_policy" rows="12" maxlength="100000">{{ request.form.get('ethics_policy', (policy.ethics_policy or '') if policy else '') }}</textarea></label>
 <label>Política de Inteligência Artificial<textarea name="ai_policy" rows="10" maxlength="100000">{{ request.form.get('ai_policy', (policy.ai_policy or '') if policy else '') }}</textarea></label>
@@ -22,3 +22,4 @@
 </form>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-policies.js', v='20261003-editor-v1') }}" defer></script>
 {% endblock %}
+

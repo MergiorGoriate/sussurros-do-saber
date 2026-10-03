@@ -689,8 +689,24 @@ def privacy():
     return render_template("privacy.html")
 
 @app.get("/politica-editorial")
+@app.get("/politicas-editoriais")
 def editorial_policy():
-    return render_template("editorial_policy.html")
+    policy = EditorialPolicy.query.first()
+    fields = (
+        ("reviewer_guidelines", "Diretrizes para Revisores"),
+        ("ethics_policy", "Ética e Integridade Científica"),
+        ("ai_policy", "Política de Inteligência Artificial"),
+        ("data_policy", "Política de Dados de Investigação"),
+        ("fees_policy", "Taxas / APC"),
+        ("open_access_policy", "Acesso Aberto e Licenciamento"),
+    )
+    sections = []
+    if policy:
+        for field, title in fields:
+            content = (getattr(policy, field, "") or "").strip()
+            if content:
+                sections.append({"id": field.replace("_", "-"), "title": title, "content": render_markdown(content)})
+    return render_template("editorial_policy.html", policy_sections=sections)
 
 @app.get("/politica-de-correcoes")
 def corrections_policy():
@@ -1291,4 +1307,5 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 

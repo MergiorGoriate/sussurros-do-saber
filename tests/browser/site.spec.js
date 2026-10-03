@@ -356,7 +356,11 @@ test('author guidelines link targets an existing section on mobile',async({page}
 
 test('author guidelines saved in administration render with functional anchors',async({page})=>{
   await signInAdministrator(page);
-  await page.goto('/admin/politicas-editoriais',{waitUntil:'domcontentloaded'});
+  await page.goto('/admin',{waitUntil:'domcontentloaded'});
+  await page.getByRole('link',{name:'Políticas Editoriais',exact:true}).click();
+  await expect(page).toHaveURL(/\/admin\/politicas-editoriais$/);
+  await expect(page.locator('[name="ethics_policy"]')).toBeVisible();
+  await page.locator('[name="ethics_policy"]').fill('Ética editorial configurada pelo painel.');
   await page.locator('[name="author_guidelines"]').fill('## Tipos de manuscritos\n\n- Artigo original\n- Revisão\n\n## Estrutura\n\n| Campo | Descrição |\n| --- | --- |\n| Resumo | Texto científico |');
   await page.getByRole('button',{name:'Pré-visualizar diretrizes',exact:true}).click();
   await expect(page.locator('#guidelines-preview')).toBeVisible();
@@ -364,6 +368,8 @@ test('author guidelines saved in administration render with functional anchors',
   await page.getByRole('button',{name:'Guardar políticas',exact:true}).click();
   await expect(page).toHaveURL(new RegExp('/admin/politicas-editoriais$'));
   await expect(page.locator('[name="author_guidelines"]')).toHaveValue(/Tipos de manuscritos/);
+  await page.goto('/politicas-editoriais');
+  await expect(page.locator('#ethics-policy')).toContainText('Ética editorial configurada pelo painel.');
   for(const width of [1440,320]){
     await page.setViewportSize({width,height:900});
     await page.goto('/diretrizes-para-autores',{waitUntil:'domcontentloaded'});
@@ -375,4 +381,5 @@ test('author guidelines saved in administration render with functional anchors',
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
 });
+
 
