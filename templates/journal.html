@@ -45,7 +45,7 @@
     <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo"><i class="fa-solid fa-quote-right"></i></button>
     <a class="journal-article-pdf" href="{{ (url_for('journal_preview_pdf', journal_id=journal.id) if request.endpoint == 'journal_preview' else url_for('journal_download_pdf', slug=journal.slug)) }}" download aria-label="Baixar PDF" title="Baixar PDF"><i class="fa-regular fa-file-pdf"></i></a>
   </div>
-  <p id="journal-action-status" role="status" aria-live="polite"></p>
+  <p id="journal-action-status" class="sr-only" role="status" aria-live="polite"></p>
 </section>
 <div class="journal-information">
 <details class="journal-mobile-toc" id="journal-mobile-toc">

@@ -1639,8 +1639,6 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .dark .journal-article-share a,.dark .journal-article-actions button{color:#cbd5e1}
 .dark .journal-article-meta strong{color:#e2e8f0}
 .dark .journal-article-header,.dark .journal-article-actions{border-color:#475569}
-.journal-page #journal-action-status:empty{display:none}
-.journal-page #journal-action-status{margin:.5rem 0 0;font-size:.875rem}
 .journal-page .journal-article-actions button:focus-visible,
 .journal-page .journal-article-share a:focus-visible{outline:2px solid #1e4e8c;outline-offset:3px}
 @media(max-width:899px){
