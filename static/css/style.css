@@ -1618,3 +1618,16 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 @media (max-width:767px){
   .journal-page .journal-information{margin-top:0 !important;padding-top:0 !important;gap:.5rem !important}
 }
+
+/* Mobile: afasta o botão flutuante do índice para cima, evitando sobreposição com voltar ao topo/assistente */
+@media (max-width:899px){
+  .journal-page .journal-mobile-toc:not([open])>summary{
+    bottom:224px!important;
+  }
+}
+@media (max-width:480px){
+  .journal-page .journal-mobile-toc:not([open])>summary{
+    right:16px!important;
+    bottom:218px!important;
+  }
+}
