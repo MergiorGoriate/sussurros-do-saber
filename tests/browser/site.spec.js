@@ -98,7 +98,7 @@ test('back-to-top stays above the assistant and returns to the start', async ({ 
 test('journal mobile index stays inside the viewport and can be collapsed', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   const response = await page.goto('/revistas/revista-de-teste-cientifico', { waitUntil: 'domcontentloaded' });
-  if (response.status() === 404) test.skip(true, 'No published CI journal fixture is available');
+  expect(response.status()).toBe(200);
   const details = page.locator('#journal-mobile-toc');
   const summary = details.locator('summary');
   await expect(summary).toBeVisible();
@@ -112,4 +112,38 @@ test('journal mobile index stays inside the viewport and can be collapsed', asyn
   expect(box.width).toBeLessThanOrEqual(360);
   await summary.click();
   await expect(details).not.toHaveAttribute('open', '');
+});
+
+
+for (const width of [320, 768]) {
+  test(`journal index preserves all sections at ${width}px and closes with Escape`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/revistas/revista-de-teste-cientifico', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#journal-article-title')).toHaveText('Artigo de teste');
+    await expect(page.locator('#conteudo-revista h2').first()).toHaveText('Introdução');
+    await page.locator('#cookieReject').click();
+    await page.locator('#themeToggle').click();
+    await page.locator('#journal-mobile-toc summary').click();
+    const links=page.locator('#journal-content-index a');
+    await expect(links).toHaveCount(4);
+    const bounds=await page.locator('#journal-toc').boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
+    const color=await links.first().evaluate(element=>getComputedStyle(element).color);
+    expect(color).toBe('rgb(226, 232, 240)');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#journal-mobile-toc')).not.toHaveAttribute('open','');
+  });
+}
+
+test('journal bookmarks survive malformed storage and appear in Favorites', async ({ page }) => {
+  await page.addInitScript(()=>{if(!localStorage.getItem('savedJournalArticles'))localStorage.setItem('savedJournalArticles','invalid json');if(!localStorage.getItem('journalAlerts'))localStorage.setItem('journalAlerts','{}');});
+  await page.goto('/revistas/revista-de-teste-cientifico', { waitUntil: 'domcontentloaded' });
+  await page.locator('#cookieReject').click();
+  await page.locator('.journal-save-btn').click();
+  await expect(page.locator('.journal-save-btn')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#journal-action-status')).toContainText('Artigo guardado');
+  await page.goto('/favoritos', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#favoritesGrid')).toContainText('Artigo de teste');
+  await expect(page.locator('#favoritesEmpty')).toBeHidden();
 });

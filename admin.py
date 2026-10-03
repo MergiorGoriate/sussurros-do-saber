@@ -810,6 +810,10 @@ def journal_form(journal_id=None):
         duplicate = Journal.query.filter(Journal.slug == base_slug, Journal.id != journal.id).first()
         cover_url = request.form.get("cover_image", "").strip()
         cover_file = request.files.get("cover_file")
+        invalid_length = any(len(request.form.get(name, "").strip()) > maximum for name, maximum in {
+            "slug": 200, "abbreviation": 30, "frequency": 80, "current_issue": 120,
+            "doi": 180, "cover_image": 600, "cover_alt": 300,
+        }.items())
 
         if not 3 <= len(title) <= 180:
             flash("O título deve ter entre 3 e 180 caracteres.", "error")
@@ -821,9 +825,11 @@ def journal_form(journal_id=None):
             flash("Não foi possível gerar o endereço da revista.", "error")
         elif duplicate:
             flash("Já existe uma revista com este endereço.", "error")
+        elif invalid_length:
+            flash("Um dos campos excede o tamanho permitido. Reduza o texto e tente novamente.", "error")
         elif issn and not re.fullmatch(r"[0-9]{4}-[0-9]{3}[0-9X]", issn):
             flash("O ISSN deve seguir o formato 1234-567X.", "error")
-        elif cover_url and not re.fullmatch(r"https?://[^\\s]+", cover_url, re.I):
+        elif cover_url and not re.fullmatch(r"https?://[^\s]+", cover_url, re.I):
             flash("Informe um endereço válido para a capa.", "error")
         else:
             try:

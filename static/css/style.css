@@ -1631,3 +1631,21 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     bottom:218px!important;
   }
 }
+
+
+/* Legibilidade dos metadados e do índice nas revistas em modo escuro. */
+.dark .journal-article-header,.dark .journal-article-header h1{color:#f3f4f6}
+.dark .journal-article-authors,.dark .journal-article-meta,
+.dark .journal-article-share a,.dark .journal-article-actions button{color:#cbd5e1}
+.dark .journal-article-meta strong{color:#e2e8f0}
+.dark .journal-article-header,.dark .journal-article-actions{border-color:#475569}
+.journal-page #journal-action-status:empty{display:none}
+.journal-page #journal-action-status{margin:.5rem 0 0;font-size:.875rem}
+.journal-page .journal-article-actions button:focus-visible,
+.journal-page .journal-article-share a:focus-visible{outline:2px solid #1e4e8c;outline-offset:3px}
+@media(max-width:899px){
+ .dark .journal-page .journal-mobile-toc[open]>#journal-toc,
+ .dark .journal-page #journal-toc>strong{background:#172027!important;color:#f3f4f6!important}
+ .dark .journal-page #journal-toc .journal-content-index>a{color:#e2e8f0!important;border-color:#475569!important}
+ .journal-page .journal-mobile-toc>summary{min-width:44px;min-height:44px}
+}

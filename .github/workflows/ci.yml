@@ -81,6 +81,21 @@ jobs:
           path: static/css/tailwind.css
           retention-days: 7
       - run: npx playwright install --with-deps chromium
+      - name: Create browser journal fixture
+        run: |
+          python - <<'PY'
+          from app import app
+          from models import db, Journal
+          with app.app_context():
+              journal = Journal.query.filter_by(slug="revista-de-teste-cientifico").first()
+              if not journal:
+                  journal = Journal(slug="revista-de-teste-cientifico", title="Revista científica de teste", field="Biologia", description="Revista usada nos testes de navegação.")
+                  db.session.add(journal)
+              journal.published = True
+              journal.content_markdown = "# Artigo de teste\n\n## Introdução\n\nTexto de teste.\n\n## Desenvolvimento com um título longo que deve caber no índice em dispositivos móveis\n\nTexto de teste.\n\n### Métodos\n\nTexto de teste."
+              journal.references = "Fonte: https://example.org/estudo"
+              db.session.commit()
+          PY
       - name: Start Flask application
         run: |
           python -m gunicorn app:app --bind 127.0.0.1:5000 --workers 1 --timeout 60 > /tmp/sussurros-server.log 2>&1 &
@@ -103,3 +118,4 @@ jobs:
             /tmp/sussurros-server.log
           if-no-files-found: ignore
           retention-days: 7
+

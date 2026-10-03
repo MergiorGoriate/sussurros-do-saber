@@ -359,6 +359,89 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(rendered.count('href="https://doi.org/10.1000/teste"'), 1)
         self.assertNotIn("<a href=\"<a", rendered)
 
+    def test_markdown_preserves_url_labels_code_and_query_parameters(self):
+        rendered = str(render_markdown(
+            "# Título\n\n[https://example.org](https://example.org)\n\n"
+            "`https://example.org/code`\n\nhttps://example.org/?a=1&b=2"
+        ))
+        self.assertIn("<h1>Título</h1>", rendered)
+        self.assertEqual(rendered.count('href="https://example.org"'), 1)
+        self.assertIn('<code>https://example.org/code</code>', rendered)
+        self.assertIn('href="https://example.org/?a=1&amp;b=2"', rendered)
+        self.assertNotIn("&amp;amp;", rendered)
+
+    def test_journal_title_is_rendered_without_removing_introduction(self):
+        with app.app_context():
+            journal = Journal(title="Revista editorial", slug="titulo-regressao", field="Biologia",
+                              description="Uma revista com conteúdo de teste.", published=True,
+                              content_markdown="# Título do artigo\n\n## Introdução\n\nPrimeiro parágrafo.")
+            db.session.add(journal)
+            db.session.commit()
+        response = self.client.get("/revistas/titulo-regressao")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('id="journal-article-title">Título do artigo</h1>'.encode(), response.data)
+        self.assertIn("<h2>Introdução</h2>".encode(), response.data)
+        self.assertNotIn(b"heading.remove()", response.data)
+        with app.app_context():
+            journal = Journal.query.filter_by(slug="titulo-regressao").first()
+            journal.content_markdown = "## Introdução\n\nPrimeiro parágrafo."
+            db.session.commit()
+        response = self.client.get("/revistas/titulo-regressao")
+        self.assertIn('id="journal-article-title">Revista editorial</h1>'.encode(), response.data)
+        self.assertIn("<h2>Introdução</h2>".encode(), response.data)
+
+    def test_journal_draft_preview_and_pdf_require_administrator(self):
+        with app.app_context():
+            journal = Journal(title="Revista rascunho", slug="rascunho-regressao", field="Biologia",
+                              description="Uma revista ainda em preparação.", published=False,
+                              content_markdown="## Introdução\n\nConteúdo reservado.")
+            db.session.add(journal)
+            db.session.commit()
+            identifier = journal.id
+        self.assertEqual(self.client.get("/revistas/rascunho-regressao").status_code, 404)
+        self.assertEqual(self.client.get("/revistas/rascunho-regressao/baixar.pdf").status_code, 404)
+        with self.client.session_transaction() as session:
+            session.clear()
+        preview = f"/admin/revistas/{identifier}/previsualizar"
+        pdf = f"/admin/revistas/{identifier}/baixar.pdf"
+        self.assertEqual(self.client.get(preview).status_code, 302)
+        self.assertEqual(self.client.get(pdf).status_code, 302)
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+        response = self.client.get(preview)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        response = self.client.get(pdf)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data.startswith(b"%PDF-"))
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+    def test_static_and_health_requests_do_not_update_editorial_database(self):
+        with patch("app.Article.publish_due_scheduled") as publish:
+            self.client.get("/static/css/style.css").close()
+            self.client.get("/healthz")
+            publish.assert_not_called()
+            self.client.get("/artigos")
+            publish.assert_called_once()
+
+    def test_journal_cover_url_with_s_is_accepted_and_long_metadata_rejected(self):
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "cover-csrf"
+        data = {"csrf_token": "cover-csrf", "title": "Revista de capa", "slug": "capa-regressao",
+                "description": "Uma descrição suficientemente longa para validação.",
+                "field": "Biologia", "cover_image": "https://images.example.org/cover.webp"}
+        self.assertEqual(self.client.post("/admin/revistas/nova", data=data).status_code, 302)
+        with app.app_context():
+            self.assertEqual(Journal.query.filter_by(slug="capa-regressao").first().cover_image, data["cover_image"])
+        data.update(slug="metadata-invalida", doi="x" * 181)
+        response = self.client.post("/admin/revistas/nova", data=data)
+        self.assertEqual(response.status_code, 200)
+        with app.app_context():
+            self.assertIsNone(Journal.query.filter_by(slug="metadata-invalida").first())
+
     def test_journal_template_uses_references_and_notes_after_content(self):
         template = Path(app.root_path, "templates", "journal.html").read_text(encoding="utf-8")
         content_position = template.index('id="conteudo-revista"')
@@ -776,3 +859,4 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
