@@ -194,10 +194,6 @@ test('citation icon opens an accessible dialog with the article reference', asyn
     const consent=page.locator('#cookieReject');
     if(await consent.isVisible())await consent.click();
     if(width===320)await page.locator('#themeToggle').click();
-    await expect(page.locator('.journal-sections h2')).toHaveText(['Resumo','Palavras-chave','Abstract','Keywords','Resultados','Contribuição dos autores','Agradecimentos','Financiamento','Conflitos de interesse','Aprovação ética','Consentimento informado','Disponibilidade de dados','Referências bibliográficas','Notas']);
-    await expect(page.locator('[data-article-field="summary"]')).toContainText('Resumo em português do estudo.');
-    await expect(page.locator('#notas')).toContainText('Nota complementar do estudo.');
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 
     await page.locator('.journal-cite-btn').click();
     const dialog=page.getByRole('dialog', {name:'Citar este artigo'});
@@ -319,6 +315,10 @@ for (const width of [1440,320]) {
     await page.goto('/revistas/'+slug,{waitUntil:'domcontentloaded'});
     const consent=page.locator('#cookieReject');if(await consent.isVisible())await consent.click();
     if(width===320)await page.locator('#themeToggle').click();
+    await expect(page.locator('.journal-sections h2')).toHaveText(['Resumo','Palavras-chave','Abstract','Keywords','Resultados','Contribuição dos autores','Agradecimentos','Financiamento','Conflitos de interesse','Aprovação ética','Consentimento informado','Disponibilidade de dados','Referências bibliográficas','Notas']);
+    await expect(page.locator('[data-article-field="summary"]')).toContainText('Resumo em português do estudo.');
+    await expect(page.locator('#notas')).toContainText('Nota complementar do estudo.');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     const orcid=page.locator('.journal-article-authors a.journal-orcid-link');
     await expect(orcid).toHaveAttribute('href','https://orcid.org/0000-0002-1825-0097');
     await context.route('https://orcid.org/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<p>Perfil ORCID de teste</p>'}));
