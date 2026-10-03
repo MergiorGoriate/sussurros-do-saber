@@ -40,9 +40,9 @@
     {% if journal.doi %}<span>•</span><span>DOI: {{ journal.doi }}</span>{% endif %}
   </div>
   <div class="journal-article-actions" aria-label="Ações do artigo">
-    <button type="button" aria-label="Alertas" title="Alertas"><i class="fa-solid fa-bell"></i></button>
-    <button type="button" aria-label="Guardar" title="Guardar"><i class="fa-regular fa-bookmark"></i></button>
-    <button type="button" aria-label="Citar" title="Citar"><i class="fa-solid fa-quote-right"></i></button>
+    <button type="button" class="journal-alert-btn" aria-label="Ativar alertas" title="Ativar alertas" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
+    <button type="button" class="journal-save-btn" aria-label="Guardar artigo" title="Guardar artigo" aria-pressed="false"><i class="fa-regular fa-bookmark"></i></button>
+    <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo"><i class="fa-solid fa-quote-right"></i></button>
     <a class="journal-article-pdf" href="{{ url_for('journal_download_pdf', slug=journal.slug) }}" download aria-label="Baixar PDF" title="Baixar PDF"><i class="fa-regular fa-file-pdf"></i></a>
   </div>
 </section>
@@ -103,6 +103,43 @@ document.addEventListener('DOMContentLoaded',()=>{
    box.appendChild(a);
  });
  if(!headings.length)box.hidden=true;
+});
+</script>
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded',()=>{
+ const slug={{ journal.slug|tojson }};
+ const title={{ journal.title|tojson }};
+ const journalTitle={{ journal.title|tojson }};
+ const issue={{ (journal.current_issue or 'Edição em preparação')|tojson }};
+ const doi={{ (journal.doi or '')|tojson }};
+ const url=window.location.href.split('#')[0];
+ const alertBtn=document.querySelector('.journal-alert-btn');
+ const saveBtn=document.querySelector('.journal-save-btn');
+ const citeBtn=document.querySelector('.journal-cite-btn');
+ const setPressed=(btn,on,solid,regular)=>{if(!btn)return;btn.setAttribute('aria-pressed',String(on));const i=btn.querySelector('i');if(i){i.className=on?solid:regular;}};
+ let alerts=JSON.parse(localStorage.getItem('journalAlerts')||'[]');
+ let saved=JSON.parse(localStorage.getItem('savedJournalArticles')||'[]');
+ setPressed(alertBtn,alerts.includes(slug),'fa-solid fa-bell','fa-regular fa-bell');
+ setPressed(saveBtn,saved.some(x=>x.slug===slug),'fa-solid fa-bookmark','fa-regular fa-bookmark');
+ alertBtn?.addEventListener('click',()=>{
+   const on=!alerts.includes(slug);
+   alerts=on?[...alerts,slug]:alerts.filter(x=>x!==slug);
+   localStorage.setItem('journalAlerts',JSON.stringify(alerts));
+   setPressed(alertBtn,on,'fa-solid fa-bell','fa-regular fa-bell');
+   alertBtn.title=on?'Alertas ativados neste navegador':'Ativar alertas';
+ });
+ saveBtn?.addEventListener('click',()=>{
+   const on=!saved.some(x=>x.slug===slug);
+   saved=on?[...saved,{slug,title,url,savedAt:new Date().toISOString()}]:saved.filter(x=>x.slug!==slug);
+   localStorage.setItem('savedJournalArticles',JSON.stringify(saved));
+   setPressed(saveBtn,on,'fa-solid fa-bookmark','fa-regular fa-bookmark');
+   saveBtn.title=on?'Artigo guardado':'Guardar artigo';
+ });
+ citeBtn?.addEventListener('click',async()=>{
+   const citation=doi?title+'. '+journalTitle+'. '+issue+'. DOI: '+doi:title+'. '+journalTitle+'. '+issue+'. '+url;
+   try{await navigator.clipboard.writeText(citation);citeBtn.title='Citação copiada';}
+   catch(e){window.prompt('Copie a citação:',citation);}
+ });
 });
 </script>
 {% endblock %}
