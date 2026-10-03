@@ -685,8 +685,7 @@ def privacy():
 
 @app.get("/politica-editorial")
 def editorial_policy():
-    policy = EditorialPolicy.query.first()
-    return render_template("editorial_policy.html", policy=policy)
+    return render_template("editorial_policy.html")
 
 @app.get("/politica-de-correcoes")
 def corrections_policy():
