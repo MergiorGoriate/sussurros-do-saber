@@ -1,4 +1,9 @@
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, session, url_for
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from xml.sax.saxutils import escape
 import requests
 import gzip
@@ -699,6 +704,53 @@ def journal_detail(slug):
     if not journal:
         return render_template("404.html"), 404
     return render_template("journal.html", journal=journal)
+
+@app.get("/revistas/<slug>/baixar.pdf")
+def journal_download_pdf(slug):
+    journal = Journal.query.filter_by(slug=slug, published=True).first()
+    if not journal:
+        return render_template("404.html"), 404
+
+    # PDF textual, leve e gerado sob demanda a partir do conteúdo publicado.
+    raw = journal.content_markdown or journal.guidelines or ""
+    html = markdown.markdown(raw, extensions=["extra"])
+    clean = bleach.clean(html, tags=["p","br","strong","em","b","i","h1","h2","h3","h4","ul","ol","li","blockquote"], strip=True)
+    refs_raw = journal.references or ""
+    refs_html = bleach.clean(markdown.markdown(refs_raw, extensions=["extra"]), tags=["p","br","strong","em","b","i","ul","ol","li"], strip=True)
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm, topMargin=18*mm, bottomMargin=18*mm,
+                            title=journal.title, author="Sussurros do Saber")
+    styles = getSampleStyleSheet()
+    story = [Paragraph(html_escape(journal.title), styles["Title"]), Spacer(1, 8)]
+    if journal.description:
+        story += [Paragraph(html_escape(journal.description), styles["BodyText"]), Spacer(1, 12)]
+    # ReportLab Paragraph suporta o subconjunto HTML acima.
+    for block in re.split(r"(?=<(?:h[1-4]|p|ul|ol|blockquote)[ >])", clean):
+        block = block.strip()
+        if not block:
+            continue
+        try:
+            story.append(Paragraph(block, styles["BodyText"]))
+            story.append(Spacer(1, 6))
+        except Exception:
+            story.append(Paragraph(html_escape(bleach.clean(block, tags=[], strip=True)), styles["BodyText"]))
+    if refs_html.strip():
+        story += [Spacer(1, 12), Paragraph("Referências e Notas", styles["Heading2"])]
+        for block in re.split(r"(?=<(?:p|ul|ol)[ >])", refs_html):
+            if block.strip():
+                try: story.append(Paragraph(block.strip(), styles["BodyText"]))
+                except Exception: story.append(Paragraph(html_escape(bleach.clean(block, tags=[], strip=True)), styles["BodyText"]))
+                story.append(Spacer(1, 5))
+    doc.build(story)
+    pdf = buffer.getvalue()
+    buffer.close()
+    filename = re.sub(r"[^a-zA-Z0-9._-]+", "-", journal.slug).strip("-") + ".pdf"
+    return Response(pdf, mimetype="application/pdf", headers={
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "private, max-age=300",
+        "X-Content-Type-Options": "nosniff",
+    })
 
 @app.get("/recursos")
 def resources():
