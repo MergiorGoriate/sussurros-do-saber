@@ -1666,3 +1666,6 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 /* Respiro entre a barra editorial e o resumo das revistas. */
 .journal-page .journal-article-header{margin-bottom:20px}
 @media(max-width:767px){.journal-page .journal-article-header{margin-bottom:16px}}
+
+/* Ações das revistas alinhadas à direita também em dispositivos móveis. */
+.journal-page .journal-article-actions{justify-content:flex-end}
