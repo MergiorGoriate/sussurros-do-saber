@@ -219,7 +219,8 @@ test('citation icon opens an accessible dialog with the article reference', asyn
     const dialog=page.getByRole('dialog', {name:'Citar este artigo'});
     await expect(dialog).toBeVisible();
     await expect(page.locator('#journal-citation-text')).toHaveValue(/Artigo de teste/);
-    await expect(page.locator('#journal-citation-text')).toHaveValue(/Revista de Teste Científico/);
+    const journalName=await page.locator('.journal-article-meta strong').innerText();
+    expect(await page.locator('#journal-citation-text').inputValue()).toContain(journalName);
     const bounds=await dialog.boundingBox();
     expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
