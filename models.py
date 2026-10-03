@@ -105,6 +105,9 @@ class Journal(db.Model):
 
 class EditorialPolicy(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    page_title = db.Column(db.Text, default="", nullable=False)
+    page_description = db.Column(db.Text, default="", nullable=False)
+    page_content = db.Column(db.Text, default="", nullable=False)
     author_guidelines = db.Column(db.Text, default="", nullable=False)
     reviewer_guidelines = db.Column(db.Text, default="", nullable=False)
     ethics_policy = db.Column(db.Text, default="", nullable=False)
@@ -230,3 +233,4 @@ class Subscriber(db.Model):
     email = db.Column(db.String(180), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+

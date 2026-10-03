@@ -828,10 +828,29 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b"<table>", response.data)
         self.assertIn(b"/diretrizes-para-autores", self.client.get("/sitemap.xml").data)
 
+    def test_editorial_page_migration_preserves_existing_policies(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+        from sqlalchemy import create_engine, text
+        from app import ensure_editorial_policy_columns
+        engine = create_engine("sqlite://")
+        try:
+            with engine.begin() as connection:
+                connection.execute(text("CREATE TABLE editorial_policy (id INTEGER PRIMARY KEY, ethics_policy TEXT)"))
+                connection.execute(text("INSERT INTO editorial_policy (ethics_policy) VALUES ('Preservar ética')"))
+            with patch("app.db", SimpleNamespace(engine=engine, session=Mock())):
+                ensure_editorial_policy_columns()
+                ensure_editorial_policy_columns()
+            with engine.connect() as connection:
+                row = connection.execute(text("SELECT ethics_policy, page_title, page_description, page_content FROM editorial_policy")).one()
+                self.assertEqual(tuple(row), ("Preservar ética", "", "", ""))
+        finally:
+            engine.dispose()
+
     def test_editorial_policies_public_routes_show_admin_content(self):
         from types import SimpleNamespace
         from unittest.mock import patch
-        policy = SimpleNamespace(reviewer_guidelines="## Avaliação\n\nRevisão configurada.", ethics_policy="Ética configurada.", ai_policy="<script>alert(1)</script>", data_policy="", fees_policy="Sem taxas configuradas.", open_access_policy="Licença configurada.")
+        policy = SimpleNamespace(page_title="Política configurada", page_description="Descrição configurada.", page_content="## Missão editável\n\nTexto geral gerido no painel.", author_guidelines="Autores configurados.", reviewer_guidelines="## Avaliação\n\nRevisão configurada.", ethics_policy="Ética configurada.", ai_policy="<script>alert(1)</script>", data_policy="", fees_policy="Sem taxas configuradas.", open_access_policy="Licença configurada.")
         with patch("app.EditorialPolicy") as model:
             model.query.first.return_value = policy
             for path in ("/politica-editorial", "/politicas-editoriais"):
@@ -839,11 +858,20 @@ class PlatformTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 html = response.get_data(as_text=True)
                 self.assertIn("Revisão configurada.", html)
+                self.assertIn("Política configurada", html)
+                self.assertIn("Descrição configurada.", html)
+                self.assertIn("Texto geral gerido no painel.", html)
+                self.assertIn("Autores configurados.", html)
+                self.assertNotIn("Missão e independência", html)
+                self.assertNotIn("Os princípios que orientam", html)
                 self.assertIn("Licença configurada.", html)
                 self.assertIn("/diretrizes-para-autores", html)
                 self.assertNotIn("<script>alert(1)</script>", html)
             model.query.first.return_value = None
-            self.assertEqual(self.client.get("/politicas-editoriais").status_code, 200)
+            empty = self.client.get("/politicas-editoriais")
+            self.assertEqual(empty.status_code, 200)
+            self.assertNotIn("Missão e independência", empty.get_data(as_text=True))
+            self.assertNotIn('id="author-guidelines"', empty.get_data(as_text=True))
 
     def test_author_guidelines_without_types_use_a_valid_content_link(self):
         from types import SimpleNamespace
@@ -881,8 +909,9 @@ class PlatformTests(unittest.TestCase):
         with app.app_context():
             self.assertEqual(EditorialPolicy.query.count(), 0)
         content = "## Tipos de manuscritos\n\nTexto guardado pelo painel."
-        response = self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": content})
+        response = self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": content, "page_title": "Título editável", "page_description": "Descrição editável", "page_content": "## Política geral\n\nInformações guardadas."})
         self.assertEqual(response.status_code, 302)
+        self.assertIn("Informações guardadas.", self.client.get("/politicas-editoriais").get_data(as_text=True))
         self.assertIn(b"Texto guardado pelo painel.", self.client.get("/diretrizes-para-autores").data)
         invalid = self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": "x" * 100001})
         self.assertEqual(invalid.status_code, 200)
@@ -1050,6 +1079,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
