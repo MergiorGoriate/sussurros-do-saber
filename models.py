@@ -103,6 +103,18 @@ class Journal(db.Model):
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
 
+class EditorialPolicy(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    author_guidelines = db.Column(db.Text, default="", nullable=False)
+    reviewer_guidelines = db.Column(db.Text, default="", nullable=False)
+    ethics_policy = db.Column(db.Text, default="", nullable=False)
+    ai_policy = db.Column(db.Text, default="", nullable=False)
+    data_policy = db.Column(db.Text, default="", nullable=False)
+    fees_policy = db.Column(db.Text, default="", nullable=False)
+    open_access_policy = db.Column(db.Text, default="", nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+
 class Article(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(240), nullable=False)

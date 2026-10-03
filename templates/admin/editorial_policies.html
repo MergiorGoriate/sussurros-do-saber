@@ -1,0 +1,18 @@
+{% extends 'admin/base.html' %}
+{% block title %}Políticas Editoriais{% endblock %}
+{% block content %}
+<header class="admin-header"><div><span>Governança editorial</span><h1>Políticas Editoriais</h1><p>Edite as políticas institucionais da publicação. Os campos aceitam Markdown.</p></div><a href="/diretrizes-para-autores" target="_blank" rel="noopener">Ver Diretrizes ↗</a></header>
+<form method="post" class="editor-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<section class="editor-main">
+<label>Diretrizes para Autores<textarea name="author_guidelines" rows="24" maxlength="100000">{{ policy.author_guidelines }}</textarea><small>Quando preenchido, este conteúdo é apresentado na página pública.</small></label>
+<label>Diretrizes para Revisores<textarea name="reviewer_guidelines" rows="12" maxlength="100000">{{ policy.reviewer_guidelines }}</textarea></label>
+<label>Ética e Integridade Científica<textarea name="ethics_policy" rows="12" maxlength="100000">{{ policy.ethics_policy }}</textarea></label>
+<label>Política de Inteligência Artificial<textarea name="ai_policy" rows="10" maxlength="100000">{{ policy.ai_policy }}</textarea></label>
+<label>Política de Dados de Investigação<textarea name="data_policy" rows="10" maxlength="100000">{{ policy.data_policy }}</textarea></label>
+<label>Taxas / APC<textarea name="fees_policy" rows="8" maxlength="100000">{{ policy.fees_policy }}</textarea></label>
+<label>Acesso Aberto e Licenciamento<textarea name="open_access_policy" rows="10" maxlength="100000">{{ policy.open_access_policy }}</textarea></label>
+</section>
+<aside class="editor-side"><h2>Publicação</h2><p>Guarde aqui as políticas editoriais. As Diretrizes para Autores podem ser publicadas diretamente na página pública existente.</p><button class="admin-primary" type="submit">Guardar políticas</button></aside>
+</form>
+{% endblock %}

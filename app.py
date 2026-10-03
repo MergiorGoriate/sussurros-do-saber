@@ -24,7 +24,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from journal_metadata import journal_authors
 from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -70,7 +70,8 @@ app.register_blueprint(admin_bp)
 
 @app.get("/diretrizes-para-autores")
 def author_guidelines():
-    return render_template("author_guidelines.html")
+    policy = EditorialPolicy.query.first()
+    return render_template("author_guidelines.html", policy=policy)
 
 
 @app.get("/ads.txt")
