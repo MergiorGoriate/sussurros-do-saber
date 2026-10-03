@@ -1685,3 +1685,43 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .dark .journal-citation-dialog textarea{background:#111827;border-color:#475569}
 .dark .journal-citation-heading button{border-color:#475569}
 @media(max-width:480px){.journal-citation-dialog{padding:18px}.journal-citation-footer .primary-btn{width:100%;text-align:center}}
+
+/* Article authors and editorial information */
+.journal-author-trigger{border:0;padding:2px 0;background:transparent;color:inherit;font:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.journal-orcid-link{display:inline-flex;align-items:center;justify-content:center;margin-left:5px;color:#659b17;font-size:1.15rem;text-decoration:none;vertical-align:middle}
+.journal-details-dialog{box-sizing:border-box;width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 32px);margin:auto;padding:0;border:1px solid #cbd5e1;border-radius:16px;background:#fff;color:#1f2937;box-shadow:0 24px 80px #0004;overflow:hidden}
+.journal-details-dialog[open]{display:flex;flex-direction:column}
+.journal-details-dialog::backdrop{background:rgba(15,23,42,.6)}
+.journal-details-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;background:#1E4E8C;color:#fff;flex-shrink:0}
+.journal-details-heading h2{margin:0;font-size:1.3rem;font-weight:700;color:#fff}
+.journal-details-heading button{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;border:0;border-radius:8px;background:transparent;color:#fff;font-size:1.4rem;cursor:pointer}
+.journal-details-tabs{display:flex;flex-shrink:0;border-bottom:1px solid #cbd5e1;background:#f1f5f9}
+.journal-details-tabs button{flex:1;min-height:52px;border:0;border-bottom:3px solid transparent;background:transparent;color:#475569;font:inherit;font-weight:700;cursor:pointer}
+.journal-details-tabs button[aria-selected="true"]{border-bottom-color:#1E4E8C;background:#fff;color:#1E4E8C}
+.journal-details-body{padding:20px;overflow-y:auto;min-height:0;overscroll-behavior:contain}
+.journal-details-body [hidden]{display:none!important}
+.journal-editorial-section{padding:0 0 22px;margin:0 0 22px;border-bottom:1px solid #e2e8f0}
+.journal-editorial-section:last-child{margin:0;border:0}
+.journal-editorial-section h3{margin:0 0 14px;font-size:1.1rem;font-weight:700;color:#1E4E8C}
+.journal-publication-card{display:flex;align-items:center;gap:20px;padding:16px;background:#f1f5f9;border-radius:10px}
+.journal-publication-card img{width:35%;max-width:160px;height:auto;flex-shrink:0;box-shadow:0 6px 20px #0002}
+.journal-publication-card div{min-width:0;overflow-wrap:anywhere}
+.journal-publication-card p{margin:8px 0 0}
+.journal-details-empty{color:#64748b}
+.journal-author-details{margin:0 0 12px;border:1px solid #cbd5e1;border-radius:10px;overflow:hidden}
+.journal-author-details summary{padding:16px;cursor:pointer;font-weight:700;overflow-wrap:anywhere}
+.journal-author-details[open] summary{background:#eaf1fb;color:#1E4E8C}
+.journal-author-description{padding:0 16px 16px}
+.journal-author-description p{white-space:pre-line;overflow-wrap:anywhere;margin:12px 0}
+.journal-author-orcid{display:inline-flex;align-items:center;gap:6px;color:#1E4E8C;text-decoration:underline}
+.journal-author-orcid i{color:#659b17}
+.journal-details-dialog button:focus-visible,.journal-details-dialog summary:focus-visible,.journal-author-trigger:focus-visible,.journal-orcid-link:focus-visible{outline:3px solid #6ea7e6;outline-offset:3px}
+.dark .journal-details-dialog{background:#172027;color:#f3f4f6;border-color:#475569}
+.dark .journal-details-tabs,.dark .journal-publication-card{background:#111827;border-color:#475569}
+.dark .journal-details-tabs button{color:#cbd5e1}
+.dark .journal-details-tabs button[aria-selected="true"],.dark .journal-author-details[open] summary{background:#223449;color:#93c5fd;border-bottom-color:#93c5fd}
+.dark .journal-editorial-section,.dark .journal-author-details{border-color:#475569}
+.dark .journal-editorial-section h3,.dark .journal-author-orcid{color:#93c5fd}
+.dark .journal-details-empty{color:#cbd5e1}
+.dark .journal-orcid-link,.dark .journal-author-orcid i{color:#a6ce39}
+@media(max-width:480px){.journal-details-heading{padding:12px}.journal-details-heading h2{font-size:1.15rem}.journal-details-body{padding:14px}.journal-publication-card{gap:12px;padding:12px}}

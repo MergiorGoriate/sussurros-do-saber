@@ -23,13 +23,12 @@
   </div>
   <h1 id="journal-article-title">{{ article_title }}</h1>
   <div class="journal-article-authors">
-  {% if journal.authors_orcid %}
-    {% for line in journal.authors_orcid.splitlines() if line.strip() %}
-      {% set raw=line.strip() %}
-      {% if '—' in raw %}{% set parts=raw.split('—',1) %}{% set author_name=parts[0].strip() %}{% set orcid_value=parts[1].strip() %}
-      {% elif 'http://orcid.org/' in raw or 'https://orcid.org/' in raw %}{% set author_name=raw.split('http')[0].strip(' -–—:|') %}{% set orcid_value='http' ~ raw.split('http',1)[1] %}
-      {% else %}{% set author_name=raw %}{% set orcid_value='' %}{% endif %}
-      <span class="journal-article-author"><span class="journal-article-author-name">{{ author_name }}</span>{% if orcid_value %}<a class="journal-orcid-dot" href="https://orcid.org/{{ orcid_value.split('/')[-1]|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID de {{ author_name }}">iD</a>{% endif %}</span>{% if not loop.last %}<span class="journal-author-comma">,</span>{% endif %}
+  {% if journal_authors %}
+    {% for author in journal_authors %}
+      <span class="journal-article-author">
+        {% if author.name %}<button type="button" class="journal-author-trigger" data-journal-details="authors" data-author-index="{{ loop.index0 }}" aria-haspopup="dialog" aria-controls="journal-details-dialog">{{ author.name }}</button>{% endif %}
+        {% if author.orcid %}<a class="journal-orcid-link" href="{{ author.orcid }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID{% if author.name %} de {{ author.name }}{% endif %}" title="Abrir perfil ORCID"><i class="fa-brands fa-orcid" aria-hidden="true"></i></a>{% endif %}
+      </span>{% if not loop.last %}<span class="journal-author-comma">,</span>{% endif %}
     {% endfor %}
   {% else %}<span>Autores a indicar</span>{% endif %}
   </div>
@@ -43,6 +42,7 @@
     <button type="button" class="journal-alert-btn" aria-label="Acompanhar revista neste navegador" title="Acompanhar revista neste navegador" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
     <button type="button" class="journal-save-btn" aria-label="Guardar artigo" title="Guardar artigo" aria-pressed="false"><i class="fa-regular fa-bookmark"></i></button>
     <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo" aria-haspopup="dialog" aria-controls="journal-citation-dialog"><i class="fa-solid fa-quote-right"></i></button>
+    <button type="button" class="journal-information-btn" data-journal-details="information" aria-label="Informações do artigo" title="Informações do artigo" aria-haspopup="dialog" aria-controls="journal-details-dialog"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
     <a class="journal-article-pdf" href="{{ (url_for('journal_preview_pdf', journal_id=journal.id) if request.endpoint == 'journal_preview' else url_for('journal_download_pdf', slug=journal.slug)) }}" download aria-label="Baixar PDF" title="Baixar PDF"><i class="fa-regular fa-file-pdf"></i></a>
   </div>
   <p id="journal-action-status" class="sr-only" role="status" aria-live="polite"></p>
@@ -71,6 +71,34 @@
 {% endif %}
 </div></div>
 
+<dialog id="journal-details-dialog" class="journal-details-dialog" aria-labelledby="journal-details-title">
+  <div class="journal-details-heading"><h2 id="journal-details-title">Informações e Autores</h2><button type="button" id="journal-details-close" aria-label="Fechar informações e autores"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+  <div class="journal-details-tabs" role="tablist" aria-label="Dados do artigo">
+    <button type="button" id="journal-tab-information" role="tab" aria-controls="journal-panel-information" aria-selected="true" tabindex="0" data-details-tab="information">Informações</button>
+    <button type="button" id="journal-tab-authors" role="tab" aria-controls="journal-panel-authors" aria-selected="false" tabindex="-1" data-details-tab="authors">Autores</button>
+  </div>
+  <div class="journal-details-body">
+    <section id="journal-panel-information" role="tabpanel" aria-labelledby="journal-tab-information" tabindex="0">
+      <section class="journal-editorial-section"><h3>Revista e capa</h3><div class="journal-publication-card">
+        {% if journal.cover_image %}<img src="{{ journal.cover_image|image_variant(480) }}" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}" width="160" loading="lazy" decoding="async">{% endif %}
+        <div><strong>{{ journal.title }}</strong>{% if journal.current_issue %}<p>{{ journal.current_issue }}</p>{% endif %}{% if journal.publication_date %}<p>Publicado em {{ journal.publication_date.strftime('%d/%m/%Y') }}</p>{% endif %}{% if journal.issn %}<p>ISSN {{ journal.issn }}</p>{% endif %}</div>
+      </div></section>
+      {% for label, value in [('Direitos autorais',journal.copyright_policy),('Histórico de submissões',journal.submission_history),('Agradecimentos',journal.acknowledgements),('Financiamento',journal.funding),('Informações sobre a licença',journal.license_info)] %}
+      <section class="journal-editorial-section"><h3>{{ label }}</h3>{% if value %}<div class="article-markdown">{{ value|markdown }}</div>{% else %}<p class="journal-details-empty">Informação não adicionada.</p>{% endif %}</section>
+      {% endfor %}
+    </section>
+    <section id="journal-panel-authors" role="tabpanel" aria-labelledby="journal-tab-authors" tabindex="0" hidden>
+      {% for author in journal_authors %}
+      <details class="journal-author-details" data-details-author="{{ loop.index0 }}">
+        <summary>{{ author.name or 'Autor (ORCID)' }}</summary>
+        <div class="journal-author-description">{% if author.description %}<p>{{ author.description }}</p>{% else %}<p class="journal-details-empty">Descrição não adicionada.</p>{% endif %}
+          {% if author.orcid %}<a class="journal-author-orcid" href="{{ author.orcid }}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-orcid" aria-hidden="true"></i> Ver perfil ORCID</a>{% endif %}
+        </div>
+      </details>
+      {% else %}<p class="journal-details-empty">Autores não adicionados.</p>{% endfor %}
+    </section>
+  </div>
+</dialog>
 <dialog id="journal-citation-dialog" class="journal-citation-dialog" aria-labelledby="journal-citation-title" aria-describedby="journal-citation-help">
   <div class="journal-citation-heading">
     <h2 id="journal-citation-title">Citar este artigo</h2>
@@ -90,7 +118,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  const mobileToc=document.getElementById('journal-mobile-toc');
  const toc=document.getElementById('journal-toc');
  const closeToc=()=>{mobileToc?.removeAttribute('open');};
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('journal-citation-dialog')?.open){closeToc();mobileToc?.querySelector('summary')?.focus();}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]')){closeToc();mobileToc?.querySelector('summary')?.focus();}});
  mobileToc?.addEventListener('click',e=>{if(e.target===mobileToc)closeToc();});
  if(mobileToc&&toc){
    toc.addEventListener('click',e=>{if(e.target.closest('a')&&window.matchMedia('(max-width: 899px)').matches){mobileToc.removeAttribute('open');}});
@@ -156,7 +184,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  const citationText=document.getElementById('journal-citation-text');
  const citationStatus=document.getElementById('journal-citation-status');
  citeBtn?.addEventListener('click',()=>{
-   const authors={{ (journal.authors_orcid or '')|tojson }}.split('\n').map(line=>line.split(/[—|]/)[0].replace(/https?:\/\/orcid\.org\/\S+/g,'').trim()).filter(Boolean).join(', ');
+   const authors={{ journal_authors|map(attribute='name')|select|join(', ')|tojson }};
    const year={{ (journal.publication_date.year|string if journal.publication_date else 's.d.')|tojson }};
    const citation=(authors?authors+'. ':'')+'('+year+'). '+title+'. '+journalTitle+'. '+issue+'. '+(doi?'https://doi.org/'+doi.replace(/^https?:\/\/doi\.org\//,''):url);
    citationText.value=citation;
@@ -182,5 +210,6 @@ document.addEventListener('DOMContentLoaded',()=>{
  });
 });
 </script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/journal-details.js', v='20261003-1') }}" defer></script>
 {% endblock %}
 

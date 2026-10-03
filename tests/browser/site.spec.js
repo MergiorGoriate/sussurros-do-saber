@@ -166,28 +166,7 @@ test('journal header and first content have compact spacing on desktop and mobil
 });
 
 test('journal administrator can filter the catalog and preview Markdown tables', async ({ page }) => {
-  const login=await page.request.get('/admin/login');
-  const html=await login.text();
-  const token=html.match(/name="csrf_token"[^>]*value="([^"]+)"/);
-  expect(token).not.toBeNull();
-  const response=await page.request.post('/admin/login',{form:{
-    username:process.env.ADMIN_USERNAME||'admin',
-    password:process.env.ADMIN_PASSWORD||'a-strong-test-password',
-    csrf_token:token[1]
-  }});
-  expect(response.ok()).toBeTruthy();
-  const challenge=await response.text();
-  const challengeToken=challenge.match(/name="csrf_token"[^>]*value="([^"]+)"/);
-  expect(challengeToken).not.toBeNull();
-  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  const bits=[...(process.env.ADMIN_TOTP_SECRET||'JBSWY3DPEHPK3PXP')].map(c=>alphabet.indexOf(c).toString(2).padStart(5,'0')).join('');
-  const key=Buffer.from(bits.match(/.{8}/g).map(byte=>parseInt(byte,2)));
-  const counter=Buffer.alloc(8);counter.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));
-  const digest=require('node:crypto').createHmac('sha1',key).update(counter).digest();
-  const offset=digest[digest.length-1]&15;
-  const code=String((digest.readUInt32BE(offset)&0x7fffffff)%1000000).padStart(6,'0');
-  const verified=await page.request.post('/admin/verificar-2fa',{form:{csrf_token:challengeToken[1],code}});
-  expect(verified.ok()).toBeTruthy();
+  await signInAdministrator(page);
   await page.goto('/admin/revistas', {waitUntil:'domcontentloaded'});
   await expect(page.locator('#journal-admin-search')).toBeVisible();
   await page.locator('#journal-admin-search').fill('nenhuma-revista-corresponde');
@@ -250,3 +229,106 @@ test('citation remains available when clipboard permission is denied', async ({ 
   await expect(page.locator('#journal-citation-text')).toBeFocused();
   await expect(page.locator('#journal-citation-text')).toHaveValue(/Artigo de teste/);
 });
+
+async function signInAdministrator(page) {
+  const login=await page.request.get('/admin/login');
+  const html=await login.text();
+  const token=html.match(/name="csrf_token"[^>]*value="([^"]+)"/);
+  expect(token).not.toBeNull();
+  const response=await page.request.post('/admin/login',{form:{
+    username:process.env.ADMIN_USERNAME||'admin',
+    password:process.env.ADMIN_PASSWORD||'a-strong-test-password',
+    csrf_token:token[1]
+  }});
+  expect(response.ok()).toBeTruthy();
+  const challenge=await response.text();
+  const challengeToken=challenge.match(/name="csrf_token"[^>]*value="([^"]+)"/);
+  expect(challengeToken).not.toBeNull();
+  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bits=[...(process.env.ADMIN_TOTP_SECRET||'JBSWY3DPEHPK3PXP')].map(c=>alphabet.indexOf(c).toString(2).padStart(5,'0')).join('');
+  const key=Buffer.from(bits.match(/.{8}/g).map(byte=>parseInt(byte,2)));
+  const counter=Buffer.alloc(8);counter.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));
+  const digest=require('node:crypto').createHmac('sha1',key).update(counter).digest();
+  const offset=digest[digest.length-1]&15;
+  const code=String((digest.readUInt32BE(offset)&0x7fffffff)%1000000).padStart(6,'0');
+  const verified=await page.request.post('/admin/verificar-2fa',{form:{csrf_token:challengeToken[1],code}});
+  expect(verified.ok()).toBeTruthy();
+}
+
+for (const width of [1440,320]) {
+  test(`journal authors and editorial information can be administered at ${width}px`, async ({page,context})=>{
+    await signInAdministrator(page);
+    await page.goto('/admin/revistas/nova',{waitUntil:'domcontentloaded'});
+    const slug='editorial-browser-'+width+'-'+Date.now();
+    await page.locator('[name="title"]').fill('Revista com informações');
+    await page.locator('[name="slug"]').fill(slug);
+    await page.locator('[name="field"]').fill('Biologia');
+    await page.locator('[name="description"]').fill('Revista científica com os dados editoriais preenchidos para teste.');
+    await page.locator('[name="content_markdown"]').fill('# Artigo com autores\n\n## Resultados\n\nConteúdo científico.');
+    await page.locator('[name="author_name"]').first().fill('Autora de teste');
+    await page.locator('[name="author_orcid"]').first().fill('https://orcid.org/0000-0002-1825-0097');
+    await page.locator('[name="author_description"]').first().fill('Investigadora de Biologia e análise de dados.');
+    await page.locator('#journal-add-author').click();
+    await page.locator('[name="author_name"]').nth(1).fill('Segundo autor');
+    await page.locator('[name="author_description"]').nth(1).fill('Responsável pela revisão científica.');
+    await page.locator('#journal-add-author').click();
+    await expect(page.locator('[data-author-card]')).toHaveCount(3);
+    await page.locator('[data-remove-author]').nth(2).click();
+    await expect(page.locator('[data-author-card]')).toHaveCount(2);
+    for (const [field,value] of Object.entries({
+      copyright_policy:'Direitos autorais dos autores.',
+      submission_history:'Submetido em 01/10/2026 e aceite em 03/10/2026.',
+      acknowledgements:'Agradecemos à equipa de investigação.',
+      funding:'Apoio do projeto científico de teste.',
+      license_info:'[Licença de teste](https://example.org/licenca)'
+    }))await page.locator('[name="'+field+'"]').fill(value);
+    await page.locator('[name="cover_image"]').fill('https://example.org/capa.png');
+    await page.locator('[name="published"]').check();
+    await page.getByRole('button',{name:'Guardar alterações',exact:true}).click();
+    await expect(page).toHaveURL(/\/admin\/revistas$/);
+    const edit=page.locator('[data-journal-row]').filter({hasText:'Revista com informações'}).first().getByRole('link',{name:'Editar',exact:true});
+    await edit.click();
+    await expect(page.locator('[name="author_description"]').first()).toHaveValue('Investigadora de Biologia e análise de dados.');
+    await expect(page.locator('[name="funding"]')).toHaveValue('Apoio do projeto científico de teste.');
+    await page.setViewportSize({width,height:900});
+    await page.goto('/revistas/'+slug,{waitUntil:'domcontentloaded'});
+    const consent=page.locator('#cookieReject');if(await consent.isVisible())await consent.click();
+    if(width===320)await page.locator('#themeToggle').click();
+    const orcid=page.locator('.journal-article-authors a.journal-orcid-link');
+    await expect(orcid).toHaveAttribute('href','https://orcid.org/0000-0002-1825-0097');
+    await context.route('https://orcid.org/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<p>Perfil ORCID de teste</p>'}));
+    const popupPromise=context.waitForEvent('page');
+    await orcid.click();
+    const popup=await popupPromise;await popup.waitForLoadState();
+    expect(popup.url()).toBe('https://orcid.org/0000-0002-1825-0097');
+    await popup.close();
+    const dialog=page.getByRole('dialog',{name:'Informações e Autores',exact:true});
+    await expect(dialog).toBeHidden();
+    const authorButton=page.getByRole('button',{name:'Autora de teste',exact:true});
+    await authorButton.click();
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole('tab',{name:'Autores',exact:true})).toHaveAttribute('aria-selected','true');
+    await expect(dialog).toContainText('Investigadora de Biologia e análise de dados.');
+    await expect(dialog).toContainText('Segundo autor');
+    const bounds=await dialog.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
+    await page.getByRole('tab',{name:'Informações',exact:true}).click();
+    await expect(page.locator('#journal-panel-information')).toBeVisible();
+    await expect(page.locator('#journal-panel-authors')).toBeHidden();
+    for (const value of ['Direitos autorais dos autores.','Submetido em 01/10/2026','Agradecemos à equipa','Apoio do projeto científico','Licença de teste'])
+      await expect(page.locator('#journal-panel-information')).toContainText(value);
+    await expect(page.locator('.journal-publication-card img')).toHaveAttribute('src','https://example.org/capa.png');
+    await expect(page.locator('#journal-panel-information a').filter({hasText:'Licença de teste'})).toHaveAttribute('href','https://example.org/licenca');
+    await page.getByRole('tab',{name:'Informações',exact:true}).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab',{name:'Autores',exact:true})).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(authorButton).toBeFocused();
+    await page.getByRole('button',{name:'Informações do artigo',exact:true}).click();
+    await expect(page.getByRole('tab',{name:'Informações',exact:true})).toHaveAttribute('aria-selected','true');
+    await page.getByRole('button',{name:'Fechar informações e autores',exact:true}).click();
+    await expect(dialog).toBeHidden();
+  });
+}

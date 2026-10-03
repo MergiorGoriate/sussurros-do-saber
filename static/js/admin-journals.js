@@ -10,6 +10,18 @@
  form.addEventListener('input',markDirty);form.addEventListener('change',markDirty);
  form.addEventListener('submit',()=>{dirty=false;status.textContent='A guardar…';});
  window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
+ const authorsEditor=form.querySelector('#journal-authors-editor'),authorTemplate=form.querySelector('#journal-author-template');
+ form.querySelector('#journal-add-author')?.addEventListener('click',()=>{
+   if(authorsEditor.querySelectorAll('[data-author-card]').length>=30){status.textContent='Limite de 30 autores por artigo.';return;}
+   const fragment=authorTemplate.content.cloneNode(true);
+   const input=fragment.querySelector('[name="author_name"]');
+   authorsEditor.appendChild(fragment);markDirty();input.focus();
+ });
+ authorsEditor?.addEventListener('click',event=>{
+   const remove=event.target.closest('[data-remove-author]');if(!remove)return;
+   remove.closest('[data-author-card]').remove();markDirty();
+   form.querySelector('#journal-add-author').focus();
+ });
  const render=async()=>{
    const text=area.value.trim();count.textContent=(text?text.split(/\s+/).length:0)+' palavras · '+area.value.length+' caracteres';
    controller?.abort();controller=new AbortController();const data=new FormData();data.set('csrf_token',form.querySelector('[name="csrf_token"]').value);data.set('content',area.value);data.set('references',references.value);

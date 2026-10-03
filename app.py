@@ -21,6 +21,7 @@ import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
+from journal_metadata import journal_authors
 from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
@@ -743,7 +744,7 @@ def journal_article_content(journal):
 def render_journal(journal):
     article_title, content = journal_article_content(journal)
     return render_template("journal.html", journal=journal,
-                           article_title=article_title, journal_content=Markup(content),
+                           article_title=article_title, journal_content=Markup(content), journal_authors=journal_authors(journal),
                            public_url=SITE_URL + url_for("journal_detail", slug=journal.slug))
 
 @app.get("/revistas/<slug>/baixar.pdf")
@@ -1130,6 +1131,11 @@ def ensure_journal_columns():
         "doi": "VARCHAR(180) DEFAULT ''",
         "publication_date": "DATE",
         "authors_orcid": "TEXT DEFAULT ''",
+        "authors_data": "TEXT DEFAULT ''",
+        "submission_history": "TEXT DEFAULT ''",
+        "acknowledgements": "TEXT DEFAULT ''",
+        "funding": "TEXT DEFAULT ''",
+        "license_info": "TEXT DEFAULT ''",
         "content_markdown": "TEXT DEFAULT ''",
         "references": "TEXT DEFAULT ''",
         "guidelines": "TEXT DEFAULT ''",

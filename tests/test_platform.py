@@ -851,6 +851,66 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Revista de Teste Científico".encode(), response.data)
 
+    def test_journal_authors_and_editorial_information_round_trip(self):
+        from journal_metadata import journal_authors
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "journal-metadata-csrf"
+        fields = {
+            "csrf_token": "journal-metadata-csrf", "title": "Revista metadata regressao",
+            "description": "Descrição científica completa para verificar as informações editoriais.",
+            "field": "Biologia", "slug": "metadata-regressao", "published": "on",
+            "content_markdown": "# Artigo com autores\n\n## Resultados\n\nConteúdo.",
+            "authors_structured": "1", "author_name": ["Autora Um", "Autor Dois"],
+            "author_orcid": ["http://orcid.org/0000-0002-1825-0097", ""],
+            "author_description": ["Investigadora de Biologia.", "Contribuição: análise dos resultados."],
+            "copyright_policy": "Direitos confirmados pelos autores.",
+            "submission_history": "Submetido em 01/10/2026.",
+            "acknowledgements": "Agradecemos à equipa de laboratório.",
+            "funding": "Financiamento do projeto de teste.",
+            "license_info": "[Licença de teste](https://example.org/licenca)",
+            "cover_image": "https://example.org/capa.png"
+        }
+        response = self.client.post("/admin/revistas/nova", data=fields)
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            journal = Journal.query.filter_by(slug="metadata-regressao").one()
+            identifier = journal.id
+            authors = journal_authors(journal)
+            self.assertEqual(len(authors), 2)
+            self.assertEqual(authors[0]["orcid"], "https://orcid.org/0000-0002-1825-0097")
+            self.assertEqual(authors[1]["description"], fields["author_description"][1])
+            self.assertIn("Autora Um", journal.authors_orcid)
+            self.assertEqual(journal.funding, fields["funding"])
+        public = self.client.get("/revistas/metadata-regressao")
+        self.assertEqual(public.status_code, 200)
+        for value in ("Autora Um", "Autor Dois", "Investigadora de Biologia.", "fa-brands fa-orcid",
+                      "https://orcid.org/0000-0002-1825-0097", "Direitos autorais", "Histórico de submissões",
+                      "Agradecimentos", "Financiamento", "Informações sobre a licença",
+                      "Financiamento do projeto de teste.", 'href="https://example.org/licenca"'):
+            self.assertIn(value.encode(), public.data)
+        editor = self.client.get(f"/admin/revistas/{identifier}/editar")
+        self.assertIn(b"Investigadora de Biologia.", editor.data)
+        self.assertIn(b"Financiamento do projeto de teste.", editor.data)
+        fields.update(author_name=["Autora Atualizada"], author_orcid=[""], author_description=["Descrição atualizada."])
+        self.assertEqual(self.client.post(f"/admin/revistas/{identifier}/editar", data=fields).status_code, 302)
+        with app.app_context():
+            journal = db.session.get(Journal, identifier)
+            self.assertEqual(len(journal_authors(journal)), 1)
+            self.assertEqual(journal_authors(journal)[0]["name"], "Autora Atualizada")
+        fields.update(author_name=[""], author_orcid=["https://orcid.org.evil.test/0000-0002-1825-0097"], author_description=[""])
+        invalid = self.client.post(f"/admin/revistas/{identifier}/editar", data=fields)
+        self.assertEqual(invalid.status_code, 200)
+        self.assertIn("Informe uma URL ORCID válida".encode(), invalid.data)
+        with app.app_context():
+            self.assertEqual(journal_authors(db.session.get(Journal, identifier))[0]["name"], "Autora Atualizada")
+        fields.update(author_name=[], author_orcid=[], author_description=[])
+        self.assertEqual(self.client.post(f"/admin/revistas/{identifier}/editar", data=fields).status_code, 302)
+        with app.app_context():
+            self.assertEqual(journal_authors(db.session.get(Journal, identifier)), [])
+
     def test_secondary_administrator_cannot_manage_accounts(self):
         with self.client.session_transaction() as session:
             session.clear()

@@ -1,7 +1,16 @@
 {% extends 'admin/base.html' %}
 {% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}
 {% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-journals.css', v='20261003-1') }}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-journals.css', v='20261003-authors-2') }}">{% endblock %}
+{% macro author_card(author) %}
+<fieldset class="journal-author-card" data-author-card>
+<legend>Autor</legend>
+<label>Nome do autor<input name="author_name" maxlength="180" value="{{ author.name }}" placeholder="Nome completo"></label>
+<label>URL do ORCID<input name="author_orcid" maxlength="180" value="{{ author.orcid }}" placeholder="https://orcid.org/0000-0002-1825-0097"><small>O ícone abrirá o perfil ORCID diretamente. Pode indicar também apenas o identificador.</small></label>
+<label>Descrição do autor<textarea name="author_description" rows="4" maxlength="4000" placeholder="Afiliação, formação, áreas de investigação e contribuição para o artigo.">{{ author.description }}</textarea></label>
+<button type="button" class="admin-secondary" data-remove-author>Remover autor</button>
+</fieldset>
+{% endmacro %}
 {% block content %}
 
 <header class="admin-header"><div><span>Catálogo científico</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
@@ -11,6 +20,14 @@
 <label>Título<input name="title" required minlength="3" maxlength="180" value="{{ request.form.get('title', journal.title or '') }}"></label>
 <label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="4">{{ request.form.get('description', journal.description or '') }}</textarea></label>
 <div class="journal-editor-note"><strong>Conteúdo público da revista</strong><p>Estes campos controlam o artigo, os metadados editoriais, o índice, as referências e as ações exibidas na página pública.</p></div>
+<h2>Autores do artigo</h2>
+<p class="journal-editor-help">O nome abrirá a aba Autores com a descrição. O ORCID terá uma ligação independente. Adicione um cartão por autor.</p>
+<input type="hidden" name="authors_structured" value="1">
+<div id="journal-authors-editor">
+{% for author in journal_authors %}{{ author_card(author) }}{% else %}{{ author_card({'name':'', 'orcid':'', 'description':''}) }}{% endfor %}
+</div>
+<button type="button" class="admin-secondary" id="journal-add-author">Adicionar autor</button>
+<template id="journal-author-template">{{ author_card({'name':'', 'orcid':'', 'description':''}) }}</template>
 <h2>Conteúdo científico</h2><p class="journal-editor-help">Use # para o título do artigo e ## ou ### para as secções do índice.</p><label>Conteúdo em Markdown
 <div class="markdown-toolbar" data-md-toolbar>
 <button type="button" data-md="heading">Título</button><button type="button" data-md="section">Secção</button><button type="button" data-md="bold"><strong>Negrito</strong></button><button type="button" data-md="italic"><em>Itálico</em></button><button type="button" data-md="quote">Citação</button><button type="button" data-md="list">Lista</button><button type="button" data-md="reference">Referência</button><button type="button" data-md="image">Imagem</button><button type="button" data-md="video">Vídeo</button><button type="button" data-md="table">Tabela</button><button type="button" data-md="chart">Gráfico</button>
@@ -22,6 +39,13 @@
 <label>Ou URL da capa<input name="cover_image" type="url" value="{{ request.form.get('cover_image', journal.cover_image or '') }}" placeholder="https://..."></label>
 <label>Texto alternativo da capa<input name="cover_alt" maxlength="300" value="{{ request.form.get('cover_alt', journal.cover_alt or '') }}"></label>
 <img id="journal-cover-preview" class="image-preview" src="{{ journal.cover_image|image_variant(800) if journal.cover_image else '' }}" alt="Pré-visualização da capa" {% if not journal.cover_image %}hidden{% endif %}>
+<h2>Informações editoriais do artigo</h2>
+<p class="journal-editor-help">A capa, edição e data usam os campos da revista. Os textos abaixo aparecem na aba Informações. Preencha apenas dados confirmados; nenhum direito ou licença é atribuído automaticamente. Aceita Markdown e ligações.</p>
+<label>Direitos autorais<textarea name="copyright_policy" rows="4" maxlength="20000">{{ request.form.get('copyright_policy', journal.copyright_policy or '') }}</textarea></label>
+<label>Histórico de submissões<textarea name="submission_history" rows="4" maxlength="20000" placeholder="Datas de submissão, revisão e aceitação.">{{ request.form.get('submission_history', journal.submission_history or '') }}</textarea></label>
+<label>Agradecimentos<textarea name="acknowledgements" rows="4" maxlength="20000">{{ request.form.get('acknowledgements', journal.acknowledgements or '') }}</textarea></label>
+<label>Financiamento<textarea name="funding" rows="4" maxlength="20000" placeholder="Entidades financiadoras, bolsas e projetos, se aplicável.">{{ request.form.get('funding', journal.funding or '') }}</textarea></label>
+<label>Informações sobre a licença<textarea name="license_info" rows="4" maxlength="20000" placeholder="Nome da licença, condições e URL oficial.">{{ request.form.get('license_info', journal.license_info or '') }}</textarea></label>
 </section>
 <aside class="editor-side"><h2>Publicação e metadados</h2>
 <label>Abreviatura<input name="abbreviation" maxlength="30" value="{{ request.form.get('abbreviation', journal.abbreviation or '') }}"></label>
@@ -30,7 +54,7 @@
 <label>Periodicidade<input name="frequency" maxlength="80" value="{{ request.form.get('frequency', journal.frequency or '') }}" placeholder="Semestral"></label>
 <label>Edição atual<input name="current_issue" maxlength="120" value="{{ request.form.get('current_issue', journal.current_issue or '') }}" placeholder="Vol. 1 · N.º 1"></label>
 <div class="journal-editor-note"><strong>Metadados científicos</strong><p>Informação apresentada na barra editorial pública da revista.</p></div>
-<label>Autores / ORCID<textarea name="authors_orcid" rows="5" placeholder="Nome do autor — https://orcid.org/0000-0000-0000-0000&#10;Um autor por linha.">{{ request.form.get('authors_orcid', journal.authors_orcid or '') }}</textarea><small>Inclua apenas autores ou responsáveis confirmados e respetivos ORCID.</small></label>
+
 <label>DOI<input name="doi" maxlength="180" value="{{ request.form.get('doi', journal.doi or '') }}" placeholder="10.xxxx/xxxxx"></label>
 <label>Data de publicação<input name="publication_date" type="date" value="{{ request.form.get('publication_date', journal.publication_date.isoformat() if journal.publication_date else '') }}"></label>
 <label>Slug<input name="slug" maxlength="200" value="{{ request.form.get('slug', journal.slug or '') }}" placeholder="gerado automaticamente"></label>
@@ -42,5 +66,5 @@
 {% endif %}
 <div class="journal-save-actions"><button class="admin-primary" type="submit">Guardar alterações</button><button class="admin-secondary" type="submit" name="save_mode" value="draft">Guardar rascunho</button></div><p id="journal-editor-status" role="status" aria-live="polite">Sem alterações por guardar.</p>
 </aside></form>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-journals.js', v='20261003-1') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-journals.js', v='20261003-authors-2') }}" defer></script>
 {% endblock %}
