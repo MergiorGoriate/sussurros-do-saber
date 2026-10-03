@@ -10,7 +10,7 @@
 <dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
 <div class="journal-actions mt-8 flex gap-3 flex-wrap"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="journal-pdf-download" href="{{ url_for('journal_download_pdf', slug=journal.slug) }}" download title="Baixar PDF" aria-label="Baixar {{ journal.title }} em PDF"><i class="fa-regular fa-file-pdf" aria-hidden="true"></i><span class="sr-only">Baixar PDF</span></a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
 </header>
-<section class="journal-article-header" id="journal-article-heading" hidden>
+<section class="journal-article-header" id="journal-article-heading">
   <div class="journal-article-topline">
     <div class="journal-article-type"><i class="fa-solid fa-lock-open" aria-hidden="true"></i><span>{{ journal.field or 'Artigo científico' }}</span></div>
     <div class="journal-article-share" aria-label="Partilhar artigo">
@@ -21,7 +21,7 @@
       <a href="mailto:?subject={{ journal.title|urlencode }}&body={{ request.url|urlencode }}" aria-label="E-mail"><i class="fa-solid fa-envelope"></i></a>
     </div>
   </div>
-  <h1 id="journal-article-title"></h1>
+  <h1 id="journal-article-title">{{ journal.title }}</h1>
   <div class="journal-article-authors">
   {% if journal.authors_orcid %}
     {% for line in journal.authors_orcid.splitlines() if line.strip() %}
@@ -76,10 +76,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const out = document.getElementById('journal-article-title');
   if (!body || !box || !out) return;
   const heading = body.querySelector('h1, h2');
-  if (!heading) return;
-  out.textContent = heading.textContent.trim();
-  box.hidden = false;
-  heading.remove();
+  if (heading) {
+    out.textContent = heading.textContent.trim();
+    heading.remove();
+  }
 });
 </script>
 </article>
