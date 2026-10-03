@@ -1575,3 +1575,27 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
  .journal-article-meta{gap:.45rem;font-size:.76rem}
  .journal-article-actions{justify-content:flex-start;gap:1rem}
 }
+
+
+/* Compacta a transição entre o cabeçalho editorial e o conteúdo da revista */
+.journal-page .journal-article-header{
+  margin-bottom:.65rem;
+  padding-bottom:.45rem;
+}
+.journal-page .journal-article-actions{
+  margin-top:.45rem;
+  padding-top:.45rem;
+}
+.journal-page .journal-article-header + .journal-content,
+.journal-page .journal-article-header + section,
+.journal-page #journal-article-heading + .journal-content{
+  margin-top:0 !important;
+  padding-top:.75rem !important;
+}
+@media (max-width:767px){
+  .journal-page .journal-article-header{margin-bottom:.35rem;padding-bottom:.3rem}
+  .journal-page .journal-article-actions{margin-top:.3rem;padding-top:.3rem}
+  .journal-page .journal-article-header + .journal-content,
+  .journal-page .journal-article-header + section,
+  .journal-page #journal-article-heading + .journal-content{padding-top:.5rem !important}
+}
