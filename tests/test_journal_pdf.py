@@ -25,6 +25,15 @@ class JournalPDFTests(unittest.TestCase):
         self.assertTrue(pdf.startswith(b'%PDF-'))
         self.assertIn(b'/Subtype /Image', pdf)
 
+    def test_pdf_uses_the_article_title_from_the_public_page(self):
+        from types import SimpleNamespace
+        from app import journal_article_content
+        journal = SimpleNamespace(title='Nome da revista', content_markdown='# Título do artigo\n\nConteúdo.', guidelines='')
+        title, content = journal_article_content(journal)
+        self.assertEqual(title, 'Título do artigo')
+        self.assertNotIn('<h1>', content)
+        self.assertIn('Conteúdo', content)
+
     def test_title_is_not_duplicated_and_lists_keep_numbering(self):
         result = article_flowables('<h1>Artigo</h1><ol><li>Primeiro</li><li>Segundo</li></ol>', 450, 700, '/tmp', 'https://example.org', title='Artigo')
         text = ' '.join(getattr(item, 'text', '') for item in result)
