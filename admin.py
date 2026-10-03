@@ -426,7 +426,7 @@ def logout():
 @login_required
 def editorial_policies():
     policy = EditorialPolicy.query.first()
-    fields = ("author_guidelines", "reviewer_guidelines", "ethics_policy", "ai_policy", "data_policy", "fees_policy", "open_access_policy")
+    fields = ("page_title", "page_description", "page_content", "author_guidelines", "reviewer_guidelines", "ethics_policy", "ai_policy", "data_policy", "fees_policy", "open_access_policy")
     if request.method == "POST":
         validate_csrf()
         values = {field: request.form[field].strip() for field in fields if field in request.form}
@@ -1058,4 +1058,5 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 

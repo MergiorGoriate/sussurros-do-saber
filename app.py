@@ -693,6 +693,7 @@ def privacy():
 def editorial_policy():
     policy = EditorialPolicy.query.first()
     fields = (
+        ("author_guidelines", "Diretrizes para Autores"),
         ("reviewer_guidelines", "Diretrizes para Revisores"),
         ("ethics_policy", "Ética e Integridade Científica"),
         ("ai_policy", "Política de Inteligência Artificial"),
@@ -706,7 +707,10 @@ def editorial_policy():
             content = (getattr(policy, field, "") or "").strip()
             if content:
                 sections.append({"id": field.replace("_", "-"), "title": title, "content": render_markdown(content)})
-    return render_template("editorial_policy.html", policy_sections=sections)
+    return render_template("editorial_policy.html", policy_sections=sections,
+                           page_title=(getattr(policy, "page_title", "") or "").strip() or "Políticas Editoriais",
+                           page_description=(getattr(policy, "page_description", "") or "").strip(),
+                           page_content=render_markdown(getattr(policy, "page_content", "") or ""))
 
 @app.get("/politica-de-correcoes")
 def corrections_policy():
@@ -1200,6 +1204,19 @@ def ensure_journal_columns():
     db.session.remove()
 
 
+def ensure_editorial_policy_columns():
+    """Adiciona os campos da página sem alterar políticas existentes."""
+    inspector = inspect(db.engine)
+    if "editorial_policy" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("editorial_policy")}
+    with db.engine.begin() as connection:
+        for name in ("page_title", "page_description", "page_content"):
+            if name not in existing:
+                connection.execute(text(f"ALTER TABLE editorial_policy ADD COLUMN \"{name}\" TEXT DEFAULT '' NOT NULL"))
+    db.session.remove()
+
+
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
     additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
@@ -1238,6 +1255,7 @@ def seed_database():
     ensure_admin_columns()
     ensure_author_columns()
     ensure_journal_columns()
+    ensure_editorial_policy_columns()
     ensure_article_columns()
     if not Journal.query.first():
         default_guidelines = (
@@ -1307,5 +1325,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 

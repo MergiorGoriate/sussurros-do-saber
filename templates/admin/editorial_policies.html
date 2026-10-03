@@ -5,7 +5,13 @@
 <form method="post" class="editor-form editorial-policy-editor" data-preview-url="{{ url_for('admin.preview_author_guidelines') }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <section class="editor-main">
-<label>Diretrizes para Autores<textarea name="author_guidelines" id="author-guidelines" rows="18" aria-describedby="guidelines-help" maxlength="100000">{{ request.form.get('author_guidelines', (policy.author_guidelines or '') if policy else '') }}</textarea><small id="guidelines-help">O conteúdo guardado substitui as diretrizes públicas. Use ## para as secções e ### para as subsecções. Se deixar este campo vazio, serão apresentadas as diretrizes predefinidas.</small></label>
+<h2>Página de Políticas Editoriais</h2>
+<p>Todos os textos públicos são definidos aqui. Campos vazios não apresentam conteúdo predefinido nesta página.</p>
+<label>Título da página<input name="page_title" maxlength="100000" placeholder="Políticas Editoriais" value="{{ request.form.get('page_title', (policy.page_title or '') if policy else '') }}"><small>Se ficar vazio, o título de navegação será Políticas Editoriais.</small></label>
+<label>Descrição da página<textarea name="page_description" rows="3" maxlength="100000">{{ request.form.get('page_description', (policy.page_description or '') if policy else '') }}</textarea></label>
+<label>Conteúdo geral das Políticas Editoriais<textarea name="page_content" rows="14" maxlength="100000">{{ request.form.get('page_content', (policy.page_content or '') if policy else '') }}</textarea><small>Use Markdown para criar secções, princípios, listas e ligações. Apenas o texto guardado será publicado.</small></label>
+
+<label>Diretrizes para Autores<textarea name="author_guidelines" id="author-guidelines" rows="18" aria-describedby="guidelines-help" maxlength="100000">{{ request.form.get('author_guidelines', (policy.author_guidelines or '') if policy else '') }}</textarea><small id="guidelines-help">O conteúdo guardado substitui as diretrizes públicas. Use ## para as secções e ### para as subsecções. Se deixar este campo vazio, esta secção não aparece nas Políticas Editoriais. A página separada de Diretrizes para Autores mantém as suas diretrizes predefinidas.</small></label>
 <div class="policy-preview-actions"><button type="button" class="admin-secondary" id="preview-guidelines">Pré-visualizar diretrizes</button><span id="guidelines-preview-status" role="status" aria-live="polite"></span></div>
 <section id="guidelines-preview" class="policy-preview" aria-label="Pré-visualização das diretrizes" hidden></section>
 <button class="admin-primary" type="submit">Guardar políticas</button>
@@ -22,4 +28,5 @@
 </form>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-policies.js', v='20261003-editor-v1') }}" defer></script>
 {% endblock %}
+
 
