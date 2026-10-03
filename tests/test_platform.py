@@ -828,6 +828,23 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b"<table>", response.data)
         self.assertIn(b"/diretrizes-para-autores", self.client.get("/sitemap.xml").data)
 
+    def test_editorial_policies_public_routes_show_admin_content(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        policy = SimpleNamespace(reviewer_guidelines="## Avaliação\n\nRevisão configurada.", ethics_policy="Ética configurada.", ai_policy="<script>alert(1)</script>", data_policy="", fees_policy="Sem taxas configuradas.", open_access_policy="Licença configurada.")
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = policy
+            for path in ("/politica-editorial", "/politicas-editoriais"):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                html = response.get_data(as_text=True)
+                self.assertIn("Revisão configurada.", html)
+                self.assertIn("Licença configurada.", html)
+                self.assertIn("/diretrizes-para-autores", html)
+                self.assertNotIn("<script>alert(1)</script>", html)
+            model.query.first.return_value = None
+            self.assertEqual(self.client.get("/politicas-editoriais").status_code, 200)
+
     def test_author_guidelines_without_types_use_a_valid_content_link(self):
         from types import SimpleNamespace
         with patch("app.EditorialPolicy") as model:
@@ -857,6 +874,7 @@ class PlatformTests(unittest.TestCase):
         form = self.client.get("/admin/politicas-editoriais")
         self.assertEqual(form.status_code, 200)
         self.assertNotIn(b">None</textarea>", form.data)
+        self.assertIn(b'/admin/politicas-editoriais', form.data)
         with app.app_context():
             self.assertEqual(EditorialPolicy.query.count(), 0)
         self.assertEqual(self.client.post("/admin/politicas-editoriais", data={"author_guidelines": "invalid csrf"}).status_code, 400)
@@ -1032,5 +1050,6 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
