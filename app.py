@@ -757,25 +757,36 @@ def journal_preview_pdf(journal_id):
 
 def render_journal_pdf(journal):
 
-    from journal_pdf import article_flowables
+    from journal_pdf import article_flowables, pdf_styles, page_footer
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
                             topMargin=18*mm, bottomMargin=18*mm,
                             title=journal.title, author="Sussurros do Saber")
-    styles = getSampleStyleSheet()
-    story = [Paragraph(html_escape(journal.title), styles["Title"]), Spacer(1, 8)]
+    styles = pdf_styles()
+    story = [Paragraph("SUSSURROS DO SABER", styles["Metadata"]), Spacer(1, 6),
+             Paragraph(html_escape(journal.title), styles["Title"]), Spacer(1, 8)]
+    metadata = []
+    for label, field in (("Autores / ORCID", "authors_orcid"), ("ISSN", "issn"),
+                         ("Edição", "current_issue"), ("DOI", "doi")):
+        value = getattr(journal, field, "")
+        if value:
+            metadata.append(Paragraph("<b>" + label + ":</b> " + html_escape(str(value)).replace("\\n", "<br/>"), styles["Metadata"]))
+    publication_date = getattr(journal, "publication_date", None)
+    if publication_date:
+        metadata.append(Paragraph("Publicado em " + publication_date.strftime("%d/%m/%Y"), styles["Metadata"]))
+    story += metadata + [Spacer(1, 8)]
     if journal.description:
         story += [Paragraph(html_escape(journal.description), styles["BodyText"]), Spacer(1, 12)]
     if journal.cover_image:
         story += article_flowables('<img src="' + html_escape(journal.cover_image, quote=True) + '" alt="Capa">',
-                                   doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN)
+                                   doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, image_height_ratio=.35)
     story += article_flowables(render_markdown(journal.content_markdown or journal.guidelines or ""),
-                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN)
+                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, title=journal.title)
     if journal.references:
         story += [Spacer(1, 12), Paragraph("Referências e Notas", styles["Heading2"])]
         story += article_flowables(render_markdown(journal.references), doc.width, doc.height,
                                    app.static_folder, CANONICAL_ORIGIN)
-    doc.build(story)
+    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf = buffer.getvalue()
     buffer.close()
     filename = re.sub(r"[^a-zA-Z0-9._-]+", "-", journal.slug).strip("-") + ".pdf"

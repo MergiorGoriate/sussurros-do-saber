@@ -18,12 +18,19 @@ class JournalPDFTests(unittest.TestCase):
         with patch('journal_pdf.load_image', return_value=image.getvalue()) as fetch:
             flowables = article_flowables(render_markdown(content), document.width, document.height, '/tmp', 'https://example.org')
             self.assertTrue(any(item.__class__.__name__ == "Table" for item in flowables))
-            self.assertTrue(any(item.__class__.__name__ == "Drawing" for item in flowables))
+            self.assertTrue(any(item.__class__.__name__ == "Drawing" for group in flowables for item in getattr(group, "_content", [group])))
             document.build(flowables)
         self.assertEqual(fetch.call_count, 1)
         pdf = buffer.getvalue()
         self.assertTrue(pdf.startswith(b'%PDF-'))
         self.assertIn(b'/Subtype /Image', pdf)
+
+    def test_title_is_not_duplicated_and_lists_keep_numbering(self):
+        result = article_flowables('<h1>Artigo</h1><ol><li>Primeiro</li><li>Segundo</li></ol>', 450, 700, '/tmp', 'https://example.org', title='Artigo')
+        text = ' '.join(getattr(item, 'text', '') for item in result)
+        self.assertNotIn('Artigo', text)
+        self.assertIn('1. Primeiro', text)
+        self.assertIn('2. Segundo', text)
 
     def test_download_response_embeds_body_and_cover_images(self):
         from types import SimpleNamespace
