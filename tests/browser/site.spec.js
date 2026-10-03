@@ -230,7 +230,12 @@ test('citation remains available when clipboard permission is denied', async ({ 
   await expect(page.locator('#journal-citation-text')).toHaveValue(/Artigo de teste/);
 });
 
+let administratorCookies;
 async function signInAdministrator(page) {
+  if(administratorCookies){
+    await page.context().addCookies(administratorCookies);
+    return;
+  }
   const login=await page.request.get('/admin/login');
   const html=await login.text();
   const token=html.match(/name="csrf_token"[^>]*value="([^"]+)"/);
@@ -253,6 +258,7 @@ async function signInAdministrator(page) {
   const code=String((digest.readUInt32BE(offset)&0x7fffffff)%1000000).padStart(6,'0');
   const verified=await page.request.post('/admin/verificar-2fa',{form:{csrf_token:challengeToken[1],code}});
   expect(verified.ok()).toBeTruthy();
+  administratorCookies=await page.context().cookies();
 }
 
 for (const width of [1440,320]) {
