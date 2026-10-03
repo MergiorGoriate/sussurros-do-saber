@@ -1662,3 +1662,7 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-page .journal-sections{margin-top:0!important;padding-top:0!important}
 .journal-page #conteudo-revista{margin-top:0!important;padding-top:0!important}
 .journal-page #conteudo-revista .article-markdown>:first-child{margin-top:0!important}
+
+/* Respiro entre a barra editorial e o resumo das revistas. */
+.journal-page .journal-article-header{margin-bottom:20px}
+@media(max-width:767px){.journal-page .journal-article-header{margin-bottom:16px}}

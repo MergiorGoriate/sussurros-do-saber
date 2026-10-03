@@ -160,7 +160,7 @@ test('journal header and first content have compact spacing on desktop and mobil
     });
     expect(gaps.above).toBeGreaterThanOrEqual(0);
     expect(gaps.above).toBeLessThanOrEqual(16);
-    expect(gaps.below).toBeGreaterThanOrEqual(0);
+    expect(gaps.below).toBeGreaterThanOrEqual(16);
     expect(gaps.below).toBeLessThanOrEqual(24);
   }
 });
