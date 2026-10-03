@@ -429,7 +429,7 @@ def editorial_policies():
     fields = ("author_guidelines", "reviewer_guidelines", "ethics_policy", "ai_policy", "data_policy", "fees_policy", "open_access_policy")
     if request.method == "POST":
         validate_csrf()
-        values = {field: request.form.get(field, "").strip() for field in fields}
+        values = {field: request.form[field].strip() for field in fields if field in request.form}
         if any(len(value) > 100000 for value in values.values()):
             flash("Cada política deve ter até 100000 caracteres. Reduza o texto e tente novamente.", "error")
         else:
@@ -442,6 +442,21 @@ def editorial_policies():
             flash("Políticas editoriais guardadas com sucesso.", "success")
             return redirect(url_for("admin.editorial_policies"))
     return render_template("admin/editorial_policies.html", policy=policy)
+
+
+@admin_bp.post("/politicas-editoriais/previsualizar")
+@login_required
+@limiter.limit("60 per minute")
+def preview_author_guidelines():
+    validate_csrf()
+    content = request.form.get("author_guidelines", "").strip()
+    if len(content) > 100000:
+        return jsonify(error="As diretrizes devem ter até 100000 caracteres."), 400
+    from app import render_markdown
+    from editorial_content import prepare_guidelines
+    html = render_markdown(content) if content else render_template("partials/author_guidelines_default.html")
+    html, _ = prepare_guidelines(html)
+    return jsonify(html=str(html), default=not bool(content))
 
 
 @admin_bp.get("/docs")
@@ -1043,3 +1058,4 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
