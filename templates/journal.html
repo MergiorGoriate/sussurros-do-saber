@@ -42,7 +42,7 @@
   <div class="journal-article-actions" aria-label="Ações do artigo">
     <button type="button" class="journal-alert-btn" aria-label="Acompanhar revista neste navegador" title="Acompanhar revista neste navegador" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
     <button type="button" class="journal-save-btn" aria-label="Guardar artigo" title="Guardar artigo" aria-pressed="false"><i class="fa-regular fa-bookmark"></i></button>
-    <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo"><i class="fa-solid fa-quote-right"></i></button>
+    <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo" aria-haspopup="dialog" aria-controls="journal-citation-dialog"><i class="fa-solid fa-quote-right"></i></button>
     <a class="journal-article-pdf" href="{{ (url_for('journal_preview_pdf', journal_id=journal.id) if request.endpoint == 'journal_preview' else url_for('journal_download_pdf', slug=journal.slug)) }}" download aria-label="Baixar PDF" title="Baixar PDF"><i class="fa-regular fa-file-pdf"></i></a>
   </div>
   <p id="journal-action-status" class="sr-only" role="status" aria-live="polite"></p>
@@ -71,13 +71,26 @@
 {% endif %}
 </div></div>
 
+<dialog id="journal-citation-dialog" class="journal-citation-dialog" aria-labelledby="journal-citation-title" aria-describedby="journal-citation-help">
+  <div class="journal-citation-heading">
+    <h2 id="journal-citation-title">Citar este artigo</h2>
+    <button type="button" id="journal-citation-close" aria-label="Fechar citação"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+  </div>
+  <p id="journal-citation-help">Use esta referência para citar o artigo no seu trabalho.</p>
+  <label for="journal-citation-text" class="sr-only">Citação do artigo</label>
+  <textarea id="journal-citation-text" readonly rows="6"></textarea>
+  <div class="journal-citation-footer">
+    <button type="button" class="primary-btn" id="journal-citation-copy">Copiar citação</button>
+    <p id="journal-citation-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
 </article>
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded',()=>{
  const mobileToc=document.getElementById('journal-mobile-toc');
  const toc=document.getElementById('journal-toc');
  const closeToc=()=>{mobileToc?.removeAttribute('open');};
- document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeToc();mobileToc?.querySelector('summary')?.focus();}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('journal-citation-dialog')?.open){closeToc();mobileToc?.querySelector('summary')?.focus();}});
  mobileToc?.addEventListener('click',e=>{if(e.target===mobileToc)closeToc();});
  if(mobileToc&&toc){
    toc.addEventListener('click',e=>{if(e.target.closest('a')&&window.matchMedia('(max-width: 899px)').matches){mobileToc.removeAttribute('open');}});
@@ -139,12 +152,33 @@ document.addEventListener('DOMContentLoaded',()=>{
    setPressed(saveBtn,on,'fa-solid fa-bookmark','fa-regular fa-bookmark');
    message(on?'Artigo guardado. Pode consultá-lo na página Favoritos.':'Artigo removido dos favoritos.');
  });
- citeBtn?.addEventListener('click',async()=>{
+ const citationDialog=document.getElementById('journal-citation-dialog');
+ const citationText=document.getElementById('journal-citation-text');
+ const citationStatus=document.getElementById('journal-citation-status');
+ citeBtn?.addEventListener('click',()=>{
    const authors={{ (journal.authors_orcid or '')|tojson }}.split('\n').map(line=>line.split(/[—|]/)[0].replace(/https?:\/\/orcid\.org\/\S+/g,'').trim()).filter(Boolean).join(', ');
    const year={{ (journal.publication_date.year|string if journal.publication_date else 's.d.')|tojson }};
    const citation=(authors?authors+'. ':'')+'('+year+'). '+title+'. '+journalTitle+'. '+issue+'. '+(doi?'https://doi.org/'+doi.replace(/^https?:\/\/doi\.org\//,''):url);
-   try{await navigator.clipboard.writeText(citation);message('Citação copiada.');}
-   catch(e){window.prompt('Copie a citação:',citation);}
+   citationText.value=citation;
+   citationStatus.textContent='';
+   if(!citationDialog.open)citationDialog.showModal();
+ });
+ document.getElementById('journal-citation-close')?.addEventListener('click',()=>citationDialog.close());
+ citationDialog?.addEventListener('click',event=>{
+   if(event.target!==citationDialog)return;
+   const bounds=citationDialog.getBoundingClientRect();
+   if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)citationDialog.close();
+ });
+ citationDialog?.addEventListener('close',()=>citeBtn?.focus());
+ document.getElementById('journal-citation-copy')?.addEventListener('click',async()=>{
+   try{
+     await navigator.clipboard.writeText(citationText.value);
+     citationStatus.textContent='Citação copiada.';
+   }catch{
+     citationText.focus();
+     citationText.select();
+     citationStatus.textContent='Selecione e copie a citação com o menu do navegador ou Ctrl+C.';
+   }
  });
 });
 </script>
