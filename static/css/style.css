@@ -1474,3 +1474,45 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   }
   .journal-page #journal-toc .journal-content-index>a{padding:6px!important;font-size:.74rem!important}
 }
+
+
+/* Revista — ação PDF compacta, alinhada com a barra de ferramentas */
+.journal-actions .journal-pdf-download{
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 44px;
+  width:44px;
+  height:44px;
+  padding:0;
+  margin:0;
+  border:0;
+  border-radius:50%;
+  background:#d9251d;
+  color:#fff;
+  font-size:1.2rem;
+  line-height:1;
+  box-shadow:none;
+  text-decoration:none;
+  vertical-align:middle;
+  transition:transform .16s ease,background-color .16s ease,box-shadow .16s ease;
+}
+.journal-actions .journal-pdf-download:hover{
+  background:#b91f18;
+  color:#fff;
+  transform:translateY(-1px);
+  box-shadow:0 5px 14px rgba(217,37,29,.2);
+}
+.journal-actions .journal-pdf-download:focus-visible{
+  outline:3px solid rgba(30,78,140,.28);
+  outline-offset:3px;
+}
+.journal-actions .journal-pdf-download i{margin:0}
+@media(max-width:767px){
+  .journal-actions{align-items:center;gap:10px!important}
+  .journal-actions .journal-pdf-download{
+    flex-basis:42px;
+    width:42px;
+    height:42px;
+    font-size:1.12rem;
+  }
+}
