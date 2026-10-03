@@ -66,6 +66,17 @@ class Category(db.Model):
 
 class Journal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    summary = db.Column(db.Text, default="")
+    keywords = db.Column(db.Text, default="")
+    abstract = db.Column(db.Text, default="")
+    abstract_keywords = db.Column(db.Text, default="")
+    author_contributions = db.Column(db.Text, default="")
+    conflicts_of_interest = db.Column(db.Text, default="")
+    ethics_approval = db.Column(db.Text, default="")
+    informed_consent = db.Column(db.Text, default="")
+    data_availability = db.Column(db.Text, default="")
+    notes = db.Column(db.Text, default="")
+
     title = db.Column(db.String(180), nullable=False)
     slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
     abbreviation = db.Column(db.String(30), default="")
@@ -233,4 +244,5 @@ class Subscriber(db.Model):
     email = db.Column(db.String(180), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
 

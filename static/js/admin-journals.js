@@ -24,12 +24,12 @@
  });
  const render=async()=>{
    const text=area.value.trim();count.textContent=(text?text.split(/\s+/).length:0)+' palavras · '+area.value.length+' caracteres';
-   controller?.abort();controller=new AbortController();const data=new FormData();data.set('csrf_token',form.querySelector('[name="csrf_token"]').value);data.set('content',area.value);data.set('references',references.value);
+   controller?.abort();controller=new AbortController();const data=new FormData();data.set('csrf_token',form.querySelector('[name="csrf_token"]').value);data.set('content',area.value);data.set('references',references.value);form.querySelectorAll('.journal-article-field').forEach(field=>{if(!['content_markdown','references'].includes(field.name))data.set(field.name,field.value);});
    try{const response=await fetch(form.dataset.previewUrl,{method:'POST',body:data,signal:controller.signal});if(!response.ok)throw new Error();const result=await response.json();preview.innerHTML=result.html||'<p>O conteúdo aparecerá aqui.</p>';refPreview.innerHTML=result.references||'<p>Sem referências adicionadas.</p>';}
    catch(error){if(error.name!=='AbortError'){preview.textContent='Não foi possível atualizar a pré-visualização. O texto continua no editor.';}}
  };
  const schedule=()=>{clearTimeout(timer);timer=setTimeout(render,450);};
- area.addEventListener('input',schedule);references.addEventListener('input',schedule);render();
+ form.querySelectorAll('.journal-article-field').forEach(field=>field.addEventListener('input',schedule));render();
  const snippets={heading:'# Título do artigo',section:'## Secção',quote:'> Citação',list:'- Item',reference:'[Referência](https://doi.org/...)',image:'![Descrição da imagem](https://...)',video:'[video: Título do vídeo](https://www.youtube.com/watch?v=...)',table:'| Coluna | Coluna |\n| --- | --- |\n| Valor | Valor |',chart:'[chart: bar|Título do gráfico|Grupo A=12; Grupo B=8]'};
  form.querySelectorAll('[data-md]').forEach(button=>button.addEventListener('click',()=>{
    const type=button.dataset.md,start=area.selectionStart,end=area.selectionEnd,selected=area.value.slice(start,end)||'texto';

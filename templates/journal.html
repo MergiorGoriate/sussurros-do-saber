@@ -51,24 +51,19 @@
 <details class="journal-mobile-toc" id="journal-mobile-toc">
 <summary aria-label="Abrir índice do conteúdo" title="Índice do conteúdo"><i class="fa-solid fa-list-ul" aria-hidden="true"></i><span class="sr-only">Índice do conteúdo</span></summary>
 <nav class="journal-toc" id="journal-toc" aria-label="Índice do conteúdo"><strong>Índice do conteúdo</strong>
-{% if journal.content_markdown or journal.guidelines %}<div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
+{% if journal_content %}<div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
 </nav>
 </details>
 <div class="journal-sections">
-{% if journal.content_markdown %}
-<section id="conteudo-revista" class="journal-info-section">
-<div class="article-markdown">{{ journal_content }}</div>
-</section>
-{% elif journal.guidelines %}
-<section id="conteudo-revista" class="journal-info-section">
-<h2>Diretrizes editoriais</h2><div class="article-markdown">{{ journal_content }}</div>
-</section>
+{% if journal_content %}
+<section id="conteudo-revista" class="journal-info-section"><div class="article-markdown">{{ journal_content }}</div></section>
 {% endif %}
 {% if journal.references %}
 <section id="referencias" class="journal-info-section">
-<h2>Referências e Notas</h2><div class="article-markdown">{{ journal.references|markdown }}</div>
+<h2>Referências bibliográficas</h2><div class="article-markdown">{{ journal.references|markdown }}</div>
 </section>
 {% endif %}
+{% if journal.notes %}<section id="notas" class="journal-info-section"><h2>Notas</h2><div class="article-markdown">{{ journal.notes|markdown }}</div></section>{% endif %}
 </div></div>
 
 <dialog id="journal-details-dialog" class="journal-details-dialog" aria-labelledby="journal-details-title">
@@ -212,4 +207,5 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/journal-details.js', v='20261003-1') }}" defer></script>
 {% endblock %}
+
 

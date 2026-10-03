@@ -57,6 +57,29 @@ class JournalPDFTests(unittest.TestCase):
         self.assertIn('attachment', response.headers['Content-Disposition'])
         self.assertIn(b'/Subtype /Image', response.data)
 
+    def test_pdf_includes_structured_fields_references_and_notes_in_order(self):
+        from types import SimpleNamespace
+        from app import app, render_journal_pdf
+        journal = SimpleNamespace(title="Revista", slug="artigo", description="Descrição",
+                                  content_markdown="# Artigo científico\n\n## Introdução\n\nTexto científico.",
+                                  guidelines="", cover_image="", references="Referência verificável.",
+                                  summary="Resumo português.", keywords="biologia; ciência",
+                                  abstract="English abstract.", abstract_keywords="biology; science",
+                                  author_contributions="Contributos científicos.", acknowledgements="Agradecimentos científicos.",
+                                  funding="Financiamento confirmado.", conflicts_of_interest="Sem conflitos.",
+                                  ethics_approval="Aprovação ética obtida.", informed_consent="Consentimento obtido.",
+                                  data_availability="Dados disponíveis.", notes="Nota final.")
+        with app.test_request_context(), patch("journal_pdf.article_flowables", wraps=article_flowables) as renderer:
+            response = render_journal_pdf(journal)
+        self.assertTrue(response.data.startswith(b"%PDF-"))
+        body, references, notes = [str(call.args[0]) for call in renderer.call_args_list]
+        positions = [body.index(value) for value in ("Resumo português.", "biologia; ciência", "English abstract.",
+                     "biology; science", "Texto científico.", "Contributos científicos.", "Agradecimentos científicos.",
+                     "Financiamento confirmado.", "Sem conflitos.", "Aprovação ética obtida.", "Consentimento obtido.", "Dados disponíveis.")]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("Referência verificável.", references)
+        self.assertIn("Nota final.", notes)
+
     def test_failed_image_retains_article_and_visible_notice(self):
         with patch('journal_pdf.load_image', side_effect=ValueError('unavailable')):
             result = article_flowables('<p>Conteúdo</p><img src="https://example.org/a.png" alt="Figura 1"><p>Conclusão</p>', 450, 700, '/tmp', 'https://example.org')
@@ -72,3 +95,4 @@ class JournalPDFTests(unittest.TestCase):
                 load_image('http://localhost/a.png', '/tmp/static', 'https://example.org', time.monotonic() + 10)
         with self.assertRaises(ValueError):
             load_image('/static/%2e%2e/secret', '/tmp/static', 'https://example.org', time.monotonic() + 10)
+

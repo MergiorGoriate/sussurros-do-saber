@@ -21,6 +21,7 @@ import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
+from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
 from journal_metadata import journal_authors
 from editorial_content import prepare_guidelines
 from admin import admin_bp, login_required, slugify, validate_csrf
@@ -751,9 +752,17 @@ def journal_markdown_preview():
     validate_csrf()
     content = request.form.get("content", "")
     references = request.form.get("references", "")
-    if len(content) + len(references) > 500000:
+    from types import SimpleNamespace
+    extra = {name: request.form.get(name, "") for name in ARTICLE_FIELD_LIMITS}
+    if any(len(value) > ARTICLE_FIELD_LIMITS[name] for name, value in extra.items()):
+        return jsonify({"error": "Um dos campos do artigo excede o limite permitido."}), 400
+    if len(content) + len(references) + sum(map(len, extra.values())) > 750000:
         return jsonify({"error": "Conteúdo demasiado extenso para pré-visualização."}), 400
-    return jsonify({"html": str(render_markdown(content)), "references": str(render_markdown(references))})
+    source = SimpleNamespace(**extra)
+    references_html = str(render_markdown(references))
+    if source.notes.strip():
+        references_html += "<h2>Notas</h2>" + str(render_markdown(source.notes))
+    return jsonify({"html": structured_article_content(source, str(render_markdown(content)), render_markdown), "references": references_html})
 
 
 @app.get("/admin/revistas/<int:journal_id>/previsualizar")
@@ -769,7 +778,7 @@ def journal_article_content(journal):
     if title_heading:
         article_title = html_unescape(bleach.clean(title_heading.group(1), tags=[], strip=True))
         content = content[title_heading.end():]
-    return article_title, content
+    return article_title, structured_article_content(journal, content, render_markdown)
 
 
 def render_journal(journal):
@@ -821,8 +830,12 @@ def render_journal_pdf(journal):
     story += article_flowables(content,
                                doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, title=article_title)
     if journal.references:
-        story += [Spacer(1, 12), Paragraph("Referências e Notas", styles["Heading2"])]
+        story += [Spacer(1, 12), Paragraph("Referências bibliográficas", styles["Heading2"])]
         story += article_flowables(render_markdown(journal.references), doc.width, doc.height,
+                                   app.static_folder, CANONICAL_ORIGIN)
+    if getattr(journal, "notes", ""):
+        story += [Spacer(1, 12), Paragraph("Notas", styles["Heading2"])]
+        story += article_flowables(render_markdown(journal.notes), doc.width, doc.height,
                                    app.static_folder, CANONICAL_ORIGIN)
     doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf = buffer.getvalue()
@@ -1167,6 +1180,16 @@ def ensure_journal_columns():
         "acknowledgements": "TEXT DEFAULT ''",
         "funding": "TEXT DEFAULT ''",
         "license_info": "TEXT DEFAULT ''",
+        "summary": "TEXT DEFAULT ''",
+        "keywords": "TEXT DEFAULT ''",
+        "abstract": "TEXT DEFAULT ''",
+        "abstract_keywords": "TEXT DEFAULT ''",
+        "author_contributions": "TEXT DEFAULT ''",
+        "conflicts_of_interest": "TEXT DEFAULT ''",
+        "ethics_approval": "TEXT DEFAULT ''",
+        "informed_consent": "TEXT DEFAULT ''",
+        "data_availability": "TEXT DEFAULT ''",
+        "notes": "TEXT DEFAULT ''",
         "content_markdown": "TEXT DEFAULT ''",
         "references": "TEXT DEFAULT ''",
         "guidelines": "TEXT DEFAULT ''",
@@ -1325,6 +1348,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
