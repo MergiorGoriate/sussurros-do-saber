@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, and_
-from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy.orm import joinedload, load_only, reconstructor
+from editorial_policy_defaults import EDITORIAL_POLICY_DEFAULTS
 
 db = SQLAlchemy()
 
@@ -113,6 +114,17 @@ class EditorialPolicy(db.Model):
     fees_policy = db.Column(db.Text, default="", nullable=False)
     open_access_policy = db.Column(db.Text, default="", nullable=False)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._apply_editorial_defaults()
+
+    @reconstructor
+    def _apply_editorial_defaults(self):
+        for field, default_value in EDITORIAL_POLICY_DEFAULTS.items():
+            current_value = (getattr(self, field, "") or "").strip()
+            if not current_value or (field == "reviewer_guidelines" and current_value.lower() == "teste"):
+                setattr(self, field, default_value)
 
 
 class Article(db.Model):
