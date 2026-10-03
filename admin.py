@@ -426,18 +426,21 @@ def logout():
 @login_required
 def editorial_policies():
     policy = EditorialPolicy.query.first()
-    if policy is None:
-        policy = EditorialPolicy()
-        db.session.add(policy)
-        db.session.commit()
+    fields = ("author_guidelines", "reviewer_guidelines", "ethics_policy", "ai_policy", "data_policy", "fees_policy", "open_access_policy")
     if request.method == "POST":
         validate_csrf()
-        fields = ("author_guidelines", "reviewer_guidelines", "ethics_policy", "ai_policy", "data_policy", "fees_policy", "open_access_policy")
-        for field in fields:
-            setattr(policy, field, request.form.get(field, "").strip())
-        db.session.commit()
-        flash("Políticas editoriais guardadas com sucesso.", "success")
-        return redirect(url_for("admin.editorial_policies"))
+        values = {field: request.form.get(field, "").strip() for field in fields}
+        if any(len(value) > 100000 for value in values.values()):
+            flash("Cada política deve ter até 100000 caracteres. Reduza o texto e tente novamente.", "error")
+        else:
+            if policy is None:
+                policy = EditorialPolicy()
+                db.session.add(policy)
+            for field, value in values.items():
+                setattr(policy, field, value)
+            db.session.commit()
+            flash("Políticas editoriais guardadas com sucesso.", "success")
+            return redirect(url_for("admin.editorial_policies"))
     return render_template("admin/editorial_policies.html", policy=policy)
 
 

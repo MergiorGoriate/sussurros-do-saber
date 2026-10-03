@@ -1,80 +1,15 @@
 {% extends 'base.html' %}
 {% block title %}Diretrizes para Autores — Sussurros do Saber{% endblock %}
 {% block meta_description %}Diretrizes de submissão, estrutura de manuscritos, revisão por pares, ética, referências e acesso aberto do Sussurros do Saber.{% endblock %}
+{% block canonical %}{{ site_url }}{{ url_for('author_guidelines') }}{% endblock %}
 {% block content %}
 <section class="institutional-hero"><div class="max-w-5xl mx-auto px-4 py-14">
 <span class="eyebrow">Publicação científica</span>
 <h1 class="font-serif text-5xl md:text-6xl mt-3">Diretrizes para Autores</h1>
 <p class="mt-4 text-lg opacity-65 max-w-3xl">Requisitos para preparar e submeter manuscritos científicos ao Sussurros do Saber.</p>
-<div class="flex flex-wrap gap-3 mt-7"><a class="primary-btn" href="#tipos">Tipos de manuscrito</a><a class="secondary-btn" href="/contacto?assunto=Submiss%C3%A3o%20cient%C3%ADfica">Contactar a equipa editorial</a></div>
+<div class="flex flex-wrap gap-3 mt-7"><a class="primary-btn" href="#{{ manuscript_types_id or 'diretrizes-conteudo' }}">{{ 'Tipos de manuscrito' if manuscript_types_id else 'Consultar diretrizes' }}</a><a class="secondary-btn" href="/contacto?assunto=Submiss%C3%A3o%20cient%C3%ADfica">Contactar a equipa editorial</a></div>
 </div></section>
-<article class="max-w-4xl mx-auto px-4 legal-content">
-{% if policy and policy.author_guidelines %}
-{{ policy.author_guidelines|markdown }}
-{% else %}
-<h2>Princípios gerais</h2>
-<p>O Sussurros do Saber recebe manuscritos científicos e académicos originais, metodologicamente fundamentados e compatíveis com os princípios de ética e integridade em investigação. A submissão pressupõe que o manuscrito não esteja simultaneamente em avaliação por outra publicação.</p>
-
-<h2>Idiomas</h2>
-<p>São aceites manuscritos em <strong>português</strong> e <strong>inglês</strong>. Título, resumo e palavras-chave devem ser fornecidos nos dois idiomas. A tradução deve preservar o significado científico do conteúdo.</p>
-
-<h2 id="tipos">Tipos de manuscrito</h2>
-<h3>Artigo de Investigação Original</h3>
-<p>Até <strong>7.000 palavras</strong>; resumo até <strong>250 palavras</strong>; máximo recomendado de <strong>8 tabelas/figuras</strong>. Estrutura preferencial: título; autores, afiliações, ORCID e autor correspondente; resumo; 3–6 palavras-chave; Introdução; Materiais e Métodos/Metodologia; Resultados; Discussão; Conclusão; Agradecimentos; Contribuição dos autores; Financiamento; Conflitos de interesse; Ética; Disponibilidade dos dados; Referências.</p>
-
-<h3>Artigo de Revisão</h3>
-<p>Até <strong>9.000 palavras</strong> e resumo até <strong>250 palavras</strong>. Deve incluir introdução, metodologia da pesquisa/revisão bibliográfica, desenvolvimento temático, discussão crítica, conclusão e referências. Revisões sistemáticas e meta-análises devem seguir as diretrizes metodológicas e de relato adequadas ao desenho.</p>
-
-<h3>Comunicação Breve</h3>
-<p>Até <strong>3.000 palavras</strong>; resumo até <strong>200 palavras</strong>; máximo recomendado de <strong>4 tabelas/figuras</strong>. Deve apresentar de forma concisa introdução, métodos, resultados, discussão, conclusão e referências.</p>
-
-<h3>Estudo de Caso</h3>
-<p>Até <strong>4.500 palavras</strong>; resumo até <strong>250 palavras</strong>; máximo recomendado de <strong>5 tabelas/figuras</strong>. Deve incluir contextualização do caso, procedimentos ou metodologia, resultados/observações, discussão, conclusão e considerações éticas quando aplicáveis.</p>
-
-<h3>Editorial ou Perspectiva</h3>
-<p>Até <strong>2.500 palavras</strong>. Estrutura flexível, com texto principal fundamentado, considerações finais, conflitos de interesse e referências quando aplicável.</p>
-
-<h2>Autoria e identificação</h2>
-<p>Cada manuscrito deve informar nome completo dos autores, afiliação institucional, cidade e país, ORCID quando disponível e endereço eletrónico do autor correspondente. A autoria deve ser reservada a pessoas que tenham realizado contribuição intelectual substancial e possam assumir responsabilidade pelo trabalho.</p>
-
-<h2>Revisão por pares</h2>
-<p>Os manuscritos científicos sujeitos a avaliação externa seguem, como padrão, <strong>revisão por pares duplamente anónima (double-blind peer review)</strong>. Os revisores não recebem a identidade dos autores e os autores não recebem a identidade dos revisores. Quando solicitado, os autores devem fornecer uma versão anonimizada do manuscrito. A decisão final cabe à equipa editorial.</p>
-
-<h2>Resumo e palavras-chave</h2>
-<p>O resumo deve apresentar, de forma concisa, contexto ou problema, objetivo, metodologia, principais resultados e conclusão. Devem ser fornecidas entre <strong>3 e 6 palavras-chave</strong>, preferencialmente com terminologia científica reconhecida na área.</p>
-
-<h2>Tabelas e figuras</h2>
-<p>Tabelas e figuras devem ser numeradas sequencialmente, possuir título ou legenda, ser mencionadas no texto, indicar a fonte quando pertinente e apresentar qualidade adequada à publicação. Manipulações de imagem que alterem ou distorçam a interpretação científica dos dados não são permitidas.</p>
-
-<h2>Referências</h2>
-<p>O Sussurros do Saber adota as normas <strong>APA, 7.ª edição</strong>. Todas as fontes citadas devem constar da lista de referências e vice-versa. Sempre que disponível e pertinente, deve ser incluído o DOI.</p>
-
-<h2>Ética, conflitos e financiamento</h2>
-<p>Investigações envolvendo seres humanos, animais ou outras situações sujeitas a supervisão ética devem cumprir os requisitos éticos e legais aplicáveis e identificar a aprovação ética quando pertinente. Todos os autores devem declarar potenciais conflitos de interesse e todas as fontes de financiamento; a ausência de financiamento específico também deve ser declarada.</p>
-
-<h2>Contribuição dos autores e dados</h2>
-<p>Quando aplicável, o manuscrito deve indicar as contribuições dos autores, incluindo conceptualização, metodologia, investigação, recolha e análise de dados, redação, revisão, supervisão ou administração do projeto. Deve também apresentar uma declaração sobre disponibilidade dos dados quando científica, ética e legalmente apropriado.</p>
-
-<h2>Inteligência Artificial</h2>
-<p>Ferramentas de inteligência artificial podem ser utilizadas como instrumentos auxiliares, incluindo revisão linguística, tradução e organização textual. Sistemas de IA <strong>não podem ser autores ou coautores</strong>. O uso substancial de IA generativa deve ser declarado de forma transparente. Os autores humanos permanecem responsáveis pela exatidão, originalidade, referências, dados, direitos de autor e conclusões do manuscrito.</p>
-
-<h2>Integridade científica</h2>
-<p>Não são tolerados plágio, fabricação ou falsificação de dados, manipulação enganosa de imagens, autoria inadequada, publicação duplicada ou redundante e manipulação do processo de revisão por pares. Suspeitas fundamentadas podem resultar em suspensão, rejeição, correção ou retratação, conforme o caso.</p>
-
-<h2>Monografias, dissertações e teses</h2>
-<p>Monografias, trabalhos de conclusão de curso, dissertações e teses não constituem, por si próprios, categorias de manuscrito. Os resultados podem ser submetidos depois de adaptados a uma das categorias editoriais aceites, declarando-se a origem académica quando pertinente.</p>
-
-<h2>Processo editorial</h2>
-<p>O fluxo pode compreender submissão, verificação editorial, análise de escopo, verificação formal/ética/de integridade, revisão por pares, revisão pelos autores, reavaliação, decisão editorial, preparação editorial, revisão final e publicação. As decisões podem ser: aceitar, solicitar pequenas revisões, solicitar revisões substanciais ou rejeitar.</p>
-
-<h2>Direitos de autor e acesso aberto</h2>
-<p>O Sussurros do Saber adota, para os conteúdos aos quais esta política se aplica, a licença <strong>Creative Commons Attribution 4.0 International (CC BY 4.0)</strong>. O conteúdo pode ser partilhado e adaptado, inclusive para fins comerciais, desde que a autoria seja devidamente atribuída e as condições da licença sejam cumpridas. A licença aplicável deve ser indicada na página de cada artigo.</p>
-
-<h2>Correções pós-publicação</h2>
-<p>Quando necessário, o Sussurros do Saber pode publicar correções, esclarecimentos, expressões de preocupação ou retratações para preservar a integridade do registo científico. Consulte também a <a href="/politica-de-correcoes">Política de Correções</a>.</p>
-
-<h2>Submissão e contacto</h2>
-<p>O cumprimento destas diretrizes não implica aceitação automática. A publicação depende da adequação ao escopo, qualidade científica, integridade, avaliação editorial e, quando aplicável, revisão por pares. Para iniciar uma proposta de submissão, <a href="/contacto?assunto=Submiss%C3%A3o%20cient%C3%ADfica">contacte a equipa editorial</a>.</p>
-{% endif %}
+<article id="diretrizes-conteudo" class="max-w-4xl mx-auto px-4 legal-content author-guidelines-content">
+<div class="article-markdown">{{ guidelines_content }}</div>
 </article>
 {% endblock %}

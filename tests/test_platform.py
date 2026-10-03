@@ -816,6 +816,64 @@ class PlatformTests(unittest.TestCase):
         }, follow_redirects=True)
         self.assertIn(b"Esta URL de autor j\xc3\xa1 est\xc3\xa1 em uso.", response.data)
 
+    def test_author_guidelines_custom_content_has_working_anchors(self):
+        from types import SimpleNamespace
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = SimpleNamespace(author_guidelines="## Tipos de manuscritos\n\n- Investigação original\n- Revisão\n\n## Estrutura\n\n| Campo | Requisito |\n| --- | --- |\n| Resumo | 250 palavras |")
+            response = self.client.get("/diretrizes-para-autores")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'href="#tipos"', response.data)
+        self.assertIn(b'<h2 id="tipos">Tipos de manuscritos</h2>', response.data)
+        self.assertIn(b'class="article-markdown"', response.data)
+        self.assertIn(b"<table>", response.data)
+        self.assertIn(b"/diretrizes-para-autores", self.client.get("/sitemap.xml").data)
+
+    def test_author_guidelines_without_types_use_a_valid_content_link(self):
+        from types import SimpleNamespace
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = SimpleNamespace(author_guidelines="## Preparação\n\nTexto personalizado.")
+            response = self.client.get("/diretrizes-para-autores")
+        self.assertIn(b'href="#diretrizes-conteudo"', response.data)
+        self.assertIn(b'id="diretrizes-conteudo"', response.data)
+        self.assertIn(b"Consultar diretrizes", response.data)
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = None
+            default = self.client.get("/diretrizes-para-autores")
+        self.assertEqual(default.status_code, 200)
+        self.assertIn(b'<h2 id="tipos">Tipos de manuscrito</h2>', default.data)
+
+    def test_editorial_guidelines_save_and_validate_without_writes_on_get(self):
+        from models import EditorialPolicy
+        with app.app_context():
+            EditorialPolicy.query.delete()
+            db.session.commit()
+        with self.client.session_transaction() as session:
+            session.clear()
+        self.assertEqual(self.client.get("/admin/politicas-editoriais").status_code, 302)
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "guidelines-csrf"
+        form = self.client.get("/admin/politicas-editoriais")
+        self.assertEqual(form.status_code, 200)
+        self.assertNotIn(b">None</textarea>", form.data)
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.count(), 0)
+        self.assertEqual(self.client.post("/admin/politicas-editoriais", data={"author_guidelines": "invalid csrf"}).status_code, 400)
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.count(), 0)
+        content = "## Tipos de manuscritos\n\nTexto guardado pelo painel."
+        response = self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": content})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(b"Texto guardado pelo painel.", self.client.get("/diretrizes-para-autores").data)
+        invalid = self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": "x" * 100001})
+        self.assertEqual(invalid.status_code, 200)
+        self.assertIn(b"100000 caracteres", invalid.data)
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.first().author_guidelines, content)
+        self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": "   "})
+        self.assertIn("Princípios gerais".encode(), self.client.get("/diretrizes-para-autores").data)
+
     def test_journal_schema_contains_all_management_columns(self):
         with app.app_context():
             columns = {column["name"] for column in inspect(db.engine).get_columns("journal")}

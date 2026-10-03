@@ -22,6 +22,7 @@ from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 from journal_metadata import journal_authors
+from editorial_content import prepare_guidelines
 from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
@@ -71,7 +72,11 @@ app.register_blueprint(admin_bp)
 @app.get("/diretrizes-para-autores")
 def author_guidelines():
     policy = EditorialPolicy.query.first()
-    return render_template("author_guidelines.html", policy=policy)
+    custom_content = (policy.author_guidelines or "").strip() if policy else ""
+    content = render_markdown(custom_content) if custom_content else render_template("partials/author_guidelines_default.html")
+    guidelines_content, manuscript_types_id = prepare_guidelines(content)
+    return render_template("author_guidelines.html", policy=policy, guidelines_content=guidelines_content,
+                           manuscript_types_id=manuscript_types_id)
 
 
 @app.get("/ads.txt")
@@ -896,7 +901,7 @@ def sitemap():
         url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"),
         url_for("terms"), url_for("privacy"), url_for("editorial_policy"),
         url_for("corrections_policy"), url_for("accessibility"), url_for("services"),
-        url_for("scientific_editing"), url_for("journals"),
+        url_for("scientific_editing"), url_for("journals"), url_for("author_guidelines"),
     ]
     static_urls = "".join(
         f"<url><loc>{escape(SITE_URL + path)}</loc></url>"

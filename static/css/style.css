@@ -1725,3 +1725,5 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .dark .journal-details-empty{color:#cbd5e1}
 .dark .journal-orcid-link,.dark .journal-author-orcid i{color:#a6ce39}
 @media(max-width:480px){.journal-details-heading{padding:12px}.journal-details-heading h2{font-size:1.15rem}.journal-details-body{padding:14px}.journal-publication-card{gap:12px;padding:12px}}
+
+.author-guidelines-content{opacity:1;padding-bottom:3rem;min-width:0}.author-guidelines-content .article-markdown{overflow-wrap:anywhere}.author-guidelines-content h2,.author-guidelines-content h3{scroll-margin-top:100px}.author-guidelines-content .article-markdown table{max-width:100%;overflow-x:auto}.author-guidelines-content .article-markdown img{max-width:100%;height:auto}

@@ -341,3 +341,34 @@ for (const width of [1440,320]) {
     await expect(dialog).toBeHidden();
   });
 }
+
+test('author guidelines link targets an existing section on mobile',async({page})=>{
+  await page.setViewportSize({width:320,height:800});
+  const response=await page.goto('/diretrizes-para-autores',{waitUntil:'domcontentloaded'});
+  expect(response.status()).toBe(200);
+  await page.locator('#cookieReject').click();
+  await page.locator('#themeToggle').click();
+  const link=page.getByRole('link',{name:'Tipos de manuscrito',exact:true});
+  await link.click();
+  await expect(page.locator('#tipos')).toBeInViewport();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
+test('author guidelines saved in administration render with functional anchors',async({page})=>{
+  await signInAdministrator(page);
+  await page.goto('/admin/politicas-editoriais',{waitUntil:'domcontentloaded'});
+  await page.locator('[name="author_guidelines"]').fill('## Tipos de manuscritos\n\n- Artigo original\n- Revisão\n\n## Estrutura\n\n| Campo | Descrição |\n| --- | --- |\n| Resumo | Texto científico |');
+  await page.getByRole('button',{name:'Guardar políticas',exact:true}).click();
+  await expect(page).toHaveURL(new RegExp('/admin/politicas-editoriais$'));
+  await expect(page.locator('[name="author_guidelines"]')).toHaveValue(/Tipos de manuscritos/);
+  for(const width of [1440,320]){
+    await page.setViewportSize({width,height:900});
+    await page.goto('/diretrizes-para-autores',{waitUntil:'domcontentloaded'});
+    const consent=page.locator('#cookieReject');if(await consent.isVisible())await consent.click();
+    await expect(page.locator('.author-guidelines-content ul')).toContainText('Artigo original');
+    await expect(page.locator('.author-guidelines-content table')).toContainText('Texto científico');
+    await page.getByRole('link',{name:'Tipos de manuscrito',exact:true}).click();
+    await expect(page.locator('#tipos')).toBeInViewport();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
+});

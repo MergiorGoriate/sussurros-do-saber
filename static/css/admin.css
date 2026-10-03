@@ -589,3 +589,5 @@ input,textarea,select,button{font-size:16px}
 .docs-section p:last-child,.docs-section ol:last-child,.docs-section ul:last-child{margin-bottom:0}
 .docs-section a{color:#1e4e8c;text-underline-offset:2px}
 @media(max-width:850px){.docs-section{scroll-margin-top:125px}}
+
+.editorial-policy-editor .editor-side{position:static}
