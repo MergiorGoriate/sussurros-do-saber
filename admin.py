@@ -17,6 +17,7 @@ import requests
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
+from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
 from storage import ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
 
@@ -792,6 +793,11 @@ def journals():
     )
 
 
+def render_journal_form(journal):
+    authors = submitted_author_rows(request.form) if request.method == "POST" and ("authors_structured" in request.form or "author_name" in request.form) else journal_authors(journal)
+    return render_template("admin/journal_form.html", journal=journal, journal_authors=authors)
+
+
 @admin_bp.route("/revistas/nova", methods=["GET", "POST"])
 @admin_bp.route("/revistas/<int:journal_id>/editar", methods=["GET", "POST"])
 @login_required
@@ -810,6 +816,16 @@ def journal_form(journal_id=None):
         duplicate = Journal.query.filter(Journal.slug == base_slug, Journal.id != journal.id).first()
         cover_url = request.form.get("cover_image", "").strip()
         cover_file = request.files.get("cover_file")
+        submitted_authors = None
+        if ("authors_structured" in request.form or "author_name" in request.form):
+            try:
+                submitted_authors = validate_authors(submitted_author_rows(request.form))
+            except ValueError as error:
+                flash(str(error), "error")
+                return render_journal_form(journal)
+        if any(len(request.form.get(name, "").strip()) > 20000 for name in (*EDITORIAL_FIELDS, "authors_orcid")):
+            flash("As informações editoriais devem ter até 20000 caracteres por campo.", "error")
+            return render_journal_form(journal)
         invalid_length = any(len(request.form.get(name, "").strip()) > maximum for name, maximum in {
             "slug": 200, "abbreviation": 30, "frequency": 80, "current_issue": 120,
             "doi": 180, "cover_image": 600, "cover_alt": 300,
@@ -837,7 +853,7 @@ def journal_form(journal_id=None):
                     cover_url = upload_journal_cover(cover_file)
             except ImageUploadError as error:
                 flash(str(error), "error")
-                return render_template("admin/journal_form.html", journal=journal)
+                return render_journal_form(journal)
 
             journal.title = title
             journal.slug = base_slug
@@ -848,13 +864,20 @@ def journal_form(journal_id=None):
             journal.frequency = request.form.get("frequency", "").strip()
             journal.current_issue = request.form.get("current_issue", "").strip()
             journal.doi = request.form.get("doi", "").strip()
-            journal.authors_orcid = request.form.get("authors_orcid", "").strip()
+            if submitted_authors is not None:
+                journal.authors_data = json.dumps(submitted_authors, ensure_ascii=False)
+                journal.authors_orcid = legacy_author_lines(submitted_authors)
+            else:
+                journal.authors_orcid = request.form.get("authors_orcid", "").strip()
+                journal.authors_data = ""
+            for name in EDITORIAL_FIELDS:
+                setattr(journal, name, request.form.get(name, "").strip())
             publication_date_raw = request.form.get("publication_date", "").strip()
             try:
                 journal.publication_date = datetime.strptime(publication_date_raw, "%Y-%m-%d").date() if publication_date_raw else None
             except ValueError:
                 flash("Informe uma data de publicação válida.", "error")
-                return render_template("admin/journal_form.html", journal=journal)
+                return render_journal_form(journal)
             journal.content_markdown = request.form.get("content_markdown", "").strip()
             journal.references = request.form.get("references", "").strip()
             journal.editorial_policy = request.form.get("editorial_policy", "").strip()
@@ -868,7 +891,7 @@ def journal_form(journal_id=None):
             flash("Revista guardada com sucesso.", "success")
             return redirect(url_for("admin.journals"))
 
-    return render_template("admin/journal_form.html", journal=journal)
+    return render_journal_form(journal)
 
 
 @admin_bp.post("/revistas/<int:journal_id>/publicacao")
