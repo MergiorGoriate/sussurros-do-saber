@@ -201,3 +201,52 @@ test('journal administrator can filter the catalog and preview Markdown tables',
   await page.locator('[data-md="chart"]').click();
   await expect(page.locator('[data-md-preview] .article-chart')).toBeVisible();
 });
+
+test('citation icon opens an accessible dialog with the article reference', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.copiedCitation='';
+    Object.defineProperty(navigator, 'clipboard', {configurable:true,value:{
+      writeText: async text => {window.copiedCitation=text;}
+    }});
+  });
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({width,height:800});
+    await page.goto('/revistas/revista-de-teste-cientifico', {waitUntil:'domcontentloaded'});
+    const consent=page.locator('#cookieReject');
+    if(await consent.isVisible())await consent.click();
+    if(width===320)await page.locator('#themeToggle').click();
+    await page.locator('.journal-cite-btn').click();
+    const dialog=page.getByRole('dialog', {name:'Citar este artigo'});
+    await expect(dialog).toBeVisible();
+    await expect(page.locator('#journal-citation-text')).toHaveValue(/Artigo de teste/);
+    const journalName=await page.locator('.journal-article-meta strong').innerText();
+    expect(await page.locator('#journal-citation-text').inputValue()).toContain(journalName);
+    const bounds=await dialog.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(()=>window.copiedCitation)).toBe('');
+    await page.locator('#journal-citation-copy').click();
+    await expect(page.locator('#journal-citation-status')).toHaveText('Citação copiada.');
+    expect(await page.evaluate(()=>window.copiedCitation)).toContain('Artigo de teste');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('.journal-cite-btn')).toBeFocused();
+    await page.evaluate(()=>{window.copiedCitation='';});
+    await page.locator('.journal-cite-btn').click();
+    await page.getByRole('button',{name:'Fechar citação',exact:true}).click();
+    await expect(dialog).toBeHidden();
+  }
+});
+
+test('citation remains available when clipboard permission is denied', async ({ page }) => {
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{
+    writeText:async()=>{throw new Error('denied');}
+  }}));
+  await page.goto('/revistas/revista-de-teste-cientifico', {waitUntil:'domcontentloaded'});
+  await page.locator('#cookieReject').click();
+  await page.locator('.journal-cite-btn').click();
+  await page.locator('#journal-citation-copy').click();
+  await expect(page.locator('#journal-citation-status')).toContainText('copie a citação');
+  await expect(page.locator('#journal-citation-text')).toBeFocused();
+  await expect(page.locator('#journal-citation-text')).toHaveValue(/Artigo de teste/);
+});
