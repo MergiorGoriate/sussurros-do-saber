@@ -147,3 +147,20 @@ test('journal bookmarks survive malformed storage and appear in Favorites', asyn
   await expect(page.locator('#favoritesGrid')).toContainText('Artigo de teste');
   await expect(page.locator('#favoritesEmpty')).toBeHidden();
 });
+
+test('journal header and first content have compact spacing on desktop and mobile', async ({ page }) => {
+  for (const width of [1440, 360]) {
+    await page.setViewportSize({width, height:900});
+    await page.goto('/revistas/revista-de-teste-cientifico', {waitUntil:'domcontentloaded'});
+    const gaps=await page.evaluate(()=>{
+      const hero=document.querySelector('.journal-hero').getBoundingClientRect();
+      const header=document.querySelector('.journal-article-header').getBoundingClientRect();
+      const content=document.querySelector('#conteudo-revista .article-markdown').firstElementChild.getBoundingClientRect();
+      return {above:header.top-hero.bottom,below:content.top-header.bottom};
+    });
+    expect(gaps.above).toBeGreaterThanOrEqual(0);
+    expect(gaps.above).toBeLessThanOrEqual(16);
+    expect(gaps.below).toBeGreaterThanOrEqual(0);
+    expect(gaps.below).toBeLessThanOrEqual(24);
+  }
+});
