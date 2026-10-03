@@ -262,7 +262,8 @@ async function signInAdministrator(page) {
 }
 
 for (const width of [1440,320]) {
-  test(`journal authors and editorial information can be administered at ${width}px`, async ({page,context})=>{
+  test(`journal authors and editorial information can be administered at ${width}px`, async ({page,context},testInfo)=>{
+    await context.route('https://example.org/capa.png',route=>route.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAGAAAACACAIAAAB7vvvtAAABFElEQVR4nO3QQRHAIADAMEDIJKEM0VOw65M9EgW9zmefwbd1O+DvDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFB4AdaOAfh0q+/GAAAAAElFTkSuQmCC','base64')}));
     await signInAdministrator(page);
     await page.goto('/admin/revistas/nova',{waitUntil:'domcontentloaded'});
     const slug='editorial-browser-'+width+'-'+Date.now();
@@ -319,6 +320,7 @@ for (const width of [1440,320]) {
     const bounds=await dialog.boundingBox();
     expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
+    await page.screenshot({path:testInfo.outputPath('authors-dialog.png')});
     await page.getByRole('tab',{name:'Informações',exact:true}).click();
     await expect(page.locator('#journal-panel-information')).toBeVisible();
     await expect(page.locator('#journal-panel-authors')).toBeHidden();
@@ -326,6 +328,7 @@ for (const width of [1440,320]) {
       await expect(page.locator('#journal-panel-information')).toContainText(value);
     await expect(page.locator('.journal-publication-card img')).toHaveAttribute('src','https://example.org/capa.png');
     await expect(page.locator('#journal-panel-information a').filter({hasText:'Licença de teste'})).toHaveAttribute('href','https://example.org/licenca');
+    await page.screenshot({path:testInfo.outputPath('information-dialog.png')});
     await page.getByRole('tab',{name:'Informações',exact:true}).focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('tab',{name:'Autores',exact:true})).toBeFocused();
