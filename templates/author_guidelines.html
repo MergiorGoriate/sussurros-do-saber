@@ -9,6 +9,9 @@
 <div class="flex flex-wrap gap-3 mt-7"><a class="primary-btn" href="#tipos">Tipos de manuscrito</a><a class="secondary-btn" href="/contacto?assunto=Submiss%C3%A3o%20cient%C3%ADfica">Contactar a equipa editorial</a></div>
 </div></section>
 <article class="max-w-4xl mx-auto px-4 legal-content">
+{% if policy and policy.author_guidelines %}
+{{ policy.author_guidelines|markdown }}
+{% else %}
 <h2>Princípios gerais</h2>
 <p>O Sussurros do Saber recebe manuscritos científicos e académicos originais, metodologicamente fundamentados e compatíveis com os princípios de ética e integridade em investigação. A submissão pressupõe que o manuscrito não esteja simultaneamente em avaliação por outra publicação.</p>
 
@@ -72,5 +75,6 @@
 
 <h2>Submissão e contacto</h2>
 <p>O cumprimento destas diretrizes não implica aceitação automática. A publicação depende da adequação ao escopo, qualidade científica, integridade, avaliação editorial e, quando aplicável, revisão por pares. Para iniciar uma proposta de submissão, <a href="/contacto?assunto=Submiss%C3%A3o%20cient%C3%ADfica">contacte a equipa editorial</a>.</p>
+{% endif %}
 </article>
 {% endblock %}
