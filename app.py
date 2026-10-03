@@ -25,6 +25,7 @@ from journal_metadata import journal_authors
 from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
+from editorial_policy_defaults import EDITORIAL_POLICY_DEFAULTS
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
@@ -686,6 +687,20 @@ def privacy():
 @app.get("/politica-editorial")
 def editorial_policy():
     policy = EditorialPolicy.query.first()
+    if policy is None:
+        policy = EditorialPolicy()
+        db.session.add(policy)
+
+    # Persist defaults only for missing fields; never overwrite editorial content.
+    changed = False
+    for field, default_value in EDITORIAL_POLICY_DEFAULTS.items():
+        current_value = (getattr(policy, field, "") or "").strip()
+        if not current_value or (field == "reviewer_guidelines" and current_value.lower() == "teste"):
+            setattr(policy, field, default_value)
+            changed = True
+    if changed:
+        db.session.commit()
+
     return render_template("editorial_policy.html", policy=policy)
 
 @app.get("/politica-de-correcoes")
