@@ -72,7 +72,7 @@ window.dataLayer.push({event:'default_consent'});
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261003-journal-editorial-v18') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261003-spacing-v20') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 {% block head_extra %}{% endblock %}
@@ -198,7 +198,7 @@ window.dataLayer.push({event:'default_consent'});
   </div>
 </section>
 <button id="backToTop" class="back-to-top" type="button" aria-label="Voltar ao topo" title="Voltar ao topo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 13 6-6 6 6"/><path d="M12 7v11"/></svg></button>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20260929-back-to-top') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261003-spacing-v20') }}" defer></script>
 {% if request.path == '/contacto' %}<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260930-contact') }}" defer></script>{% endif %}
 <script nonce="{{ csp_nonce }}">
 (()=>{let assistantLoaded=false,animationsLoaded=false;
@@ -212,3 +212,4 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 </script>
 </body>
 </html>
+

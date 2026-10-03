@@ -21,7 +21,7 @@ import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
-from admin import admin_bp, slugify
+from admin import admin_bp, login_required, slugify
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
 
@@ -80,7 +80,8 @@ def ads_txt():
 @app.before_request
 def publish_due_scheduled_articles():
     """Sincroniza o estado de publicações cujo horário programado já chegou."""
-    Article.publish_due_scheduled()
+    if request.endpoint != "static" and request.path not in {"/healthz", "/ads.txt", "/robots.txt"}:
+        Article.publish_due_scheduled()
 
 
 @app.before_request
@@ -271,25 +272,30 @@ def render_markdown(value):
     url_pattern = re.compile(r'''(?<!["'=])(https?://[^\s<]+)''', re.I)
     parts = re.split(r'(<[^>]+>)', rendered)
     inside_anchor = False
+    code_depth = 0
     for index, part in enumerate(parts):
         if part.startswith("<"):
-            if re.match(r'<a\\b', part, re.I):
+            if re.match(r'<(?:pre|code)\b', part, re.I):
+                code_depth += 1
+            elif re.match(r'</(?:pre|code)\s*>', part, re.I):
+                code_depth = max(0, code_depth - 1)
+            if re.match(r'<a\b', part, re.I):
                 inside_anchor = True
-            elif re.match(r'</a\\s*>', part, re.I):
+            elif re.match(r'</a\s*>', part, re.I):
                 inside_anchor = False
             continue
-        if inside_anchor:
+        if inside_anchor or code_depth:
             continue
         def linkify(match):
             raw = match.group(1)
             url = raw.rstrip('.,;:!?)]}')
             suffix = raw[len(url):]
-            safe_url = html_escape(url, quote=True)
-            safe_label = html_escape(url)
+            safe_url = html_escape(html_unescape(url), quote=True)
+            safe_label = html_escape(html_unescape(url))
             return f'<a href="{safe_url}" rel="noopener noreferrer">{safe_label}</a>{html_escape(suffix)}'
         parts[index] = url_pattern.sub(linkify, part)
     rendered = "".join(parts)
-    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
+    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
     cleaned = bleach.clean(
         rendered,
         tags=allowed,
@@ -703,13 +709,41 @@ def journal_detail(slug):
     journal = Journal.query.filter_by(slug=slug, published=True).first()
     if not journal:
         return render_template("404.html"), 404
-    return render_template("journal.html", journal=journal)
+    return render_journal(journal)
+
+
+@app.get("/admin/revistas/<int:journal_id>/previsualizar")
+@login_required
+def journal_preview(journal_id):
+    return render_journal(db.get_or_404(Journal, journal_id))
+
+
+def render_journal(journal):
+    content = str(render_markdown(journal.content_markdown or journal.guidelines or ""))
+    title_heading = re.match(r"\s*<h1>(.*?)</h1>\s*", content, re.S)
+    article_title = journal.title
+    if title_heading:
+        article_title = html_unescape(bleach.clean(title_heading.group(1), tags=[], strip=True))
+        content = content[title_heading.end():]
+    return render_template("journal.html", journal=journal,
+                           article_title=article_title, journal_content=Markup(content),
+                           public_url=SITE_URL + url_for("journal_detail", slug=journal.slug))
 
 @app.get("/revistas/<slug>/baixar.pdf")
 def journal_download_pdf(slug):
     journal = Journal.query.filter_by(slug=slug, published=True).first()
     if not journal:
         return render_template("404.html"), 404
+    return render_journal_pdf(journal)
+
+
+@app.get("/admin/revistas/<int:journal_id>/baixar.pdf")
+@login_required
+def journal_preview_pdf(journal_id):
+    return render_journal_pdf(db.get_or_404(Journal, journal_id))
+
+
+def render_journal_pdf(journal):
 
     # PDF textual, leve e gerado sob demanda a partir do conteúdo publicado.
     raw = journal.content_markdown or journal.guidelines or ""

@@ -34,10 +34,10 @@
 <label>Data de publicação<input name="publication_date" type="date" value="{{ journal.publication_date.isoformat() if journal.publication_date else '' }}"></label>
 <label>Slug<input name="slug" maxlength="200" value="{{ journal.slug or '' }}" placeholder="gerado automaticamente"></label>
 <label class="check"><input name="published" type="checkbox" {% if journal.published %}checked{% endif %}> Publicada no catálogo</label>
-<div class="journal-editor-note"><strong>Funcionalidades públicas</strong><p>Índice responsivo gerado automaticamente pelos títulos H2/H3. URLs tornam-se clicáveis. Os botões Alertas, Guardar, Citar e Baixar PDF são disponibilizados automaticamente na página pública.</p></div>
+<div class="journal-editor-note"><strong>Funcionalidades públicas</strong><p>Índice responsivo gerado automaticamente pelos títulos H2/H3. URLs tornam-se clicáveis. Os botões Acompanhar, Guardar, Citar e Baixar PDF são disponibilizados automaticamente na página pública. O acompanhamento informa atualizações ao regressar à página, neste navegador.</p></div>
 {% if journal.id %}
-<a class="secondary-btn" href="{{ url_for('journal_detail', slug=journal.slug) }}" target="_blank" rel="noopener">Pré-visualizar revista</a>
-<a class="secondary-btn" href="{{ url_for('journal_download_pdf', slug=journal.slug) }}" target="_blank" rel="noopener">Testar PDF</a>
+<a class="secondary-btn" href="{{ url_for('journal_preview', journal_id=journal.id) }}" target="_blank" rel="noopener">Pré-visualizar revista</a>
+<a class="secondary-btn" href="{{ url_for('journal_preview_pdf', journal_id=journal.id) }}" target="_blank" rel="noopener">Testar PDF</a>
 {% endif %}
 <button class="admin-primary">Guardar revista</button>
 </aside></form>
@@ -52,3 +52,4 @@
 })();
 </script>
 {% endblock %}
+

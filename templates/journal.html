@@ -14,14 +14,14 @@
   <div class="journal-article-topline">
     <div class="journal-article-type"><i class="fa-solid fa-lock-open" aria-hidden="true"></i><span>{{ journal.field or 'Artigo científico' }}</span></div>
     <div class="journal-article-share" aria-label="Partilhar artigo">
-      <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-      <a href="https://twitter.com/intent/tweet?url={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
-      <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
-      <a href="https://api.whatsapp.com/send?text={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-      <a href="mailto:?subject={{ journal.title|urlencode }}&body={{ request.url|urlencode }}" aria-label="E-mail"><i class="fa-solid fa-envelope"></i></a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+      <a href="https://twitter.com/intent/tweet?url={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+      <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+      <a href="https://api.whatsapp.com/send?text={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+      <a href="mailto:?subject={{ journal.title|urlencode }}&body={{ public_url|urlencode }}" aria-label="E-mail"><i class="fa-solid fa-envelope"></i></a>
     </div>
   </div>
-  <h1 id="journal-article-title">{{ journal.title }}</h1>
+  <h1 id="journal-article-title">{{ article_title }}</h1>
   <div class="journal-article-authors">
   {% if journal.authors_orcid %}
     {% for line in journal.authors_orcid.splitlines() if line.strip() %}
@@ -29,38 +29,39 @@
       {% if '—' in raw %}{% set parts=raw.split('—',1) %}{% set author_name=parts[0].strip() %}{% set orcid_value=parts[1].strip() %}
       {% elif 'http://orcid.org/' in raw or 'https://orcid.org/' in raw %}{% set author_name=raw.split('http')[0].strip(' -–—:|') %}{% set orcid_value='http' ~ raw.split('http',1)[1] %}
       {% else %}{% set author_name=raw %}{% set orcid_value='' %}{% endif %}
-      <span class="journal-article-author"><span class="journal-article-author-name">{{ author_name }}</span>{% if orcid_value %}<a class="journal-orcid-dot" href="{{ orcid_value if orcid_value.startswith('http') else 'https://orcid.org/' ~ orcid_value }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID de {{ author_name }}">iD</a>{% endif %}</span>{% if not loop.last %}<span class="journal-author-comma">,</span>{% endif %}
+      <span class="journal-article-author"><span class="journal-article-author-name">{{ author_name }}</span>{% if orcid_value %}<a class="journal-orcid-dot" href="https://orcid.org/{{ orcid_value.split('/')[-1]|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID de {{ author_name }}">iD</a>{% endif %}</span>{% if not loop.last %}<span class="journal-author-comma">,</span>{% endif %}
     {% endfor %}
   {% else %}<span>Autores a indicar</span>{% endif %}
   </div>
   <div class="journal-article-meta">
     <strong>{{ journal.title }}</strong>
-    <span>•</span><span>{{ journal.publication_date.strftime('%d de %B de %Y') if journal.publication_date else 'Data a definir' }}</span>
+    <span>•</span><span>{{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'Data a definir' }}</span>
     <span>•</span><span>{{ journal.current_issue or 'Edição em preparação' }}</span>
     {% if journal.doi %}<span>•</span><span>DOI: {{ journal.doi }}</span>{% endif %}
   </div>
   <div class="journal-article-actions" aria-label="Ações do artigo">
-    <button type="button" class="journal-alert-btn" aria-label="Ativar alertas" title="Ativar alertas" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
+    <button type="button" class="journal-alert-btn" aria-label="Acompanhar revista neste navegador" title="Acompanhar revista neste navegador" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
     <button type="button" class="journal-save-btn" aria-label="Guardar artigo" title="Guardar artigo" aria-pressed="false"><i class="fa-regular fa-bookmark"></i></button>
     <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo"><i class="fa-solid fa-quote-right"></i></button>
-    <a class="journal-article-pdf" href="{{ url_for('journal_download_pdf', slug=journal.slug) }}" download aria-label="Baixar PDF" title="Baixar PDF"><i class="fa-regular fa-file-pdf"></i></a>
+    <a class="journal-article-pdf" href="{{ (url_for('journal_preview_pdf', journal_id=journal.id) if request.endpoint == 'journal_preview' else url_for('journal_download_pdf', slug=journal.slug)) }}" download aria-label="Baixar PDF" title="Baixar PDF"><i class="fa-regular fa-file-pdf"></i></a>
   </div>
+  <p id="journal-action-status" role="status" aria-live="polite"></p>
 </section>
 <div class="journal-information">
 <details class="journal-mobile-toc" id="journal-mobile-toc">
 <summary aria-label="Abrir índice do conteúdo" title="Índice do conteúdo"><i class="fa-solid fa-list-ul" aria-hidden="true"></i><span class="sr-only">Índice do conteúdo</span></summary>
 <nav class="journal-toc" id="journal-toc" aria-label="Índice do conteúdo"><strong>Índice do conteúdo</strong>
-{% if journal.content_markdown %}<div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
+{% if journal.content_markdown or journal.guidelines %}<div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
 </nav>
 </details>
 <div class="journal-sections">
 {% if journal.content_markdown %}
 <section id="conteudo-revista" class="journal-info-section">
-<div class="article-markdown">{{ journal.content_markdown|markdown }}</div>
+<div class="article-markdown">{{ journal_content }}</div>
 </section>
 {% elif journal.guidelines %}
 <section id="conteudo-revista" class="journal-info-section">
-<h2>Diretrizes editoriais</h2><div class="article-markdown">{{ journal.guidelines|markdown }}</div>
+<h2>Diretrizes editoriais</h2><div class="article-markdown">{{ journal_content }}</div>
 </section>
 {% endif %}
 {% if journal.references %}
@@ -69,31 +70,22 @@
 </section>
 {% endif %}
 </div></div>
-<script id="journal-article-heading-script" nonce="{{ csp_nonce }}">
-document.addEventListener('DOMContentLoaded', function () {
-  const body = document.querySelector('#conteudo-revista .article-markdown');
-  const box = document.getElementById('journal-article-heading');
-  const out = document.getElementById('journal-article-title');
-  if (!body || !box || !out) return;
-  const heading = body.querySelector('h1, h2');
-  if (heading) {
-    out.textContent = heading.textContent.trim();
-    heading.remove();
-  }
-});
-</script>
+
 </article>
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded',()=>{
  const mobileToc=document.getElementById('journal-mobile-toc');
  const toc=document.getElementById('journal-toc');
+ const closeToc=()=>{mobileToc?.removeAttribute('open');};
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeToc();mobileToc?.querySelector('summary')?.focus();}});
+ mobileToc?.addEventListener('click',e=>{if(e.target===mobileToc)closeToc();});
  if(mobileToc&&toc){
    toc.addEventListener('click',e=>{if(e.target.closest('a')&&window.matchMedia('(max-width: 899px)').matches){mobileToc.removeAttribute('open');}});
  }
  const box=document.getElementById('journal-content-index');
  const root=document.querySelector('#conteudo-revista .article-markdown');
  if(!box||!root)return;
- const headings=[...root.querySelectorAll('h2,h3')];
+ const headings=[...document.querySelectorAll('.journal-sections h2,.journal-sections h3')];
  const used=new Set();
  const slugify=s=>(s||'secao').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'secao';
  headings.forEach((h,i)=>{
@@ -108,38 +100,53 @@ document.addEventListener('DOMContentLoaded',()=>{
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded',()=>{
  const slug={{ journal.slug|tojson }};
- const title={{ journal.title|tojson }};
+ const title={{ article_title|tojson }};
  const journalTitle={{ journal.title|tojson }};
  const issue={{ (journal.current_issue or 'Edição em preparação')|tojson }};
  const doi={{ (journal.doi or '')|tojson }};
- const url=window.location.href.split('#')[0];
+ const url={{ public_url|tojson }};
  const alertBtn=document.querySelector('.journal-alert-btn');
  const saveBtn=document.querySelector('.journal-save-btn');
  const citeBtn=document.querySelector('.journal-cite-btn');
- const setPressed=(btn,on,solid,regular)=>{if(!btn)return;btn.setAttribute('aria-pressed',String(on));const i=btn.querySelector('i');if(i){i.className=on?solid:regular;}};
- let alerts=JSON.parse(localStorage.getItem('journalAlerts')||'[]');
- let saved=JSON.parse(localStorage.getItem('savedJournalArticles')||'[]');
+ const status=document.getElementById('journal-action-status');
+ const message=text=>{if(status)status.textContent=text;};
+ const readList=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[];}catch{return[];}};
+ const persist=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{message('O navegador não permite guardar preferências.');return false;}};
+ const setPressed=(btn,on,solid,regular)=>{if(!btn)return;btn.setAttribute('aria-pressed',String(on));const i=btn.querySelector('i');if(i)i.className=on?solid:regular;};
+ let alerts=readList('journalAlerts');
+ let saved=readList('savedJournalArticles');
  setPressed(alertBtn,alerts.includes(slug),'fa-solid fa-bell','fa-regular fa-bell');
- setPressed(saveBtn,saved.some(x=>x.slug===slug),'fa-solid fa-bookmark','fa-regular fa-bookmark');
+ setPressed(saveBtn,saved.some(x=>x&&x.slug===slug),'fa-solid fa-bookmark','fa-regular fa-bookmark');
+ const updatedAt={{ journal.updated_at.isoformat()|tojson }};
+ try{
+   const previous=localStorage.getItem('journalSeen:'+slug);
+   if(alerts.includes(slug)&&previous&&previous!==updatedAt)message('Esta revista foi atualizada desde a sua última visita.');
+   localStorage.setItem('journalSeen:'+slug,updatedAt);
+ }catch{}
  alertBtn?.addEventListener('click',()=>{
    const on=!alerts.includes(slug);
-   alerts=on?[...alerts,slug]:alerts.filter(x=>x!==slug);
-   localStorage.setItem('journalAlerts',JSON.stringify(alerts));
+   const next=on?[...alerts,slug]:alerts.filter(x=>x!==slug);
+   if(!persist('journalAlerts',next))return;
+   alerts=next;
    setPressed(alertBtn,on,'fa-solid fa-bell','fa-regular fa-bell');
-   alertBtn.title=on?'Alertas ativados neste navegador':'Ativar alertas';
+   message(on?'Acompanhamento ativado. Ao voltar a esta página, será informado de atualizações neste navegador.':'Acompanhamento desativado.');
  });
  saveBtn?.addEventListener('click',()=>{
-   const on=!saved.some(x=>x.slug===slug);
-   saved=on?[...saved,{slug,title,url,savedAt:new Date().toISOString()}]:saved.filter(x=>x.slug!==slug);
-   localStorage.setItem('savedJournalArticles',JSON.stringify(saved));
+   const on=!saved.some(x=>x&&x.slug===slug);
+   const next=on?[...saved,{slug,title,url,savedAt:new Date().toISOString()}]:saved.filter(x=>x&&x.slug!==slug);
+   if(!persist('savedJournalArticles',next))return;
+   saved=next;
    setPressed(saveBtn,on,'fa-solid fa-bookmark','fa-regular fa-bookmark');
-   saveBtn.title=on?'Artigo guardado':'Guardar artigo';
+   message(on?'Artigo guardado. Pode consultá-lo na página Favoritos.':'Artigo removido dos favoritos.');
  });
  citeBtn?.addEventListener('click',async()=>{
-   const citation=doi?title+'. '+journalTitle+'. '+issue+'. DOI: '+doi:title+'. '+journalTitle+'. '+issue+'. '+url;
-   try{await navigator.clipboard.writeText(citation);citeBtn.title='Citação copiada';}
+   const authors={{ (journal.authors_orcid or '')|tojson }}.split('\n').map(line=>line.split(/[—|]/)[0].replace(/https?:\/\/orcid\.org\/\S+/g,'').trim()).filter(Boolean).join(', ');
+   const year={{ (journal.publication_date.year|string if journal.publication_date else 's.d.')|tojson }};
+   const citation=(authors?authors+'. ':'')+'('+year+'). '+title+'. '+journalTitle+'. '+issue+'. '+(doi?'https://doi.org/'+doi.replace(/^https?:\/\/doi\.org\//,''):url);
+   try{await navigator.clipboard.writeText(citation);message('Citação copiada.');}
    catch(e){window.prompt('Copie a citação:',citation);}
  });
 });
 </script>
 {% endblock %}
+
