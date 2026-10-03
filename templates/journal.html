@@ -10,7 +10,7 @@
 <dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
 <div class="journal-actions mt-8 flex gap-3 flex-wrap"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="journal-pdf-download" href="{{ url_for('journal_download_pdf', slug=journal.slug) }}" download title="Baixar PDF" aria-label="Baixar {{ journal.title }} em PDF"><i class="fa-regular fa-file-pdf" aria-hidden="true"></i><span class="sr-only">Baixar PDF</span></a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
 </header>
-<section class="journal-nav-strip journal-meta-strip" aria-label="Metadados e ações da revista">
+<section class="journal-article-heading" id="journal-article-heading" hidden>\n<h1 id="journal-article-title"></h1>\n</section>\n<section class="journal-nav-strip journal-meta-strip" aria-label="Metadados e ações da revista">
 <div class="journal-publication-meta journal-publication-values">
   <span>{{ journal.title }}</span>
   <span class="journal-authors">{% if journal.authors_orcid %}{% for line in journal.authors_orcid.splitlines() if line.strip() %}{% set raw = line.strip() %}{% if '—' in raw %}{% set parts = raw.split('—', 1) %}{% set author_name = parts[0].strip() %}{% set orcid_value = parts[1].strip() %}{% elif 'http://orcid.org/' in raw or 'https://orcid.org/' in raw %}{% set author_name = raw.split('http')[0].strip(' -–—:|') %}{% set orcid_value = 'http' ~ raw.split('http', 1)[1] %}{% else %}{% set author_name = '' %}{% set orcid_value = raw %}{% endif %}{% set orcid_url = orcid_value if orcid_value.startswith('http') else 'https://orcid.org/' ~ orcid_value %}{% set orcid_id = orcid_url|replace('https://orcid.org/', '')|replace('http://orcid.org/', '') %}<span class="journal-author">{% if author_name %}<span class="journal-author-name">{{ author_name }}</span>{% endif %}<a class="journal-orcid-link" href="{{ orcid_url }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID {{ orcid_id }}{% if author_name %} de {{ author_name }}{% endif %}" title="Abrir ORCID"><span class="journal-orcid-icon" aria-hidden="true">iD</span><span class="journal-orcid-id">{{ orcid_id }}</span></a></span>{% if not loop.last %}<span class="journal-author-sep">·</span>{% endif %}{% endfor %}{% else %}<span>A indicar</span>{% endif %}</span>
@@ -50,6 +50,19 @@
 </section>
 {% endif %}
 </div></div>
+<script id="journal-article-heading-script" nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function () {
+  const body = document.querySelector('#conteudo-revista .article-markdown');
+  const box = document.getElementById('journal-article-heading');
+  const out = document.getElementById('journal-article-title');
+  if (!body || !box || !out) return;
+  const heading = body.querySelector('h1, h2');
+  if (!heading) return;
+  out.textContent = heading.textContent.trim();
+  box.hidden = false;
+  heading.remove();
+});
+</script>
 </article>
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded',()=>{
