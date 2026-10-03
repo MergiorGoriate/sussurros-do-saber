@@ -17,6 +17,7 @@ import requests
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
+from journal_article import ARTICLE_FIELD_LIMITS
 from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
 from storage import ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
@@ -863,6 +864,12 @@ def journal_form(journal_id=None):
         if any(len(request.form.get(name, "").strip()) > 20000 for name in (*EDITORIAL_FIELDS, "authors_orcid")):
             flash("As informações editoriais devem ter até 20000 caracteres por campo.", "error")
             return render_journal_form(journal)
+        if any(len(request.form.get(name, "").strip()) > maximum for name, maximum in ARTICLE_FIELD_LIMITS.items()):
+            flash("Os campos do artigo devem ter até 20000 caracteres; palavras-chave até 2000.", "error")
+            return render_journal_form(journal)
+        if len(request.form.get("content_markdown", "")) > 400000 or len(request.form.get("references", "")) > 100000:
+            flash("O conteúdo do artigo deve ter até 400000 caracteres e as referências até 100000.", "error")
+            return render_journal_form(journal)
         invalid_length = any(len(request.form.get(name, "").strip()) > maximum for name, maximum in {
             "slug": 200, "abbreviation": 30, "frequency": 80, "current_issue": 120,
             "doi": 180, "cover_image": 600, "cover_alt": 300,
@@ -915,6 +922,9 @@ def journal_form(journal_id=None):
             except ValueError:
                 flash("Informe uma data de publicação válida.", "error")
                 return render_journal_form(journal)
+            for name in ARTICLE_FIELD_LIMITS:
+                if name in request.form:
+                    setattr(journal, name, request.form[name].strip())
             journal.content_markdown = request.form.get("content_markdown", "").strip()
             journal.references = request.form.get("references", "").strip()
             journal.editorial_policy = request.form.get("editorial_policy", "").strip()
@@ -1058,5 +1068,6 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 

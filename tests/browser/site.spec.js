@@ -194,6 +194,11 @@ test('citation icon opens an accessible dialog with the article reference', asyn
     const consent=page.locator('#cookieReject');
     if(await consent.isVisible())await consent.click();
     if(width===320)await page.locator('#themeToggle').click();
+    await expect(page.locator('.journal-sections h2')).toHaveText(['Resumo','Palavras-chave','Abstract','Keywords','Resultados','Contribuição dos autores','Agradecimentos','Financiamento','Conflitos de interesse','Aprovação ética','Consentimento informado','Disponibilidade de dados','Referências bibliográficas','Notas']);
+    await expect(page.locator('[data-article-field="summary"]')).toContainText('Resumo em português do estudo.');
+    await expect(page.locator('#notas')).toContainText('Nota complementar do estudo.');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+
     await page.locator('.journal-cite-btn').click();
     const dialog=page.getByRole('dialog', {name:'Citar este artigo'});
     await expect(dialog).toBeVisible();
@@ -287,6 +292,17 @@ for (const width of [1440,320]) {
       submission_history:'Submetido em 01/10/2026 e aceite em 03/10/2026.',
       acknowledgements:'Agradecemos à equipa de investigação.',
       funding:'Apoio do projeto científico de teste.',
+      summary:'Resumo em português do estudo.',
+      keywords:'biologia; investigação',
+      abstract:'English abstract of the study.',
+      abstract_keywords:'biology; research',
+      author_contributions:'Contributos científicos dos autores.',
+      conflicts_of_interest:'Os autores declaram não haver conflitos.',
+      ethics_approval:'Aprovação da comissão de ética de teste.',
+      informed_consent:'Consentimento informado obtido para o teste.',
+      data_availability:'Dados em https://example.org/dados',
+      references:'Referência bibliográfica do estudo.',
+      notes:'Nota complementar do estudo.',
       license_info:'[Licença de teste](https://example.org/licenca)'
     }))await page.locator('[name="'+field+'"]').fill(value);
     await page.locator('[name="cover_image"]').fill('https://example.org/capa.png');
@@ -297,6 +313,8 @@ for (const width of [1440,320]) {
     await edit.click();
     await expect(page.locator('[name="author_description"]').first()).toHaveValue('Investigadora de Biologia e análise de dados.');
     await expect(page.locator('[name="funding"]')).toHaveValue('Apoio do projeto científico de teste.');
+    await expect(page.locator('[name="summary"]')).toHaveValue('Resumo em português do estudo.');
+    await expect(page.locator('[name="notes"]')).toHaveValue('Nota complementar do estudo.');
     await page.setViewportSize({width,height:900});
     await page.goto('/revistas/'+slug,{waitUntil:'domcontentloaded'});
     const consent=page.locator('#cookieReject');if(await consent.isVisible())await consent.click();
@@ -387,6 +405,7 @@ test('author guidelines saved in administration render with functional anchors',
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
 });
+
 
 
 

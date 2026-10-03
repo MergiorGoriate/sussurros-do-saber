@@ -455,9 +455,15 @@ class PlatformTests(unittest.TestCase):
         response = self.client.post(endpoint, data={
             "csrf_token": "preview-token", "content": "# Título\n\n| A | B |\n| --- | --- |\n| 1 | 2 |",
             "references": "https://example.org/fonte",
+            "summary": "Resumo da pré-visualização.", "abstract": "English preview.",
+            "author_contributions": "Contributos no preview.", "notes": "Nota do preview.",
         })
         self.assertEqual(response.status_code, 200)
         self.assertIn("<table>", response.json["html"])
+        self.assertIn("Resumo da pré-visualização.", response.json["html"])
+        self.assertIn("English preview.", response.json["html"])
+        self.assertIn("Contributos no preview.", response.json["html"])
+        self.assertIn("Nota do preview.", response.json["references"])
         self.assertIn("<h1>Título</h1>", response.json["html"])
         self.assertIn('href="https://example.org/fonte"', response.json["references"])
         self.assertEqual(response.headers["Cache-Control"], "no-store")
@@ -487,8 +493,9 @@ class PlatformTests(unittest.TestCase):
         content_position = template.index('id="conteudo-revista"')
         references_position = template.index('id="referencias"')
         self.assertGreater(references_position, content_position)
-        self.assertIn("<h2>Referências e Notas</h2>", template)
-        self.assertNotIn("<h2>Referências bibliográficas</h2>", template)
+        self.assertIn("<h2>Referências bibliográficas</h2>", template)
+        self.assertIn("<h2>Notas</h2>", template)
+        self.assertGreater(template.index('id="notas"'), references_position)
 
     def test_gzip_compression_for_public_html(self):
         response = self.client.get("/", headers={"Accept-Encoding": "gzip"})
@@ -944,6 +951,78 @@ class PlatformTests(unittest.TestCase):
             "cover_image", "cover_alt", "published", "created_at", "updated_at",
         }.issubset(columns))
 
+    def test_journal_article_migration_preserves_legacy_content(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from sqlalchemy import create_engine, text
+        from app import ensure_journal_columns
+        from journal_article import ARTICLE_FIELD_LIMITS
+        engine = create_engine("sqlite://")
+        try:
+            with engine.begin() as connection:
+                connection.execute(text("CREATE TABLE journal (id INTEGER PRIMARY KEY, content_markdown TEXT, \"references\" TEXT, acknowledgements TEXT, funding TEXT)"))
+                connection.execute(text("INSERT INTO journal VALUES (1, 'Conteúdo original', 'Referências originais', 'Agradecimentos originais', 'Financiamento original')"))
+            with patch("app.db", SimpleNamespace(engine=engine, session=Mock())):
+                ensure_journal_columns()
+                ensure_journal_columns()
+            with engine.connect() as connection:
+                row = connection.execute(text("SELECT * FROM journal")).mappings().one()
+                self.assertEqual(row["content_markdown"], "Conteúdo original")
+                self.assertEqual(row["references"], "Referências originais")
+                self.assertEqual(row["acknowledgements"], "Agradecimentos originais")
+                self.assertEqual(row["funding"], "Financiamento original")
+                for name in set(ARTICLE_FIELD_LIMITS) - {"acknowledgements", "funding"}:
+                    self.assertEqual(row[name], "")
+        finally:
+            engine.dispose()
+
+    def test_journal_structured_article_round_trip_order_optional_and_limits(self):
+        from bs4 import BeautifulSoup
+        from journal_article import ARTICLE_FIELD_LIMITS
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "article-fields-csrf"
+        fields = {name: "Texto " + name for name in ARTICLE_FIELD_LIMITS}
+        fields.update({"csrf_token": "article-fields-csrf", "title": "Revista estruturada",
+                       "slug": "artigo-estruturado", "field": "Biologia", "published": "on",
+                       "description": "Descrição completa da revista de artigo estruturado.",
+                       "content_markdown": "# Título científico\n\n## Introdução\n\nTexto científico.",
+                       "references": "Referência verificável."})
+        response = self.client.post("/admin/revistas/nova", data=fields)
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            journal = Journal.query.filter_by(slug="artigo-estruturado").one()
+            identifier = journal.id
+            for name in ARTICLE_FIELD_LIMITS:
+                self.assertEqual(getattr(journal, name), fields[name])
+        page = self.client.get("/revistas/artigo-estruturado")
+        soup = BeautifulSoup(page.data, "html.parser")
+        headings = [item.get_text() for item in soup.select(".journal-sections h2")]
+        self.assertEqual(headings, ["Resumo", "Palavras-chave", "Abstract", "Keywords", "Introdução",
+                                   "Contribuição dos autores", "Agradecimentos", "Financiamento",
+                                   "Conflitos de interesse", "Aprovação ética", "Consentimento informado",
+                                   "Disponibilidade de dados", "Referências bibliográficas", "Notas"])
+        form = self.client.get(f"/admin/revistas/{identifier}/editar")
+        editor = BeautifulSoup(form.data, "html.parser")
+        for name in ARTICLE_FIELD_LIMITS:
+            controls = editor.select(f'[name="{name}"]')
+            self.assertEqual(len(controls), 1)
+            self.assertFalse(controls[0].has_attr("required"))
+            self.assertEqual(controls[0].get_text(), fields[name])
+        invalid = dict(fields, keywords="x" * 2001)
+        response = self.client.post(f"/admin/revistas/{identifier}/editar", data=invalid)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("2000", response.get_data(as_text=True))
+        with app.app_context():
+            self.assertEqual(db.session.get(Journal, identifier).keywords, fields["keywords"])
+        # Empty optional declarations remove their public sections without removing the body.
+        cleared = dict(fields, **{name: "" for name in ARTICLE_FIELD_LIMITS})
+        self.assertEqual(self.client.post(f"/admin/revistas/{identifier}/editar", data=cleared).status_code, 302)
+        soup = BeautifulSoup(self.client.get("/revistas/artigo-estruturado").data, "html.parser")
+        self.assertEqual([item.get_text() for item in soup.select(".journal-sections h2")], ["Introdução", "Referências bibliográficas"])
+
     def test_journal_can_be_managed_and_published(self):
         with self.client.session_transaction() as session:
             session.clear()
@@ -1079,6 +1158,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
