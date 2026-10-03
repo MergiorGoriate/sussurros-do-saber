@@ -871,6 +871,21 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b"100000 caracteres", invalid.data)
         with app.app_context():
             self.assertEqual(EditorialPolicy.query.first().author_guidelines, content)
+        preview = self.client.post("/admin/politicas-editoriais/previsualizar", data={"csrf_token": "guidelines-csrf", "author_guidelines": "## Tipos de manuscritos\n\n<script>alert(1)</script>"})
+        self.assertEqual(preview.status_code, 200)
+        self.assertIn('id="tipos"', preview.json["html"])
+        self.assertNotIn("<script>", preview.json["html"])
+        self.assertEqual(self.client.post("/admin/politicas-editoriais/previsualizar", data={"author_guidelines": "test"}).status_code, 400)
+        self.assertEqual(self.client.post("/admin/politicas-editoriais/previsualizar", data={"csrf_token": "guidelines-csrf", "author_guidelines": "x" * 100001}).status_code, 400)
+        default_preview = self.client.post("/admin/politicas-editoriais/previsualizar", data={"csrf_token": "guidelines-csrf"})
+        self.assertTrue(default_preview.json["default"])
+        self.assertIn("Princípios gerais", default_preview.json["html"])
+        with app.app_context():
+            EditorialPolicy.query.first().reviewer_guidelines = "Preservar revisão"
+            db.session.commit()
+        self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": content})
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.first().reviewer_guidelines, "Preservar revisão")
         self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": "   "})
         self.assertIn("Princípios gerais".encode(), self.client.get("/diretrizes-para-autores").data)
 
@@ -1017,4 +1032,5 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 

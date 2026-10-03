@@ -591,3 +591,10 @@ input,textarea,select,button{font-size:16px}
 @media(max-width:850px){.docs-section{scroll-margin-top:125px}}
 
 .editorial-policy-editor .editor-side{position:static}
+
+
+.editorial-policy-editor .editor-main{min-width:0}
+.policy-preview-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}
+.policy-preview{border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:20px;overflow-wrap:anywhere;line-height:1.7;overflow-x:auto}
+.policy-preview img{max-width:100%;height:auto}.policy-preview table{border-collapse:collapse}.policy-preview td,.policy-preview th{border:1px solid var(--line);padding:8px}
+.policy-other{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}.policy-other summary{cursor:pointer;font-weight:700;margin-bottom:20px}

@@ -358,6 +358,9 @@ test('author guidelines saved in administration render with functional anchors',
   await signInAdministrator(page);
   await page.goto('/admin/politicas-editoriais',{waitUntil:'domcontentloaded'});
   await page.locator('[name="author_guidelines"]').fill('## Tipos de manuscritos\n\n- Artigo original\n- Revisão\n\n## Estrutura\n\n| Campo | Descrição |\n| --- | --- |\n| Resumo | Texto científico |');
+  await page.getByRole('button',{name:'Pré-visualizar diretrizes',exact:true}).click();
+  await expect(page.locator('#guidelines-preview')).toBeVisible();
+  await expect(page.locator('#guidelines-preview table')).toContainText('Texto científico');
   await page.getByRole('button',{name:'Guardar políticas',exact:true}).click();
   await expect(page).toHaveURL(new RegExp('/admin/politicas-editoriais$'));
   await expect(page.locator('[name="author_guidelines"]')).toHaveValue(/Tipos de manuscritos/);
@@ -372,3 +375,4 @@ test('author guidelines saved in administration render with functional anchors',
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
 });
+

@@ -7,7 +7,7 @@
   <meta name="referrer" content="same-origin">
   <title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title>
   <link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}">
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20260929-brand-blue') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261003-policy-editor-v2') }}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -22,7 +22,6 @@
       <a href="{{ url_for('admin.authors') }}">Autores</a>
       <a href="{{ url_for('admin.categories') }}">Categorias</a>
       <a href="{{ url_for('admin.journals') }}">Revistas</a>
-      <a href="{{ url_for('admin.editorial_policies') }}">Políticas Editoriais</a>
       <a href="{{ url_for('admin.comments') }}">Comentários</a>
       {% if current_admin_is_primary %}
       <a href="{{ url_for('admin.administrators') }}">Administradores</a>
@@ -47,3 +46,4 @@
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js') }}" defer></script>
 </body>
 </html>
+
