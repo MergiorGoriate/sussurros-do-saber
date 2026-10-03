@@ -164,3 +164,40 @@ test('journal header and first content have compact spacing on desktop and mobil
     expect(gaps.below).toBeLessThanOrEqual(24);
   }
 });
+
+test('journal administrator can filter the catalog and preview Markdown tables', async ({ page }) => {
+  const login=await page.request.get('/admin/login');
+  const html=await login.text();
+  const token=html.match(/name="csrf_token"[^>]*value="([^"]+)"/);
+  expect(token).not.toBeNull();
+  const response=await page.request.post('/admin/login',{form:{
+    username:process.env.ADMIN_USERNAME||'admin',
+    password:process.env.ADMIN_PASSWORD||'a-strong-test-password',
+    csrf_token:token[1]
+  }});
+  expect(response.ok()).toBeTruthy();
+  const challenge=await response.text();
+  const challengeToken=challenge.match(/name="csrf_token"[^>]*value="([^"]+)"/);
+  expect(challengeToken).not.toBeNull();
+  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bits=[...(process.env.ADMIN_TOTP_SECRET||'JBSWY3DPEHPK3PXP')].map(c=>alphabet.indexOf(c).toString(2).padStart(5,'0')).join('');
+  const key=Buffer.from(bits.match(/.{8}/g).map(byte=>parseInt(byte,2)));
+  const counter=Buffer.alloc(8);counter.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));
+  const digest=require('node:crypto').createHmac('sha1',key).update(counter).digest();
+  const offset=digest[digest.length-1]&15;
+  const code=String((digest.readUInt32BE(offset)&0x7fffffff)%1000000).padStart(6,'0');
+  const verified=await page.request.post('/admin/verificar-2fa',{form:{csrf_token:challengeToken[1],code}});
+  expect(verified.ok()).toBeTruthy();
+  await page.goto('/admin/revistas', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#journal-admin-search')).toBeVisible();
+  await page.locator('#journal-admin-search').fill('nenhuma-revista-corresponde');
+  await expect(page.locator('#journal-admin-empty')).toBeVisible();
+  await page.goto('/admin/revistas/nova', {waitUntil:'domcontentloaded'});
+  await page.locator('[name="content_markdown"]').fill('## Introdução\n\n| Grupo | Valor |\n| --- | --- |\n| A | 12 |');
+  await expect(page.locator('[data-md-preview] table')).toBeVisible();
+  await expect(page.locator('[data-md-preview]')).toContainText('Introdução');
+  await expect(page.locator('#journal-word-count')).toContainText('palavras');
+  await expect(page.locator('#journal-editor-status')).toHaveText('Alterações por guardar.');
+  await page.locator('[data-md="chart"]').click();
+  await expect(page.locator('[data-md-preview] .article-chart')).toBeVisible();
+});

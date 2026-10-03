@@ -54,6 +54,7 @@ jobs:
     env:
       DATABASE_URL: sqlite:////tmp/sussurros-browser-ci.db
       SECRET_KEY: ci-browser-secret-key
+      ADMIN_TOTP_SECRET: JBSWY3DPEHPK3PXP
       ADMIN_USERNAME: ci-admin
       ADMIN_PASSWORD: ci-only-strong-password
       SITE_URL: http://127.0.0.1:5000

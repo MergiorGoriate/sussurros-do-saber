@@ -442,6 +442,46 @@ class PlatformTests(unittest.TestCase):
         with app.app_context():
             self.assertIsNone(Journal.query.filter_by(slug="metadata-invalida").first())
 
+    def test_journal_markdown_preview_requires_login_and_csrf(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+        endpoint = "/admin/revistas/previsualizar-markdown"
+        self.assertEqual(self.client.post(endpoint).status_code, 302)
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "preview-token"
+        self.assertEqual(self.client.post(endpoint, data={"content": "# Título"}).status_code, 400)
+        response = self.client.post(endpoint, data={
+            "csrf_token": "preview-token", "content": "# Título\n\n| A | B |\n| --- | --- |\n| 1 | 2 |",
+            "references": "https://example.org/fonte",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<table>", response.json["html"])
+        self.assertIn("<h1>Título</h1>", response.json["html"])
+        self.assertIn('href="https://example.org/fonte"', response.json["references"])
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+    def test_journal_explicit_draft_and_invalid_form_preserve_input(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "draft-token"
+        data = {"csrf_token": "draft-token", "title": "Revista em preparação",
+                "slug": "editor-rascunho", "field": "Biologia",
+                "description": "Descrição científica com dimensão suficiente.",
+                "content_markdown": "## Introdução", "published": "on", "save_mode": "draft"}
+        response = self.client.post("/admin/revistas/nova", data=data)
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            self.assertFalse(Journal.query.filter_by(slug="editor-rascunho").first().published)
+        data.update(title="Título preservado", slug="editor-invalido", description="Curta")
+        response = self.client.post("/admin/revistas/nova", data=data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('value="Título preservado"'.encode(), response.data)
+        self.assertIn("## Introdução".encode(), response.data)
+
     def test_journal_template_uses_references_and_notes_after_content(self):
         template = Path(app.root_path, "templates", "journal.html").read_text(encoding="utf-8")
         content_position = template.index('id="conteudo-revista"')
