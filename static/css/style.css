@@ -1599,3 +1599,22 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
   .journal-page .journal-article-header + section,
   .journal-page #journal-article-heading + .journal-content{padding-top:.5rem !important}
 }
+
+
+/* Remove definitivamente o vazio entre o cabeçalho do artigo e o conteúdo */
+.journal-page .journal-information{
+  margin-top:0 !important;
+  padding-top:0 !important;
+  gap:1rem !important;
+}
+.journal-page .journal-sections{
+  margin-top:0 !important;
+  padding-top:0 !important;
+}
+.journal-page .journal-info-section:first-child{
+  margin-top:0 !important;
+  padding-top:0 !important;
+}
+@media (max-width:767px){
+  .journal-page .journal-information{margin-top:0 !important;padding-top:0 !important;gap:.5rem !important}
+}
