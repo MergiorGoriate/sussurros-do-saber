@@ -68,6 +68,11 @@ limiter.init_app(app)
 app.register_blueprint(admin_bp)
 
 
+@app.get("/diretrizes-para-autores")
+def author_guidelines():
+    return render_template("author_guidelines.html")
+
+
 @app.get("/ads.txt")
 def ads_txt():
     """Publica a declaração Authorized Digital Sellers do Google AdSense."""
