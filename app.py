@@ -730,13 +730,18 @@ def journal_preview(journal_id):
     return render_journal(db.get_or_404(Journal, journal_id))
 
 
-def render_journal(journal):
+def journal_article_content(journal):
     content = str(render_markdown(journal.content_markdown or journal.guidelines or ""))
     title_heading = re.match(r"\s*<h1>(.*?)</h1>\s*", content, re.S)
     article_title = journal.title
     if title_heading:
         article_title = html_unescape(bleach.clean(title_heading.group(1), tags=[], strip=True))
         content = content[title_heading.end():]
+    return article_title, content
+
+
+def render_journal(journal):
+    article_title, content = journal_article_content(journal)
     return render_template("journal.html", journal=journal,
                            article_title=article_title, journal_content=Markup(content),
                            public_url=SITE_URL + url_for("journal_detail", slug=journal.slug))
@@ -757,25 +762,37 @@ def journal_preview_pdf(journal_id):
 
 def render_journal_pdf(journal):
 
-    from journal_pdf import article_flowables
+    from journal_pdf import article_flowables, pdf_styles, page_footer
+    article_title, content = journal_article_content(journal)
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
                             topMargin=18*mm, bottomMargin=18*mm,
-                            title=journal.title, author="Sussurros do Saber")
-    styles = getSampleStyleSheet()
-    story = [Paragraph(html_escape(journal.title), styles["Title"]), Spacer(1, 8)]
+                            title=article_title, author="Sussurros do Saber")
+    styles = pdf_styles()
+    story = [Paragraph("SUSSURROS DO SABER", styles["Metadata"]), Spacer(1, 6),
+             Paragraph(html_escape(article_title), styles["Title"]), Spacer(1, 8)]
+    metadata = [Paragraph(html_escape(journal.title), styles["Metadata"])]
+    for label, field in (("Autores / ORCID", "authors_orcid"), ("ISSN", "issn"),
+                         ("Edição", "current_issue"), ("DOI", "doi")):
+        value = getattr(journal, field, "")
+        if value:
+            metadata.append(Paragraph("<b>" + label + ":</b> " + html_escape(str(value)).replace("\n", "<br/>"), styles["Metadata"]))
+    publication_date = getattr(journal, "publication_date", None)
+    if publication_date:
+        metadata.append(Paragraph("Publicado em " + publication_date.strftime("%d/%m/%Y"), styles["Metadata"]))
+    story += metadata + [Spacer(1, 8)]
     if journal.description:
         story += [Paragraph(html_escape(journal.description), styles["BodyText"]), Spacer(1, 12)]
     if journal.cover_image:
         story += article_flowables('<img src="' + html_escape(journal.cover_image, quote=True) + '" alt="Capa">',
-                                   doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN)
-    story += article_flowables(render_markdown(journal.content_markdown or journal.guidelines or ""),
-                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN)
+                                   doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, image_height_ratio=.35)
+    story += article_flowables(content,
+                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, title=article_title)
     if journal.references:
         story += [Spacer(1, 12), Paragraph("Referências e Notas", styles["Heading2"])]
         story += article_flowables(render_markdown(journal.references), doc.width, doc.height,
                                    app.static_folder, CANONICAL_ORIGIN)
-    doc.build(story)
+    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf = buffer.getvalue()
     buffer.close()
     filename = re.sub(r"[^a-zA-Z0-9._-]+", "-", journal.slug).strip("-") + ".pdf"
@@ -1257,3 +1274,4 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+

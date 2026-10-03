@@ -10,12 +10,61 @@ import warnings
 import urllib3
 from bs4 import BeautifulSoup, NavigableString
 from PIL import Image as PillowImage
+import reportlab
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Image, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Image, Paragraph, Spacer, Table, TableStyle, KeepTogether
 from svglib.svglib import svg2rlg
 
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+
+def pdf_styles():
+    if 'ArticleSans' not in pdfmetrics.getRegisteredFontNames():
+        folder = Path(reportlab.__file__).parent / 'fonts'
+        for name, file in (('ArticleSans', 'Vera.ttf'), ('ArticleSans-Bold', 'VeraBd.ttf'),
+                           ('ArticleSans-Italic', 'VeraIt.ttf'), ('ArticleSans-BoldItalic', 'VeraBI.ttf')):
+            pdfmetrics.registerFont(TTFont(name, str(folder / file)))
+        pdfmetrics.registerFontFamily('ArticleSans', normal='ArticleSans', bold='ArticleSans-Bold',
+                                      italic='ArticleSans-Italic', boldItalic='ArticleSans-BoldItalic')
+    styles = getSampleStyleSheet()
+    for style in styles.byName.values():
+        if not hasattr(style, 'fontName'):
+            continue
+        style.fontName = 'ArticleSans-Bold' if style.fontName.endswith('Bold') else 'ArticleSans'
+    ink = colors.HexColor('#1E4E8C')
+    styles['Title'].fontSize = 22
+    styles['Title'].leading = 27
+    styles['Title'].textColor = ink
+    styles['Title'].alignment = 0
+    styles['BodyText'].fontSize = 10.5
+    styles['BodyText'].leading = 15
+    for name in ('Heading1', 'Heading2', 'Heading3'):
+        styles[name].textColor = ink
+        styles[name].spaceBefore = 12
+        styles[name].keepWithNext = True
+    styles.add(ParagraphStyle('Caption', parent=styles['BodyText'], fontSize=9,
+                              leading=12, textColor=colors.HexColor('#4a5568'), spaceBefore=5))
+    styles.add(ParagraphStyle('Metadata', parent=styles['Caption'], spaceAfter=4))
+    styles.add(ParagraphStyle('ListItem', parent=styles['BodyText'], leftIndent=14,
+                              firstLineIndent=-10, spaceAfter=4))
+    styles.add(ParagraphStyle('CodeBlock', parent=styles['BodyText'], fontName='Courier',
+                              fontSize=8, leading=11, backColor=colors.HexColor('#f3f5f7')))
+    return styles
+
+
+def page_footer(canvas, document):
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor('#1E4E8C'))
+    canvas.setLineWidth(.5)
+    canvas.line(document.leftMargin, 38, document.pagesize[0] - document.rightMargin, 38)
+    canvas.setFont('ArticleSans', 8)
+    canvas.setFillColor(colors.HexColor('#4a5568'))
+    canvas.drawString(document.leftMargin, 26, 'Sussurros do Saber | www.sussurrosdosaber.com')
+    canvas.drawRightString(document.pagesize[0] - document.rightMargin, 26, str(document.page))
+    canvas.restoreState()
 
 
 def load_image(source, static_folder, origin, deadline):
@@ -76,9 +125,12 @@ def load_image(source, static_folder, origin, deadline):
     raise ValueError('Demasiados redirecionamentos')
 
 
-def article_flowables(html, width, height, static_folder, origin):
-    styles = getSampleStyleSheet()
+def article_flowables(html, width, height, static_folder, origin, image_height_ratio=.70, title=None):
+    styles = pdf_styles()
     soup = BeautifulSoup(str(html), 'html.parser')
+    first_heading = soup.find('h1')
+    if title and first_heading and first_heading.get_text(' ', strip=True).casefold() == title.strip().casefold():
+        first_heading.decompose()
     story, cache = [], {}
     deadline = time.monotonic() + 20
 
@@ -107,20 +159,47 @@ def article_flowables(html, width, height, static_folder, origin):
                     with warnings.catch_warnings():
                         warnings.simplefilter('error', PillowImage.DecompressionBombWarning)
                         with PillowImage.open(BytesIO(raw)) as image:
-                            image.load()
+                            if image.width * image.height > 20_000_000:
+                                raise ValueError('Resolução de imagem excessiva')
+                            image.thumbnail((2400, 2400), PillowImage.Resampling.LANCZOS)
+                            rgba = image.convert('RGBA')
+                            background = PillowImage.new('RGB', image.size, 'white')
+                            background.paste(rgba, mask=rgba.getchannel('A'))
                             converted = BytesIO()
-                            image.convert('RGB').save(converted, format='PNG')
+                            background.save(converted, format='PNG', optimize=True)
                     cache[source] = converted.getvalue()
                 figure = Image(BytesIO(cache[source]))
-                ratio = min(width / figure.imageWidth, height * .70 / figure.imageHeight, 1)
+                ratio = min(width / figure.imageWidth, height * image_height_ratio / figure.imageHeight, 1)
                 figure.drawWidth = figure.imageWidth * ratio
                 figure.drawHeight = figure.imageHeight * ratio
-                story.extend([Spacer(1, 8), figure])
-                if label:
-                    story.append(Paragraph(escape(label), styles['Caption'] if 'Caption' in styles else styles['BodyText']))
+                group = [figure]
+                if label and not (node.parent.name == 'figure' and node.parent.find('figcaption')):
+                    group.append(Paragraph(escape(label), styles['Caption']))
+                story.append(Spacer(1, 8))
+                if node.parent.name == 'figure':
+                    story.extend(group)
+                else:
+                    story.append(KeepTogether(group))
             except Exception:
                 story.append(Paragraph(escape(f'{label} — imagem indisponível no PDF.'), styles['BodyText']))
             story.append(Spacer(1, 8))
+        elif name == 'figure':
+            start = len(story)
+            for child in node.children:
+                walk(child)
+            group = story[start:]
+            story[start:] = [KeepTogether(group)] if group else []
+        elif name in ('ul', 'ol'):
+            for index, item in enumerate(node.find_all('li', recursive=False), 1):
+                prefix = str(index) + '. ' if name == 'ol' else '• '
+                direct = BeautifulSoup(''.join(str(child) for child in item.contents if getattr(child, 'name', None) not in ('ul', 'ol')), 'html.parser')
+                line = paragraph(direct, 'ListItem')
+                line = Paragraph(escape(prefix) + line.text, styles['ListItem'])
+                story.append(line)
+                for child in item.find_all(['ul', 'ol'], recursive=False):
+                    walk(child)
+        elif name == 'pre':
+            story.extend([Paragraph(escape(node.get_text()).replace('\n', '<br/>'), styles['CodeBlock']), Spacer(1, 8)])
         elif name == 'svg':
             # Only the sanitized inline chart SVG produced by the public renderer.
             viewbox = node.attrs.pop('viewbox', '0 0 800 440')
@@ -147,7 +226,7 @@ def article_flowables(html, width, height, static_folder, origin):
         elif name in ('h1', 'h2', 'h3', 'h4'):
             story.extend([paragraph(node, 'Heading' + str(min(int(name[1]), 3))), Spacer(1, 6)])
         elif name in ('p', 'li', 'figcaption', 'blockquote') and not node.find(['img', 'svg', 'table', 'figure']):
-            story.extend([paragraph(node), Spacer(1, 6)])
+            story.extend([paragraph(node, 'Caption' if name == 'figcaption' else 'BodyText'), Spacer(1, 6)])
         elif name not in ('script', 'style', 'iframe', 'source'):
             for child in node.children:
                 walk(child)
