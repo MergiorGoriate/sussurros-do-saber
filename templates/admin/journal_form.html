@@ -9,13 +9,14 @@
 <section class="editor-main">
 <label>Título<input name="title" required minlength="3" maxlength="180" value="{{ journal.title or '' }}"></label>
 <label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="6">{{ journal.description or '' }}</textarea></label>
+<div class="journal-editor-note"><strong>Conteúdo público da revista</strong><p>Estes campos controlam o artigo, os metadados editoriais, o índice, as referências e as ações exibidas na página pública.</p></div>
 <label>Conteúdo em Markdown
 <div class="markdown-toolbar" data-md-toolbar>
 <button type="button" data-md="heading">Título</button><button type="button" data-md="bold"><strong>Negrito</strong></button><button type="button" data-md="italic"><em>Itálico</em></button><button type="button" data-md="quote">Citação</button><button type="button" data-md="list">Lista</button><button type="button" data-md="reference">Referência</button><button type="button" data-md="image">Imagem</button><button type="button" data-md="video">Vídeo</button><button type="button" data-md="table">Tabela</button><button type="button" data-md="chart">Gráfico</button>
 </div>
 <div class="markdown-editor-grid"><textarea id="journal-content-md" name="content_markdown" rows="22" placeholder="Escreva em Markdown...">{{ journal.content_markdown or '' }}</textarea><div><strong>Pré-visualização</strong><div class="markdown-preview" data-md-preview></div></div></div>
 </label>
-<label>Referências e Notas<textarea name="references" rows="10" placeholder="## Referências e Notas&#10;&#10;1. Autor. Título. Revista...&#10;2. DOI: https://doi.org/...">{{ journal.references or '' }}</textarea><small>Aceita Markdown. URLs completas (https://...) serão apresentadas como links clicáveis.</small></label>
+<label>Referências e Notas <small>— exibidas abaixo da conclusão</small><textarea name="references" rows="10" placeholder="## Referências e Notas&#10;&#10;1. Autor. Título. Revista...&#10;2. DOI: https://doi.org/...">{{ journal.references or '' }}</textarea><small>Aceita Markdown. URLs completas (https://...) serão apresentadas como links clicáveis.</small></label>
 <label>Capa via Cloudinary<input name="cover_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
 <label>Ou URL da capa<input name="cover_image" type="url" value="{{ journal.cover_image or '' }}" placeholder="https://..."></label>
 <label>Texto alternativo da capa<input name="cover_alt" maxlength="300" value="{{ journal.cover_alt or '' }}"></label>
@@ -33,6 +34,11 @@
 <label>Data de publicação<input name="publication_date" type="date" value="{{ journal.publication_date.isoformat() if journal.publication_date else '' }}"></label>
 <label>Slug<input name="slug" maxlength="200" value="{{ journal.slug or '' }}" placeholder="gerado automaticamente"></label>
 <label class="check"><input name="published" type="checkbox" {% if journal.published %}checked{% endif %}> Publicada no catálogo</label>
+<div class="journal-editor-note"><strong>Funcionalidades públicas</strong><p>Índice responsivo gerado automaticamente pelos títulos H2/H3. URLs tornam-se clicáveis. Os botões Alertas, Guardar, Citar e Baixar PDF são disponibilizados automaticamente na página pública.</p></div>
+{% if journal.id %}
+<a class="secondary-btn" href="{{ url_for('journal_detail', slug=journal.slug) }}" target="_blank" rel="noopener">Pré-visualizar revista</a>
+<a class="secondary-btn" href="{{ url_for('journal_download_pdf', slug=journal.slug) }}" target="_blank" rel="noopener">Testar PDF</a>
+{% endif %}
 <button class="admin-primary">Guardar revista</button>
 </aside></form>
 <script nonce="{{ csp_nonce }}">
