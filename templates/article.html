@@ -1,34 +1,33 @@
 {% extends 'base.html' %}{% block title %}{{ article.title }} — Sussurros do
 Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock %}{% block canonical %}{{ site_url }}{{ url_for('article', slug=article.slug) }}{% endblock %}{% block og_type %}article{% endblock %}{% block og_title %}{{ article.title }}{% endblock %}{% block og_description %}{{ article.summary }}{% endblock %}{% block og_image %}{{ article.image|social_image }}{% endblock %}{% block og_image_url %}{{ article.image|social_image }}{% endblock %}{% block og_image_secure %}{{ article.image|social_image }}{% endblock %}{% block og_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block twitter_title %}{{ article.title }}{% endblock %}{% block twitter_description %}{{ article.summary }}{% endblock %}{% block twitter_image %}{{ article.image|social_image }}{% endblock %}{% block twitter_image_alt %}Imagem de capa do artigo: {{ article.title }}{% endblock %}{% block head_extra %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css', v='20260929-brand-blue') }}">{% endblock %}{% block resource_hints %}{% if article.image %}<link rel="preload" as="image" href="{{ article.image|image_variant(768) }}" imagesrcset="{{ article.image|image_srcset([480, 768, 1200]) }}" imagesizes="(max-width: 767px) 100vw, 1152px" fetchpriority="high">{% endif %}{% endblock %}{% block content %}<script nonce="{{ csp_nonce }}" type="application/ld+json">{{ {"@context":"https://schema.org","@type":"Article","headline":article.title,"description":article.summary,"datePublished":(article.published_at or article.created_at).isoformat(),"dateModified":article.updated_at.isoformat(),"author":{"@type":"Person","name":article.author,"image":article.author_rel.photo or none},"publisher":{"@type":"Organization","name":"Sussurros do Saber","url":site_url},"mainEntityOfPage":site_url ~ url_for('article', slug=article.slug),"image":article.image|social_image}|tojson }}</script><article class="article-page">
-  <header class="article-header max-w-4xl mx-auto px-4 pt-14 text-center">
-    <span class="eyebrow">{{ article.category }}</span>
-    <h1 class="article-title font-serif leading-tight mt-4">
-      {{ article.title }}
-    </h1>
-    <p class="article-summary mt-5">{{ article.summary }}</p>
-    <div class="article-author-line">
-      {% if article.author_rel.photo %}
-      <img src="{{ article.author_rel.photo|safe_image_url }}" alt="" class="article-author-avatar" loading="lazy" decoding="async">
-      {% else %}
-      <span class="article-author-avatar article-author-fallback" aria-hidden="true">{{ article.author[:2]|upper }}</span>
-      {% endif %}
-      <a class="article-author-link" href="{{ url_for('author_detail', slug=article.author_rel.slug) }}">Por {{ article.author }}</a>
+  <header class="article-header article-editorial-header max-w-6xl mx-auto px-4 pt-14">
+    <div class="article-editorial-topline">
+      <div class="article-editorial-type"><i class="fa-solid fa-lock-open" aria-hidden="true"></i><span>{{ article.category }}</span></div>
+      <div class="article-editorial-share" aria-label="Partilhar artigo">
+        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="https://twitter.com/intent/tweet?url={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+        <a href="https://api.whatsapp.com/send?text={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="mailto:?subject={{ article.title|urlencode }}&body={{ request.url|urlencode }}" aria-label="E-mail"><i class="fa-solid fa-envelope"></i></a>
+      </div>
     </div>
-    <p class="article-meta article-byline justify-center">
-      <span>Publicado em {{ article.date }}</span>
-      <span>Atualizado em {{ article.updated_at.strftime('%d/%m/%Y') }}</span>
-      <span>{{ article.read_time }}</span>
-    </p>
-    <div class="reading-tools">
-      <button
-        class="bookmark"
-        data-id="{{ article.id }}"
-        aria-label="Guardar {{ article.title }}"
-        aria-pressed="false"
-      >
-        ♡
-      </button>
+    <h1 class="article-title">{{ article.title }}</h1>
+    <p class="article-summary">{{ article.summary }}</p>
+    <div class="article-editorial-authors">
+      <a class="article-editorial-author" href="{{ url_for('author_detail', slug=article.author_rel.slug) }}">{{ article.author }}</a>
+      {% if article.author_rel.orcid %}<a class="article-editorial-orcid" href="https://orcid.org/{{ article.author_rel.orcid }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID de {{ article.author }}">iD</a>{% endif %}
+    </div>
+    <div class="article-editorial-meta">
+      <strong>Sussurros do Saber</strong>
+      <span>•</span><span>{{ article.date }}</span>
+      <span>•</span><span>{{ article.read_time }}</span>
+      {% if article.doi %}<span>•</span><a href="https://doi.org/{{ article.doi }}" rel="external noopener">DOI: {{ article.doi }}</a>{% endif %}
+    </div>
+    <div class="article-editorial-actions" aria-label="Ações do artigo">
+      <button type="button" aria-label="Alertas" title="Alertas"><i class="fa-solid fa-bell"></i></button>
+      <button class="bookmark" data-id="{{ article.id }}" aria-label="Guardar {{ article.title }}" aria-pressed="false" title="Guardar"><i class="fa-regular fa-bookmark"></i></button>
+      <a href="#references-title" aria-label="Ver referências" title="Referências"><i class="fa-solid fa-quote-right"></i></a>
     </div>
   </header>
   {% if article.image %}
