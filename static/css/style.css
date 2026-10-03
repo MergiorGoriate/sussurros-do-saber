@@ -1545,3 +1545,33 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
     letter-spacing:-.025em;
   }
 }
+
+/* Cabeçalho editorial de artigo — hierarquia inspirada em periódicos científicos */
+.journal-article-header{margin:3rem 0 2.25rem;padding:0 0 1rem;border-bottom:1px solid #d9dde2;color:#202124}
+.journal-article-header[hidden]{display:none}
+.journal-article-topline{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.75rem}
+.journal-article-type{display:flex;align-items:center;gap:.65rem;color:#c52a22;font-size:.78rem;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+.journal-article-type i{font-size:.72rem}
+.journal-article-share{display:flex;align-items:center;gap:1.25rem}
+.journal-article-share a{color:#737373;text-decoration:none;font-size:1.05rem}
+.journal-article-header h1{margin:0 0 1.8rem;max-width:1080px;font-family:Arial,Helvetica,sans-serif;font-size:clamp(2.5rem,4.15vw,4.25rem);line-height:1.08;letter-spacing:-.035em;font-weight:800;color:#191919;text-wrap:balance}
+.journal-article-authors{display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;margin-bottom:2.35rem;color:#707070;font-size:.9rem;line-height:1.7}
+.journal-article-author{display:inline-flex;align-items:center;gap:.35rem}
+.journal-article-author-name{text-decoration:underline;text-underline-offset:3px}
+.journal-orcid-dot{display:inline-grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#a6ce39;color:#fff!important;font-size:.62rem;font-weight:800;text-decoration:none!important}
+.journal-author-comma{margin-right:.08rem}
+.journal-article-meta{display:flex;align-items:center;flex-wrap:wrap;gap:.65rem;color:#777;font-size:.82rem;line-height:1.5}
+.journal-article-meta strong{color:#333;font-style:italic}
+.journal-article-actions{display:flex;justify-content:flex-end;align-items:center;gap:1.45rem;margin-top:.8rem;padding-top:.8rem;border-top:1px solid #d9dde2}
+.journal-article-actions button,.journal-article-actions a{display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;background:transparent;color:#777;font-size:1.15rem;text-decoration:none;cursor:pointer}
+.journal-article-actions .journal-article-pdf{width:44px;height:44px;border-radius:50%;background:#d9251d;color:#fff;font-size:1.25rem}
+@media(max-width:767px){
+ .journal-article-header{margin:1.75rem 0 1.5rem}
+ .journal-article-topline{align-items:flex-start;margin-bottom:1.2rem}
+ .journal-article-share{gap:.8rem}
+ .journal-article-share a{font-size:.95rem}
+ .journal-article-header h1{font-size:clamp(2rem,9vw,3rem);line-height:1.08;margin-bottom:1.25rem}
+ .journal-article-authors{margin-bottom:1.4rem;font-size:.82rem}
+ .journal-article-meta{gap:.45rem;font-size:.76rem}
+ .journal-article-actions{justify-content:flex-start;gap:1rem}
+}
