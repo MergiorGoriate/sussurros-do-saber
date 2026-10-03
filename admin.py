@@ -18,7 +18,7 @@ from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_t
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
 from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
-from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
 from storage import ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -420,6 +420,25 @@ def logout():
     validate_csrf()
     session.clear()
     return redirect(url_for("admin.login"))
+
+
+@admin_bp.route("/politicas-editoriais", methods=["GET", "POST"])
+@login_required
+def editorial_policies():
+    policy = EditorialPolicy.query.first()
+    if policy is None:
+        policy = EditorialPolicy()
+        db.session.add(policy)
+        db.session.commit()
+    if request.method == "POST":
+        validate_csrf()
+        fields = ("author_guidelines", "reviewer_guidelines", "ethics_policy", "ai_policy", "data_policy", "fees_policy", "open_access_policy")
+        for field in fields:
+            setattr(policy, field, request.form.get(field, "").strip())
+        db.session.commit()
+        flash("Políticas editoriais guardadas com sucesso.", "success")
+        return redirect(url_for("admin.editorial_policies"))
+    return render_template("admin/editorial_policies.html", policy=policy)
 
 
 @admin_bp.get("/docs")
