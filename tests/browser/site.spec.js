@@ -356,7 +356,7 @@ test('author guidelines link targets an existing section on mobile',async({page}
 
 test('author guidelines saved in administration render with functional anchors',async({page})=>{
   await signInAdministrator(page);
-  await page.goto('/admin/',{waitUntil:'domcontentloaded'});
+  await page.goto('/admin',{waitUntil:'domcontentloaded'});
   await page.getByRole('link',{name:'Políticas Editoriais',exact:true}).click();
   await expect(page).toHaveURL(/\/admin\/politicas-editoriais$/);
   await expect(page.locator('[name="ethics_policy"]')).toBeVisible();
