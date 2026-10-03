@@ -757,37 +757,24 @@ def journal_preview_pdf(journal_id):
 
 def render_journal_pdf(journal):
 
-    # PDF textual, leve e gerado sob demanda a partir do conteúdo publicado.
-    raw = journal.content_markdown or journal.guidelines or ""
-    html = markdown.markdown(raw, extensions=["extra"])
-    clean = bleach.clean(html, tags=["p","br","strong","em","b","i","h1","h2","h3","h4","ul","ol","li","blockquote"], strip=True)
-    refs_raw = journal.references or ""
-    refs_html = bleach.clean(markdown.markdown(refs_raw, extensions=["extra"]), tags=["p","br","strong","em","b","i","ul","ol","li"], strip=True)
-
+    from journal_pdf import article_flowables
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm, topMargin=18*mm, bottomMargin=18*mm,
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
+                            topMargin=18*mm, bottomMargin=18*mm,
                             title=journal.title, author="Sussurros do Saber")
     styles = getSampleStyleSheet()
     story = [Paragraph(html_escape(journal.title), styles["Title"]), Spacer(1, 8)]
     if journal.description:
         story += [Paragraph(html_escape(journal.description), styles["BodyText"]), Spacer(1, 12)]
-    # ReportLab Paragraph suporta o subconjunto HTML acima.
-    for block in re.split(r"(?=<(?:h[1-4]|p|ul|ol|blockquote)[ >])", clean):
-        block = block.strip()
-        if not block:
-            continue
-        try:
-            story.append(Paragraph(block, styles["BodyText"]))
-            story.append(Spacer(1, 6))
-        except Exception:
-            story.append(Paragraph(html_escape(bleach.clean(block, tags=[], strip=True)), styles["BodyText"]))
-    if refs_html.strip():
+    if journal.cover_image:
+        story += article_flowables('<img src="' + html_escape(journal.cover_image, quote=True) + '" alt="Capa">',
+                                   doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN)
+    story += article_flowables(render_markdown(journal.content_markdown or journal.guidelines or ""),
+                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN)
+    if journal.references:
         story += [Spacer(1, 12), Paragraph("Referências e Notas", styles["Heading2"])]
-        for block in re.split(r"(?=<(?:p|ul|ol)[ >])", refs_html):
-            if block.strip():
-                try: story.append(Paragraph(block.strip(), styles["BodyText"]))
-                except Exception: story.append(Paragraph(html_escape(bleach.clean(block, tags=[], strip=True)), styles["BodyText"]))
-                story.append(Spacer(1, 5))
+        story += article_flowables(render_markdown(journal.references), doc.width, doc.height,
+                                   app.static_folder, CANONICAL_ORIGIN)
     doc.build(story)
     pdf = buffer.getvalue()
     buffer.close()
