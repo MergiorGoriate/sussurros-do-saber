@@ -861,7 +861,7 @@ def journal_form(journal_id=None):
             journal.copyright_policy = request.form.get("copyright_policy", "").strip()
             journal.cover_image = cover_url
             journal.cover_alt = request.form.get("cover_alt", "").strip()
-            journal.published = request.form.get("published") == "on"
+            journal.published = request.form.get("save_mode") != "draft" and request.form.get("published") == "on"
             if not journal.id:
                 db.session.add(journal)
             db.session.commit()

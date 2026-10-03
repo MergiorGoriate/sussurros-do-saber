@@ -164,3 +164,28 @@ test('journal header and first content have compact spacing on desktop and mobil
     expect(gaps.below).toBeLessThanOrEqual(24);
   }
 });
+
+test('journal administrator can filter the catalog and preview Markdown tables', async ({ page }) => {
+  const login=await page.request.get('/admin/login');
+  const html=await login.text();
+  const token=html.match(/name="csrf_token"[^>]*value="([^"]+)"/);
+  expect(token).not.toBeNull();
+  const response=await page.request.post('/admin/login',{form:{
+    username:process.env.ADMIN_USERNAME||'admin',
+    password:process.env.ADMIN_PASSWORD||'a-strong-test-password',
+    csrf_token:token[1]
+  }});
+  expect(response.ok()).toBeTruthy();
+  await page.goto('/admin/revistas', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('#journal-admin-search')).toBeVisible();
+  await page.locator('#journal-admin-search').fill('nenhuma-revista-corresponde');
+  await expect(page.locator('#journal-admin-empty')).toBeVisible();
+  await page.goto('/admin/revistas/nova', {waitUntil:'domcontentloaded'});
+  await page.locator('[name="content_markdown"]').fill('## Introdução\n\n| Grupo | Valor |\n| --- | --- |\n| A | 12 |');
+  await expect(page.locator('[data-md-preview] table')).toBeVisible();
+  await expect(page.locator('[data-md-preview]')).toContainText('Introdução');
+  await expect(page.locator('#journal-word-count')).toContainText('palavras');
+  await expect(page.locator('#journal-editor-status')).toHaveText('Alterações por guardar.');
+  await page.locator('[data-md="chart"]').click();
+  await expect(page.locator('[data-md-preview] .article-chart')).toBeVisible();
+});

@@ -21,7 +21,7 @@ import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
-from admin import admin_bp, login_required, slugify
+from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
 
@@ -710,6 +710,18 @@ def journal_detail(slug):
     if not journal:
         return render_template("404.html"), 404
     return render_journal(journal)
+
+
+@app.post("/admin/revistas/previsualizar-markdown")
+@login_required
+@limiter.limit("120 per minute")
+def journal_markdown_preview():
+    validate_csrf()
+    content = request.form.get("content", "")
+    references = request.form.get("references", "")
+    if len(content) + len(references) > 500000:
+        return jsonify({"error": "Conteúdo demasiado extenso para pré-visualização."}), 400
+    return jsonify({"html": str(render_markdown(content)), "references": str(render_markdown(references))})
 
 
 @app.get("/admin/revistas/<int:journal_id>/previsualizar")
