@@ -8,8 +8,5 @@
   "devDependencies": {
     "tailwindcss": "3.4.19",
     "@playwright/test": "1.63.0"
-  },
-  "overrides": {
-    "braces": "3.0.3"
   }
 }
