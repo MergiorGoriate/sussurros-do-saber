@@ -38,7 +38,7 @@
 <label>Keywords<textarea class="journal-article-field" name="abstract_keywords" rows="2" maxlength="2000">{{ request.form.get('abstract_keywords', journal.abstract_keywords or '') }}</textarea><small>Keywords in English, separated by semicolons.</small></label>
 <h2>Conteúdo do artigo</h2><p class="journal-editor-help">Defina o título do artigo no campo próprio. Use ## ou ### para as secções do índice. Os títulos # já guardados continuam compatíveis.</p><label>Conteúdo do artigo em Markdown
 <div class="markdown-toolbar" data-md-toolbar>
-<button type="button" data-md="heading">Título</button><button type="button" data-md="section">Secção</button><button type="button" data-md="bold"><strong>Negrito</strong></button><button type="button" data-md="italic"><em>Itálico</em></button><button type="button" data-md="quote">Citação</button><button type="button" data-md="list">Lista</button><button type="button" data-md="reference">Referência</button><button type="button" data-md="image">Imagem</button><button type="button" data-md="video">Vídeo</button><button type="button" data-md="table">Tabela</button><button type="button" data-md="chart">Gráfico</button>
+<button type="button" data-md="heading">Título</button><button type="button" data-md="section">Secção</button><button type="button" data-md="bold"><strong>Negrito</strong></button><button type="button" data-md="italic"><em>Itálico</em></button><button type="button" data-md="quote">Citação</button><button type="button" data-md="list">Lista</button><button type="button" data-md="link">Hiperligação</button><button type="button" data-md="reference">Referência</button><button type="button" data-md="image">Imagem</button><button type="button" data-md="video">Vídeo</button><button type="button" data-md="table">Tabela</button><button type="button" data-md="chart">Gráfico</button>
 </div>
 <p id="journal-word-count" class="journal-editor-help" aria-live="polite"></p><div class="markdown-editor-grid"><textarea id="journal-content-md" class="journal-article-field" maxlength="400000" name="content_markdown" rows="22" placeholder="Escreva em Markdown...">{{ request.form.get('content_markdown', journal.content_markdown or '') }}</textarea><div><strong>Pré-visualização</strong><div class="markdown-preview" data-md-preview></div><h3>Referências bibliográficas e notas</h3><div class="markdown-preview" data-reference-preview></div></div></div>
 </label>
@@ -80,7 +80,7 @@
 {% endif %}
 <div class="journal-save-actions"><button class="admin-primary" type="submit">Guardar alterações</button><button class="admin-secondary" type="submit" name="save_mode" value="draft">Guardar rascunho</button></div><p id="journal-editor-status" role="status" aria-live="polite">Sem alterações por guardar.</p>
 </aside></form>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-journals.js', v='20261004-article-fields-v1') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-journals.js', v='20261004-hyperlinks-v1') }}" defer></script>
 {% endblock %}
 
 

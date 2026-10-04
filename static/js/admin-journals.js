@@ -33,6 +33,20 @@
  const snippets={heading:'# Título do artigo',section:'## Secção',quote:'> Citação',list:'- Item',reference:'[Referência](https://doi.org/...)',image:'![Descrição da imagem](https://...)',video:'[video: Título do vídeo](https://www.youtube.com/watch?v=...)',table:'| Coluna | Coluna |\n| --- | --- |\n| Valor | Valor |',chart:'[chart: bar|Título do gráfico|Grupo A=12; Grupo B=8]'};
  form.querySelectorAll('[data-md]').forEach(button=>button.addEventListener('click',()=>{
    const type=button.dataset.md,start=area.selectionStart,end=area.selectionEnd,selected=area.value.slice(start,end)||'texto';
+   if(type==='link'){
+     const label=window.prompt('Texto da hiperligação:',area.value.slice(start,end)||'');
+     if(label===null)return;
+     if(!label.trim()){window.alert('Escreva o texto da hiperligação.');return;}
+     const address=window.prompt('Endereço da hiperligação (https://…):','https://');
+     if(address===null)return;
+     let url;
+     try{url=new URL(address.trim());if(!['https:','http:'].includes(url.protocol)||!url.hostname)throw new Error();}
+     catch{window.alert('Informe um endereço válido iniciado por https:// ou http://.');return;}
+     const text=label.trim().replace(/\\/g,'\\\\').replace(/\[/g,'\\[').replace(/\]/g,'\\]').replace(/[\r\n]+/g,' ');
+     const href=url.href.replace(/\(/g,'%28').replace(/\)/g,'%29');
+     area.setRangeText('['+text+']('+href+')',start,end,'end');
+     area.focus();markDirty();schedule();return;
+   }
    let value=type==='bold'?'**'+selected+'**':type==='italic'?'*'+selected+'*':snippets[type]||'';
    if(!['bold','italic'].includes(type))value='\n\n'+value+'\n\n';
    area.setRangeText(value,start,end,'end');area.focus();markDirty();schedule();
