@@ -142,6 +142,7 @@ class Article(db.Model):
     keywords = db.Column(db.String(500), default="")
     doi = db.Column(db.String(180), default="")
     image = db.Column(db.String(600), default="")
+    cover_video = db.Column(db.String(1000), default="")
     status = db.Column(db.String(20), default="draft", nullable=False)
     read_minutes = db.Column(db.Integer, default=5, nullable=False)
     featured = db.Column(db.Boolean, default=False, nullable=False)

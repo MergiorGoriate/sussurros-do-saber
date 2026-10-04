@@ -638,6 +638,12 @@ def article_form(article_id=None):
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            from app import article_cover_video
+            cover_video = request.form.get("cover_video", "").strip()
+            if cover_video and (len(cover_video) > 1000 or not article_cover_video(cover_video, title)):
+                flash("Use uma URL válida do YouTube, Vimeo ou de um vídeo MP4, WebM ou OGG.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            article.cover_video = cover_video
             article.title = title
             base_slug = slugify(request.form.get("slug") or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
             candidate, number = base_slug, 2
