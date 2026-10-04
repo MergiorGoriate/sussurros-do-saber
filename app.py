@@ -319,6 +319,7 @@ def render_markdown(value):
         protocols=["http", "https", "mailto"],
         strip=True,
     )
+    cleaned = re.sub(r"<p>\[capitular\]\s*", '<p class="article-dropcap">', cleaned)
     for token, embed in embeds.items():
         cleaned = cleaned.replace(f"<p>{token}</p>", embed).replace(token, embed)
     return Markup(cleaned)
