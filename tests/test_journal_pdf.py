@@ -25,6 +25,16 @@ class JournalPDFTests(unittest.TestCase):
         self.assertTrue(pdf.startswith(b'%PDF-'))
         self.assertIn(b'/Subtype /Image', pdf)
 
+    def test_editorial_header_includes_supplied_logo_above_journal_name(self):
+        from types import SimpleNamespace
+        from journal_pdf import editorial_header
+        header = editorial_header(SimpleNamespace(issn="", current_issue="Vol. 1", doi=""), 450)
+        brand = header._cellvalues[0][1]
+        self.assertEqual(brand[0].__class__.__name__, "Image")
+        self.assertEqual(brand[0].hAlign, "CENTER")
+        self.assertLessEqual(brand[0].drawWidth, 36)
+        self.assertIn("Revista sussurros do saber", brand[-1].text)
+
     def test_academic_styles_and_compact_bilingual_labels(self):
         from journal_pdf import pdf_styles
         styles = pdf_styles()
@@ -113,5 +123,6 @@ class JournalPDFTests(unittest.TestCase):
                 load_image('http://localhost/a.png', '/tmp/static', 'https://example.org', time.monotonic() + 10)
         with self.assertRaises(ValueError):
             load_image('/static/%2e%2e/secret', '/tmp/static', 'https://example.org', time.monotonic() + 10)
+
 
 
