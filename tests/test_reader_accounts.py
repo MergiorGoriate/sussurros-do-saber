@@ -104,3 +104,12 @@ class ReaderAccountTests(unittest.TestCase):
         self.journal.published = False
         db.session.commit()
         self.assertEqual(self.update().status_code,404)
+
+    def test_library_uses_legacy_article_heading(self):
+        self.sign_in()
+        self.journal.article_title = ''
+        self.journal.content_markdown = '# Título do artigo antigo\n\nConteúdo.'
+        db.session.commit()
+        self.assertEqual(self.update().status_code,200)
+        self.assertIn('Título do artigo antigo'.encode(),
+                      self.client.get('/conta/biblioteca').data)

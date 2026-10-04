@@ -12,6 +12,15 @@ from submissions import researcher, email_valid, notify, account_link, DUMMY_PAS
 reader_bp = Blueprint('reader', __name__, url_prefix='/conta')
 
 
+@reader_bp.app_template_filter('reader_article_title')
+def reader_article_title(journal):
+    title = (journal.article_title or '').strip()
+    if title:
+        return title
+    from app import journal_article_content
+    return journal_article_content(journal)[0]
+
+
 class ReaderJournal(db.Model):
     __table_args__ = (db.UniqueConstraint('owner_id', 'journal_id'),)
     id = db.Column(db.Integer, primary_key=True)
