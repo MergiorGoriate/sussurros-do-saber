@@ -75,6 +75,7 @@ window.dataLayer.push({event:'default_consent'});
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261004-article-title-v28') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-v2') }}">
 {% block head_extra %}{% endblock %}
 </head>
 <body class="bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
@@ -108,7 +109,9 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/revistas">Revistas</a>
 <a href="/recursos" class="nav-feature">Recursos</a>
 <a href="/servicos">Serviços</a>
-<a href="/favoritos">Favoritos</a>
+<a href="/favoritos">Favoritos neste navegador</a>
+<a href="/conta/biblioteca">Os meus favoritos</a>
+<a href="/conta/notificacoes">Notificações</a>
 <a href="/sobre">Sobre Nós</a>
 </nav>
 <form id="searchPanel" action="/artigos" class="hidden py-4 border-t border-black/10">
@@ -199,7 +202,7 @@ window.dataLayer.push({event:'default_consent'});
   </div>
 </section>
 <button id="backToTop" class="back-to-top" type="button" aria-label="Voltar ao topo" title="Voltar ao topo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 13 6-6 6 6"/><path d="M12 7v11"/></svg></button>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261003-spacing-v20') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261005-fixes-v21') }}" defer></script>
 {% if request.path == '/contacto' %}<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260930-contact') }}" defer></script>{% endif %}
 <script nonce="{{ csp_nonce }}">
 (()=>{let assistantLoaded=false,animationsLoaded=false;
@@ -211,7 +214,10 @@ window.addEventListener('load',()=>{if('requestIdleCallback'in window)requestIdl
 if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:6500});else window.addEventListener('load',()=>setTimeout(loadAssistant,3500),{once:true});
 })();
 </script>
+{% include 'reader_dialog.html' %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-v2') }}" defer></script>
 </body>
 </html>
+
 
 

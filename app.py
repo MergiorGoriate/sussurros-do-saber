@@ -70,6 +70,8 @@ limiter.init_app(app)
 from submissions import submissions_bp, install_submission_cli
 app.register_blueprint(admin_bp)
 app.register_blueprint(submissions_bp)
+from reader_accounts import reader_bp
+app.register_blueprint(reader_bp)
 install_submission_cli(app)
 
 
@@ -544,14 +546,29 @@ def social_image_url(url):
 @app.errorhandler(500)
 def internal_server_error(error):
     db.session.rollback()
+    if request.is_json or request.path.startswith(("/api/", "/admin/api/", "/conta/")):
+        message = "O serviço está temporariamente indisponível. Tente novamente."
+        return jsonify(ok=False, message=message, error=message, answer=message), 500
     return render_template("500.html"), 500
 
 
 @app.errorhandler(429)
 def rate_limited(error):
-    if request.path.startswith("/api/"):
-        return jsonify({"ok": False, "answer": "Limite temporário atingido. Aguarde antes de tentar novamente."}), 429
+    if request.path.startswith(("/api/", "/admin/api/", "/conta/")):
+        message = "Limite temporário atingido. Aguarde antes de tentar novamente."
+        response = jsonify(ok=False, message=message, error=message, answer=message)
+        response.status_code = 429
+        response.headers["Retry-After"] = str(max(1, int(getattr(error, "retry_after", None) or 60)))
+        return response
     return render_template("429.html"), 429
+
+
+@app.errorhandler(413)
+def upload_too_large(error):
+    message = "O carregamento excede o limite do pedido. Cada vídeo pode ter até 50 MB e cada imagem até 8 MB. Carregue os ficheiros separadamente."
+    if request.path.startswith(("/api/", "/admin/api/", "/conta/")):
+        return jsonify(ok=False, message=message, error=message, answer=message), 413
+    return render_template("413.html", message=message), 413
 
 SEED_ARTICLES = [
     {"id": 1, "category": "Biologia", "title": "Bactérias endofíticas: os microrganismos invisíveis que protegem as plantas", "summary": "Dentro das plantas vivem comunidades capazes de produzir compostos com potencial antibacteriano.", "author": "Mergior Goriate", "date": "10 Setembro 2026", "read_time": "7 min", "image": "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1400&q=85", "featured": True},
@@ -936,12 +953,12 @@ def api_articles():
     raw_ids = request.args.get("ids", "")[:512]
     requested_ids = list(dict.fromkeys(
         int(value) for value in raw_ids.split(",")
-        if value.strip().isdigit()
+        if re.fullmatch(r"[0-9]{1,10}", value.strip()) and int(value) <= 2147483647
     ))[:50]
     limit = max(1, min(50, request.args.get("limit", 24, type=int)))
 
     items = Article.public_card_query()
-    if requested_ids:
+    if "ids" in request.args:
         items = items.filter(Article.id.in_(requested_ids))
         limit = min(50, len(requested_ids))
     if query:
@@ -1043,10 +1060,21 @@ def healthcheck():
 def valid_email(value):
     return bool(re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value)) and len(value) <= 254
 
+
+def json_text_fields(*names):
+    """Reject non-object payloads and non-text fields before accessing them."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or any(not isinstance(data.get(name, ""), str) for name in names):
+        return None
+    return {name: data.get(name, "").strip() for name in names}
+
 @app.post("/api/newsletter")
 @limiter.limit("5 per hour")
 def newsletter():
-    email = (request.get_json(silent=True) or {}).get("email", "").strip().lower()
+    data = json_text_fields("email")
+    if data is None:
+        return jsonify(ok=False, message="Introduza um endereço de e-mail válido."), 400
+    email = data["email"].lower()
     if not valid_email(email):
         return jsonify({"ok": False, "message": "Introduza um endereço de e-mail válido."}), 400
     subscriber = Subscriber.query.filter_by(email=email).first()
@@ -1060,7 +1088,10 @@ def newsletter():
 @app.post("/api/assistente")
 @limiter.limit("5 per minute; 20 per hour")
 def assistant():
-    message = (request.get_json(silent=True) or {}).get("message", "").strip()
+    data = json_text_fields("message")
+    if data is None:
+        return jsonify(ok=False, answer="Escreva uma pergunta em texto."), 400
+    message = data["message"]
     if not message:
         return jsonify({"ok": False, "answer": "Escreva uma pergunta para eu poder ajudar."}), 400
     if len(message) > 800:
@@ -1078,6 +1109,8 @@ def assistant():
         )
         worker_response.raise_for_status()
         result = worker_response.json()
+        if not isinstance(result, dict) or not isinstance(result.get("answer"), str):
+            raise ValueError("Invalid assistant response")
         return jsonify(result), 200 if result.get("ok") else 502
     except (requests.RequestException, ValueError):
         return jsonify({
@@ -1089,7 +1122,9 @@ def assistant():
 @app.post("/api/contacto")
 @limiter.limit("10 per hour")
 def submit_contact():
-    data = request.get_json(silent=True) or {}
+    data = json_text_fields("name", "email", "subject", "message", "website")
+    if data is None:
+        return jsonify(ok=False, message="Preencha correctamente todos os campos."), 400
     name = data.get("name", "").strip()
     email = data.get("email", "").strip()
     subject = data.get("subject", "").strip()

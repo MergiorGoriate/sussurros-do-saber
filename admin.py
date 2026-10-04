@@ -647,6 +647,13 @@ def article_form(article_id=None):
             if status in {"published", "scheduled"} and len(body) < 50:
                 flash("Artigos publicados ou programados precisam de conteúdo completo.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            limits = {"body": 400000, "references": 100000, "keywords": 500, "doi": 180, "slug": 260}
+            if any(len(request.form.get(name, "")) > maximum for name, maximum in limits.items()):
+                flash("Um dos campos excede o limite permitido. Reduza o conteúdo e tente novamente.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if status == "scheduled" and not scheduled_at:
+                flash("Informe a data e hora da publicação programada.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
