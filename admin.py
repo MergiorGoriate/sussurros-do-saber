@@ -937,6 +937,8 @@ def journal_form(journal_id=None):
             journal.published = request.form.get("save_mode") != "draft" and request.form.get("published") == "on"
             if not journal.id:
                 db.session.add(journal)
+            from submissions import publication_saved
+            publication_saved(journal)
             db.session.commit()
             flash("Revista guardada com sucesso.", "success")
             return redirect(url_for("admin.journals"))
@@ -950,6 +952,8 @@ def toggle_journal(journal_id):
     validate_csrf()
     journal = db.get_or_404(Journal, journal_id)
     journal.published = not journal.published
+    from submissions import publication_saved
+    publication_saved(journal)
     db.session.commit()
     flash("Revista publicada." if journal.published else "Revista ocultada.", "success")
     return redirect(url_for("admin.journals"))
@@ -960,6 +964,9 @@ def toggle_journal(journal_id):
 def delete_journal(journal_id):
     validate_csrf()
     journal = db.get_or_404(Journal, journal_id)
+    from submission_models import Manuscript, SubmissionSetting
+    if Manuscript.query.filter(db.or_(Manuscript.journal_id == journal_id, Manuscript.publication_id == journal_id)).first() or db.session.get(SubmissionSetting, journal_id):
+        abort(409, description="Esta revista está ligada ao fluxo editorial. Oculte-a em vez de eliminar os registos.")
     db.session.delete(journal)
     db.session.commit()
     flash("Revista eliminada.", "success")

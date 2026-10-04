@@ -15,6 +15,7 @@
   <a href="#operacao">Operação</a>
 </nav>
 <div class="docs-content">
+<section class="admin-panel docs-section" id="submissoes"><h2>Submissões científicas</h2><p>Em <a href="/admin/submissoes">Submissões</a>, configure cada revista: tipos aceites, formatos do manuscrito principal, e-mail editorial e abertura explícita. As contas de autor são independentes do acesso administrativo.</p><p>Configure SMTP_HOST, SMTP_PORT, SMTP_FROM, SMTP_USERNAME, SMTP_PASSWORD e SMTP_TLS=true (ou SMTP_SSL=true). Execute <code>flask --app app enviar-notificacoes --limit 50</code> a cada minuto num único worker/agendamento do Coolify. A fila persiste na base de dados; sem SMTP, as confirmações e recuperações de conta ficam pendentes.</p><p>Os originais e versões ficam privados na base de dados, com limites de 8 MB por ficheiro, 25 por versão e 100 MB por conta. Inclua estas tabelas nos backups PostgreSQL. Faça backup antes da implantação. As novas tabelas são criadas idempotentemente pelo padrão create_all existente; nenhum registo anterior é alterado.</p><p>A aceitação permite preparar um rascunho de publicação, sem publicar automaticamente. DOCX importa texto, tabelas e figuras PNG/JPEG; TXT importa texto. PDF permanece como original privado e exige inserção/conferência do conteúdo no editor. Confira a ordem e legendas das figuras, formatação, referências e metadados antes da publicação explícita. Figuras importadas só ficam públicas quando o artigo é publicado.</p><p>A equipa administrativa mantém as permissões existentes e pode atribuir um editor responsável. O modelo de convites/pareceres de revisão está preparado, mas o portal de revisores e a anonimização para revisão cega ainda não estão ativados. Não entregue originais identificados como se fossem documentos anonimizados.</p><p>Rollback: reverta o código sem eliminar as novas tabelas, preservando submissões e auditoria. Antes da abertura pública, teste confirmação de conta e entrega de e-mails no ambiente de produção.</p></section>
   <section id="primeiros-passos" class="admin-panel docs-section" aria-labelledby="docs-start">
     <h2 id="docs-start">Primeiros passos</h2>
     <ol>
@@ -78,3 +79,4 @@
   </section>
 </div>
 {% endblock %}
+

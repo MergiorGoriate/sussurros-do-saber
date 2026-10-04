@@ -12,6 +12,7 @@
 </fieldset>
 {% endmacro %}
 {% block content %}
+{% if journal.id %}<p><a href="{{ url_for('admin.submission_settings',journal_id=journal.id) }}">Configurar submissões desta revista</a></p>{% endif %}
 
 <header class="admin-header journal-editor-header"><div><span>Catálogo científico</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
 <form method="post" enctype="multipart/form-data" class="editor-form journal-editor" data-preview-url="{{ url_for('journal_markdown_preview') }}">

@@ -67,7 +67,10 @@ SITE_URL = CANONICAL_ORIGIN if _configured_host == "sussurrosdosaber.com" else _
 
 db.init_app(app)
 limiter.init_app(app)
+from submissions import submissions_bp, install_submission_cli
 app.register_blueprint(admin_bp)
+app.register_blueprint(submissions_bp)
+install_submission_cli(app)
 
 
 @app.get("/diretrizes-para-autores")
@@ -347,7 +350,7 @@ def security_headers(response):
         # comentários e nunca podem ser guardadas por caches partilhadas.
         private_response = (
             request.method != "GET"
-            or request.path.startswith(("/admin", "/api/", "/artigo/"))
+            or request.path.startswith(("/admin", "/api/", "/artigo/", "/submissoes"))
             or response.status_code >= 400
         )
         if private_response:
