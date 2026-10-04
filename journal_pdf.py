@@ -72,8 +72,12 @@ def editorial_header(journal, width):
             details.append(escape((label + ": " if label else "") + value))
     left = Paragraph("<br/>".join(details), styles['Metadata'])
     right = Paragraph("Revista sussurros do saber<br/><font size=8>www.sussurrosdosaber.com</font>", styles['HeaderBrand'])
-    header = Table([[left, right]], colWidths=[width * .44, width * .56])
+    logo_path = Path(__file__).parent / 'static' / 'img' / 'pdf-logo-sussurros.png'
+    logo = Image(str(logo_path), width=36, height=36, kind='proportional', mask='auto')
+    logo.hAlign = 'CENTER'
+    header = Table([[left, [logo, Spacer(1, 4), right]]], colWidths=[width * .44, width * .56])
     header.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                               ('ALIGN', (1, 0), (1, 0), 'CENTER'),
                                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
                                ('LINEBELOW', (0, 0), (-1, -1), .4, colors.HexColor('#cccccc'))]))
     return header
@@ -273,4 +277,5 @@ def article_flowables(html, width, height, static_folder, origin, image_height_r
     for child in soup.children:
         walk(child)
     return story
+
 
