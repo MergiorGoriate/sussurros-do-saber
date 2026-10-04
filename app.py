@@ -808,7 +808,7 @@ def render_journal_pdf(journal):
     article_title, content = journal_article_content(journal)
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
-                            topMargin=18*mm, bottomMargin=18*mm,
+                            topMargin=8*mm, bottomMargin=18*mm,
                             title=article_title, author="Sussurros do Saber")
     styles = pdf_styles()
     story = [editorial_header(journal, doc.width), Spacer(1, 9),
@@ -1366,7 +1366,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
-
 
 
 
