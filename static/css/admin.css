@@ -599,15 +599,15 @@ input,textarea,select,button{font-size:16px}
 .policy-preview img{max-width:100%;height:auto}.policy-preview table{border-collapse:collapse}.policy-preview td,.policy-preview th{border:1px solid var(--line);padding:8px}
 .policy-other{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}.policy-other summary{cursor:pointer;font-weight:700;margin-bottom:20px}
 
-.article-portrait {
+.markdown-preview figure.article-portrait {
   float: right; width: min(38%, 320px); margin: 0 0 1.5rem 2rem;
 }
-.article-portrait img {
-  display: block; width: 100%; aspect-ratio: 1; object-fit: cover;
+.markdown-preview figure.article-portrait img {
+  display: block; width: 100%; height: auto; max-height: none; margin: 0; aspect-ratio: 1; object-fit: cover;
   border-radius: 50%;
 }
-.article-portrait figcaption { margin-top: 1rem; font-size: .9em; line-height: 1.5; }
-.article-portrait figcaption small { display: block; margin-top: .8rem; font-family: sans-serif; font-size: .75em; }
+.markdown-preview figure.article-portrait figcaption { margin-top: 1rem; font-size: .9em; line-height: 1.5; }
+.markdown-preview figure.article-portrait figcaption small { display: block; margin-top: .8rem; font-family: sans-serif; font-size: .75em; }
 @media (max-width: 640px) {
-  .article-portrait { float: none; width: min(100%, 300px); margin: 1.5rem auto; }
+  .markdown-preview figure.article-portrait { float: none; width: min(100%, 300px); margin: 1.5rem auto; }
 }
