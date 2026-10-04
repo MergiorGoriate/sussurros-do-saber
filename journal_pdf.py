@@ -77,6 +77,7 @@ def editorial_header(journal, width):
     logo.hAlign = 'CENTER'
     header = Table([[left, [logo, Spacer(1, 4), right]]], colWidths=[width * .44, width * .56])
     header.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                               ('ALIGN', (1, 0), (1, 0), 'CENTER'),
                                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
                                ('LINEBELOW', (0, 0), (-1, -1), .4, colors.HexColor('#cccccc'))]))
     return header

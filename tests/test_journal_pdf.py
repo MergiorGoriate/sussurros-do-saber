@@ -32,6 +32,7 @@ class JournalPDFTests(unittest.TestCase):
         brand = header._cellvalues[0][1]
         self.assertEqual(brand[0].__class__.__name__, "Image")
         self.assertEqual(brand[0].hAlign, "CENTER")
+        self.assertEqual(header._cellStyles[0][1].alignment, "CENTER")
         self.assertLessEqual(brand[0].drawWidth, 36)
         self.assertIn("Revista sussurros do saber", brand[-1].text)
 
