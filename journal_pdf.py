@@ -14,7 +14,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Image, Paragraph, Spacer, Table, TableStyle, KeepTogether
+from reportlab.platypus import Image, Paragraph, Spacer, Table, TableStyle, KeepTogether, PageBreak
 from svglib.svglib import svg2rlg
 
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -153,7 +153,7 @@ def load_image(source, static_folder, origin, deadline):
     raise ValueError('Demasiados redirecionamentos')
 
 
-def article_flowables(html, width, height, static_folder, origin, image_height_ratio=.70, title=None):
+def article_flowables(html, width, height, static_folder, origin, image_height_ratio=.70, title=None, start_body_new_page=False):
     styles = pdf_styles()
     soup = BeautifulSoup(str(html), 'html.parser')
     first_heading = soup.find('h1')
@@ -274,7 +274,14 @@ def article_flowables(html, width, height, static_folder, origin, image_height_r
         elif name not in ('script', 'style', 'iframe', 'source'):
             for child in node.children:
                 walk(child)
+    body_started = False
     for child in soup.children:
+        if isinstance(child, NavigableString) and not child.strip():
+            continue
+        is_front_matter = (getattr(child, 'name', None) == 'section' and
+                           child.get('data-article-field') in ('summary', 'keywords', 'abstract', 'abstract_keywords'))
+        if start_body_new_page and not body_started and not is_front_matter:
+            story.append(PageBreak())
+            body_started = True
         walk(child)
     return story
-
