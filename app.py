@@ -158,6 +158,17 @@ def safe_video_embed(url, title):
     return None
 
 
+@app.template_filter("article_cover_video")
+def article_cover_video(url, title):
+    try:
+        parsed = urlparse(url or "")
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password:
+            return Markup("")
+        return Markup(safe_video_embed(url, title) or "")
+    except ValueError:
+        return Markup("")
+
+
 def safe_chart_embed(chart_type, title, raw_data):
     chart_type = chart_type.lower()
     title = (title or "Gráfico").strip()[:180]
@@ -1288,7 +1299,7 @@ def ensure_editorial_policy_columns():
 
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
-    additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
+    additions = {"cover_video": "VARCHAR(1000) DEFAULT ''", "references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
     for name, definition in additions.items():
         if name not in existing:
             db.session.execute(text(f'ALTER TABLE article ADD COLUMN "{name}" {definition}'))
