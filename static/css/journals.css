@@ -28,3 +28,16 @@
 .issue-card li a { color: var(--green); font-weight: 700; }
 .issue-card li small { display: block; opacity: .65; }
 @media (max-width: 640px) { .issue-card { grid-template-columns: 1fr; } .issue-card > img { width: 120px; } }
+
+/* Letra capitular aplicada apenas aos parágrafos escolhidos no editor. */
+.article-dropcap::first-letter {
+  float: left;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 3.4em;
+  line-height: .85;
+  font-weight: 700;
+  color: #1e4e8c;
+  margin: .08em .16em 0 0;
+}
+.article-dropcap { display: flow-root; }
+.dark .article-dropcap::first-letter { color: #8db9f0; }

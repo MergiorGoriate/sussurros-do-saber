@@ -33,6 +33,16 @@
  const snippets={heading:'# Título do artigo',section:'## Secção',quote:'> Citação',list:'- Item',reference:'[Referência](https://doi.org/...)',image:'![Descrição da imagem](https://...)',video:'[video: Título do vídeo](https://www.youtube.com/watch?v=...)',table:'| Coluna | Coluna |\n| --- | --- |\n| Valor | Valor |',chart:'[chart: bar|Título do gráfico|Grupo A=12; Grupo B=8]'};
  form.querySelectorAll('[data-md]').forEach(button=>button.addEventListener('click',()=>{
    const type=button.dataset.md,start=area.selectionStart,end=area.selectionEnd,selected=area.value.slice(start,end)||'texto';
+   if(type==='dropcap'){
+     const paragraphStart=area.value.lastIndexOf('\n\n',Math.max(0,start-1))+2;
+     const from=paragraphStart===1?0:paragraphStart;
+     const next=area.value.indexOf('\n\n',start);
+     const to=next<0?area.value.length:next;
+     const paragraph=area.value.slice(from,to);
+     if(!paragraph.trim()){window.alert('Escreva primeiro o parágrafo.');return;}
+     const value=paragraph.startsWith('[capitular] ')?paragraph.slice(12):'[capitular] '+paragraph;
+     area.setRangeText(value,from,to,'end');area.focus();markDirty();schedule();return;
+   }
    if(type==='link'){
      const label=window.prompt('Texto da hiperligação:',area.value.slice(start,end)||'');
      if(label===null)return;
