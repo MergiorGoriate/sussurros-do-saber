@@ -33,7 +33,7 @@
   {% else %}<span>Autores a indicar</span>{% endif %}
   </div>
   <div class="journal-article-meta">
-    <strong>Revista sussurros do saber</strong>
+    <strong>Revista Científica Sussurros do Saber</strong>
     <span>•</span><span>{{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'Data a definir' }}</span>
     <span>•</span><span>{{ journal.current_issue or 'Edição em preparação' }}</span>
     {% if journal.doi %}<span>•</span><span>DOI: {{ journal.doi }}</span>{% endif %}
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 document.addEventListener('DOMContentLoaded',()=>{
  const slug={{ journal.slug|tojson }};
  const title={{ article_title|tojson }};
- const journalTitle={{ 'Revista sussurros do saber'|tojson }};
+ const journalTitle={{ 'Revista Científica Sussurros do Saber'|tojson }};
  const issue={{ (journal.current_issue or 'Edição em preparação')|tojson }};
  const doi={{ (journal.doi or '')|tojson }};
  const url={{ public_url|tojson }};
