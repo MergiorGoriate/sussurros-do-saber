@@ -52,7 +52,7 @@ class JournalPDFTests(unittest.TestCase):
         self.assertEqual(brand[0].hAlign, "CENTER")
         self.assertEqual(header._cellStyles[0][1].alignment, "CENTER")
         self.assertAlmostEqual(brand[0].drawWidth, 54)
-        self.assertIn("Revista sussurros do saber", brand[-1].text)
+        self.assertIn("Revista Científica Sussurros do Saber", brand[-1].text)
 
     def test_academic_styles_and_compact_bilingual_labels(self):
         from journal_pdf import pdf_styles
