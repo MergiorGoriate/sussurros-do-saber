@@ -31,7 +31,7 @@ STATES = {'draft': 'Rascunho', 'submitted': 'Submetido', 'screening': 'Triagem e
           'reevaluation': 'Reavaliação', 'accepted': 'Aceite', 'rejected': 'Rejeitado',
           'production': 'Produção editorial', 'published': 'Publicado'}
 TRANSITIONS = {'submitted': ('screening', 'rejected'), 'screening': ('review', 'revision_requested', 'accepted', 'rejected'),
-               'review': ('revision_requested', 'accepted', 'rejected'), 'revision_requested': (),
+               'review': ('revision_requested', 'accepted', 'rejected'), 'revision_requested': ('rejected',),
                'revised': ('reevaluation', 'review', 'accepted', 'rejected'),
                'reevaluation': ('review', 'revision_requested', 'accepted', 'rejected'),
                'accepted': (), 'production': (), 'published': (), 'rejected': (), 'draft': ()}
@@ -485,7 +485,7 @@ def remove_file(file_id):
 
 @submissions_bp.get('/ficheiros/<int:file_id>')
 def download(file_id):
-    file = db.get_or_404(ManuscriptFile, file_id)
+    file = ManuscriptFile.query.options(defer(ManuscriptFile.payload)).filter_by(id=file_id).first_or_404()
     manuscript = db.session.get(Manuscript, file.version.manuscript_id)
     if not editorial_access():
         account = researcher()
@@ -790,7 +790,7 @@ def import_publication_figures(publication, files, main):
 
 @submissions_bp.get('/figuras/<int:asset_id>')
 def publication_figure(asset_id):
-    asset = db.get_or_404(PublicationAsset, asset_id)
+    asset = PublicationAsset.query.options(defer(PublicationAsset.payload)).filter_by(id=asset_id).first_or_404()
     journal = db.session.get(Journal, asset.journal_id)
     if not journal or (not journal.published and not editorial_access()):
         abort(404)
