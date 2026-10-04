@@ -871,7 +871,7 @@ def journal_form(journal_id=None):
             flash("O conteúdo do artigo deve ter até 400000 caracteres e as referências até 100000.", "error")
             return render_journal_form(journal)
         invalid_length = any(len(request.form.get(name, "").strip()) > maximum for name, maximum in {
-            "slug": 200, "abbreviation": 30, "frequency": 80, "current_issue": 120,
+            "article_title": 300, "slug": 200, "abbreviation": 30, "frequency": 80, "current_issue": 120,
             "doi": 180, "cover_image": 600, "cover_alt": 300,
         }.items())
 
@@ -899,6 +899,8 @@ def journal_form(journal_id=None):
                 flash(str(error), "error")
                 return render_journal_form(journal)
 
+            if "article_title" in request.form:
+                journal.article_title = request.form["article_title"].strip()
             journal.title = title
             journal.slug = base_slug
             journal.abbreviation = request.form.get("abbreviation", "").strip().upper()
@@ -1068,6 +1070,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 
