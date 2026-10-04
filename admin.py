@@ -20,7 +20,7 @@ from extensions import limiter
 from journal_article import ARTICLE_FIELD_LIMITS
 from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
-from storage import ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
+from storage import VideoUploadError, upload_article_video, ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -590,6 +590,18 @@ def parse_datetime(value):
     return datetime.fromisoformat(value) if value else None
 
 
+@admin_bp.post("/api/videos")
+@login_required
+@limiter.limit("10 per hour")
+def upload_inline_video():
+    validate_csrf()
+    try:
+        video_url = upload_article_video(request.files.get("video"))
+    except VideoUploadError as error:
+        return jsonify(ok=False, error=str(error)), 400
+    return jsonify(ok=True, url=video_url)
+
+
 @admin_bp.post("/api/imagens")
 @login_required
 @limiter.limit("20 per hour")
@@ -640,6 +652,13 @@ def article_form(article_id=None):
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             from app import article_cover_video
             cover_video = request.form.get("cover_video", "").strip()
+            video_file = request.files.get("cover_video_file")
+            if video_file and video_file.filename:
+                try:
+                    cover_video = upload_article_video(video_file)
+                except VideoUploadError as error:
+                    flash(str(error), "error")
+                    return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if cover_video and (len(cover_video) > 1000 or not article_cover_video(cover_video, title)):
                 flash("Use uma URL válida do YouTube, Vimeo ou de um vídeo MP4, WebM ou OGG.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())

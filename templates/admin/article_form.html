@@ -25,7 +25,8 @@
       <section id="inlineVideoPanel" class="inline-image-panel inline-video-panel" hidden aria-labelledby="inlineVideoTitle">
         <div class="inline-image-head"><div><strong id="inlineVideoTitle">Inserir vídeo no texto</strong><small>Compatível com YouTube, Vimeo e ficheiros MP4, WebM ou OGG.</small></div><button type="button" id="closeInlineVideo" aria-label="Fechar">×</button></div>
         <div class="inline-video-fields">
-          <label>Endereço do vídeo<input id="inlineVideoUrl" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=..."></label>
+          <label>Carregar vídeo do dispositivo (máximo 50 MB)<input id="inlineVideoFile" type="file" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"></label>
+          <label>Ou endereço do vídeo<input id="inlineVideoUrl" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=..."></label>
           <label>Título ou legenda<input id="inlineVideoTitleInput" maxlength="180" placeholder="Descreva brevemente o conteúdo do vídeo"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineVideo" class="admin-primary">Inserir vídeo no artigo</button><span id="inlineVideoStatus" role="status" aria-live="polite"></span></div>
@@ -53,6 +54,7 @@
     <label>Referências bibliográficas<textarea name="references" rows="8" placeholder="## Referências&#10;&#10;1. Autor. Título. Revista...&#10;2. DOI: https://doi.org/...">{{ article.references or '' }}</textarea><small>Aceita Markdown. Inclua DOI ou URL quando disponíveis.</small></label>
     <label>Palavras-chave<input name="keywords" value="{{ article.keywords or '' }}" placeholder="biologia, microbiologia, educação"></label>
     <label>DOI<input name="doi" value="{{ article.doi or '' }}" placeholder="10.xxxx/xxxxx"></label>
+<label>Carregar vídeo principal do dispositivo (MP4, WebM ou OGG; máximo 50 MB)<input name="cover_video_file" type="file" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"><small>O ficheiro seleccionado tem prioridade sobre a ligação abaixo. Guarde o artigo para concluir o carregamento.</small></label>
 <label>Vídeo principal (opcional)<input name="cover_video" type="url" maxlength="1000" value="{{ request.form.get('cover_video', article.cover_video or '') }}" placeholder="https://www.youtube.com/watch?v=..."><small>Aceita YouTube, Vimeo ou URL de MP4, WebM e OGG. Substitui a imagem principal na página do artigo. Mantenha uma imagem para os cartões e as partilhas. Apague a URL para voltar à imagem.</small></label>
     <label>Carregar imagem (JPG, PNG ou WebP; máximo 8 MB)<input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
     <label>Ou endereço externo da imagem<input id="imageUrl" name="image" type="url" value="{{ article.image|safe_image_url }}" placeholder="https://..."></label>
@@ -70,5 +72,5 @@
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261004-pullquote-v1') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261004-video-upload-v2') }}"></script>
 {% endblock %}

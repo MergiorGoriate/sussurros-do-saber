@@ -56,7 +56,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=IS_PRODUCTION or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
     SESSION_REFRESH_EACH_REQUEST=False,
-    MAX_CONTENT_LENGTH=9 * 1024 * 1024,
+    MAX_CONTENT_LENGTH=60 * 1024 * 1024,
 )
 CANONICAL_ORIGIN = "https://www.sussurrosdosaber.com"
 _configured_site_url = os.getenv("SITE_URL", CANONICAL_ORIGIN).rstrip("/")
