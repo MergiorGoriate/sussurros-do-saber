@@ -3,7 +3,7 @@
 {% block meta_description %}{{ journal.description }}{% endblock %}
 {% block canonical %}{{ site_url }}{{ url_for('journal_detail', slug=journal.slug) }}{% endblock %}
 {% block content %}
-<article class="journal-page max-w-6xl mx-auto px-4 py-14">
+<article data-reader-journal="{{ journal.slug }}" class="journal-page max-w-6xl mx-auto px-4 py-14">
 <header class="journal-hero grid md:grid-cols-[300px_1fr] gap-10 items-start">
 {% if journal.cover_image %}<img class="w-full rounded-2xl shadow-xl" src="{{ journal.cover_image|image_variant(480) }}" srcset="{{ journal.cover_image|image_srcset([320, 480, 800]) }}" sizes="(max-width: 767px) 100vw, 300px" width="480" height="640" decoding="async" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}">{% endif %}
 <div class="journal-hero-copy"><div class="journal-kicker"><span class="eyebrow">{{ journal.field }}</span><span class="journal-open-badge">Acesso aberto</span></div><h1 class="font-serif text-5xl mt-3">{{ journal.title }}</h1><p class="journal-description text-xl opacity-70 mt-5">{{ journal.description }}</p>
@@ -39,7 +39,7 @@
     {% if journal.doi %}<span>•</span><span>DOI: {{ journal.doi }}</span>{% endif %}
   </div>
   <div class="journal-article-actions" aria-label="Ações do artigo">
-    <button type="button" class="journal-alert-btn" aria-label="Acompanhar revista neste navegador" title="Acompanhar revista neste navegador" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
+    <button type="button" class="journal-alert-btn" aria-label="Receber notificações de artigos na minha conta" title="Receber notificações de artigos na minha conta" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
     <button type="button" class="journal-save-btn" aria-label="Guardar artigo" title="Guardar artigo" aria-pressed="false"><i class="fa-regular fa-bookmark"></i></button>
     <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo" aria-haspopup="dialog" aria-controls="journal-citation-dialog"><i class="fa-solid fa-quote-right"></i></button>
     <button type="button" class="journal-information-btn" data-journal-details="information" aria-label="Informações do artigo" title="Informações do artigo" aria-haspopup="dialog" aria-controls="journal-details-dialog"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
@@ -146,35 +146,6 @@ document.addEventListener('DOMContentLoaded',()=>{
  const citeBtn=document.querySelector('.journal-cite-btn');
  const status=document.getElementById('journal-action-status');
  const message=text=>{if(status)status.textContent=text;};
- const readList=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[];}catch{return[];}};
- const persist=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{message('O navegador não permite guardar preferências.');return false;}};
- const setPressed=(btn,on,solid,regular)=>{if(!btn)return;btn.setAttribute('aria-pressed',String(on));const i=btn.querySelector('i');if(i)i.className=on?solid:regular;};
- let alerts=readList('journalAlerts');
- let saved=readList('savedJournalArticles');
- setPressed(alertBtn,alerts.includes(slug),'fa-solid fa-bell','fa-regular fa-bell');
- setPressed(saveBtn,saved.some(x=>x&&x.slug===slug),'fa-solid fa-bookmark','fa-regular fa-bookmark');
- const updatedAt={{ journal.updated_at.isoformat()|tojson }};
- try{
-   const previous=localStorage.getItem('journalSeen:'+slug);
-   if(alerts.includes(slug)&&previous&&previous!==updatedAt)message('Esta revista foi atualizada desde a sua última visita.');
-   localStorage.setItem('journalSeen:'+slug,updatedAt);
- }catch{}
- alertBtn?.addEventListener('click',()=>{
-   const on=!alerts.includes(slug);
-   const next=on?[...alerts,slug]:alerts.filter(x=>x!==slug);
-   if(!persist('journalAlerts',next))return;
-   alerts=next;
-   setPressed(alertBtn,on,'fa-solid fa-bell','fa-regular fa-bell');
-   message(on?'Acompanhamento ativado. Ao voltar a esta página, será informado de atualizações neste navegador.':'Acompanhamento desativado.');
- });
- saveBtn?.addEventListener('click',()=>{
-   const on=!saved.some(x=>x&&x.slug===slug);
-   const next=on?[...saved,{slug,title,url,savedAt:new Date().toISOString()}]:saved.filter(x=>x&&x.slug!==slug);
-   if(!persist('savedJournalArticles',next))return;
-   saved=next;
-   setPressed(saveBtn,on,'fa-solid fa-bookmark','fa-regular fa-bookmark');
-   message(on?'Artigo guardado. Pode consultá-lo na página Favoritos.':'Artigo removido dos favoritos.');
- });
  const citationDialog=document.getElementById('journal-citation-dialog');
  const citationText=document.getElementById('journal-citation-text');
  const citationStatus=document.getElementById('journal-citation-status');
@@ -207,5 +178,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/journal-details.js', v='20261003-1') }}" defer></script>
 {% endblock %}
+
 
 

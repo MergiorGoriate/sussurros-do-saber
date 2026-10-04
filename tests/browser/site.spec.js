@@ -136,16 +136,22 @@ for (const width of [320, 768]) {
   });
 }
 
-test('journal bookmarks survive malformed storage and appear in Favorites', async ({ page }) => {
-  await page.addInitScript(()=>{if(!localStorage.getItem('savedJournalArticles'))localStorage.setItem('savedJournalArticles','invalid json');if(!localStorage.getItem('journalAlerts'))localStorage.setItem('journalAlerts','{}');});
-  await page.goto('/revistas/revista-de-teste-cientifico', { waitUntil: 'domcontentloaded' });
+test('journal reading actions open account dialog and restore focus on mobile', async ({ page }) => {
+  await page.setViewportSize({width:360,height:800});
+  await page.goto('/revistas/revista-de-teste-cientifico', {waitUntil:'domcontentloaded'});
   await page.locator('#cookieReject').click();
-  await page.locator('.journal-save-btn').click();
-  await expect(page.locator('.journal-save-btn')).toHaveAttribute('aria-pressed','true');
-  await expect(page.locator('#journal-action-status')).toContainText('Artigo guardado');
-  await page.goto('/favoritos', { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#favoritesGrid')).toContainText('Artigo de teste');
-  await expect(page.locator('#favoritesEmpty')).toBeHidden();
+  for (const selector of ['.journal-save-btn','.journal-alert-btn']) {
+    await page.locator(selector).click();
+    await expect(page.locator('#reader-dialog')).toBeVisible();
+    await expect(page.locator('#reader-auth-form [name="email"]')).toBeFocused();
+    await page.locator('[data-reader-mode="register"]').click();
+    await expect(page.locator('#reader-name-label')).toBeVisible();
+    await expect(page.locator('#reader-password-help')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#reader-dialog')).not.toBeVisible();
+    await expect(page.locator(selector)).toBeFocused();
+    await expect(page.locator(selector)).toHaveAttribute('aria-pressed','false');
+  }
 });
 
 test('journal header and first content have compact spacing on desktop and mobile', async ({ page }) => {
@@ -415,6 +421,7 @@ test('author guidelines saved in administration render with functional anchors',
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
 });
+
 
 
 

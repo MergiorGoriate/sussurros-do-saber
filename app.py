@@ -70,6 +70,8 @@ limiter.init_app(app)
 from submissions import submissions_bp, install_submission_cli
 app.register_blueprint(admin_bp)
 app.register_blueprint(submissions_bp)
+from reader_accounts import reader_bp
+app.register_blueprint(reader_bp)
 install_submission_cli(app)
 
 
@@ -1405,6 +1407,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 

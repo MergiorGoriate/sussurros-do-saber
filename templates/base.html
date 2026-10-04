@@ -75,6 +75,7 @@ window.dataLayer.push({event:'default_consent'});
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261004-article-title-v28') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-v1') }}">
 {% block head_extra %}{% endblock %}
 </head>
 <body class="bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
@@ -108,7 +109,9 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/revistas">Revistas</a>
 <a href="/recursos" class="nav-feature">Recursos</a>
 <a href="/servicos">Serviços</a>
-<a href="/favoritos">Favoritos</a>
+<a href="/favoritos">Favoritos neste navegador</a>
+<a href="/conta/biblioteca">Os meus favoritos</a>
+<a href="/conta/notificacoes">Notificações</a>
 <a href="/sobre">Sobre Nós</a>
 </nav>
 <form id="searchPanel" action="/artigos" class="hidden py-4 border-t border-black/10">
@@ -211,7 +214,10 @@ window.addEventListener('load',()=>{if('requestIdleCallback'in window)requestIdl
 if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:6500});else window.addEventListener('load',()=>setTimeout(loadAssistant,3500),{once:true});
 })();
 </script>
+{% include 'reader_dialog.html' %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-v1') }}" defer></script>
 </body>
 </html>
+
 
 
