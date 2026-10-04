@@ -25,6 +25,22 @@ class JournalPDFTests(unittest.TestCase):
         self.assertTrue(pdf.startswith(b'%PDF-'))
         self.assertIn(b'/Subtype /Image', pdf)
 
+    def test_academic_styles_and_compact_bilingual_labels(self):
+        from journal_pdf import pdf_styles
+        styles = pdf_styles()
+        self.assertEqual(styles["Title"].alignment, 1)
+        self.assertEqual(styles["BodyText"].alignment, 4)
+        self.assertEqual(styles["BodyText"].fontName, "ArticleSerif")
+        self.assertLessEqual(styles["Title"].fontSize, 14)
+        self.assertLessEqual(styles["BodyText"].leading, 13)
+        html = '<section data-article-field="summary"><h2>Resumo</h2><p>Texto em português.</p></section><section data-article-field="abstract"><h2>Abstract</h2><p>English text.</p></section>'
+        result = article_flowables(html, 450, 700, '/tmp', 'https://example.org')
+        paragraphs = [item for item in result if hasattr(item, 'text')]
+        self.assertEqual(len(paragraphs), 2)
+        self.assertIn('Resumo: ', paragraphs[0].text)
+        self.assertIn('Texto em português.', paragraphs[0].text)
+        self.assertIn('Abstract: ', paragraphs[1].text)
+
     def test_pdf_uses_the_article_title_from_the_public_page(self):
         from types import SimpleNamespace
         from app import journal_article_content
@@ -97,4 +113,5 @@ class JournalPDFTests(unittest.TestCase):
                 load_image('http://localhost/a.png', '/tmp/static', 'https://example.org', time.monotonic() + 10)
         with self.assertRaises(ValueError):
             load_image('/static/%2e%2e/secret', '/tmp/static', 'https://example.org', time.monotonic() + 10)
+
 

@@ -19,6 +19,8 @@
 <section class="editor-main"><h2>Identificação da revista</h2>
 <div class="journal-title-fields"><label>Título da revista<input name="title" required minlength="3" maxlength="180" value="{{ request.form.get('title', journal.title or '') }}"><small>Nome da revista no catálogo.</small></label>
 <label>Título do artigo<input name="article_title" maxlength="300" value="{{ request.form.get('article_title', journal.article_title or '') }}"><small>Nome do artigo na página, na citação e no PDF. Se ficar vazio, usa o título # do conteúdo ou o nome da revista.</small></label></div>
+<label>Título do artigo em inglês (opcional)<input name="article_title_en" maxlength="300" value="{{ request.form.get('article_title_en', journal.article_title_en or '') }}"><small>Apresentado abaixo do título principal no PDF académico.</small></label>
+<label>Autor para correspondência (opcional)<textarea name="corresponding_author" rows="2" maxlength="2000">{{ request.form.get('corresponding_author', journal.corresponding_author or '') }}</textarea><small>Nome e contacto do autor responsável, para o cabeçalho do PDF.</small></label>
 <label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="4">{{ request.form.get('description', journal.description or '') }}</textarea></label>
 <div class="journal-editor-note"><strong>Conteúdo público da revista</strong><p>Estes campos controlam o artigo, os metadados editoriais, o índice, as referências e as ações exibidas na página pública.</p></div>
 <h2>Autores do artigo</h2>
@@ -79,5 +81,6 @@
 </aside></form>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-journals.js', v='20261004-article-fields-v1') }}" defer></script>
 {% endblock %}
+
 
 

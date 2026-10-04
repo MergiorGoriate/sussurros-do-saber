@@ -804,25 +804,44 @@ def journal_preview_pdf(journal_id):
 
 def render_journal_pdf(journal):
 
-    from journal_pdf import article_flowables, pdf_styles, page_footer
+    from journal_pdf import article_flowables, pdf_styles, page_footer, editorial_header
     article_title, content = journal_article_content(journal)
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
                             topMargin=18*mm, bottomMargin=18*mm,
                             title=article_title, author="Sussurros do Saber")
     styles = pdf_styles()
-    story = [Paragraph("SUSSURROS DO SABER", styles["Metadata"]), Spacer(1, 6),
-             Paragraph(html_escape(article_title), styles["Title"]), Spacer(1, 8)]
-    metadata = [Paragraph(html_escape(journal.title), styles["Metadata"])]
-    for label, field in (("Autores / ORCID", "authors_orcid"), ("ISSN", "issn"),
-                         ("Edição", "current_issue"), ("DOI", "doi")):
-        value = getattr(journal, field, "")
-        if value:
-            metadata.append(Paragraph("<b>" + label + ":</b> " + html_escape(str(value)).replace("\n", "<br/>"), styles["Metadata"]))
+    story = [editorial_header(journal, doc.width), Spacer(1, 9),
+             Paragraph("Artigo científico", styles["PaperType"]),
+             Paragraph(html_escape(article_title), styles["Title"])]
+    english_title = (getattr(journal, "article_title_en", "") or "").strip()
+    if english_title:
+        story += [Paragraph(html_escape(english_title), styles["EnglishTitle"]), Spacer(1, 4)]
+    authors = journal_authors(journal)
+    if authors:
+        author_names = []
+        for index, author in enumerate(authors, 1):
+            name = html_escape(author["name"] or author["orcid"])
+            author_names.append("<b>" + name + "</b>" + (f"<super>{index}</super>" if author["description"] else ""))
+        story += [Paragraph(", ".join(author_names), styles["Metadata"])]
+        for index, author in enumerate(authors, 1):
+            if author["description"]:
+                story.append(Paragraph(f"<super>{index}</super>" + html_escape(author["description"]).replace("\n", "<br/>"), styles["Metadata"]))
+        for author in authors:
+            if author["orcid"]:
+                url = html_escape(author["orcid"], quote=True)
+                story.append(Paragraph(html_escape(author["name"]) + f' - ORCID: <link href="{url}">{url}</link>', styles["Metadata"]))
+    history = getattr(journal, "submission_history", "") or ""
+    if history:
+        plain_history = html_unescape(bleach.clean(str(render_markdown(history)), tags=[], strip=True)).strip()
+        story.append(Paragraph(html_escape(plain_history).replace("\n", "<br/>"), styles["Metadata"]))
     publication_date = getattr(journal, "publication_date", None)
     if publication_date:
-        metadata.append(Paragraph("Publicado em " + publication_date.strftime("%d/%m/%Y"), styles["Metadata"]))
-    story += metadata + [Spacer(1, 8)]
+        story.append(Paragraph("Publicado em: " + publication_date.strftime("%d/%m/%Y"), styles["Metadata"]))
+    correspondence = (getattr(journal, "corresponding_author", "") or "").strip()
+    if correspondence:
+        story.append(Paragraph("<b>Autor para correspondência:</b> " + html_escape(correspondence).replace("\n", "<br/>"), styles["Metadata"]))
+    story += [Spacer(1, 8)]
     story += article_flowables(content,
                                doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, title=article_title)
     if journal.references:
@@ -1187,6 +1206,8 @@ def ensure_journal_columns():
         "data_availability": "TEXT DEFAULT ''",
         "notes": "TEXT DEFAULT ''",
         "article_title": "VARCHAR(300) DEFAULT ''",
+        "article_title_en": "VARCHAR(300) DEFAULT ''",
+        "corresponding_author": "TEXT DEFAULT ''",
         "content_markdown": "TEXT DEFAULT ''",
         "references": "TEXT DEFAULT ''",
         "guidelines": "TEXT DEFAULT ''",
@@ -1345,6 +1366,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
