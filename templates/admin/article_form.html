@@ -8,7 +8,7 @@
     <label>Título<input id="titleField" name="title" value="{{ article.title or '' }}" required minlength="5"></label>
     <label>Resumo<textarea name="summary" rows="3" required>{{ article.summary or '' }}</textarea></label>
     <div class="editor-field"><span class="editor-label">Conteúdo em Markdown</span>
-      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button><button type="button" id="openTable" aria-expanded="false" aria-controls="tablePanel">Tabela</button><button type="button" id="openChart" aria-expanded="false" aria-controls="chartPanel">Gráfico</button></div>
+      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="insertPullQuote">Citação em destaque</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button><button type="button" id="openTable" aria-expanded="false" aria-controls="tablePanel">Tabela</button><button type="button" id="openChart" aria-expanded="false" aria-controls="chartPanel">Gráfico</button></div>
       <section id="inlineImagePanel" class="inline-image-panel" hidden aria-labelledby="inlineImageTitle">
         <div class="inline-image-head"><div><strong id="inlineImageTitle">Inserir imagem no texto</strong><small>A imagem será colocada na posição actual do cursor.</small></div><button type="button" id="closeInlineImage" aria-label="Fechar">×</button></div>
         <div class="inline-image-fields">
@@ -69,5 +69,5 @@
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261004-portrait-v1') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261004-pullquote-v1') }}"></script>
 {% endblock %}

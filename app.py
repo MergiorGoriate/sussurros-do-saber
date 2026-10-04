@@ -279,6 +279,12 @@ def render_markdown(value):
         embed = safe_chart_embed(match.group(1), match.group(2), match.group(3))
         return store_embed("CHART", embed) if embed else match.group(0)
 
+    def pullquote_placeholder(match):
+        text, _, author = match.group(1).partition("|")
+        return store_embed("PULLQUOTE", '<figure class="article-pullquote">'
+                           f'<blockquote><p>{html_escape(text.strip())}</p></blockquote>'
+                           f'<figcaption>{html_escape(author.strip())}</figcaption></figure>')
+
     def portrait_placeholder(match):
         parts = match.group(1).split("|", 2)
         parts += [""] * (3 - len(parts))
@@ -294,6 +300,8 @@ def render_markdown(value):
 
     prepared = re.sub(r"\[portrait:\s*([^\]\n]+)\]\((https?://[^\s)]+)\)",
                       portrait_placeholder, value or "", flags=re.I)
+    prepared = re.sub(r"^\[destaque:\s*([^\]\n]+)\]\s*$",
+                      pullquote_placeholder, prepared, flags=re.M)
     prepared = IMAGE_DIRECTIVE.sub(image_placeholder, prepared)
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)

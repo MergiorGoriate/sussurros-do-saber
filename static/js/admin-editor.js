@@ -49,6 +49,10 @@
   };
   const render = () => {
     const html = escape(editor.value)
+      .replace(/^\[destaque:\s*([^\]\n]+)\]\s*$/gm, (_,details) => {
+        const [text,author='']=details.split('|');
+        return '<figure class="article-pullquote"><blockquote><p>'+text+'</p></blockquote><figcaption>'+author+'</figcaption></figure>';
+      })
       .replace(/\[portrait:\s*([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_,details,url) => {
         const [alt,caption='',credit='']=details.split('|');
         return '<figure class="article-portrait"><img src="'+url+'" alt="'+alt+'" loading="lazy"><figcaption>'+caption+'<small>'+credit+'</small></figcaption></figure>';
@@ -195,6 +199,17 @@
     render();chartTitle.value='';chartLabels.value='';chartValues.value='';chartStatus.textContent='Gráfico inserido no artigo.';setChartPanel(false);editor.focus();
   });
 
+  document.querySelector('#insertPullQuote')?.addEventListener('click',()=>{
+    const start=editor.selectionStart,end=editor.selectionEnd;
+    const text=window.prompt('Texto da citação em destaque:',editor.value.slice(start,end));
+    if(text===null)return;
+    if(!text.trim()){window.alert('Escreva o texto da citação.');return;}
+    const author=window.prompt('Autor e instituição (opcional):','');
+    if(author===null)return;
+    const clean=value=>value.trim().replace(/[\r\n\[\]|]+/g,' ');
+    editor.setRangeText('\n\n[destaque: '+clean(text)+'|'+clean(author)+']\n\n',start,end,'end');
+    editor.focus();editor.dispatchEvent(new Event('input',{bubbles:true}));
+  });
   editor.addEventListener('input', render);
   render();
 
