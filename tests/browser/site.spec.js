@@ -456,7 +456,7 @@ test('blocked browser storage does not break bookmark controls', async ({ page }
     Object.defineProperty(window,'localStorage',{get(){throw new Error('Storage blocked');}});
   });
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto('/',{waitUntil:'domcontentloaded'});
+  await page.goto('/artigos',{waitUntil:'domcontentloaded'});
   const bookmark=page.locator('.bookmark').first();
   await bookmark.click();
   await expect(bookmark).toHaveAttribute('title',/O navegador não permite guardar/);
