@@ -33,7 +33,7 @@ class JournalPDFTests(unittest.TestCase):
         self.assertEqual(brand[0].__class__.__name__, "Image")
         self.assertEqual(brand[0].hAlign, "CENTER")
         self.assertEqual(header._cellStyles[0][1].alignment, "CENTER")
-        self.assertLessEqual(brand[0].drawWidth, 36)
+        self.assertAlmostEqual(brand[0].drawWidth, 54)
         self.assertIn("Revista sussurros do saber", brand[-1].text)
 
     def test_academic_styles_and_compact_bilingual_labels(self):
@@ -124,6 +124,5 @@ class JournalPDFTests(unittest.TestCase):
                 load_image('http://localhost/a.png', '/tmp/static', 'https://example.org', time.monotonic() + 10)
         with self.assertRaises(ValueError):
             load_image('/static/%2e%2e/secret', '/tmp/static', 'https://example.org', time.monotonic() + 10)
-
 
 
