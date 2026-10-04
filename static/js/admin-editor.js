@@ -156,8 +156,24 @@
   };
   openVideo?.addEventListener('click',()=>setVideoPanel(videoPanel.hidden));
   closeVideo?.addEventListener('click',()=>setVideoPanel(false));
-  insertVideo?.addEventListener('click',()=>{
-    const url=videoUrl.value.trim(),title=cleanText(videoTitle.value);
+  insertVideo?.addEventListener('click',async()=>{
+    let url=videoUrl.value.trim();
+    const title=cleanText(videoTitle.value),file=document.querySelector('#inlineVideoFile').files[0];
+    if(file && (file.size > 50*1024*1024 || !/\.(mp4|webm|ogg)$/i.test(file.name))){videoStatus.textContent='Use MP4, WebM ou OGG com no máximo 50 MB.';return}
+    if(file){
+      if(!title){videoStatus.textContent='Escreva um título ou uma legenda para o vídeo.';return}
+      insertVideo.disabled=true;videoStatus.textContent='A carregar vídeo...';
+      try{
+        const data=new FormData();
+        data.append('csrf_token',document.querySelector('input[name="csrf_token"]').value);
+        data.append('video',file);
+        const response=await fetch('/admin/api/videos',{method:'POST',body:data,headers:{'Accept':'application/json'}});
+        const result=await response.json().catch(()=>({error:'Não foi possível carregar o vídeo. Verifique o tamanho e tente novamente.'}));
+        if(!response.ok||!result.ok)throw new Error(result.error||'Não foi possível carregar o vídeo.');
+        url=result.url;videoUrl.value=url;document.querySelector('#inlineVideoFile').value='';
+      }catch(error){videoStatus.textContent=error.message;return}
+      finally{insertVideo.disabled=false}
+    }
     if(!/^https?:\/\//i.test(url)){videoStatus.textContent='Informe um endereço válido iniciado por https://.';videoUrl.focus();return}
     if(!title){videoStatus.textContent='Escreva um título ou uma legenda para o vídeo.';videoTitle.focus();return}
     try{
