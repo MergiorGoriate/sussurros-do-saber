@@ -1010,6 +1010,7 @@ class PlatformTests(unittest.TestCase):
         fields = {name: "Texto " + name for name in ARTICLE_FIELD_LIMITS}
         fields.update({"csrf_token": "article-fields-csrf", "title": "Revista estruturada",
                        "article_title": "Título do artigo separado",
+                       "article_title_en": "Separate article title", "corresponding_author": "Autora, contacto@example.org",
                        "slug": "artigo-estruturado", "field": "Biologia", "published": "on",
                        "description": "Descrição completa da revista de artigo estruturado.",
                        "content_markdown": "# Título científico\n\n## Introdução\n\nTexto científico.",
@@ -1019,6 +1020,8 @@ class PlatformTests(unittest.TestCase):
         with app.app_context():
             journal = Journal.query.filter_by(slug="artigo-estruturado").one()
             identifier = journal.id
+            self.assertEqual(journal.article_title_en, "Separate article title")
+            self.assertEqual(journal.corresponding_author, "Autora, contacto@example.org")
             for name in ARTICLE_FIELD_LIMITS:
                 self.assertEqual(getattr(journal, name), fields[name])
         page = self.client.get("/revistas/artigo-estruturado")
@@ -1184,6 +1187,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

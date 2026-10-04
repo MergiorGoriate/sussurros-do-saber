@@ -10,7 +10,6 @@ import warnings
 import urllib3
 from bs4 import BeautifulSoup, NavigableString
 from PIL import Image as PillowImage
-import reportlab
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
@@ -22,37 +21,62 @@ MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 
 def pdf_styles():
-    if 'ArticleSans' not in pdfmetrics.getRegisteredFontNames():
-        folder = Path(reportlab.__file__).parent / 'fonts'
-        for name, file in (('ArticleSans', 'Vera.ttf'), ('ArticleSans-Bold', 'VeraBd.ttf'),
-                           ('ArticleSans-Italic', 'VeraIt.ttf'), ('ArticleSans-BoldItalic', 'VeraBI.ttf')):
+    if 'ArticleSerif' not in pdfmetrics.getRegisteredFontNames():
+        folder = Path(__file__).parent / 'static' / 'fonts'
+        for name, file in (('ArticleSerif', 'DejaVuSerif.ttf'), ('ArticleSerif-Bold', 'DejaVuSerif-Bold.ttf'),
+                           ('ArticleSerif-Italic', 'DejaVuSerif-Italic.ttf'), ('ArticleSerif-BoldItalic', 'DejaVuSerif-BoldItalic.ttf')):
             pdfmetrics.registerFont(TTFont(name, str(folder / file)))
-        pdfmetrics.registerFontFamily('ArticleSans', normal='ArticleSans', bold='ArticleSans-Bold',
-                                      italic='ArticleSans-Italic', boldItalic='ArticleSans-BoldItalic')
+        pdfmetrics.registerFontFamily('ArticleSerif', normal='ArticleSerif', bold='ArticleSerif-Bold',
+                                      italic='ArticleSerif-Italic', boldItalic='ArticleSerif-BoldItalic')
     styles = getSampleStyleSheet()
     for style in styles.byName.values():
-        if not hasattr(style, 'fontName'):
-            continue
-        style.fontName = 'ArticleSans-Bold' if style.fontName.endswith('Bold') else 'ArticleSans'
-    ink = colors.HexColor('#1E4E8C')
-    styles['Title'].fontSize = 22
-    styles['Title'].leading = 27
-    styles['Title'].textColor = ink
-    styles['Title'].alignment = 0
-    styles['BodyText'].fontSize = 10.5
-    styles['BodyText'].leading = 15
-    for name in ('Heading1', 'Heading2', 'Heading3'):
-        styles[name].textColor = ink
-        styles[name].spaceBefore = 12
+        if hasattr(style, 'fontName'):
+            style.fontName = 'ArticleSerif-Bold' if style.fontName.endswith('Bold') else 'ArticleSerif'
+            style.textColor = colors.black
+    styles['Title'].fontName = 'ArticleSerif-Bold'
+    styles['Title'].fontSize = 14
+    styles['Title'].leading = 17
+    styles['Title'].alignment = 1
+    styles['Title'].spaceAfter = 8
+    styles['Title'].keepWithNext = True
+    styles['BodyText'].fontSize = 10
+    styles['BodyText'].leading = 12.5
+    styles['BodyText'].alignment = 4
+    for name, size in (('Heading1', 12), ('Heading2', 11), ('Heading3', 10)):
+        styles[name].fontName = 'ArticleSerif-Bold'
+        styles[name].fontSize = size
+        styles[name].leading = size + 2
+        styles[name].spaceBefore = 9
+        styles[name].spaceAfter = 3
         styles[name].keepWithNext = True
-    styles.add(ParagraphStyle('Caption', parent=styles['BodyText'], fontSize=9,
-                              leading=12, textColor=colors.HexColor('#4a5568'), spaceBefore=5))
-    styles.add(ParagraphStyle('Metadata', parent=styles['Caption'], spaceAfter=4))
+    styles.add(ParagraphStyle('Caption', parent=styles['BodyText'], fontSize=8.5,
+                              leading=11, textColor=colors.HexColor('#444444'), spaceBefore=4))
+    styles.add(ParagraphStyle('Metadata', parent=styles['Caption'], alignment=1, textColor=colors.black, spaceBefore=0, spaceAfter=4))
+    styles.add(ParagraphStyle('PaperType', parent=styles['Metadata'], fontName='ArticleSerif-Italic', alignment=0))
+    styles.add(ParagraphStyle('EnglishTitle', parent=styles['Metadata'], fontName='ArticleSerif-Bold', fontSize=10, leading=12))
+    styles.add(ParagraphStyle('HeaderBrand', parent=styles['Metadata'], fontName='ArticleSerif-Bold', fontSize=12, leading=14,
+                              textColor=colors.HexColor('#1E4E8C')))
     styles.add(ParagraphStyle('ListItem', parent=styles['BodyText'], leftIndent=14,
-                              firstLineIndent=-10, spaceAfter=4))
+                              firstLineIndent=-10, spaceAfter=3))
     styles.add(ParagraphStyle('CodeBlock', parent=styles['BodyText'], fontName='Courier',
-                              fontSize=8, leading=11, backColor=colors.HexColor('#f3f5f7')))
+                              fontSize=8, leading=11, backColor=colors.HexColor('#f3f5f7'), alignment=0))
     return styles
+
+
+def editorial_header(journal, width):
+    styles = pdf_styles()
+    details = []
+    for label, field in (("ISSN", "issn"), ("", "current_issue"), ("DOI", "doi")):
+        value = str(getattr(journal, field, "") or "").strip()
+        if value:
+            details.append(escape((label + ": " if label else "") + value))
+    left = Paragraph("<br/>".join(details), styles['Metadata'])
+    right = Paragraph("Revista sussurros do saber<br/><font size=8>www.sussurrosdosaber.com</font>", styles['HeaderBrand'])
+    header = Table([[left, right]], colWidths=[width * .44, width * .56])
+    header.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                               ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                               ('LINEBELOW', (0, 0), (-1, -1), .4, colors.HexColor('#cccccc'))]))
+    return header
 
 
 def page_footer(canvas, document):
@@ -60,7 +84,7 @@ def page_footer(canvas, document):
     canvas.setStrokeColor(colors.HexColor('#1E4E8C'))
     canvas.setLineWidth(.5)
     canvas.line(document.leftMargin, 38, document.pagesize[0] - document.rightMargin, 38)
-    canvas.setFont('ArticleSans', 8)
+    canvas.setFont('ArticleSerif', 8)
     canvas.setFillColor(colors.HexColor('#4a5568'))
     canvas.drawString(document.leftMargin, 26, 'Sussurros do Saber | www.sussurrosdosaber.com')
     canvas.drawRightString(document.pagesize[0] - document.rightMargin, 26, str(document.page))
@@ -189,6 +213,22 @@ def article_flowables(html, width, height, static_folder, origin, image_height_r
                 walk(child)
             group = story[start:]
             story[start:] = [KeepTogether(group)] if group else []
+        elif name == 'section' and node.get('data-article-field') in ('summary', 'keywords', 'abstract', 'abstract_keywords'):
+            # Compact inline labels match the scientific article's bilingual front matter.
+            section = BeautifulSoup(str(node), 'html.parser').section
+            heading = section.find('h2', recursive=False)
+            label = heading.get_text(' ', strip=True) if heading else ''
+            if heading:
+                heading.decompose()
+            first = section.find('p', recursive=False)
+            if first:
+                bold = soup.new_tag('b')
+                bold.string = label + ': '
+                first.insert(0, bold)
+            else:
+                story.append(Paragraph('<b>' + escape(label) + ':</b>', styles['BodyText']))
+            for child in section.children:
+                walk(child)
         elif name in ('ul', 'ol'):
             for index, item in enumerate(node.find_all('li', recursive=False), 1):
                 prefix = str(index) + '. ' if name == 'ol' else '• '
@@ -233,3 +273,4 @@ def article_flowables(html, width, height, static_folder, origin, image_height_r
     for child in soup.children:
         walk(child)
     return story
+
