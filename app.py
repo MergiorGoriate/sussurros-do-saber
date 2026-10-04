@@ -778,6 +778,7 @@ def journal_article_content(journal):
     if title_heading:
         article_title = html_unescape(bleach.clean(title_heading.group(1), tags=[], strip=True))
         content = content[title_heading.end():]
+    article_title = (getattr(journal, "article_title", "") or "").strip() or article_title
     return article_title, structured_article_content(journal, content, render_markdown)
 
 
@@ -1190,6 +1191,7 @@ def ensure_journal_columns():
         "informed_consent": "TEXT DEFAULT ''",
         "data_availability": "TEXT DEFAULT ''",
         "notes": "TEXT DEFAULT ''",
+        "article_title": "VARCHAR(300) DEFAULT ''",
         "content_markdown": "TEXT DEFAULT ''",
         "references": "TEXT DEFAULT ''",
         "guidelines": "TEXT DEFAULT ''",
@@ -1348,6 +1350,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 

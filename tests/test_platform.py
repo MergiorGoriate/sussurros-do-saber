@@ -971,10 +971,33 @@ class PlatformTests(unittest.TestCase):
                 self.assertEqual(row["references"], "Referências originais")
                 self.assertEqual(row["acknowledgements"], "Agradecimentos originais")
                 self.assertEqual(row["funding"], "Financiamento original")
+                self.assertEqual(row["article_title"], "")
                 for name in set(ARTICLE_FIELD_LIMITS) - {"acknowledgements", "funding"}:
                     self.assertEqual(row[name], "")
         finally:
             engine.dispose()
+
+    def test_separate_article_title_keeps_legacy_fallback_and_pdf_title(self):
+        from types import SimpleNamespace
+        from app import journal_article_content, render_journal_pdf
+        from unittest.mock import patch
+        journal = SimpleNamespace(title="Nome da revista", article_title="Título explícito",
+                                  content_markdown="# Título antigo\n\n## Introdução\n\nTexto preservado.",
+                                  guidelines="", slug="titulo-separado", description="Descrição",
+                                  cover_image="", references="", notes="")
+        title, body = journal_article_content(journal)
+        self.assertEqual(title, "Título explícito")
+        self.assertNotIn("Título antigo", body)
+        self.assertIn("Texto preservado.", body)
+        from reportlab.platypus import SimpleDocTemplate
+        with app.test_request_context(), patch("app.SimpleDocTemplate", wraps=SimpleDocTemplate) as document:
+            response = render_journal_pdf(journal)
+        self.assertTrue(response.data.startswith(b"%PDF-"))
+        self.assertEqual(document.call_args.kwargs["title"], "Título explícito")
+        journal.article_title = ""
+        self.assertEqual(journal_article_content(journal)[0], "Título antigo")
+        journal.content_markdown = "## Introdução\n\nTexto preservado."
+        self.assertEqual(journal_article_content(journal)[0], "Nome da revista")
 
     def test_journal_structured_article_round_trip_order_optional_and_limits(self):
         from bs4 import BeautifulSoup
@@ -986,6 +1009,7 @@ class PlatformTests(unittest.TestCase):
             session["csrf_token"] = "article-fields-csrf"
         fields = {name: "Texto " + name for name in ARTICLE_FIELD_LIMITS}
         fields.update({"csrf_token": "article-fields-csrf", "title": "Revista estruturada",
+                       "article_title": "Título do artigo separado",
                        "slug": "artigo-estruturado", "field": "Biologia", "published": "on",
                        "description": "Descrição completa da revista de artigo estruturado.",
                        "content_markdown": "# Título científico\n\n## Introdução\n\nTexto científico.",
@@ -999,6 +1023,8 @@ class PlatformTests(unittest.TestCase):
                 self.assertEqual(getattr(journal, name), fields[name])
         page = self.client.get("/revistas/artigo-estruturado")
         soup = BeautifulSoup(page.data, "html.parser")
+        self.assertEqual(soup.select_one("#journal-article-title").get_text(), "Título do artigo separado")
+        self.assertNotIn("Título científico", soup.select_one(".journal-sections").get_text())
         headings = [item.get_text() for item in soup.select(".journal-sections h2")]
         self.assertEqual(headings, ["Resumo", "Palavras-chave", "Abstract", "Keywords", "Introdução",
                                    "Contribuição dos autores", "Agradecimentos", "Financiamento",
@@ -1158,6 +1184,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

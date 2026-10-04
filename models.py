@@ -66,6 +66,7 @@ class Category(db.Model):
 
 class Journal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    article_title = db.Column(db.String(300), default="")
     summary = db.Column(db.Text, default="")
     keywords = db.Column(db.Text, default="")
     abstract = db.Column(db.Text, default="")
@@ -244,5 +245,6 @@ class Subscriber(db.Model):
     email = db.Column(db.String(180), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
 
 

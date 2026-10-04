@@ -1,7 +1,7 @@
 {% extends 'admin/base.html' %}
 {% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}
 {% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-journals.css', v='20261003-authors-2') }}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-journals.css', v='20261004-title-hierarchy-v1') }}">{% endblock %}
 {% macro author_card(author) %}
 <fieldset class="journal-author-card" data-author-card>
 <legend>Autor</legend>
@@ -13,11 +13,12 @@
 {% endmacro %}
 {% block content %}
 
-<header class="admin-header"><div><span>Catálogo científico</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
+<header class="admin-header journal-editor-header"><div><span>Catálogo científico</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
 <form method="post" enctype="multipart/form-data" class="editor-form journal-editor" data-preview-url="{{ url_for('journal_markdown_preview') }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <section class="editor-main"><h2>Identificação da revista</h2>
-<label>Título<input name="title" required minlength="3" maxlength="180" value="{{ request.form.get('title', journal.title or '') }}"></label>
+<div class="journal-title-fields"><label>Título da revista<input name="title" required minlength="3" maxlength="180" value="{{ request.form.get('title', journal.title or '') }}"><small>Nome da revista no catálogo.</small></label>
+<label>Título do artigo<input name="article_title" maxlength="300" value="{{ request.form.get('article_title', journal.article_title or '') }}"><small>Nome do artigo na página, na citação e no PDF. Se ficar vazio, usa o título # do conteúdo ou o nome da revista.</small></label></div>
 <label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="4">{{ request.form.get('description', journal.description or '') }}</textarea></label>
 <div class="journal-editor-note"><strong>Conteúdo público da revista</strong><p>Estes campos controlam o artigo, os metadados editoriais, o índice, as referências e as ações exibidas na página pública.</p></div>
 <h2>Autores do artigo</h2>
@@ -32,7 +33,7 @@
 <label>Palavras-chave<textarea class="journal-article-field" name="keywords" rows="2" maxlength="2000">{{ request.form.get('keywords', journal.keywords or '') }}</textarea><small>Separe os termos por ponto e vírgula.</small></label>
 <label>Abstract<textarea class="journal-article-field" name="abstract" rows="6" maxlength="20000">{{ request.form.get('abstract', journal.abstract or '') }}</textarea></label>
 <label>Keywords<textarea class="journal-article-field" name="abstract_keywords" rows="2" maxlength="2000">{{ request.form.get('abstract_keywords', journal.abstract_keywords or '') }}</textarea><small>Keywords in English, separated by semicolons.</small></label>
-<h2>Conteúdo do artigo</h2><p class="journal-editor-help">Use # para o título do artigo e ## ou ### para as secções do índice.</p><label>Conteúdo do artigo em Markdown
+<h2>Conteúdo do artigo</h2><p class="journal-editor-help">Defina o título do artigo no campo próprio. Use ## ou ### para as secções do índice. Os títulos # já guardados continuam compatíveis.</p><label>Conteúdo do artigo em Markdown
 <div class="markdown-toolbar" data-md-toolbar>
 <button type="button" data-md="heading">Título</button><button type="button" data-md="section">Secção</button><button type="button" data-md="bold"><strong>Negrito</strong></button><button type="button" data-md="italic"><em>Itálico</em></button><button type="button" data-md="quote">Citação</button><button type="button" data-md="list">Lista</button><button type="button" data-md="reference">Referência</button><button type="button" data-md="image">Imagem</button><button type="button" data-md="video">Vídeo</button><button type="button" data-md="table">Tabela</button><button type="button" data-md="chart">Gráfico</button>
 </div>
@@ -78,4 +79,5 @@
 </aside></form>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-journals.js', v='20261004-article-fields-v1') }}" defer></script>
 {% endblock %}
+
 

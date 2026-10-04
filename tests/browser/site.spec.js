@@ -265,10 +265,14 @@ async function signInAdministrator(page) {
 for (const width of [1440,320]) {
   test(`journal authors and editorial information can be administered at ${width}px`, async ({page,context},testInfo)=>{
     await context.route('https://example.org/capa.png',route=>route.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAGAAAACACAIAAAB7vvvtAAABFElEQVR4nO3QQRHAIADAMEDIJKEM0VOw65M9EgW9zmefwbd1O+DvDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFB4AdaOAfh0q+/GAAAAAElFTkSuQmCC','base64')}));
+    await page.setViewportSize({width,height:900});
     await signInAdministrator(page);
     await page.goto('/admin/revistas/nova',{waitUntil:'domcontentloaded'});
     const slug='editorial-browser-'+width+'-'+Date.now();
     await page.locator('[name="title"]').fill('Revista com informações');
+    await page.getByLabel('Título do artigo',{exact:false}).fill('Título independente do artigo');
+    expect(await page.locator('.journal-editor-header h1').evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeLessThanOrEqual(24);
+    await expect(page.getByLabel('Título da revista',{exact:false})).toBeVisible();
     await page.locator('[name="slug"]').fill(slug);
     await page.locator('[name="field"]').fill('Biologia');
     await page.locator('[name="description"]').fill('Revista científica com os dados editoriais preenchidos para teste.');
@@ -310,11 +314,13 @@ for (const width of [1440,320]) {
     await expect(page.locator('[name="author_description"]').first()).toHaveValue('Investigadora de Biologia e análise de dados.');
     await expect(page.locator('[name="funding"]')).toHaveValue('Apoio do projeto científico de teste.');
     await expect(page.locator('[name="summary"]')).toHaveValue('Resumo em português do estudo.');
+    await expect(page.locator('[name="article_title"]')).toHaveValue('Título independente do artigo');
     await expect(page.locator('[name="notes"]')).toHaveValue('Nota complementar do estudo.');
     await page.setViewportSize({width,height:900});
     await page.goto('/revistas/'+slug,{waitUntil:'domcontentloaded'});
     const consent=page.locator('#cookieReject');if(await consent.isVisible())await consent.click();
     if(width===320)await page.locator('#themeToggle').click();
+    await expect(page.locator('#journal-article-title')).toHaveText('Título independente do artigo');
     await expect(page.locator('.journal-sections h2')).toHaveText(['Resumo','Palavras-chave','Abstract','Keywords','Resultados','Contribuição dos autores','Agradecimentos','Financiamento','Conflitos de interesse','Aprovação ética','Consentimento informado','Disponibilidade de dados','Referências bibliográficas','Notas']);
     await expect(page.locator('[data-article-field="summary"]')).toContainText('Resumo em português do estudo.');
     await expect(page.locator('#notas')).toContainText('Nota complementar do estudo.');
@@ -405,6 +411,7 @@ test('author guidelines saved in administration render with functional anchors',
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
 });
+
 
 
 
