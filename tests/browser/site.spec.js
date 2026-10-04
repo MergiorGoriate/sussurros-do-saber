@@ -136,16 +136,22 @@ for (const width of [320, 768]) {
   });
 }
 
-test('journal bookmarks survive malformed storage and appear in Favorites', async ({ page }) => {
-  await page.addInitScript(()=>{if(!localStorage.getItem('savedJournalArticles'))localStorage.setItem('savedJournalArticles','invalid json');if(!localStorage.getItem('journalAlerts'))localStorage.setItem('journalAlerts','{}');});
-  await page.goto('/revistas/revista-de-teste-cientifico', { waitUntil: 'domcontentloaded' });
+test('journal reading actions open account dialog and restore focus on mobile', async ({ page }) => {
+  await page.setViewportSize({width:360,height:800});
+  await page.goto('/revistas/revista-de-teste-cientifico', {waitUntil:'domcontentloaded'});
   await page.locator('#cookieReject').click();
-  await page.locator('.journal-save-btn').click();
-  await expect(page.locator('.journal-save-btn')).toHaveAttribute('aria-pressed','true');
-  await expect(page.locator('#journal-action-status')).toContainText('Artigo guardado');
-  await page.goto('/favoritos', { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#favoritesGrid')).toContainText('Artigo de teste');
-  await expect(page.locator('#favoritesEmpty')).toBeHidden();
+  for (const selector of ['.journal-save-btn','.journal-alert-btn']) {
+    await page.locator(selector).click();
+    await expect(page.locator('#reader-dialog')).toBeVisible();
+    await expect(page.locator('#reader-auth-form [name="email"]')).toBeFocused();
+    await page.locator('[data-reader-mode="register"]').click();
+    await expect(page.locator('#reader-name-label')).toBeVisible();
+    await expect(page.locator('#reader-password-help')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#reader-dialog')).not.toBeVisible();
+    await expect(page.locator(selector)).toBeFocused();
+    await expect(page.locator(selector)).toHaveAttribute('aria-pressed','false');
+  }
 });
 
 test('journal header and first content have compact spacing on desktop and mobile', async ({ page }) => {
@@ -420,3 +426,39 @@ test('author guidelines saved in administration render with functional anchors',
 
 
 
+
+test('reader registers, logs in and saves the selected article in the account', async ({ page }) => {
+  const email='reader-'+Date.now()+'@example.org';
+  await page.setViewportSize({width:360,height:800});
+  await page.goto('/revistas/revista-de-teste-cientifico',{waitUntil:'domcontentloaded'});
+  await page.locator('#cookieReject').click();
+  await page.locator('.journal-save-btn').click();
+  await page.locator('[data-reader-mode="register"]').click();
+  await page.locator('#reader-auth-form [name="name"]').fill('Leitor do teste');
+  await page.locator('#reader-auth-form [name="email"]').fill(email);
+  await page.locator('#reader-auth-form [name="password"]').fill('reader-browser-password-123');
+  await page.locator('#reader-submit').click();
+  await expect(page.locator('#reader-auth-status')).toContainText('ligação de confirmação');
+  await page.locator('#reader-auth-form [name="password"]').fill('reader-browser-password-123');
+  await page.locator('#reader-submit').click();
+  await expect(page.locator('#reader-dialog')).not.toBeVisible();
+  await expect(page.locator('.journal-save-btn')).toHaveAttribute('aria-pressed','true');
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('.journal-save-btn')).toHaveAttribute('aria-pressed','true');
+  await page.locator('.journal-alert-btn').click();
+  await expect(page.locator('#journal-action-status')).toContainText('Confirme o seu e-mail');
+  await page.goto('/conta/biblioteca',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('main')).toContainText('Artigo de teste');
+});
+
+test('blocked browser storage does not break bookmark controls', async ({ page }) => {
+  await page.addInitScript(()=>{
+    Object.defineProperty(window,'localStorage',{get(){throw new Error('Storage blocked');}});
+  });
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/artigos',{waitUntil:'domcontentloaded'});
+  const bookmark=page.locator('.bookmark').first();
+  await bookmark.click();
+  await expect(bookmark).toHaveAttribute('title',/O navegador não permite guardar/);
+  expect(errors).toEqual([]);
+});
