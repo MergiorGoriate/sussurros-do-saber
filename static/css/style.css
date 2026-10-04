@@ -1731,3 +1731,7 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 /* Compact journal title beside the cover. */
 .journal-page .journal-hero h1{font-size:clamp(1.8rem,2.8vw,3rem);line-height:1.12;letter-spacing:-.025em}
 @media(max-width:767px){.journal-page .journal-hero h1{font-size:clamp(1.5rem,6vw,1.9rem)!important;line-height:1.15!important}}
+
+/* Smaller title for the scientific article below the editorial divider. */
+.journal-article-header h1{font-size:clamp(1.8rem,3vw,2.75rem);line-height:1.15;letter-spacing:-.025em}
+@media(max-width:767px){.journal-article-header h1{font-size:clamp(1.5rem,6.5vw,1.9rem);line-height:1.18}}
