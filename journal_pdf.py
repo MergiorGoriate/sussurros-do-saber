@@ -71,7 +71,7 @@ def editorial_header(journal, width):
         if value:
             details.append(escape((label + ": " if label else "") + value))
     left = Paragraph("<br/>".join(details), styles['Metadata'])
-    right = Paragraph("Revista sussurros do saber<br/><font size=8>www.sussurrosdosaber.com</font>", styles['HeaderBrand'])
+    right = Paragraph("Revista Científica Sussurros do Saber<br/><font size=8>www.sussurrosdosaber.com</font>", styles['HeaderBrand'])
     logo_path = Path(__file__).parent / 'static' / 'img' / 'pdf-logo-sussurros.png'
     logo = Image(str(logo_path), width=54, height=54, kind='proportional', mask='auto')
     logo.hAlign = 'CENTER'
