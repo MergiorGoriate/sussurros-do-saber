@@ -16,6 +16,8 @@
           <span class="field-separator">ou</span>
           <label>Endereço externo<input id="inlineImageUrl" type="url" inputmode="url" placeholder="https://..."></label>
           <label>Descrição acessível<input id="inlineImageAlt" maxlength="180" placeholder="Descreva o que aparece na imagem"></label>
+          <label>Apresentação<select id="inlineImageLayout"><option value="full">Imagem normal</option><option value="portrait">Retrato circular à direita do texto</option></select></label>
+          <label>Crédito da imagem (opcional)<input id="inlineImageCredit" maxlength="180" placeholder="Fotógrafo, instituição ou fonte"></label>
           <label>Legenda <span class="optional">(opcional)</span><input id="inlineImageCaption" maxlength="300" placeholder="Fonte, autor ou explicação breve"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineImage" class="admin-primary">Inserir no artigo</button><span id="inlineImageStatus" role="status" aria-live="polite"></span></div>
@@ -67,5 +69,5 @@
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261004-portrait-v1') }}"></script>
 {% endblock %}

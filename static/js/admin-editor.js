@@ -49,6 +49,10 @@
   };
   const render = () => {
     const html = escape(editor.value)
+      .replace(/\[portrait:\s*([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_,details,url) => {
+        const [alt,caption='',credit='']=details.split('|');
+        return '<figure class="article-portrait"><img src="'+url+'" alt="'+alt+'" loading="lazy"><figcaption>'+caption+'<small>'+credit+'</small></figcaption></figure>';
+      })
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
@@ -116,7 +120,13 @@
     inlineStatus.textContent=file?'A carregar imagem...':'A inserir imagem...';
     try{
       if(file)url=await uploadImage(file);
-      const markdown=`\n\n![${alt}](${url})${caption?`\n*${caption}*`:''}\n\n`;
+      const layout=document.querySelector('#inlineImageLayout').value;
+      const credit=cleanText(document.querySelector('#inlineImageCredit').value);
+      const safeUrl=url.replace(/\(/g,'%28').replace(/\)/g,'%29');
+      const parts=[alt,caption,credit].map(text=>text.replace(/\|/g,' '));
+      const markdown=layout==='portrait'
+        ? '\n\n[portrait: '+parts.join('|')+']('+safeUrl+')\n\n'
+        : '\n\n!['+alt+']('+safeUrl+')'+(caption?'\n*'+caption+'*':'')+(credit?'\n*Crédito: '+credit+'*':'')+'\n\n';
       editor.setRangeText(markdown,insertionPoint,insertionPoint,'end');
       render();
       inlineFile.value='';inlineUrl.value='';inlineAlt.value='';inlineCaption.value='';

@@ -279,7 +279,22 @@ def render_markdown(value):
         embed = safe_chart_embed(match.group(1), match.group(2), match.group(3))
         return store_embed("CHART", embed) if embed else match.group(0)
 
-    prepared = IMAGE_DIRECTIVE.sub(image_placeholder, value or "")
+    def portrait_placeholder(match):
+        parts = match.group(1).split("|", 2)
+        parts += [""] * (3 - len(parts))
+        alt, caption, credit = [html_escape(part.strip(), quote=True) for part in parts]
+        url = match.group(2)
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return match.group(0)
+        safe_url = html_escape(responsive_image_url(url, 768), quote=True)
+        return store_embed("PORTRAIT", '<figure class="article-portrait">'
+                           f'<img src="{safe_url}" alt="{alt}" loading="lazy" decoding="async">'
+                           f'<figcaption>{caption}<small>{credit}</small></figcaption></figure>')
+
+    prepared = re.sub(r"\[portrait:\s*([^\]\n]+)\]\((https?://[^\s)]+)\)",
+                      portrait_placeholder, value or "", flags=re.I)
+    prepared = IMAGE_DIRECTIVE.sub(image_placeholder, prepared)
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
     rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
