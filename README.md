@@ -111,3 +111,19 @@ Sem `DATABASE_URL`, o projeto usa SQLite apenas para desenvolvimento local. Em p
 O Tailwind é compilado durante o build e servido localmente em `/static/css/tailwind.css`; o navegador não depende de `cdn.tailwindcss.com`. Execute `npm run build:css` depois de alterar classes nos templates ou scripts.
 
 Imagens editoriais devem, de preferência, ser carregadas no Cloudinary pelo painel. Quando uma imagem externa falha ou bloqueia hotlinking, o frontend substitui-a automaticamente pelo ativo local `/static/img/image-fallback.svg`.
+
+
+
+## Submissões científicas
+
+`/submissoes` é a área privada de investigadores; as contas não concedem acesso ao admin. Em `/admin/submissoes/configuracao`, configure tipos de artigo (um por linha), formatos do manuscrito principal, e-mail editorial e abra explicitamente cada revista. Preparar Manuscrito e Enviar Proposta mantêm os fluxos anteriores.
+
+A implantação cria novas tabelas pelo `db.create_all()` idempotente existente, sem alterar dados legados. Faça backup antes de implantar. Contas exigem confirmação por e-mail; configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_TLS=true` (ou `SMTP_SSL=true`). Execute `flask --app app enviar-notificacoes --limit 50` a cada minuto em **um único worker** agendado no Coolify. Credenciais nunca devem ser gravadas no repositório. Verifique a entrega real de confirmação e recuperação antes de abrir submissões ao público. A fila é transacional; falhas preservam notificações para nova tentativa. O SMTP pode reenviar uma mensagem se o processo cair após a entrega e antes do commit; o Message-ID permanece estável.
+
+Os ficheiros ficam em tabelas privadas da base de dados, separados dos metadados; não há uploads originais em `/static` nem em Cloudinary público. Limites: 8 MB/ficheiro, 25 ficheiros/versão, 100 MB/conta e 20 rascunhos simultâneos. Formatos permitidos são limitados e validados por conteúdo; documentos com macros, objetos executáveis, XML com entidades ou relações externas de objetos são rejeitados. Hyperlinks convencionais DOCX são aceites. PDFs cifrados/ativos ou com mais de 500 páginas são rejeitados. Estes controlos não substituem um serviço antivírus dedicado, que pode ser acrescentado antes de aumentar a política de formatos. Inclua as tabelas de submissão, ficheiros e notificações nos backups PostgreSQL.
+
+Submeter é idempotente; só a confirmação atribui código e preserva o snapshot recebido. Revisões criam versões novas, sem sobrescrever as anteriores. Decisões seguem transições validadas no servidor e geram auditoria. Notas internas nunca aparecem na área do autor. Administradores mantêm as permissões existentes, com 2FA; contas de investigador não ganham permissões editoriais. A atribuição de editor identifica o responsável dentro da equipa administrativa existente. O modelo de convites/pareceres já prevê revisor, modo cego, prazo, resposta e recomendação, mas o portal de revisores e a anonimização ainda não estão ativados.
+
+Aceitar não publica: **Preparar para publicação** cria um novo rascunho no editor de revistas existente, preservando a revista original. Reaproveita metadados, autores/ORCID/afiliações, declarações e campos científicos opcionais. DOCX importa texto, tabelas e figuras bitmap; TXT importa texto. PDF permanece original privado e necessita revisão/inserção do conteúdo no editor. Figuras sanitizadas do rascunho são privadas até à publicação explícita; os originais nunca se tornam públicos. Confira ordem, legendas, referências, DOI e provas HTML/PDF antes de publicar. Ocultar o artigo retorna o processo à produção e bloqueia novamente o acesso público às figuras.
+
+Para rollback, reverta o código e preserve as novas tabelas para não perder manuscritos/auditoria. Não execute `drop_all` em produção.

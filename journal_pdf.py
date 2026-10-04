@@ -105,6 +105,18 @@ def load_image(source, static_folder, origin, deadline):
         parsed = urlparse(url)
         if parsed.scheme not in ('http', 'https') or parsed.username or parsed.password:
             raise ValueError('Endereço de imagem inválido')
+        if parsed.hostname == urlparse(origin).hostname and parsed.path.startswith('/submissoes/figuras/'):
+            from flask import has_request_context
+            from submissions import editorial_access
+            from submission_models import PublicationAsset
+            from models import Journal, db
+            if not has_request_context() or not parsed.path.rsplit('/', 1)[-1].isdigit():
+                raise ValueError('Figura privada indisponível')
+            asset = db.session.get(PublicationAsset, int(parsed.path.rsplit('/', 1)[-1]))
+            journal = db.session.get(Journal, asset.journal_id) if asset else None
+            if not journal or (not journal.published and not editorial_access()):
+                raise ValueError('Figura privada indisponível')
+            return asset.payload
         if parsed.hostname == urlparse(origin).hostname and parsed.path.startswith('/static/'):
             root = Path(static_folder).resolve()
             path = (root / unquote(parsed.path[len('/static/'):])).resolve()
