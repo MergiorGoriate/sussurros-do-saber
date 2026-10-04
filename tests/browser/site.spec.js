@@ -270,7 +270,9 @@ for (const width of [1440,320]) {
     await page.goto('/admin/revistas/nova',{waitUntil:'domcontentloaded'});
     const slug='editorial-browser-'+width+'-'+Date.now();
     await page.locator('[name="title"]').fill('Revista com informações');
-    await page.getByLabel('Título do artigo',{exact:false}).fill('Título independente do artigo');
+    await page.locator('[name="article_title"]').fill('Título independente do artigo');
+    await page.locator('[name="article_title_en"]').fill('Independent article title');
+    await page.locator('[name="corresponding_author"]').fill('Autora de teste, contacto@example.org');
     expect(await page.locator('.journal-editor-header h1').evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeLessThanOrEqual(24);
     await expect(page.getByLabel('Título da revista',{exact:false})).toBeVisible();
     await page.locator('[name="slug"]').fill(slug);
@@ -315,6 +317,8 @@ for (const width of [1440,320]) {
     await expect(page.locator('[name="funding"]')).toHaveValue('Apoio do projeto científico de teste.');
     await expect(page.locator('[name="summary"]')).toHaveValue('Resumo em português do estudo.');
     await expect(page.locator('[name="article_title"]')).toHaveValue('Título independente do artigo');
+    await expect(page.locator('[name="article_title_en"]')).toHaveValue('Independent article title');
+    await expect(page.locator('[name="corresponding_author"]')).toHaveValue('Autora de teste, contacto@example.org');
     await expect(page.locator('[name="notes"]')).toHaveValue('Nota complementar do estudo.');
     await page.setViewportSize({width,height:900});
     await page.goto('/revistas/'+slug,{waitUntil:'domcontentloaded'});
