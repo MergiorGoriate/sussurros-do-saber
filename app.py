@@ -823,11 +823,6 @@ def render_journal_pdf(journal):
     if publication_date:
         metadata.append(Paragraph("Publicado em " + publication_date.strftime("%d/%m/%Y"), styles["Metadata"]))
     story += metadata + [Spacer(1, 8)]
-    if journal.description:
-        story += [Paragraph(html_escape(journal.description), styles["BodyText"]), Spacer(1, 12)]
-    if journal.cover_image:
-        story += article_flowables('<img src="' + html_escape(journal.cover_image, quote=True) + '" alt="Capa">',
-                                   doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, image_height_ratio=.35)
     story += article_flowables(content,
                                doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, title=article_title)
     if journal.references:
