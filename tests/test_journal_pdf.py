@@ -3,7 +3,7 @@ from io import BytesIO
 from unittest.mock import patch
 from PIL import Image as PillowImage
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate
+from reportlab.platypus import Paragraph, SimpleDocTemplate
 from journal_pdf import article_flowables, load_image
 
 
@@ -41,18 +41,20 @@ class JournalPDFTests(unittest.TestCase):
         self.assertIn('1. Primeiro', text)
         self.assertIn('2. Segundo', text)
 
-    def test_download_response_embeds_body_and_cover_images(self):
+    def test_download_embeds_article_images_without_cover_or_catalog_description(self):
         from types import SimpleNamespace
         from app import app, render_journal_pdf
         image = BytesIO()
         PillowImage.new('RGB', (160, 100), '#1e4e8c').save(image, 'PNG')
-        journal = SimpleNamespace(title='Artigo', slug='artigo', description='Resumo',
+        journal = SimpleNamespace(title='Artigo', slug='artigo', description='Descrição do catálogo excluída',
                                   cover_image='https://example.org/cover.png',
                                   content_markdown='![Figura 1](https://example.org/figure.png)',
                                   guidelines='', references='Referência científica')
-        with app.test_request_context(), patch('journal_pdf.load_image', return_value=image.getvalue()) as fetch:
+        with app.test_request_context(), patch('journal_pdf.load_image', return_value=image.getvalue()) as fetch, patch('app.Paragraph', wraps=Paragraph) as paragraph:
             response = render_journal_pdf(journal)
-        self.assertEqual(fetch.call_count, 2)
+        self.assertEqual(fetch.call_count, 1)
+        self.assertEqual(fetch.call_args.args[0], 'https://example.org/figure.png')
+        self.assertNotIn('Descrição do catálogo excluída', ' '.join(str(call.args[0]) for call in paragraph.call_args_list))
         self.assertEqual(response.mimetype, 'application/pdf')
         self.assertIn('attachment', response.headers['Content-Disposition'])
         self.assertIn(b'/Subtype /Image', response.data)
