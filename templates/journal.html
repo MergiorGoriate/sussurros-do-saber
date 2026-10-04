@@ -33,7 +33,7 @@
   {% else %}<span>Autores a indicar</span>{% endif %}
   </div>
   <div class="journal-article-meta">
-    <strong>{{ journal.title }}</strong>
+    <strong>Revista sussurros do saber</strong>
     <span>•</span><span>{{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'Data a definir' }}</span>
     <span>•</span><span>{{ journal.current_issue or 'Edição em preparação' }}</span>
     {% if journal.doi %}<span>•</span><span>DOI: {{ journal.doi }}</span>{% endif %}
