@@ -843,7 +843,8 @@ def render_journal_pdf(journal):
         story.append(Paragraph("<b>Autor para correspondência:</b> " + html_escape(correspondence).replace("\n", "<br/>"), styles["Metadata"]))
     story += [Spacer(1, 8)]
     story += article_flowables(content,
-                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN, title=article_title)
+                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN,
+                               title=article_title, start_body_new_page=True)
     if journal.references:
         story += [Spacer(1, 12), Paragraph("Referências bibliográficas", styles["Heading2"])]
         story += article_flowables(render_markdown(journal.references), doc.width, doc.height,
@@ -1366,7 +1367,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
-
 
 
 

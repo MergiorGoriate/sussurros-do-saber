@@ -8,6 +8,24 @@ from journal_pdf import article_flowables, load_image
 
 
 class JournalPDFTests(unittest.TestCase):
+    def test_body_starts_on_new_page_after_optional_front_matter(self):
+        front = ''.join(f'<section data-article-field="{field}"><h2>{label}</h2><p>{label} de teste.</p></section>'
+                        for field, label in (("summary", "Resumo"), ("keywords", "Palavras-chave"),
+                                             ("abstract", "Abstract"), ("abstract_keywords", "Keywords")))
+        for prefix in (front, ''):
+            with self.subTest(front_matter=bool(prefix)):
+                result = article_flowables(prefix + '<h2>Introdução</h2><p>Corpo do artigo.</p>',
+                                          450, 700, '/tmp', 'https://example.org', start_body_new_page=True)
+                breaks = [i for i, item in enumerate(result) if item.__class__.__name__ == 'PageBreak']
+                self.assertEqual(len(breaks), 1)
+                before = ' '.join(getattr(item, 'text', '') for item in result[:breaks[0]])
+                after = ' '.join(getattr(item, 'text', '') for item in result[breaks[0] + 1:])
+                self.assertNotIn('Introdução', before)
+                self.assertIn('Introdução', after)
+                self.assertIn('Corpo do artigo.', after)
+                if prefix:
+                    self.assertIn('Keywords de teste.', before)
+
     def test_article_contains_embedded_image_table_and_vector_chart(self):
         from app import render_markdown
         image = BytesIO()
@@ -124,5 +142,4 @@ class JournalPDFTests(unittest.TestCase):
                 load_image('http://localhost/a.png', '/tmp/static', 'https://example.org', time.monotonic() + 10)
         with self.assertRaises(ValueError):
             load_image('/static/%2e%2e/secret', '/tmp/static', 'https://example.org', time.monotonic() + 10)
-
 
