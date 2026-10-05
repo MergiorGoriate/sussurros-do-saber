@@ -9,7 +9,11 @@
   let stateRequest = null, googleRequest = null, googleBusy = false, importRequest = null;
   let authenticated = false, articleIds = new Set(), picture = '';
   const avatars = document.querySelectorAll('[data-reader-avatar]');
-  avatars.forEach(image => image.addEventListener('error', () => {image.hidden = true; image.removeAttribute('src');}));
+  avatars.forEach(image => image.addEventListener('error', () => {
+    image.hidden = true; image.removeAttribute('src');
+    const button = image.closest('.reader-header-login');
+    if (button) {button.classList.remove('reader-has-avatar'); button.querySelector('[data-reader-login-label]').hidden = false;}
+  }));
   const root = document.querySelector('[data-reader-journal]');
   const slug = root?.dataset.readerJournal;
   const save = root?.querySelector('.journal-save-btn');
@@ -47,11 +51,25 @@
       if (authenticated && picture) {if (image.getAttribute('src') !== picture) image.src = picture;}
       else image.removeAttribute('src');
     });
-    document.querySelectorAll('.reader-header-login').forEach(button => {button.querySelector('[data-reader-login-label]').textContent = authenticated ? 'Conta' : 'Entrar';});
+    document.querySelectorAll('.reader-header-login').forEach(button => {
+      const label = button.querySelector('[data-reader-login-label]');
+      label.textContent = authenticated ? 'Conta' : 'Entrar';
+      label.hidden = authenticated && !!picture;
+      button.classList.toggle('reader-has-avatar', authenticated && !!picture);
+      button.setAttribute('aria-label', authenticated ? 'Abrir a minha conta' : 'Entrar');
+      button.querySelector('.reader-account-chevron').hidden = !authenticated;
+    });
   };
   const sessionState = () => {
     if (!stateRequest) stateRequest = api('/conta/sessao').then(state => {
       csrf = state.csrf; authenticated = state.authenticated; picture = state.picture || '';
+      document.querySelectorAll('.reader-header-notifications').forEach(link => {
+        const count = Math.max(0, Number(state.notification_count) || 0);
+        link.hidden = !authenticated;
+        link.setAttribute('aria-label', count ? 'Notificações: ' + count + ' actualizações' : 'Notificações');
+        const badge = link.querySelector('[data-reader-notification-count]');
+        badge.hidden = !count; badge.textContent = count > 99 ? '99+' : String(count);
+      });
       articleIds = new Set((state.saved_articles || []).map(String)); render(); return state;
     }).finally(() => {stateRequest = null;});
     return stateRequest;
