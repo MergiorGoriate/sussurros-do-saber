@@ -32,12 +32,12 @@
       {% endfor %}
     {% else %}
       {% for row in reader_rows %}
-      <li class="py-4"><a href="{{ url_for('journal_detail', slug=row.journal.slug) }}">{{ row.journal|reader_article_title }}</a><p>Actualizado em {{ row.journal.updated_at.strftime('%d/%m/%Y') }}.</p><button type="button" class="primary-btn" data-reader-unfollow="{{ row.journal.slug }}">Desactivar notificações</button></li>
+      <li class="py-4"><a href="{{ url_for('journal_detail', slug=row.journal.slug) }}">{{ row.journal|reader_article_title }}</a>{% if row.followed_at and row.journal.updated_at > row.followed_at %}<p data-reader-notification-status>Nova actualização em {{ row.journal.updated_at.strftime('%d/%m/%Y') }}.</p><button type="button" class="primary-btn" data-reader-mark-read="{{ row.journal.slug }}" data-reader-revision="{{ row.journal.updated_at.isoformat() }}">Marcar como vista</button>{% else %}<p data-reader-notification-status>Sem novas actualizações. Está a acompanhar este artigo.</p>{% endif %}<button type="button" class="primary-btn" data-reader-unfollow="{{ row.journal.slug }}">Desactivar notificações</button></li>
       {% endfor %}
     {% endif %}
-    {% if not reader_rows and not reader_articles|default([]) %}<li data-reader-empty>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</li>{% endif %}
+    {% if not reader_rows and not reader_articles|default([]) %}<li data-reader-empty>{{ 'Ainda não acompanha artigos. Active o sino num artigo de revista para receber actualizações aqui.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</li>{% endif %}
   </ul>
-  <p data-reader-library-empty hidden>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</p>
+  <p data-reader-library-empty hidden>{{ 'Ainda não acompanha artigos. Active o sino num artigo de revista para receber actualizações aqui.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</p>
   {% endif %}
 </section>
 {% endblock %}

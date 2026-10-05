@@ -139,6 +139,30 @@ class ReaderAccountTests(unittest.TestCase):
         self.journal.published = True; self.account.verified = False; db.session.commit()
         self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 0)
 
+    def test_notifications_acknowledge_only_the_seen_revision(self):
+        self.sign_in(); self.update('following')
+        self.assertIn(b'Sem novas', self.client.get('/conta/notificacoes').data)
+        row = ReaderJournal.query.filter_by(owner_id=self.account.id).one()
+        row.followed_at = utcnow() - timedelta(days=2)
+        seen = utcnow() - timedelta(days=1)
+        self.journal.updated_at = seen; db.session.commit()
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 1)
+        self.assertIn(b'data-reader-mark-read', self.client.get('/conta/notificacoes').data)
+        fields = {'csrf_token': 'reader-csrf', 'action': 'read', 'enabled': 'true', 'revision': seen.isoformat()}
+        endpoint = '/conta/revistas/' + self.journal.slug
+        self.journal.updated_at = utcnow(); db.session.commit()
+        self.assertEqual(self.client.post(endpoint, data=fields).status_code, 200)
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 1)
+        fields['revision'] = self.journal.updated_at.isoformat()
+        for _ in range(2):
+            self.assertEqual(self.client.post(endpoint, data=fields).status_code, 200)
+        self.assertTrue(row.following)
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 0)
+        fields['revision'] = (utcnow() + timedelta(days=1)).isoformat()
+        self.assertEqual(self.client.post(endpoint, data=fields).status_code, 400)
+        self.account.verified = False; db.session.commit()
+        self.assertEqual(self.update('following', 'false').status_code, 200)
+
     def test_library_uses_legacy_article_heading(self):
         self.sign_in()
         self.journal.article_title = ''

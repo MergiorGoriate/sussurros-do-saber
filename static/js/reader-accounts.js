@@ -238,6 +238,25 @@
     }));
   });
   // A page restored by browser history may contain account state from before logout.
+  document.querySelectorAll('[data-reader-mark-read]').forEach(button => {
+    button.addEventListener('click', () => withAccount(button, () => async () => {
+      const result = await post('/conta/revistas/' + encodeURIComponent(button.dataset.readerMarkRead), {action: 'read', enabled: true, revision: button.dataset.readerRevision});
+      if (result.unread) {location.reload(); return;}
+      button.closest('li').querySelector('[data-reader-notification-status]').textContent = 'Sem novas actualizações. Está a acompanhar este artigo.';
+      button.remove();
+      await sessionState(); report('Actualização marcada como vista.');
+    }));
+  });
+  const syncNotifications = async () => {
+    if (document.hidden || !authenticated) return;
+    const previous = document.querySelector('[data-reader-notification-count]')?.textContent;
+    try {
+      await refresh();
+      if (location.pathname === '/conta/notificacoes' && previous !== document.querySelector('[data-reader-notification-count]')?.textContent) location.reload();
+    } catch { /* The next visit or foreground refresh will retry. */ }
+  };
+  setInterval(syncNotifications, 60000);
+  document.addEventListener('visibilitychange', () => {if (!document.hidden) syncNotifications();});
   window.addEventListener('pageshow', event => {
     if (!event.persisted) return;
     if (/^\/conta\/(biblioteca|notificacoes)$/.test(location.pathname)) location.reload();
