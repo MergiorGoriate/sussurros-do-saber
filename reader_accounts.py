@@ -235,4 +235,7 @@ def notifications():
         ReaderJournal.owner_id == account.id, ReaderJournal.following.is_(True),
         Journal.published.is_(True)
     ).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
-    return render_template('reader_library.html', reader_rows=rows, reader_account=account, notifications=True)
+    from journal_metadata import journal_authors
+    authors = {row.journal_id: [author['name'] for author in journal_authors(row.journal) if author.get('name')] for row in rows}
+    return render_template('reader_library.html', reader_rows=rows, reader_account=account,
+                           reader_notification_authors=authors, notifications=True)
