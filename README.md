@@ -127,3 +127,15 @@ Submeter é idempotente; só a confirmação atribui código e preserva o snapsh
 Aceitar não publica: **Preparar para publicação** cria um novo rascunho no editor de revistas existente, preservando a revista original. Reaproveita metadados, autores/ORCID/afiliações, declarações e campos científicos opcionais. DOCX importa texto, tabelas e figuras bitmap; TXT importa texto. PDF permanece original privado e necessita revisão/inserção do conteúdo no editor. Figuras sanitizadas do rascunho são privadas até à publicação explícita; os originais nunca se tornam públicos. Confira ordem, legendas, referências, DOI e provas HTML/PDF antes de publicar. Ocultar o artigo retorna o processo à produção e bloqueia novamente o acesso público às figuras.
 
 Para rollback, reverta o código e preserve as novas tabelas para não perder manuscritos/auditoria. Não execute `drop_all` em produção.
+
+
+### Autenticação Google opcional e favoritos únicos
+
+A leitura pública continua aberta. O botão **Entrar** permite autenticar pela conta
+existente ou Google; One Tap pode ser ignorado sem bloquear a página. Configure
+`GOOGLE_CLIENT_ID` no ambiente para activar GIS. Este fluxo não usa client secret
+nem guarda senha ou tokens Google. O `SECRET_KEY` existente protege a sessão.
+Antes de publicar, faça backup e execute `flask --app app migrar-login-google`.
+A migração adiciona apenas `google_identity` e `reader_article`; favoritos das
+revistas e preferências existentes são preservados. `/favoritos` abre a mesma
+biblioteca da conta. Consulte [configuração, migração, segurança e testes](docs/google-login.md).

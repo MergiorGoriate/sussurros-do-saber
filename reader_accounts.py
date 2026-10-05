@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 from admin import validate_csrf, csrf_token
 from extensions import limiter
-from models import db, Journal, utcnow
+from models import db, Journal, Article, utcnow
 from submission_models import Researcher
 from submissions import researcher, email_valid, notify, account_link, DUMMY_PASSWORD_HASH
 
@@ -32,6 +32,13 @@ class ReaderJournal(db.Model):
     journal = db.relationship('Journal')
 
 
+class ReaderArticle(db.Model):
+    owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), primary_key=True)
+    article_id = db.Column(db.Integer, db.ForeignKey('article.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    article = db.relationship('Article')
+
+
 @reader_bp.after_request
 def private_response(response):
     response.headers['Cache-Control'] = 'private, no-store'
@@ -43,7 +50,10 @@ def private_response(response):
 def state():
     account = researcher()
     return jsonify(ok=True, authenticated=bool(account), verified=bool(account and account.verified),
-                   csrf=csrf_token(), name=account.name if account else '')
+                   csrf=csrf_token(), name=account.name if account else '',
+                   google_prompt_suppressed=bool(session.get('google_prompt_suppressed')),
+                   saved_articles=[row.article_id for row in ReaderArticle.query.join(Article).filter(
+                       ReaderArticle.owner_id == account.id, Article.status == 'published').all()] if account else [])
 
 
 @reader_bp.post('/entrar')
@@ -53,8 +63,8 @@ def login():
     email = request.form.get('email', '').strip().lower()[:254]
     password = request.form.get('password', '')[:129]
     account = Researcher.query.filter_by(email=email, active=True).first()
-    valid = check_password_hash(account.password_hash if account else DUMMY_PASSWORD_HASH, password)
-    if not account or not valid:
+    valid = check_password_hash(account.password_hash if account and account.password_hash else DUMMY_PASSWORD_HASH, password)
+    if not account or not account.password_hash or not valid:
         return jsonify(ok=False, message='E-mail ou palavra-passe incorrectos.'), 400
     session.clear()
     session.permanent = True
@@ -86,6 +96,61 @@ def register():
 
 def public_journal(slug):
     return Journal.query.filter_by(slug=slug, published=True).first_or_404()
+
+
+@reader_bp.post('/artigos/<int:ident>')
+@limiter.limit('120 per minute')
+def article_preference(ident):
+    account = researcher()
+    if not account:
+        return jsonify(ok=False, message='Entre na sua conta para continuar.'), 401
+    validate_csrf()
+    if ident > 2147483647:
+        return jsonify(ok=False, message='Artigo inválido.'), 404
+    Article.query.filter_by(id=ident, status='published').first_or_404()
+    enabled = request.form.get('enabled')
+    if enabled not in ('true', 'false'):
+        return jsonify(ok=False, message='Preferência inválida.'), 400
+    row = db.session.get(ReaderArticle, (account.id, ident))
+    if enabled == 'true' and not row:
+        db.session.add(ReaderArticle(owner_id=account.id, article_id=ident))
+    elif enabled == 'false' and row:
+        db.session.delete(row)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(ok=False, message='Tente novamente para guardar a preferência.'), 409
+    return jsonify(ok=True, saved=enabled == 'true')
+
+
+@reader_bp.post('/importar-favoritos')
+@limiter.limit('20 per minute')
+def import_favorites():
+    account = researcher()
+    if not account:
+        return jsonify(ok=False, message='Entre na sua conta para continuar.'), 401
+    validate_csrf()
+    ids = request.form.getlist('article_ids')
+    slugs = request.form.getlist('journal_slugs')
+    if len(ids) + len(slugs) > 100 or any(len(v) > 300 for v in ids + slugs):
+        return jsonify(ok=False, message='Importe até 100 favoritos de cada vez.'), 400
+    valid_ids = {int(v) for v in ids if v.isascii() and v.isdigit() and len(v) <= 10 and int(v) <= 2147483647}
+    for article in Article.query.filter(Article.id.in_(valid_ids), Article.status == 'published').all():
+        if not db.session.get(ReaderArticle, (account.id, article.id)):
+            db.session.add(ReaderArticle(owner_id=account.id, article_id=article.id))
+    for journal in Journal.query.filter(Journal.slug.in_(set(slugs)), Journal.published.is_(True)).all():
+        row = ReaderJournal.query.filter_by(owner_id=account.id, journal_id=journal.id).first()
+        if not row:
+            row = ReaderJournal(owner_id=account.id, journal_id=journal.id)
+            db.session.add(row)
+        row.saved = True
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(ok=False, message='Tente novamente para importar os favoritos.'), 409
+    return jsonify(ok=True)
 
 
 @reader_bp.route('/revistas/<slug>', methods=['GET', 'POST'])
@@ -126,7 +191,11 @@ def library():
         ReaderJournal.owner_id == account.id, ReaderJournal.saved.is_(True),
         Journal.published.is_(True)
     ).order_by(Journal.updated_at.desc()).all() if account else []
-    return render_template('reader_library.html', reader_rows=rows, reader_account=account, notifications=False)
+    articles = ReaderArticle.query.join(Article).filter(
+        ReaderArticle.owner_id == account.id, Article.status == 'published'
+    ).order_by(ReaderArticle.created_at.desc()).all() if account else []
+    return render_template('reader_library.html', reader_rows=rows, reader_articles=articles,
+                           reader_account=account, notifications=False)
 
 
 @reader_bp.get('/notificacoes')

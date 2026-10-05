@@ -88,7 +88,9 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b'<meta name="robots" content="noindex,follow">', filtered.data)
         self.assertEqual(filtered.headers["X-Robots-Tag"], "noindex, follow")
         favorites = self.client.get("/favoritos")
-        self.assertIn(b'<meta name="robots" content="noindex,follow">', favorites.data)
+        self.assertEqual(favorites.status_code, 302)
+        self.assertEqual(favorites.location, '/conta/biblioteca')
+        self.assertIn('noindex', self.client.get(favorites.location).headers['X-Robots-Tag'])
         missing = self.client.get("/artigo/nao-existe")
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(missing.headers["X-Robots-Tag"], "noindex, nofollow")
@@ -1179,14 +1181,17 @@ class PlatformTests(unittest.TestCase):
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
             Article.query.delete()
-            db.session.commit()
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Novos artigos estão a ser preparados".encode(), response.data)
+            try:
+                response = self.client.get("/")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("Novos artigos estão a ser preparados".encode(), response.data)
+            finally:
+                db.session.rollback()
 
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

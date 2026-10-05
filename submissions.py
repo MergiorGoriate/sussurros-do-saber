@@ -153,8 +153,8 @@ def login():
         password = request.form.get('password', '')[:129]
         account = Researcher.query.filter_by(email=email, active=True).first()
         # Fixed cost for unknown users reduces account-enumeration timing differences.
-        valid = check_password_hash(account.password_hash if account else DUMMY_PASSWORD_HASH, password)
-        if account and valid:
+        valid = check_password_hash(account.password_hash if account and account.password_hash else DUMMY_PASSWORD_HASH, password)
+        if account and account.password_hash and valid:
             session.clear()
             session.permanent = True
             session['researcher_id'] = account.id
@@ -168,6 +168,7 @@ def login():
 def logout():
     validate_csrf()
     session.clear()
+    session['google_prompt_suppressed'] = True
     return redirect(url_for('journals'))
 
 
@@ -203,7 +204,7 @@ def forgot_password():
     if request.method == 'POST':
         validate_csrf()
         account = Researcher.query.filter_by(email=request.form.get('email', '').strip().lower()[:254], active=True).first()
-        if account:
+        if account and account.password_hash:
             notify(account.email, 'Recuperar palavra-passe', 'Ligação válida por uma hora:\n' + account_link(account, 'reset'))
             db.session.commit()
         flash('Se existir uma conta, receberá uma ligação de recuperação.', 'success')
@@ -215,6 +216,8 @@ def forgot_password():
 @limiter.limit('10 per hour')
 def reset_password(token):
     account = token_account(token, 'reset')
+    if not account.password_hash:
+        abort(400)
     if request.method == 'POST':
         validate_csrf()
         password = request.form.get('password', '')
@@ -795,3 +798,4 @@ def publication_figure(asset_id):
     if not journal or (not journal.published and not editorial_access()):
         abort(404)
     return send_file(io.BytesIO(asset.payload), mimetype='image/png', download_name='figura.png', max_age=0)
+
