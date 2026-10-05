@@ -28,7 +28,7 @@ async function configuredPage(page, path='/revistas/revista-de-teste-cientifico'
     }
     return route.fulfill({json:{ok:true,saved,following}});
   });
-  await page.route('**'+path,async route=>{
+  await page.route(url=>url.pathname===path,async route=>{
     const response=await route.fetch();
     await route.fulfill({response,body:(await response.text()).replace(/data-client-id=""\s+hidden/, 'data-client-id="browser-test.apps.googleusercontent.com"')});
   });
