@@ -112,11 +112,16 @@
 document.addEventListener('DOMContentLoaded',()=>{
  const mobileToc=document.getElementById('journal-mobile-toc');
  const toc=document.getElementById('journal-toc');
- const closeToc=()=>{mobileToc?.removeAttribute('open');};
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]')){closeToc();mobileToc?.querySelector('summary')?.focus();}});
+ const mobileTocMedia=window.matchMedia('(max-width: 899px)');
+ const syncToc=()=>{if(mobileToc)mobileToc.open=!mobileTocMedia.matches;};
+ syncToc();
+ mobileTocMedia.addEventListener('change',syncToc);
+ const closeToc=()=>{if(mobileTocMedia.matches)mobileToc?.removeAttribute('open');};
+ document.addEventListener('keydown',e=>{if(mobileTocMedia.matches&&mobileToc?.open&&e.key==='Escape'&&!document.querySelector('dialog[open]')){closeToc();mobileToc.querySelector('summary')?.focus();}});
  mobileToc?.addEventListener('click',e=>{if(e.target===mobileToc)closeToc();});
+ mobileToc?.addEventListener('toggle',()=>{if(!mobileTocMedia.matches&&!mobileToc.open)mobileToc.open=true;});
  if(mobileToc&&toc){
-   toc.addEventListener('click',e=>{if(e.target.closest('a')&&window.matchMedia('(max-width: 899px)').matches){mobileToc.removeAttribute('open');}});
+   toc.addEventListener('click',e=>{if(e.target.closest('a'))closeToc();});
  }
  const box=document.getElementById('journal-content-index');
  const root=document.querySelector('#conteudo-revista .article-markdown');
