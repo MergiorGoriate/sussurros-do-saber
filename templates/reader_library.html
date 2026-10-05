@@ -39,7 +39,6 @@
     {% if not reader_rows and not reader_articles|default([]) %}<li data-reader-empty>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</li>{% endif %}
   </ul>
   <p data-reader-library-empty hidden>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</p>
-  <form action="{{ url_for('submissions.logout') }}" method="post" class="mt-6"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="primary-btn">Sair da conta</button></form>
   {% endif %}
 </section>
 {% endblock %}
