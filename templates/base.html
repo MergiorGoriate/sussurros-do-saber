@@ -2,7 +2,6 @@
 <html lang="pt-MZ">
 <head>
 <meta charset="utf-8">
-<meta name="msvalidate.01" content="DAAF54BC6711A0B43659454F1E941B93" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script nonce="{{ csp_nonce }}">
 window.dataLayer=window.dataLayer||[];
@@ -76,7 +75,7 @@ window.dataLayer.push({event:'default_consent'});
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261004-article-title-v28') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
-<link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-v2') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-google-v3') }}">
 {% block head_extra %}{% endblock %}
 </head>
 <body class="bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
@@ -97,6 +96,7 @@ window.dataLayer.push({event:'default_consent'});
 <picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async" fetchpriority="high"></picture>
 </a>
 <div class="flex gap-2">
+<button type="button" data-reader-open class="reader-header-login">Entrar</button>
 <button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
 <button id="searchToggle" class="icon-btn" aria-label="Abrir pesquisa" aria-expanded="false" aria-controls="searchPanel">⌕</button>
 <button id="menuToggle" class="md:hidden icon-btn" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">☰</button>
@@ -202,7 +202,7 @@ window.dataLayer.push({event:'default_consent'});
   </div>
 </section>
 <button id="backToTop" class="back-to-top" type="button" aria-label="Voltar ao topo" title="Voltar ao topo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 13 6-6 6 6"/><path d="M12 7v11"/></svg></button>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261005-fixes-v21') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261005-google-v22') }}" defer></script>
 {% if request.path == '/contacto' %}<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260930-contact') }}" defer></script>{% endif %}
 <script nonce="{{ csp_nonce }}">
 (()=>{let assistantLoaded=false,animationsLoaded=false;
@@ -215,7 +215,7 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 })();
 </script>
 {% include 'reader_dialog.html' %}
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-v2') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-google-v3') }}" defer></script>
 </body>
 </html>
 

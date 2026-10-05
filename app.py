@@ -73,6 +73,9 @@ app.register_blueprint(submissions_bp)
 from reader_accounts import reader_bp
 app.register_blueprint(reader_bp)
 install_submission_cli(app)
+from google_auth import google_bp, install_google_cli
+app.register_blueprint(google_bp)
+install_google_cli(app)
 
 
 @app.get("/diretrizes-para-autores")
@@ -373,7 +376,7 @@ def security_headers(response):
         "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; "
         "object-src 'none'; img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://accounts.google.com/gsi/style; "
         f"script-src 'nonce-{getattr(g, 'csp_nonce', '')}' 'strict-dynamic' 'self' https:; "
         "script-src-attr 'none'; "
         "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com; upgrade-insecure-requests",
@@ -438,6 +441,7 @@ def google_site_verification_token():
 def site_context():
     return {
         "site_url": SITE_URL,
+        "google_login_client_id": __import__("google_auth").client_id(),
         "tailwind_version": TAILWIND_VERSION,
         "csp_nonce": getattr(g, "csp_nonce", ""),
         "google_site_verification": google_site_verification_token(),
@@ -945,7 +949,7 @@ def api_resources():
 
 @app.get("/favoritos")
 def favorites():
-    return render_template("favorites.html")
+    return redirect(url_for("reader.library"), code=302)
 
 @app.get("/api/artigos")
 def api_articles():

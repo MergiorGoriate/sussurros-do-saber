@@ -1,6 +1,9 @@
 <dialog id="reader-dialog" class="reader-dialog" aria-labelledby="reader-title">
 <button type="button" data-reader-close class="reader-close" aria-label="Fechar janela">×</button>
 <h2 id="reader-title">A sua conta no Sussurros do Saber</h2>
+<div id="reader-google" data-client-id="{{ google_login_client_id }}" {% if not google_login_client_id %}hidden{% endif %}><p>Entrar via Google</p><div id="reader-google-button"></div><p id="reader-google-status" role="status" aria-live="polite"></p></div>
+<div id="reader-account-panel" hidden><p id="reader-account-name"></p><a href="/conta/biblioteca">Os meus favoritos</a><form action="{{ url_for('submissions.logout') }}" method="post"><input type="hidden" name="csrf_token"><button type="submit" class="primary-btn">Sair</button></form></div>
+<div id="reader-password-panel">
 <p id="reader-purpose">Entre para guardar artigos e acompanhar actualizações.</p>
 <div class="reader-tabs"><button type="button" data-reader-mode="login" aria-pressed="true">Entrar</button><button type="button" data-reader-mode="register" aria-pressed="false">Criar conta</button></div>
 <form id="reader-auth-form">
@@ -12,6 +15,7 @@
 </form>
 <p id="reader-auth-status" role="status" aria-live="polite"></p>
 <a href="{{ url_for('submissions.forgot_password') }}">Esqueci a palavra-passe</a>
+</div>
 <p><a href="/conta/biblioteca">Os meus favoritos</a> · <a href="/conta/notificacoes">Notificações</a></p>
 </dialog>
 

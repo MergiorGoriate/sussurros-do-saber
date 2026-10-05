@@ -459,6 +459,7 @@ test('blocked browser storage does not break bookmark controls', async ({ page }
   await page.goto('/artigos',{waitUntil:'domcontentloaded'});
   const bookmark=page.locator('.bookmark').first();
   await bookmark.click();
-  await expect(bookmark).toHaveAttribute('title',/O navegador não permite guardar/);
+  await expect(page.locator('#reader-dialog')).toBeVisible();
+  await expect(bookmark).toHaveAttribute('aria-pressed','false');
   expect(errors).toEqual([]);
 });
