@@ -77,7 +77,7 @@ window.dataLayer.push({event:'default_consent'});
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261004-article-title-v28') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
-<link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-audit-v6') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-favorite-cards-v7') }}">
 {% block head_extra %}{% endblock %}
 </head>
 <body class="bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
@@ -217,6 +217,6 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 })();
 </script>
 {% include 'reader_dialog.html' %}
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-audit-v6') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-favorite-cards-v7') }}" defer></script>
 </body>
 </html>

@@ -1,12 +1,45 @@
-{% extends 'base.html' %}{% block robots %}noindex,nofollow{% endblock %}{% block title %}{{ 'Notificações' if notifications else 'Os meus favoritos' }} — Sussurros do Saber{% endblock %}
-{% block content %}<section class="max-w-6xl mx-auto px-4 py-12">
-<h1 class="font-serif text-4xl">{{ 'Notificações de artigos' if notifications else 'Os meus favoritos' }}</h1>
-<p class="mt-4">Os favoritos e o acompanhamento ficam associados à sua conta, disponíveis em qualquer dispositivo. As notificações nesta página mostram actualizações dos artigos que acompanha.</p>
-<nav class="mt-4"><a href="/conta/biblioteca">Favoritos</a> · <a href="/conta/notificacoes">Notificações</a></nav>
-{% if not reader_account %}<p class="mt-6">Entre ou crie uma conta para consultar esta página.</p><button type="button" data-reader-open class="primary-btn mt-4">Entrar / Criar conta</button>
-{% else %}<p class="mt-4">Olá, {{ reader_account.name }}.</p>
-{% if notifications and not reader_account.verified %}<p><a href="{{ url_for('submissions.verify_notice') }}">Confirme o seu e-mail para activar notificações.</a></p>{% endif %}
-<ul class="mt-6" data-reader-library>{% for row in reader_articles|default([]) %}<li class="py-4"><a href="{{ url_for('article', slug=row.article.slug) }}">{{ row.article.title }}</a> <button type="button" class="primary-btn" data-reader-remove-article="{{ row.article_id }}">Remover dos favoritos</button></li>{% endfor %}{% for row in reader_rows %}{% if row.journal.published %}<li class="py-4"><a href="{{ url_for('journal_detail', slug=row.journal.slug) }}">{{ row.journal|reader_article_title }}</a>{% if notifications %}<p>Actualizado em {{ row.journal.updated_at.strftime('%d/%m/%Y') }}.</p><button type="button" class="primary-btn" data-reader-unfollow="{{ row.journal.slug }}">Desactivar notificações</button>{% else %}<button type="button" class="primary-btn" data-reader-remove-journal="{{ row.journal.slug }}">Remover dos favoritos</button>{% endif %}</li>{% endif %}{% else %}{% if not reader_articles|default([]) %}<li data-reader-empty>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</li>{% endif %}{% endfor %}</ul><p data-reader-library-empty hidden>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</p>
-<form action="{{ url_for('submissions.logout') }}" method="post" class="mt-6"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="primary-btn">Sair da conta</button></form>
-{% endif %}</section>{% endblock %}
-
+{% extends 'base.html' %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block title %}{{ 'Notificações' if notifications else 'Os meus favoritos' }} — Sussurros do Saber{% endblock %}
+{% macro favorite_card(link, title, image, category, summary, date, id='', slug='') %}
+<li class="reader-favorite-card">
+  <div class="reader-favorite-cover">
+    <a href="{{ link }}" tabindex="-1" aria-hidden="true"><img src="{{ image|image_variant(640) if image else url_for('static', filename='img/image-fallback.svg') }}" {% if image %}srcset="{{ image|image_srcset([360, 640]) }}" sizes="(max-width: 639px) 100vw, (max-width: 1099px) 50vw, 33vw"{% endif %} width="640" height="360" alt="" loading="lazy" decoding="async"></a>
+    <button type="button" class="reader-favorite-remove" {% if id %}data-reader-remove-article="{{ id }}"{% else %}data-reader-remove-journal="{{ slug }}"{% endif %} aria-label="Remover dos favoritos: {{ title }}" title="Remover dos favoritos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z" fill="currentColor"/></svg></button>
+  </div>
+  <p class="reader-favorite-category">{{ category }}</p>
+  <h2><a href="{{ link }}">{{ title }}</a></h2>
+  {% if summary %}<p class="reader-favorite-summary">{{ summary }}</p>{% endif %}
+  {% if date %}<p class="reader-favorite-date">{{ date }}</p>{% endif %}
+</li>
+{% endmacro %}
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 py-12 reader-library-page">
+  <h1 class="font-serif text-4xl">{{ 'Notificações de artigos' if notifications else 'Os meus favoritos' }}</h1>
+  <p class="reader-library-intro">{{ 'Actualizações dos artigos que acompanha.' if notifications else 'Para ler mais tarde no computador, tablet ou telemóvel. Os artigos ficam guardados na sua conta.' }}</p>
+  <nav class="mt-4" aria-label="A sua biblioteca"><a href="/conta/biblioteca">Favoritos</a> · <a href="/conta/notificacoes">Notificações</a></nav>
+  {% if not reader_account %}
+  <p class="mt-6">Entre ou crie uma conta para consultar esta página.</p>
+  <button type="button" data-reader-open class="primary-btn mt-4">Entrar / Criar conta</button>
+  {% else %}
+  {% if notifications and not reader_account.verified %}<p><a href="{{ url_for('submissions.verify_notice') }}">Confirme o seu e-mail para activar notificações.</a></p>{% endif %}
+  <ul class="{{ 'mt-6' if notifications else 'reader-favorites-grid' }}" data-reader-library>
+    {% if not notifications %}
+      {% for row in reader_articles|default([]) %}
+        {{ favorite_card(url_for('article', slug=row.article.slug), row.article.title, row.article.image, row.article.category, row.article.summary, row.article.date, id=row.article_id) }}
+      {% endfor %}
+      {% for row in reader_rows %}
+        {{ favorite_card(url_for('journal_detail', slug=row.journal.slug), row.journal|reader_article_title, row.journal.cover_image, row.journal.field, row.journal.description, row.journal.updated_at.strftime('%d/%m/%Y'), slug=row.journal.slug) }}
+      {% endfor %}
+    {% else %}
+      {% for row in reader_rows %}
+      <li class="py-4"><a href="{{ url_for('journal_detail', slug=row.journal.slug) }}">{{ row.journal|reader_article_title }}</a><p>Actualizado em {{ row.journal.updated_at.strftime('%d/%m/%Y') }}.</p><button type="button" class="primary-btn" data-reader-unfollow="{{ row.journal.slug }}">Desactivar notificações</button></li>
+      {% endfor %}
+    {% endif %}
+    {% if not reader_rows and not reader_articles|default([]) %}<li data-reader-empty>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</li>{% endif %}
+  </ul>
+  <p data-reader-library-empty hidden>{{ 'Ainda não há novas actualizações.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</p>
+  <form action="{{ url_for('submissions.logout') }}" method="post" class="mt-6"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="primary-btn">Sair da conta</button></form>
+  {% endif %}
+</section>
+{% endblock %}

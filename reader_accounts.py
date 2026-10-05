@@ -195,7 +195,9 @@ def library():
         ReaderJournal.owner_id == account.id, ReaderJournal.saved.is_(True),
         Journal.published.is_(True)
     ).order_by(Journal.updated_at.desc()).all() if account else []
-    articles = ReaderArticle.query.options(joinedload(ReaderArticle.article)).join(Article).filter(
+    articles = ReaderArticle.query.options(
+        joinedload(ReaderArticle.article).joinedload(Article.category_rel)
+    ).join(Article).filter(
         ReaderArticle.owner_id == account.id, Article.status == 'published'
     ).order_by(ReaderArticle.created_at.desc()).all() if account else []
     return render_template('reader_library.html', reader_rows=rows, reader_articles=articles,
