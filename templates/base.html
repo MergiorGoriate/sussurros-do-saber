@@ -15,7 +15,19 @@ gtag('consent','default',{
   wait_for_update:500
 });
 </script>
-<script async nonce="{{ csp_nonce }}" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7920973591685812" crossorigin="anonymous"></script>
+<script nonce="{{ csp_nonce }}">
+// Give the cover and essential styles the first network/CPU budget.
+window.addEventListener('load',()=>{
+  const loadAds=()=>{
+    const script=document.createElement('script');
+    script.async=true; script.crossOrigin='anonymous';
+    script.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7920973591685812';
+    document.head.appendChild(script);
+  };
+  if('requestIdleCallback' in window)requestIdleCallback(loadAds,{timeout:4000});
+  else setTimeout(loadAds,1500);
+},{once:true});
+</script>
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
@@ -65,11 +77,20 @@ window.dataLayer.push({event:'default_consent'});
 <meta name="twitter:image" content="{% block twitter_image %}{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}{% endblock %}">
 <meta name="twitter:image:alt" content="{% block twitter_image_alt %}Logotipo do Sussurros do Saber{% endblock %}">
 <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
-<link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css',v=tailwind_version) }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script nonce="{{ csp_nonce }}">
+// Attach the listener before insertion: compatible with nonce-only CSP.
+(()=>{
+  const fonts=document.createElement('link');
+  fonts.rel='stylesheet'; fonts.media='print';
+  fonts.href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=optional';
+  fonts.addEventListener('load',()=>{fonts.media='all'},{once:true});
+  document.head.appendChild(fonts);
+})();
+</script>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=optional"></noscript>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
