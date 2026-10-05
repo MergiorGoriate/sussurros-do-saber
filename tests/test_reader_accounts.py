@@ -2,9 +2,9 @@ import secrets
 import unittest
 from datetime import timedelta
 from app import app, seed_database
-from models import db, Journal, utcnow
+from models import db, Journal, Article, utcnow
 from submission_models import Researcher
-from reader_accounts import ReaderJournal
+from reader_accounts import ReaderJournal, ReaderArticle
 from werkzeug.security import generate_password_hash
 
 
@@ -107,6 +107,37 @@ class ReaderAccountTests(unittest.TestCase):
         self.journal.published = False
         db.session.commit()
         self.assertEqual(self.update().status_code,404)
+
+    def test_saved_article_is_listed_once_and_removed_across_sessions(self):
+        self.sign_in()
+        article = Article.public_query().first()
+        endpoint = '/conta/artigos/' + str(article.id)
+        fields = {'csrf_token': 'reader-csrf', 'enabled': 'true'}
+        for _ in range(2):
+            self.assertEqual(self.client.post(endpoint, data=fields).status_code, 200)
+        self.assertEqual(ReaderArticle.query.filter_by(owner_id=self.account.id, article_id=article.id).count(), 1)
+        second = app.test_client(); self.sign_in(second)
+        html = second.get('/conta/biblioteca').data
+        self.assertIn(article.title.encode(), html)
+        self.assertIn(('data-reader-remove-article="' + str(article.id) + '"').encode(), html)
+        self.assertIn(article.id, second.get('/conta/sessao').json['saved_articles'])
+        fields['enabled'] = 'false'
+        self.assertEqual(second.post(endpoint, data=fields).status_code, 200)
+        self.assertNotIn(article.title.encode(), self.client.get('/conta/biblioteca').data)
+        self.assertNotIn(article.id, self.client.get('/conta/sessao').json['saved_articles'])
+
+    def test_notification_counter_excludes_private_content_and_other_accounts(self):
+        self.sign_in(); self.update('following')
+        row = ReaderJournal.query.filter_by(owner_id=self.account.id).one()
+        row.followed_at = utcnow() - timedelta(days=1)
+        self.journal.updated_at = utcnow(); db.session.commit()
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 1)
+        self.assertEqual(app.test_client().get('/conta/sessao').json['notification_count'], 0)
+        self.journal.published = False; db.session.commit()
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 0)
+        self.assertNotIn(self.journal.article_title.encode(), self.client.get('/conta/notificacoes').data)
+        self.journal.published = True; self.account.verified = False; db.session.commit()
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 0)
 
     def test_library_uses_legacy_article_heading(self):
         self.sign_in()

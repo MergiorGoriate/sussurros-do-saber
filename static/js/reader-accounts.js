@@ -19,6 +19,11 @@
   const save = root?.querySelector('.journal-save-btn');
   const alert = root?.querySelector('.journal-alert-btn');
   const message = document.getElementById('journal-action-status');
+  const feedback = document.getElementById('reader-action-feedback');
+  const report = text => {
+    if (message) message.textContent = text;
+    if (feedback) {feedback.textContent = text; feedback.hidden = !text;}
+  };
   let values = {saved: false, following: false};
   const api = async (path, data) => {
     const response = await fetch(path, {method: data ? 'POST' : 'GET', body: data,
@@ -101,6 +106,7 @@
       }
       // Remove the old browser copy only after the server saved every batch.
       if (entries.length) try {localStorage.removeItem('savedArticles'); localStorage.removeItem('savedJournalArticles');} catch {}
+      return entries.length;
     })().finally(() => {importRequest = null;});
     return importRequest;
   };
@@ -187,11 +193,13 @@
     button.disabled = true;
     try {const state = await refresh(); const apply = action(state.authenticated);
       const complete = async () => {
+        button.disabled = true;
         try {await apply();}
-        catch (error) {if (message) message.textContent = error.message; button.title = error.message;}
+        catch (error) {report(error.message); button.title = error.message;}
+        finally {button.disabled = false;}
       };
       if (!state.authenticated) await open(button, complete); else await complete();}
-    catch (error) {if (message) message.textContent = error.message; button.title = error.message;}
+    catch (error) {report(error.message); button.title = error.message;}
     finally {button.disabled = false;}
   };
   document.querySelectorAll('.bookmark').forEach(button => button.addEventListener('click', () => withAccount(button, signedIn => {
@@ -200,18 +208,52 @@
     const result = await post('/conta/artigos/' + encodeURIComponent(id), {enabled});
     if (result.saved) articleIds.add(id); else articleIds.delete(id); render();
     button.title = result.saved ? 'Artigo guardado na sua conta.' : 'Artigo removido dos favoritos.';
+    report(button.title);
     };
   })));
   for (const [button, key] of [[save, 'saved'], [alert, 'following']]) button?.addEventListener('click', () => withAccount(button, signedIn => {
     const enabled = signedIn ? !values[key] : true;
     return async () => {
     values = await post('/conta/revistas/' + encodeURIComponent(slug), {action: key, enabled}); render();
-    message.textContent = key === 'saved' ? (values.saved ? 'Artigo guardado na sua conta. Consulte Os meus favoritos.' : 'Artigo removido dos favoritos.')
-      : (values.following ? 'Notificações activadas. Consulte a página Notificações para ver actualizações deste artigo.' : 'Notificações desactivadas.');
+    report(key === 'saved' ? (values.saved ? 'Artigo guardado na sua conta. Consulte Os meus favoritos.' : 'Artigo removido dos favoritos.')
+      : (values.following ? 'Notificações activadas. Consulte a página Notificações para ver actualizações deste artigo.' : 'Notificações desactivadas.'));
+    if (key === 'following') await sessionState();
     };
   }));
+  document.querySelectorAll('[data-reader-remove-article], [data-reader-remove-journal], [data-reader-unfollow]').forEach(button => {
+    button.addEventListener('click', () => withAccount(button, () => async () => {
+      const article = button.dataset.readerRemoveArticle;
+      const journal = button.dataset.readerRemoveJournal || button.dataset.readerUnfollow;
+      if (article) {
+        await post('/conta/artigos/' + encodeURIComponent(article), {enabled: false});
+        articleIds.delete(String(article));
+      } else await post('/conta/revistas/' + encodeURIComponent(journal), {
+        action: button.hasAttribute('data-reader-unfollow') ? 'following' : 'saved', enabled: false
+      });
+      button.closest('li').remove();
+      const empty = document.querySelector('[data-reader-library-empty]');
+      if (empty) empty.hidden = !!document.querySelector('[data-reader-library] li');
+      report(article || button.hasAttribute('data-reader-remove-journal') ? 'Artigo removido dos favoritos.' : 'Notificações desactivadas.');
+      await sessionState();
+    }));
+  });
+  // A page restored by browser history may contain account state from before logout.
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted) return;
+    if (/^\/conta\/(biblioteca|notificacoes)$/.test(location.pathname)) location.reload();
+    else refresh().catch(() => {});
+  });
   refresh().then(async state => {
-    if (state.authenticated) {try {await importLegacy(); await refresh();} catch {} return;}
+    if (state.authenticated) {
+      try {
+        const imported = await importLegacy();
+        if (imported) {
+          if (location.pathname === '/conta/biblioteca' && !readLegacy('savedArticles').length && !readLegacy('savedJournalArticles').length) location.reload();
+          else await refresh();
+        }
+      } catch {report('Os favoritos antigos serão importados na próxima visita.');}
+      return;
+    }
     if (!googleArea?.dataset.clientId || state.google_prompt_suppressed || /^\/(admin|submissoes|conta)(\/|$)/.test(location.pathname)) return;
     // At most one automatic attempt per tab. Closing/ignoring never opens our modal.
     let attempted = false; try {attempted = sessionStorage.getItem('googleOneTapAttempted') === '1';} catch {attempted = true;}
