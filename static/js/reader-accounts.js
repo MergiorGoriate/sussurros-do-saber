@@ -7,7 +7,9 @@
   const googleStatus = document.getElementById('reader-google-status');
   let mode = 'login', csrf = '', pending = null, opener = null;
   let stateRequest = null, googleRequest = null, googleBusy = false, importRequest = null;
-  let authenticated = false, articleIds = new Set();
+  let authenticated = false, articleIds = new Set(), picture = '';
+  const avatars = document.querySelectorAll('[data-reader-avatar]');
+  avatars.forEach(image => image.addEventListener('error', () => {image.hidden = true; image.removeAttribute('src');}));
   const root = document.querySelector('[data-reader-journal]');
   const slug = root?.dataset.readerJournal;
   const save = root?.querySelector('.journal-save-btn');
@@ -40,11 +42,16 @@
       const image = button?.querySelector('i');
       if (image) image.className = (values[key] ? 'fa-solid' : 'fa-regular') + ' fa-' + icon;
     }
-    document.querySelectorAll('.reader-header-login').forEach(button => {button.textContent = authenticated ? 'Conta' : 'Entrar';});
+    avatars.forEach(image => {
+      image.hidden = !authenticated || !picture;
+      if (authenticated && picture) {if (image.getAttribute('src') !== picture) image.src = picture;}
+      else image.removeAttribute('src');
+    });
+    document.querySelectorAll('.reader-header-login').forEach(button => {button.querySelector('[data-reader-login-label]').textContent = authenticated ? 'Conta' : 'Entrar';});
   };
   const sessionState = () => {
     if (!stateRequest) stateRequest = api('/conta/sessao').then(state => {
-      csrf = state.csrf; authenticated = state.authenticated;
+      csrf = state.csrf; authenticated = state.authenticated; picture = state.picture || '';
       articleIds = new Set((state.saved_articles || []).map(String)); render(); return state;
     }).finally(() => {stateRequest = null;});
     return stateRequest;

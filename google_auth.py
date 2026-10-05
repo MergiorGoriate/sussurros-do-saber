@@ -4,6 +4,7 @@ import re
 import secrets
 import time
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 import click
 import requests
@@ -33,6 +34,21 @@ class GoogleIdentity(db.Model):
 def client_id():
     value = current_app.config.get('GOOGLE_CLIENT_ID', os.getenv('GOOGLE_CLIENT_ID', '')).strip()
     return value if re.fullmatch(r'[A-Za-z0-9_-]+\.apps\.googleusercontent\.com', value) else ''
+
+
+def profile_picture(value):
+    """Only HTTPS Google-hosted images from a verified identity are accepted."""
+    if not isinstance(value, str) or len(value) > 2048:
+        return ''
+    try:
+        url = urlsplit(value)
+        host = (url.hostname or '').lower()
+        if (url.scheme == 'https' and host.endswith('.googleusercontent.com')
+                and not url.username and not url.password and url.port in (None, 443)):
+            return value
+    except ValueError:
+        pass
+    return ''
 
 
 @lru_cache(maxsize=1)
@@ -131,6 +147,9 @@ def login():
     session.clear()
     session.permanent = True
     session['researcher_id'], session['researcher_nonce'] = account.id, account.token_nonce
+    picture = profile_picture(claims.get('picture'))
+    if picture:
+        session['google_picture'] = picture
     return jsonify(ok=True, verified=account.verified, csrf=csrf_token())
 
 

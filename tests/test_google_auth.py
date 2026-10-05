@@ -120,6 +120,25 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIsNone(Researcher.query.filter_by(email=self.email).first())
 
+    def test_verified_google_photo_is_available_only_in_authenticated_session(self):
+        photo = 'https://lh3.googleusercontent.com/a/example=s96-c'
+        self.challenge()
+        self.assertEqual(self.signed_login(picture=photo).status_code, 200)
+        self.assertEqual(self.client.get('/conta/sessao').json['picture'], photo)
+        with self.client.session_transaction() as state:
+            state['researcher_nonce'] = 'invalid'
+        self.assertEqual(self.client.get('/conta/sessao').json['picture'], '')
+
+    def test_profile_photo_rejects_untrusted_urls(self):
+        from google_auth import profile_picture
+        for url in ['javascript:alert(1)', 'http://lh3.googleusercontent.com/a',
+                    'https://googleusercontent.com.evil.invalid/a',
+                    'https://user@lh3.googleusercontent.com/a', 'https://lh3.googleusercontent.com:81/a', None]:
+            self.assertEqual(profile_picture(url), '')
+        self.challenge()
+        self.assertEqual(self.signed_login(picture='https://evil.invalid/avatar.png').status_code, 200)
+        self.assertEqual(self.client.get('/conta/sessao').json['picture'], '')
+
     def test_csrf_and_missing_expired_challenge(self):
         self.challenge()
         self.assertEqual(self.client.post('/conta/google/entrar', data={'credential': 'token'}).status_code, 400)

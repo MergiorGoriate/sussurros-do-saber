@@ -49,8 +49,10 @@ def private_response(response):
 @reader_bp.get('/sessao')
 def state():
     account = researcher()
+    from google_auth import profile_picture
     return jsonify(ok=True, authenticated=bool(account), verified=bool(account and account.verified),
                    csrf=csrf_token(), name=account.name if account else '',
+                   picture=profile_picture(session.get('google_picture')) if account else '',
                    google_prompt_suppressed=bool(session.get('google_prompt_suppressed')),
                    saved_articles=[row.article_id for row in ReaderArticle.query.join(Article).filter(
                        ReaderArticle.owner_id == account.id, Article.status == 'published').all()] if account else [])
