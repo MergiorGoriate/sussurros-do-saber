@@ -97,7 +97,7 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/" class="brand-link" aria-label="Sussurros do Saber — página inicial">
 <picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async" fetchpriority="high"></picture>
 </a>
-<div class="flex gap-2">
+<div class="flex gap-2 reader-header-controls">
 <a href="{{ url_for('reader.notifications') }}" class="reader-header-notifications" aria-label="Notificações" hidden><i class="fa-regular fa-bell" aria-hidden="true"></i><span data-reader-notification-count class="reader-notification-count" aria-hidden="true" hidden></span></a>
 <button type="button" data-reader-open class="reader-header-login" aria-label="Entrar" aria-haspopup="dialog" aria-controls="reader-dialog"><img data-reader-avatar class="reader-avatar" alt="" referrerpolicy="no-referrer" hidden><span data-reader-login-label>Entrar</span><i class="fa-solid fa-chevron-down reader-account-chevron" aria-hidden="true" hidden></i></button>
 <button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
@@ -221,4 +221,3 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-account-v5') }}" defer></script>
 </body>
 </html>
-

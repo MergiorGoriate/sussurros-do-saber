@@ -89,9 +89,11 @@ test('Google unavailable does not block reading or existing login',async({page})
 });
 
 test('profile controls open account and keep a usable fallback when the image fails',async({page})=>{
+  await page.setViewportSize({width:320,height:800});
   await configuredPage(page);
   await page.locator('.reader-header-login').click();
   await page.locator('#reader-google-button button').click();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
   await page.locator('.reader-header-login').click();
   await expect(page.locator('#reader-account-panel')).toBeVisible();
   await page.locator('[data-reader-close]').click();
