@@ -49,8 +49,11 @@ def private_response(response):
 @reader_bp.get('/sessao')
 def state():
     account = researcher()
+    from google_auth import profile_picture
     return jsonify(ok=True, authenticated=bool(account), verified=bool(account and account.verified),
                    csrf=csrf_token(), name=account.name if account else '',
+                   picture=profile_picture(session.get('google_picture')) if account else '',
+                   notification_count=notification_query(account).count() if account and account.verified else 0,
                    google_prompt_suppressed=bool(session.get('google_prompt_suppressed')),
                    saved_articles=[row.article_id for row in ReaderArticle.query.join(Article).filter(
                        ReaderArticle.owner_id == account.id, Article.status == 'published').all()] if account else [])
@@ -198,11 +201,15 @@ def library():
                            reader_account=account, notifications=False)
 
 
+def notification_query(account):
+    return ReaderJournal.query.join(Journal).filter(
+        ReaderJournal.owner_id == account.id, ReaderJournal.following.is_(True),
+        Journal.published.is_(True), Journal.updated_at > ReaderJournal.followed_at
+    )
+
+
 @reader_bp.get('/notificacoes')
 def notifications():
     account = researcher()
-    rows = ReaderJournal.query.join(Journal).filter(
-        ReaderJournal.owner_id == account.id, ReaderJournal.following.is_(True),
-        Journal.published.is_(True), Journal.updated_at > ReaderJournal.followed_at
-    ).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
+    rows = notification_query(account).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
     return render_template('reader_library.html', reader_rows=rows, reader_account=account, notifications=True)

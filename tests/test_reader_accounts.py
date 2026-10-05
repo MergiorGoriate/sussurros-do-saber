@@ -85,13 +85,16 @@ class ReaderAccountTests(unittest.TestCase):
         db.session.commit()
         response = self.client.get('/conta/notificacoes')
         self.assertIn(self.journal.article_title.encode(),response.data)
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 1)
         self.assertIn('no-store',response.headers['Cache-Control'])
         self.update('following','false')
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'], 0)
         self.assertNotIn(self.journal.article_title.encode(),self.client.get('/conta/notificacoes').data)
 
     def test_login_rotates_csrf_and_registration_validation(self):
         state = self.client.get('/conta/sessao').json
         self.assertFalse(state['authenticated'])
+        self.assertEqual(state['notification_count'], 0)
         response = self.client.post('/conta/entrar', data={'csrf_token':state['csrf'],
             'email':self.account.email,'password':'secure-reader-password'})
         self.assertTrue(response.json['ok'])
