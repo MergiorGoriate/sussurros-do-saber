@@ -404,12 +404,24 @@ def security_headers(response):
 
     compressible = {
         "text/html", "text/css", "text/plain", "text/xml",
-        "application/json", "application/javascript", "application/xml",
+        "application/json", "application/javascript", "text/javascript", "application/xml",
     }
-    accepts_gzip = "gzip" in request.headers.get("Accept-Encoding", "").lower()
+    accepts_gzip = request.accept_encodings["gzip"] > 0
+    eligible_for_compression = (
+        request.method == "GET" and response.status_code == 200
+        and not request.headers.get("Range")
+        and response.mimetype in compressible
+        and not response.headers.get("Content-Encoding")
+    )
+    if eligible_for_compression:
+        response.vary.add("Accept-Encoding")
+        # send_file uses direct passthrough; only materialize small text assets.
+        if (accepts_gzip and response.direct_passthrough and request.endpoint == "static"
+                and response.content_length is not None and response.content_length <= 1024 * 1024):
+            response.direct_passthrough = False
     if (
         accepts_gzip
-        and response.status_code == 200
+        and eligible_for_compression
         and not response.direct_passthrough
         and not response.headers.get("Content-Encoding")
         and response.mimetype in compressible
@@ -419,6 +431,9 @@ def security_headers(response):
             response.set_data(gzip.compress(payload, compresslevel=5))
             response.headers["Content-Encoding"] = "gzip"
             response.headers["Content-Length"] = len(response.get_data())
+            etag, _ = response.get_etag()
+            if etag:
+                response.set_etag(etag + "-gzip", weak=True)
             response.vary.add("Accept-Encoding")
     return response
 
@@ -1444,7 +1459,5 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
-
-
 
 

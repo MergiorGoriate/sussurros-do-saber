@@ -160,7 +160,7 @@ window.sdsTrack=pushAnalyticsEvent;
 
 // Mantém cartões e artigos legíveis quando uma origem externa remove ou bloqueia a imagem.
 const applyImageFallback = (image) => {
-  if (!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied === 'true') return;
+  if (!(image instanceof HTMLImageElement) || image.hasAttribute('data-reader-avatar') || image.dataset.fallbackApplied === 'true') return;
   image.dataset.fallbackApplied = 'true';
   image.removeAttribute('srcset');
   image.removeAttribute('sizes');
@@ -181,5 +181,4 @@ document.querySelectorAll('img').forEach((image) => {
 document.addEventListener('click', (event) => {
   if (event.target.closest('[data-reload-page]')) window.location.reload();
 });
-
 

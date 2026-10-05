@@ -321,6 +321,30 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("max-age=31536000", response.headers.get("Cache-Control", ""))
         self.assertIn("immutable", response.headers.get("Cache-Control", ""))
 
+    def test_static_gzip_respects_negotiation_ranges_and_cache(self):
+        import gzip
+        path = '/static/css/style.css'
+        plain = self.client.get(path)
+        encoded = self.client.get(path, headers={'Accept-Encoding': 'gzip'})
+        self.assertEqual(encoded.headers.get('Content-Encoding'), 'gzip')
+        self.assertEqual(gzip.decompress(encoded.data), plain.data)
+        self.assertLess(len(encoded.data), len(plain.data) // 2)
+        self.assertIn('Accept-Encoding', plain.headers['Vary'])
+        self.assertIn('Accept-Encoding', encoded.headers['Vary'])
+        self.assertNotEqual(plain.headers.get('ETag'), encoded.headers.get('ETag'))
+        refused = self.client.get(path, headers={'Accept-Encoding': 'gzip;q=0'})
+        self.assertNotIn('Content-Encoding', refused.headers)
+        partial = self.client.get(path, headers={'Accept-Encoding': 'gzip', 'Range': 'bytes=0-99'})
+        self.assertEqual(partial.status_code, 206)
+        self.assertNotIn('Content-Encoding', partial.headers)
+        self.assertEqual(partial.data, plain.data[:100])
+        for response in (plain, encoded, refused, partial):
+            response.close()
+        script = self.client.get('/static/js/reader-accounts.js', headers={'Accept-Encoding': 'gzip'})
+        self.assertEqual(script.headers.get('Content-Encoding'), 'gzip')
+        self.assertIn(b'const dialog', gzip.decompress(script.data))
+        script.close()
+
     def test_articles_are_paginated(self):
         response = self.client.get("/artigos?page=1")
         self.assertEqual(response.status_code, 200)
@@ -1191,7 +1215,6 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
 
 
 

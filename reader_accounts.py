@@ -2,6 +2,7 @@
 import secrets
 from flask import Blueprint, jsonify, request, session, render_template, url_for
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
 from admin import validate_csrf, csrf_token
 from extensions import limiter
@@ -190,11 +191,11 @@ def preference(slug):
 @reader_bp.get('/biblioteca')
 def library():
     account = researcher()
-    rows = ReaderJournal.query.join(Journal).filter(
+    rows = ReaderJournal.query.options(joinedload(ReaderJournal.journal)).join(Journal).filter(
         ReaderJournal.owner_id == account.id, ReaderJournal.saved.is_(True),
         Journal.published.is_(True)
     ).order_by(Journal.updated_at.desc()).all() if account else []
-    articles = ReaderArticle.query.join(Article).filter(
+    articles = ReaderArticle.query.options(joinedload(ReaderArticle.article)).join(Article).filter(
         ReaderArticle.owner_id == account.id, Article.status == 'published'
     ).order_by(ReaderArticle.created_at.desc()).all() if account else []
     return render_template('reader_library.html', reader_rows=rows, reader_articles=articles,
@@ -211,5 +212,5 @@ def notification_query(account):
 @reader_bp.get('/notificacoes')
 def notifications():
     account = researcher()
-    rows = notification_query(account).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
+    rows = notification_query(account).options(joinedload(ReaderJournal.journal)).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
     return render_template('reader_library.html', reader_rows=rows, reader_account=account, notifications=True)
