@@ -184,8 +184,10 @@ def preference(slug):
             if revision.tzinfo is not None or revision > journal.updated_at:
                 return jsonify(ok=False, message='Actualização inválida.'), 400
             # Acknowledge the revision shown to the reader, never a later update.
-            if not row.followed_at or revision > row.followed_at:
-                row.followed_at = revision
+            ReaderJournal.query.filter(
+                ReaderJournal.id == row.id,
+                db.or_(ReaderJournal.followed_at.is_(None), ReaderJournal.followed_at < revision)
+            ).update({'followed_at': revision}, synchronize_session='fetch')
             db.session.commit()
             return jsonify(ok=True, unread=journal.updated_at > row.followed_at)
         if not row:

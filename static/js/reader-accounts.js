@@ -243,7 +243,7 @@
       const result = await post('/conta/revistas/' + encodeURIComponent(button.dataset.readerMarkRead), {action: 'read', enabled: true, revision: button.dataset.readerRevision});
       if (result.unread) {location.reload(); return;}
       button.closest('li').querySelector('[data-reader-notification-status]').textContent = 'Sem novas actualizações. Está a acompanhar este artigo.';
-      button.hidden = true;
+      button.remove();
       await sessionState(); report('Actualização marcada como vista.');
     }));
   });
