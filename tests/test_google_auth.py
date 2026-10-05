@@ -103,6 +103,23 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertIsNone(Researcher.query.filter_by(email=self.email).first())
 
+    def test_invalid_signature_and_consumed_challenge(self):
+        self.challenge()
+        token = jwt.encode(self.signer, self.claims()).decode()
+        parts = token.split('.')
+        parts[2] = ('A' if parts[2][0] != 'A' else 'B') + parts[2][1:]
+        class Certificates:
+            status = 200
+            data = json.dumps({'fixture-key': self.public_key.decode()}).encode()
+        with patch('google_auth.google_transport', return_value=lambda *a, **k: Certificates()):
+            response = self.client.post('/conta/google/entrar', data={
+                'csrf_token': self.csrf, 'credential': '.'.join(parts)})
+        self.assertEqual(response.status_code, 401)
+        response = self.client.post('/conta/google/entrar', data={
+            'csrf_token': self.csrf, 'credential': token})
+        self.assertEqual(response.status_code, 400)
+        self.assertIsNone(Researcher.query.filter_by(email=self.email).first())
+
     def test_csrf_and_missing_expired_challenge(self):
         self.challenge()
         self.assertEqual(self.client.post('/conta/google/entrar', data={'credential': 'token'}).status_code, 400)

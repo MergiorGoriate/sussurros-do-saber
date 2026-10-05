@@ -1181,10 +1181,12 @@ class PlatformTests(unittest.TestCase):
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
             Article.query.delete()
-            db.session.commit()
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Novos artigos estão a ser preparados".encode(), response.data)
+            try:
+                response = self.client.get("/")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("Novos artigos estão a ser preparados".encode(), response.data)
+            finally:
+                db.session.rollback()
 
 
 if __name__ == "__main__":
