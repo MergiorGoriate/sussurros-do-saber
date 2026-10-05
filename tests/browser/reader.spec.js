@@ -47,6 +47,11 @@ test('following an article produces a real notification and disabling it clears 
   await expect(page.locator('[data-reader-notification-count]')).toHaveText('1');
   await page.locator('.reader-header-notifications').click();
   await expect(page.locator('[data-reader-library]')).toContainText(user.journal_title);
+  await page.locator('[data-reader-mark-read]').click();
+  await expect(page.locator('[data-reader-notification-count]')).toBeHidden();
+  await expect(page.locator('[data-reader-notification-status]')).toContainText('Sem novas actualizações');
+  await page.reload();
+  await expect(page.locator('[data-reader-library]')).toContainText(user.journal_title);
   await page.locator('[data-reader-unfollow]').click();
   await expect(page.locator('[data-reader-library]')).not.toContainText(user.journal_title);
   await expect(page.locator('[data-reader-notification-count]')).toBeHidden();

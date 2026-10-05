@@ -1,5 +1,6 @@
 """Account-backed reading preferences; reuses existing researcher identities."""
 import secrets
+from datetime import datetime
 from flask import Blueprint, jsonify, request, session, render_template, url_for
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
@@ -168,11 +169,25 @@ def preference(slug):
     if request.method == 'POST':
         validate_csrf()
         action, enabled = request.form.get('action'), request.form.get('enabled')
-        if action not in ('saved', 'following') or enabled not in ('true', 'false'):
+        if action not in ('saved', 'following', 'read') or enabled not in ('true', 'false'):
             return jsonify(ok=False, message='Preferência inválida.'), 400
-        if action == 'following' and not account.verified:
+        if action == 'following' and enabled == 'true' and not account.verified:
             return jsonify(ok=False, message='Confirme o seu e-mail antes de activar notificações.',
                            verify_url=url_for('submissions.verify_notice')), 403
+        if action == 'read':
+            if enabled != 'true' or not row or not row.following:
+                return jsonify(ok=False, message='Este artigo não está a ser acompanhado.'), 400
+            try:
+                revision = datetime.fromisoformat(request.form.get('revision', '')[:40])
+            except ValueError:
+                return jsonify(ok=False, message='Actualização inválida.'), 400
+            if revision.tzinfo is not None or revision > journal.updated_at:
+                return jsonify(ok=False, message='Actualização inválida.'), 400
+            # Acknowledge the revision shown to the reader, never a later update.
+            if not row.followed_at or revision > row.followed_at:
+                row.followed_at = revision
+            db.session.commit()
+            return jsonify(ok=True, unread=journal.updated_at > row.followed_at)
         if not row:
             row = ReaderJournal(owner_id=account.id, journal_id=journal.id)
             db.session.add(row)
@@ -214,5 +229,8 @@ def notification_query(account):
 @reader_bp.get('/notificacoes')
 def notifications():
     account = researcher()
-    rows = notification_query(account).options(joinedload(ReaderJournal.journal)).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
+    rows = ReaderJournal.query.options(joinedload(ReaderJournal.journal)).join(Journal).filter(
+        ReaderJournal.owner_id == account.id, ReaderJournal.following.is_(True),
+        Journal.published.is_(True)
+    ).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
     return render_template('reader_library.html', reader_rows=rows, reader_account=account, notifications=True)
