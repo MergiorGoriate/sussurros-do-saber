@@ -160,7 +160,12 @@
   });
   const withAccount = async (button, action) => {
     button.disabled = true;
-    try {const state = await refresh(); const complete = action(state.authenticated); if (!state.authenticated) await open(button, complete); else await complete();}
+    try {const state = await refresh(); const apply = action(state.authenticated);
+      const complete = async () => {
+        try {await apply();}
+        catch (error) {if (message) message.textContent = error.message; button.title = error.message;}
+      };
+      if (!state.authenticated) await open(button, complete); else await complete();}
     catch (error) {if (message) message.textContent = error.message; button.title = error.message;}
     finally {button.disabled = false;}
   };

@@ -8,7 +8,7 @@ window.google={accounts:{id:{
  cancel(){window.gisCancelled=true;}
 }}};`;
 
-async function configuredPage(page, path='/revistas/revista-de-teste-cientifico') {
+async function configuredPage(page, path='/revistas/revista-de-teste-cientifico', previouslySaved=false) {
   let signedIn=false, saved=false, following=false, actions=[];
   await page.route('https://pagead2.googlesyndication.com/**', route=>route.fulfill({contentType:'application/javascript',body:''}));
   await page.route('https://accounts.google.com/gsi/client', route=>route.fulfill({contentType:'application/javascript',body:googleStub}));
@@ -16,7 +16,7 @@ async function configuredPage(page, path='/revistas/revista-de-teste-cientifico'
   await page.route('**/conta/google/preparar', route=>route.fulfill({json:{ok:true,nonce:'browser-bound-nonce'}}));
   await page.route('**/conta/google/entrar', route=>{
     expect(route.request().postData()).toContain('signed-token-fixture');
-    signedIn=true;return route.fulfill({json:{ok:true,verified:true,csrf:'rotated-csrf'}});
+    signedIn=true;saved=previouslySaved;return route.fulfill({json:{ok:true,verified:true,csrf:'rotated-csrf'}});
   });
   await page.route('**/conta/revistas/*', route=>{
     if(route.request().method()==='POST') {
@@ -30,7 +30,7 @@ async function configuredPage(page, path='/revistas/revista-de-teste-cientifico'
   });
   await page.route('**'+path,async route=>{
     const response=await route.fetch();
-    await route.fulfill({response,body:(await response.text()).replace('data-client-id=""','data-client-id="browser-test.apps.googleusercontent.com"')});
+    await route.fulfill({response,body:(await response.text()).replace(/data-client-id=""\s+hidden/, 'data-client-id="browser-test.apps.googleusercontent.com"')});
   });
   await page.goto(path,{waitUntil:'domcontentloaded'});
   return actions;
@@ -38,7 +38,7 @@ async function configuredPage(page, path='/revistas/revista-de-teste-cientifico'
 
 test('Google manual button preserves favorite intent and rotates CSRF at 360px',async({page})=>{
   await page.setViewportSize({width:360,height:800});
-  const actions=await configuredPage(page);
+  const actions=await configuredPage(page,undefined,true);
   await page.locator('.journal-save-btn').click();
   await expect(page.locator('#reader-dialog')).toBeVisible();
   await page.locator('#reader-google-button button').click();
