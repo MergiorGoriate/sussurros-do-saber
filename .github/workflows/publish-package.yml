@@ -1,0 +1,92 @@
+name: Publish GitHub Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish (for example v2.0.0)
+        required: true
+        type: string
+  # One-time bootstrap without changing the production branch.
+  push:
+    branches: [packages/ghcr-v2.0.0]
+    paths: [.github/workflows/publish-package.yml]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ghcr-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || 'v2.0.0' }}
+      IMAGE: ghcr.io/mergiorgoriate/sussurros-do-saber
+    steps:
+      - name: Validate version
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)*)?$ ]]; then
+            echo "::error::Use an existing version tag such as v2.0.0."
+            exit 1
+          fi
+
+      - name: Check out the exact release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+
+      - name: Build release image
+        shell: bash
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          REVISION="$(git rev-parse HEAD)"
+          docker build \
+            --label "org.opencontainers.image.title=Sussurros do Saber" \
+            --label "org.opencontainers.image.description=Plataforma de divulgação científica e gestão editorial." \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --label "org.opencontainers.image.revision=$REVISION" \
+            --tag "$IMAGE:$VERSION" \
+            --tag "$IMAGE:$RELEASE_TAG" .
+          docker run --rm --entrypoint python "$IMAGE:$VERSION" \
+            -c "import flask, gunicorn; print('Container dependencies OK')"
+
+      - name: Authenticate to GitHub Container Registry
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Publish versioned image
+        shell: bash
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:$RELEASE_TAG"
+          if [[ "$RELEASE_TAG" != *-* ]]; then
+            docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
+            docker push "$IMAGE:latest"
+          fi
+          {
+            echo "## GitHub Package published"
+            echo
+            echo "- Image: `$IMAGE:$VERSION`"
+            echo "- Release: `$RELEASE_TAG`"
+            echo "- Commit: `$(git rev-parse HEAD)`"
+            echo
+            echo "This workflow publishes an image only; it does not deploy to Coolify."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log out
+        if: always()
+        run: docker logout ghcr.io
