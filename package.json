@@ -6,7 +6,7 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "3.4.19",
     "@playwright/test": "1.63.0"
   }
 }
