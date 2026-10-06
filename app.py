@@ -915,13 +915,10 @@ def build_journal_pdf(journal):
     authors = journal_authors(journal)
     if authors:
         author_names = []
-        for index, author in enumerate(authors, 1):
+        for author in authors:
             name = html_escape(author["name"] or author["orcid"])
-            author_names.append("<b>" + name + "</b>" + (f"<super>{index}</super>" if author["description"] else ""))
+            author_names.append("<b>" + name + "</b>")
         story += [Paragraph(", ".join(author_names), styles["Metadata"])]
-        for index, author in enumerate(authors, 1):
-            if author["description"]:
-                story.append(Paragraph(f"<super>{index}</super>" + html_escape(author["description"]).replace("\n", "<br/>"), styles["Metadata"]))
         for author in authors:
             if author["orcid"]:
                 url = html_escape(author["orcid"], quote=True)
