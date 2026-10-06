@@ -37,8 +37,8 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_2fa_verified"] = True
             session["admin_last_activity_at"] = time.time()
-            from admin import admin_security_stamp
-            session["admin_security_stamp"] = admin_security_stamp()
+            session["admin_superuser"] = True
+            authenticate_test_session(session)
             session["csrf_token"] = "editorial-csrf"
         response = client.post("/admin/artigos/novo", data=dict(form, status="review"))
         self.assertEqual(response.status_code, 302)
