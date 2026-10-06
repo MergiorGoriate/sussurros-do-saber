@@ -20,6 +20,8 @@ from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E402
 
 
+from security_test_support import authenticate_test_session
+
 class PlatformTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -435,6 +437,7 @@ class PlatformTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
+            authenticate_test_session(session)
         response = self.client.get(preview)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["Cache-Control"], "no-store")
@@ -456,6 +459,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "cover-csrf"
+            authenticate_test_session(session)
         data = {"csrf_token": "cover-csrf", "title": "Revista de capa", "slug": "capa-regressao",
                 "description": "Uma descrição suficientemente longa para validação.",
                 "field": "Biologia", "cover_image": "https://images.example.org/cover.webp"}
@@ -477,6 +481,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "preview-token"
+            authenticate_test_session(session)
         self.assertEqual(self.client.post(endpoint, data={"content": "# Título"}).status_code, 400)
         response = self.client.post(endpoint, data={
             "csrf_token": "preview-token", "content": "# Título\n\n| A | B |\n| --- | --- |\n| 1 | 2 |",
@@ -500,6 +505,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "draft-token"
+            authenticate_test_session(session)
         data = {"csrf_token": "draft-token", "title": "Revista em preparação",
                 "slug": "editor-rascunho", "field": "Biologia",
                 "description": "Descrição científica com dimensão suficiente.",
@@ -609,6 +615,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["admin_superuser"] = False
+            authenticate_test_session(session)
         response = self.client.get("/admin/docs")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'<meta name="robots" content="noindex,nofollow">', response.data)
@@ -624,6 +631,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "test-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/administradores", data={
             "csrf_token": "test-csrf",
             "display_name": "Editor Científico",
@@ -648,6 +656,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "manage-csrf"
+            authenticate_test_session(session)
         with app.app_context():
             administrator = AdminUser.query.filter_by(username="editor.cientifico").first()
             administrator_id = administrator.id
@@ -696,6 +705,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = False
             session["admin_2fa_verified"] = False
             session["admin_last_activity_at"] = time.time()
+            authenticate_test_session(session)
         response = self.client.get("/admin")
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.location.endswith("/admin/seguranca/2fa"))
@@ -758,6 +768,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-csrf",
             "name": "Autora com Fotografia",
@@ -778,6 +789,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-profile-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-profile-csrf",
             "name": "Investigadora Perfil",
@@ -841,6 +853,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-validation-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-validation-csrf",
             "name": "Perfil ORCID inválido",
@@ -932,6 +945,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "guidelines-csrf"
+            authenticate_test_session(session)
         form = self.client.get("/admin/politicas-editoriais")
         self.assertEqual(form.status_code, 200)
         self.assertNotIn(b">None</textarea>", form.data)
@@ -1033,6 +1047,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "article-fields-csrf"
+            authenticate_test_session(session)
         fields = {name: "Texto " + name for name in ARTICLE_FIELD_LIMITS}
         fields.update({"csrf_token": "article-fields-csrf", "title": "Revista estruturada",
                        "article_title": "Título do artigo separado",
@@ -1084,6 +1099,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "journal-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/revistas/nova", data={
             "csrf_token": "journal-csrf",
             "title": "Revista de Teste Científico",
@@ -1112,6 +1128,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "journal-metadata-csrf"
+            authenticate_test_session(session)
         fields = {
             "csrf_token": "journal-metadata-csrf", "title": "Revista metadata regressao",
             "description": "Descrição científica completa para verificar as informações editoriais.",
@@ -1172,6 +1189,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = False
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "secondary-csrf"
+            authenticate_test_session(session)
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
 
     def test_homepage_uses_four_most_read_and_nine_latest_discoveries(self):
@@ -1215,6 +1233,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

@@ -11,6 +11,7 @@ import hashlib
 import os
 import re
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from html import escape as html_escape, unescape as html_unescape
@@ -29,7 +30,19 @@ from extensions import limiter
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+def trusted_proxy_hops(name, default):
+    value = int(os.getenv(name, str(default)))
+    if not 0 <= value <= 5:
+        raise RuntimeError(f"{name} deve estar entre 0 e 5.")
+    return value
+
+
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=trusted_proxy_hops("PROXY_FIX_X_FOR", 1),
+    x_proto=trusted_proxy_hops("PROXY_FIX_X_PROTO", 1),
+    x_host=trusted_proxy_hops("PROXY_FIX_X_HOST", 0),
+)
 with open(os.path.join(app.static_folder, 'css', 'tailwind.css'), 'rb') as built_css:
     TAILWIND_VERSION = hashlib.sha256(built_css.read()).hexdigest()[:12]
 
@@ -863,6 +876,7 @@ def render_journal(journal):
                            public_url=SITE_URL + url_for("journal_detail", slug=journal.slug))
 
 @app.get("/revistas/<slug>/baixar.pdf")
+@limiter.limit("10 per minute; 60 per hour")
 def journal_download_pdf(slug):
     journal = Journal.query.filter_by(slug=slug, published=True).first()
     if not journal:
@@ -872,13 +886,20 @@ def journal_download_pdf(slug):
 
 @app.get("/admin/revistas/<int:journal_id>/baixar.pdf")
 @login_required
+@limiter.limit("10 per minute; 60 per hour")
 def journal_preview_pdf(journal_id):
     return render_journal_pdf(db.get_or_404(Journal, journal_id))
 
 
 def render_journal_pdf(journal):
+    from pdf_cache import cached_pdf_response
+    return cached_pdf_response(journal, build_journal_pdf)
+
+
+def build_journal_pdf(journal):
 
     from journal_pdf import article_flowables, pdf_styles, page_footer, editorial_header
+    image_deadline = time.monotonic() + 20
     article_title, content = journal_article_content(journal)
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
@@ -918,24 +939,19 @@ def render_journal_pdf(journal):
     story += [Spacer(1, 8)]
     story += article_flowables(content,
                                doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN,
-                               title=article_title, start_body_new_page=True)
+                               title=article_title, start_body_new_page=True, image_deadline=image_deadline)
     if journal.references:
         story += [Spacer(1, 12), Paragraph("Referências bibliográficas", styles["Heading2"])]
         story += article_flowables(render_markdown(journal.references), doc.width, doc.height,
-                                   app.static_folder, CANONICAL_ORIGIN)
+                                   app.static_folder, CANONICAL_ORIGIN, image_deadline=image_deadline)
     if getattr(journal, "notes", ""):
         story += [Spacer(1, 12), Paragraph("Notas", styles["Heading2"])]
         story += article_flowables(render_markdown(journal.notes), doc.width, doc.height,
-                                   app.static_folder, CANONICAL_ORIGIN)
+                                   app.static_folder, CANONICAL_ORIGIN, image_deadline=image_deadline)
     doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
     pdf = buffer.getvalue()
     buffer.close()
-    filename = re.sub(r"[^a-zA-Z0-9._-]+", "-", journal.slug).strip("-") + ".pdf"
-    return Response(pdf, mimetype="application/pdf", headers={
-        "Content-Disposition": f'attachment; filename="{filename}"',
-        "Cache-Control": "private, max-age=300",
-        "X-Content-Type-Options": "nosniff",
-    })
+    return pdf
 
 @app.get("/recursos")
 def resources():
@@ -1168,6 +1184,7 @@ def ensure_admin_columns():
         "two_factor_enabled": "BOOLEAN DEFAULT FALSE NOT NULL",
         "totp_secret": "VARCHAR(64)",
         "recovery_code_hashes": "TEXT DEFAULT '' NOT NULL",
+        "security_version": "INTEGER DEFAULT 1 NOT NULL",
     }
     changed = False
     for name, definition in additions.items():
@@ -1459,5 +1476,3 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
-
-

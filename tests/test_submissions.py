@@ -25,6 +25,8 @@ def docx_bytes():
     return buffer.getvalue()
 
 
+from security_test_support import authenticate_test_session
+
 class SubmissionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -58,6 +60,7 @@ class SubmissionTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session.clear();session['admin_authenticated']=True;session['admin_last_activity_at']=time.time();session['admin_superuser']=True;session['csrf_token']='test-token'
 
+            authenticate_test_session(session)
     def post(self, path, data=None, **kwargs):
         return self.client.post(path, data={'csrf_token':'test-token', **(data or {})}, **kwargs)
 
@@ -220,10 +223,11 @@ class SubmissionTests(unittest.TestCase):
         with app.test_request_context():
             from flask import session
             session['admin_authenticated']=True;session['admin_last_activity_at']=time.time()
+            authenticate_test_session(session)
             pdf=render_journal_pdf(manuscript.publication).data
         from pypdf import PdfReader
         reader=PdfReader(io.BytesIO(pdf))
-        image_count=sum(1 for page in reader.pages for item in page.get('/Resources',{}).get('/XObject',{}).get_object().values() if item.get_object().get('/Subtype')=='/Image')
+        image_count=sum(len(page.images) for page in reader.pages)
         self.assertGreaterEqual(image_count,2)
         self.assertNotIn('imagem indisponível', '\n'.join(page.extract_text() for page in reader.pages))
         self.sign_in()
@@ -245,6 +249,8 @@ class SubmissionTests(unittest.TestCase):
             session['admin_id']=administrator.id;session['admin_2fa_verified']=True
         self.assertEqual(self.client.get(f'/submissoes/ficheiros/{file.id}').status_code,404)
         administrator.two_factor_enabled=True;db.session.commit()
+        with self.client.session_transaction() as session:
+            authenticate_test_session(session)
         self.assertEqual(self.client.get(f'/submissoes/ficheiros/{file.id}').status_code,200)
 
     def test_account_confirmation_reset_and_outbox(self):
