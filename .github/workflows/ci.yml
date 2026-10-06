@@ -14,6 +14,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  restore-drill:
+    name: PostgreSQL restore drill
+    runs-on: ubuntu-latest
+    container: postgres:18-bookworm
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_PASSWORD: fixture-only-password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: fixture-only-password
+      RESTORE_ADMIN_URL: postgresql://postgres:fixture-only-password@postgres/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-venv
+      - run: python3 -m venv /tmp/drill && /tmp/drill/bin/pip install -r requirements.txt
+      - name: Validate versioned schema on PostgreSQL 18
+        env:
+          DATABASE_URL: postgresql://postgres:fixture-only-password@postgres/migrations_fixture
+        run: |
+          createdb migrations_fixture
+          /tmp/drill/bin/alembic upgrade head
+          psql -v ON_ERROR_STOP=1 -d migrations_fixture -c "INSERT INTO category (id, name, slug) VALUES (7, 'Biologia', 'biologia')"
+          /tmp/drill/bin/alembic upgrade head
+          test "$(psql -At -d migrations_fixture -c 'SELECT name FROM category WHERE id=7')" = Biologia
+      - name: Restore synthetic archive and verify production fixture is unchanged
+        run: |
+          createdb sussurros_fixture
+          psql -v ON_ERROR_STOP=1 -d sussurros_fixture -f tests/fixtures/restore.sql
+          pg_dump -Fc -d sussurros_fixture -f /tmp/fixture.dump
+          /tmp/drill/bin/python scripts/restore_drill.py /tmp/fixture.dump --report /tmp/restore-report.json
+          /tmp/drill/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          import psycopg
+          report = json.loads(Path('/tmp/restore-report.json').read_text())
+          assert report['restore_completed'] and not report['content_review_completed']
+          assert report['counts']['article'] == 1
+          assert report['counts']['comment'] == 1
+          assert report['broken_relations'] == 0
+          with psycopg.connect(dbname='sussurros_fixture') as conn:
+              assert conn.execute('SELECT count(*) FROM article').fetchone()[0] == 1
+          PY
   python:
     name: Python tests
     runs-on: ubuntu-latest

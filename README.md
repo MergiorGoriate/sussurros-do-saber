@@ -682,3 +682,9 @@ Os formulários e JavaScript do repositório definem os nomes exactos dos campos
 ## Como manter esta documentação
 
 Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates ou tarefas de operação, actualizar esta documentação e os guias relacionados no mesmo trabalho. Separar claramente o que está implementado, o que é configuração do deployment e o que ainda é futuro. Não marcar uma integração como validada só porque há um botão ou uma variável.
+
+## Ferramentas de migração e recuperação (PR #86)
+
+O comando `alembic upgrade head` regista ou cria a baseline histórica de 30/09/2026. A baseline não substitui as atualizações de esquema adicionadas posteriormente: mantenha `AUTO_SCHEMA_UPGRADE=true` até existirem migrações explícitas para todas as tabelas e colunas atuais. Nunca desative a atualização automática apenas por ter aplicado a baseline.
+
+`scripts/restore_drill.py` restaura um arquivo PostgreSQL numa base nova e isolada e gera um relatório privado. O ensaio automatizado usa dados sintéticos; backups reais e revisão dos conteúdos restaurados precisam de validação separada. O healthcheck devolve 503 quando a ligação à base de dados falha.

@@ -13,6 +13,10 @@
   <a href="#seo">SEO</a>
   <a href="#seguranca">Segurança</a>
   <a href="#operacao">Operação</a>
+  <a href="#recuperacao">Backups e recuperação</a>
+  <a href="#monitorizacao">Monitorização</a>
+  <a href="#infraestrutura">Infraestrutura e deploy</a>
+  <a href="#marca">Identidade visual</a>
 </nav>
 <div class="docs-content">
 <section class="admin-panel docs-section" id="submissoes"><h2>Submissões científicas</h2><p>Em <a href="/admin/submissoes">Submissões</a>, configure cada revista: tipos aceites, formatos do manuscrito principal, e-mail editorial e abertura explícita. As contas de autor são independentes do acesso administrativo.</p><p>Configure SMTP_HOST, SMTP_PORT, SMTP_FROM, SMTP_USERNAME, SMTP_PASSWORD e SMTP_TLS=true (ou SMTP_SSL=true). Execute <code>flask --app app enviar-notificacoes --limit 50</code> a cada minuto num único worker/agendamento do Coolify. A fila persiste na base de dados; sem SMTP, as confirmações e recuperações de conta ficam pendentes.</p><p>Os originais e versões ficam privados na base de dados, com limites de 8 MB por ficheiro, 25 por versão e 100 MB por conta. Inclua estas tabelas nos backups PostgreSQL. Faça backup antes da implantação. As novas tabelas são criadas idempotentemente pelo padrão create_all existente; nenhum registo anterior é alterado.</p><p>A aceitação permite preparar um rascunho de publicação, sem publicar automaticamente. DOCX importa texto, tabelas e figuras PNG/JPEG; TXT importa texto. PDF permanece como original privado e exige inserção/conferência do conteúdo no editor. Confira a ordem e legendas das figuras, formatação, referências e metadados antes da publicação explícita. Figuras importadas só ficam públicas quando o artigo é publicado.</p><p>A equipa administrativa mantém as permissões existentes e pode atribuir um editor responsável. O modelo de convites/pareceres de revisão está preparado, mas o portal de revisores e a anonimização para revisão cega ainda não estão ativados. Não entregue originais identificados como se fossem documentos anonimizados.</p><p>Rollback: reverta o código sem eliminar as novas tabelas, preservando submissões e auditoria. Antes da abertura pública, teste confirmação de conta e entrega de e-mails no ambiente de produção.</p></section>
@@ -75,6 +79,60 @@
       <li>Antes de mudanças na base de dados, confirme no Coolify o estado do backup local e do Cloudflare R2. Teste a restauração num ambiente isolado.</li>
       <li>Depois de um deploy, verifique a página inicial, o login, um artigo publicado e o endereço <a href="/healthz" target="_blank" rel="noopener">/healthz ↗</a>. Consulte os registos no Coolify se houver falhas.</li>
       <li>As configurações sensíveis ficam nas variáveis de ambiente do Coolify; esta página não mostra os seus valores.</li>
+    </ul>
+  </section>
+</div>
+<div class="docs-content">
+  <section id="recuperacao" class="admin-panel docs-section" aria-labelledby="docs-recovery">
+    <h2 id="docs-recovery">Backups, restauração e emergência</h2>
+    <p>Uma execução de backup bem-sucedida não comprova recuperação. Registe data da cópia, tamanho, destino R2, retenção configurada, tempo de recuperação e resultado do teste. Defina a perda máxima de dados e o tempo máximo de indisponibilidade aceitáveis.</p>
+    <ol>
+      <li>No Coolify, confirme a última execução e descarregue a cópia completa para um ambiente privado. Use um cliente PostgreSQL 18 e confirme o formato: arquivos custom/tar usam <code>pg_restore</code>; SQL simples usa um procedimento separado.</li>
+      <li>Configure <code>RESTORE_ADMIN_URL</code> exclusivamente no ambiente privado de teste, apontando para a base de manutenção <code>postgres</code>. Execute <code>python scripts/restore_drill.py backup.dump --report restore-report.json</code>. A ferramenta cria uma base com nome aleatório; não substitui nem elimina uma base existente.</li>
+      <li>Compare as contagens do relatório com as contagens registadas no momento do backup. Alterações posteriores em produção podem explicar diferenças. Confirme amostras de artigos, referências, autores, revistas, comentários e contas; o relatório não declara concluída essa revisão de conteúdos.</li>
+      <li>Verifique Cloudinary separadamente: o backup PostgreSQL guarda URLs, não os ficheiros de imagens. Confirme também Worker, DNS e variáveis privadas; estes componentes não são recuperados pelo dump.</li>
+      <li>Para testar a aplicação, use um ambiente isolado, com segredos próprios e sem serviços de envio ou exposição pública. Registe o resultado e o tempo do ensaio. A ferramenta preserva a base restaurada para revisão.</li>
+    </ol>
+    <p><strong>Incidente:</strong> suspenda alterações editoriais, preserve registos e a base afetada, escolha uma cópia validada e restaure numa base nova. Troque <code>DATABASE_URL</code> somente depois da revisão, publique o commit compatível e confirme <code>/healthz</code>, login e conteúdos. Para rollback de código, republique o commit anterior compatível com o esquema; não elimine dados para reverter um deploy.</p>
+    <p><strong>Rotina proposta:</strong> backups diários, 7 cópias diárias e 4 semanais, ensaio mensal e antes de alterações de esquema. Estes valores são uma política a configurar e verificar no Coolify/R2, não uma confirmação das configurações atuais.</p>
+  </section>
+  <section id="monitorizacao" class="admin-panel docs-section" aria-labelledby="docs-monitoring">
+    <h2 id="docs-monitoring">Monitorização e desempenho</h2>
+    <ul>
+      <li>Configure um monitor externo para <code>https://www.sussurrosdosaber.com/healthz</code>: HTTP 200 e JSON <code>{"ok":true}</code>. A resposta 503 indica falha de acesso à base. O healthcheck Docker verifica a aplicação a cada 30 segundos.</li>
+      <li>No Coolify, configure e teste notificações de falha de deploy, serviço e backup. Confirme a receção no canal escolhido; não considere o alerta ativo apenas porque foi guardado.</li>
+      <li>Acompanhe CPU, RAM, disco, reinícios, conexões PostgreSQL e erros 5xx. Como ponto de partida, alerte para disco acima de 80% e RAM acima de 90% durante 10 minutos; ajuste com base nas medições reais.</li>
+      <li>Semanalmente, confira backups, certificados, espaço livre e registos. Nunca inclua palavras-passe, códigos 2FA, corpos de mensagens ou URLs privadas nos alertas.</li>
+      <li>Meça a página inicial e um artigo no PageSpeed e em telemóvel. Acompanhe LCP ≤ 2,5 s, INP ≤ 200 ms e CLS ≤ 0,1 no percentil 75, quando houver dados de campo. O código usa Tailwind compilado e imagens responsivas; confirme o efeito nas medições.</li>
+    </ul>
+  </section>
+  <section id="infraestrutura" class="admin-panel docs-section" aria-labelledby="docs-infrastructure">
+    <h2 id="docs-infrastructure">Arquitetura, variáveis e publicação</h2>
+    <p>Cloudflare fornece DNS e a camada pública; Coolify no VPS OVHcloud executa a imagem Docker de Flask/Gunicorn e PostgreSQL 18. Cloudinary recebe imagens, R2 guarda backups e o Cloudflare Worker processa o assistente IA. O código está em <code>MergiorGoriate/sussurros-do-saber</code>.</p>
+    <ul>
+      <li><strong>Aplicação:</strong> <code>FLASK_ENV=production</code>, <code>PORT=8000</code>, <code>SITE_URL=https://www.sussurrosdosaber.com</code>, <code>DATABASE_URL</code> e <code>SECRET_KEY</code> exclusiva.</li>
+      <li><strong>Administração:</strong> <code>ADMIN_USERNAME</code>, <code>ADMIN_PASSWORD_HASH</code>, <code>ADMIN_TOTP_SECRET</code>, Turnstile e <code>RATELIMIT_STORAGE_URI</code> para Redis quando houver vários processos. A conta principal exige 2FA; contas da base configuram 2FA antes de usar o painel.</li>
+      <li><strong>Imagens e IA:</strong> <code>CLOUDINARY_CLOUD_NAME</code>, <code>CLOUDINARY_API_KEY</code>, <code>CLOUDINARY_API_SECRET</code>, <code>ASSISTANT_WORKER_URL</code> e <code>ASSISTANT_SHARED_KEY</code>. O segredo do assistente deve coincidir no Worker e no Coolify.</li>
+      <li><strong>Google:</strong> <code>GOOGLE_SITE_VERIFICATION</code> e a configuração GTM do projeto. Confirme a propriedade correta no Search Console e envie o sitemap canónico. Sitemap acessível não prova indexação.</li>
+    </ul>
+    <ol>
+      <li>Crie um PR para <code>main</code>. Exija testes Python, auditoria de dependências, testes de navegador, build Docker e ensaio PostgreSQL aprovados antes da integração.</li>
+      <li>Configure proteção de <code>main</code> no GitHub com os checks efetivamente apresentados pelo CI e bloqueio de force-push. As permissões da integração podem não permitir configurar esta proteção automaticamente.</li>
+      <li>No Coolify, confirme branch <code>main</code>, guarde as alterações pendentes e confira o commit do deploy. Evite deploy automático de commits que ainda não terminaram os checks; valide a configuração do gatilho no painel.</li>
+      <li>Antes de mudar o esquema, faça backup e restauração. Em staging, execute <code>alembic upgrade head</code>: a baseline valida o esquema existente antes de registar a versão. Depois de validar em produção, configure <code>AUTO_SCHEMA_UPGRADE=false</code> no Coolify e aplique futuras migrações antes do deploy. Até essa validação, o mecanismo de compatibilidade mantém-se ativo. Não use <code>stamp</code> para ignorar divergências.</li>
+      <li>Depois do deploy, confirme healthcheck, login 2FA, publicação, imagens, modo escuro e sitemap. Registe o commit e o resultado.</li>
+    </ol>
+    <p><strong>Fluxo editorial:</strong> prepare um rascunho, verifique fontes, referências, imagens e acessibilidade, marque <strong>Em revisão</strong> e, após a revisão editorial, <strong>Aprovado para publicação</strong>. Só <strong>Publicado</strong> ou <strong>Programado</strong> com data já alcançada torna o artigo público. Todos os administradores com acesso editorial podem alterar estes estados; a aprovação não implementa uma permissão separada de revisor.</p>
+  </section>
+  <section id="marca" class="admin-panel docs-section" aria-labelledby="docs-brand">
+    <h2 id="docs-brand">Guia de identidade visual</h2>
+    <p><strong>Sussurros do Saber</strong> comunica ciência, educação e investigação em linguagem clara, com fontes verificáveis e contexto moçambicano.</p>
+    <ul>
+      <li>Azul principal <code>#1E4E8C</code>; fundo claro <code>#F8F8F8</code>; texto principal <code>#101820</code>. O destaque coral atual é <code>#B2352B</code>, com <code>#FF8A80</code> no modo escuro.</li>
+      <li>Títulos e leitura editorial usam Georgia; a interface usa a família sans-serif definida no tema. Preserve hierarquia e legibilidade, sem introduzir fontes diferentes em cada página.</li>
+      <li>Use <code>logo-sussurros-light.png</code> no modo claro e <code>logo-sussurros-white.png</code> no escuro. Use o ícone/favicone nos espaços pequenos e preserve proporção, margens e contraste; não estique nem recorte o logotipo horizontal.</li>
+      <li>A mascote oficial é <code>mascote-3d.webp</code>. Preserve forma e cores, sem cobrir texto ou botões. Use dimensões responsivas e respeite a preferência por movimento reduzido.</li>
+      <li>Botões e controlos devem ter foco visível e área de toque suficiente. Teste contraste nos dois modos. Mantenha os ativos oficiais versionados junto do código.</li>
     </ul>
   </section>
 </div>

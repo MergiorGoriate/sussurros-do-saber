@@ -21,6 +21,7 @@ import markdown
 import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
 from journal_metadata import journal_authors
@@ -1085,7 +1086,12 @@ def robots():
 @app.get("/healthz")
 @limiter.exempt
 def healthcheck():
-    db.session.execute(text("SELECT 1"))
+    try:
+        db.session.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.error("Healthcheck: database unavailable")
+        return jsonify({"ok": False}), 503
     return jsonify({"ok": True})
 
 
@@ -1396,15 +1402,16 @@ def ensure_article_slugs():
 
 
 def seed_database():
-    # IMPORTANTE: db.create_all() só cria tabelas; não adiciona colunas a tabelas
-    # existentes. As migrações leves precisam ocorrer antes de qualquer SELECT
-    # ORM de Journal/Article que já inclua colunas recém-adicionadas.
-    db.create_all()
-    ensure_admin_columns()
-    ensure_author_columns()
-    ensure_journal_columns()
-    ensure_editorial_policy_columns()
-    ensure_article_columns()
+    if os.getenv("AUTO_SCHEMA_UPGRADE", "true").lower() == "true":
+        # IMPORTANTE: db.create_all() só cria tabelas; não adiciona colunas a tabelas
+        # existentes. As migrações leves precisam ocorrer antes de qualquer SELECT
+        # ORM de Journal/Article que já inclua colunas recém-adicionadas.
+        db.create_all()
+        ensure_admin_columns()
+        ensure_author_columns()
+        ensure_journal_columns()
+        ensure_editorial_policy_columns()
+        ensure_article_columns()
     if not Journal.query.first():
         default_guidelines = (
             "Aceitamos manuscritos originais, revisões e relatos fundamentados. "
