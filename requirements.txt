@@ -9,7 +9,7 @@ Pillow==12.3.0
 Markdown==3.11
 bleach==6.4.0
 Flask-Limiter==4.1.1
-redis>=6.4,<7
+redis>=8.1.0,<9
 reportlab==5.0.1
 
 
