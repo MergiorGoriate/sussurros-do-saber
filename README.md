@@ -2,10 +2,11 @@
 
 Plataforma de divulgação científica e publicação editorial em português, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.
 
-Este README descreve a implementação revista em **5 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
+Este README descreve a implementação revista em **7 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
 
 ## Índice
 
+- [Actualizações recentes](#actualizações-recentes)
 - [Visão geral e arquitectura](#visão-geral-e-arquitectura)
 - [Site público](#site-público)
 - [Contas, favoritos e notificações](#contas-favoritos-e-notificações)
@@ -23,6 +24,19 @@ Este README descreve a implementação revista em **5 de outubro de 2026**, com 
 - [Limites da implementação](#limites-da-implementação)
 - [Inventário completo de rotas](#inventário-completo-de-rotas)
 
+## Actualizações recentes
+
+As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em produção depende de um deploy bem-sucedido e da configuração dos serviços externos.
+
+- **Segurança administrativa:** sessões associadas às credenciais e permissões atuais; alterações invalidam sessões anteriores. Desafios de 2FA expiram em cinco minutos, incluindo acesso às pré-visualizações.
+- **PDF científico:** cabeçalho «Revista Científica Sussurros do Saber», nomes e ORCID sem descrições de autores no PDF, cache privado limitado, limites de pedidos e controlo de geração concorrente.
+- **Operação e recuperação:** healthcheck com resposta 503 em falhas da base de dados, verificação de saúde no Docker, baseline Alembic histórica e ensaio de restauração PostgreSQL numa base isolada.
+- **Fluxo de artigos:** estados «Em revisão» e «Aprovado para publicação», que permanecem privados até publicação.
+- **GitHub Packages:** publicação de imagens Docker no GHCR a partir de Releases ou execução manual para uma tag existente.
+- **Leitura e dispositivos móveis:** favoritos/notificações por conta em cartões responsivos, índice recolhível no telemóvel e aberto no computador, carregamento diferido de publicidade e fontes sem bloquear a apresentação.
+- **Presença digital:** ligações Bluesky e Reddit no rodapé e meta tags de verificação Bing/Yandex.
+- **Manutenção:** remoção de quatro ficheiros legados sem referências de runtime. A compilação mantém Tailwind 3.4.19; migrar para Tailwind 4 requer adaptar CLI, configuração e CSS, não apenas mudar a dependência.
+
 ## Visão geral e arquitectura
 
 A aplicação renderiza páginas no servidor e acrescenta interacções no navegador. A base de dados guarda conteúdo, utilizadores e processos editoriais; Cloudinary guarda imagens e vídeos enviados pelo painel. Os anexos originais de submissões ficam privados na própria base de dados. Redis mantém os limites de utilização em produção. O assistente usa um Worker do Cloudflare através do backend Flask.
@@ -38,6 +52,10 @@ A aplicação renderiza páginas no servidor e acrescenta interacções no naveg
 | `submission_uploads.py` | Validação de anexos e conversão limitada de DOCX para Markdown |
 | `journal_article.py` / `journal_metadata.py` | Campos científicos, ordem de apresentação e autores estruturados/ORCID |
 | `journal_pdf.py` | Composição editorial de PDF, tabelas, imagens e gráficos |
+| `pdf_cache.py` | Cache privado limitado e trava de geração PDF entre workers do mesmo contentor |
+| `gunicorn.conf.py` | Pools de base de dados independentes após fork dos workers |
+| `migrations/` / `alembic.ini` | Baseline histórica de esquema, criação ou validação da base |
+| `scripts/restore_drill.py` | Ensaio de recuperação PostgreSQL numa base nova e isolada |
 | `storage.py` | Validação e envio de imagens/vídeos para Cloudinary |
 | `extensions.py` | Instância e armazenamento do limitador de pedidos |
 | `editorial_content.py` | Conteúdo editorial inicial e compatibilidade com texto existente |
@@ -47,7 +65,7 @@ A aplicação renderiza páginas no servidor e acrescenta interacções no naveg
 | `cloudflare-worker/worker.js` | Endpoint privado do assistente e chamada ao Workers AI |
 | `tests/` | Testes Python e testes de navegador Playwright |
 | `Dockerfile` | Compilação CSS e imagem de execução Python/Gunicorn |
-| `.github/workflows/` | Testes, auditorias de dependências e construção Docker |
+| `.github/workflows/` | Testes, auditorias, recuperação PostgreSQL, construção Docker e publicação GHCR |
 
 A execução de referência usa Python 3.11 e Node 22. As dependências efectivas estão em [requirements.txt](requirements.txt), [package.json](package.json) e `package-lock.json`; esses ficheiros são a fonte dos números de versão.
 
@@ -133,6 +151,10 @@ O botão de citação abre uma referência construída com autores, ano, título
 
 ### PDF
 
+O cabeçalho usa **Revista Científica Sussurros do Saber**. No bloco de autores, o PDF apresenta nomes e ligações ORCID; as descrições individuais continuam disponíveis na página do site.
+
+O cache de geração é privado no servidor, com validade de 300 segundos, limite de 16 MiB por PDF e 64 MiB no conjunto. As respostas mantêm `Cache-Control: private, no-store`. Uma trava entre workers do mesmo contentor limita a geração concorrente: indisponibilidade temporária devolve 503 e `Retry-After: 5`; PDF acima do limite devolve 413. A chave inclui os dados da publicação, base de dados e versão de formato.
+
 - Download público em `/revistas/<slug>/baixar.pdf`, apenas para publicações visíveis.
 - Pré-visualização e PDF privados para administradores, incluindo rascunhos.
 - Composição em A4 pelo ReportLab, com identidade editorial, metadados, autores, corpo, referências e numeração de páginas; não é simplesmente uma captura do HTML.
@@ -161,7 +183,7 @@ Entrada em `/admin/login`. O painel tem autenticação central, CSRF, verificaç
 
 ### Estados e edição
 
-Artigos de divulgação têm `draft`, `published` e `scheduled`. Um artigo programado torna-se publicado ao chegar a data e ocorrer um pedido que execute a verificação, excepto pedidos excluídos como estáticos/health/robots/ads. **Não existe um agendador autónomo de publicação**. As datas internas usam UTC sem timezone; não assumir conversão automática do campo `datetime-local` para a hora local.
+Artigos de divulgação têm `draft`, `review`, `approved`, `published` e `scheduled`. «Em revisão» e «Aprovado para publicação» permanecem privados e não aparecem no sitemap nem no feed. A aprovação exige corpo suficiente, mas não publica automaticamente o artigo. Um artigo programado torna-se publicado ao chegar a data e ocorrer um pedido que execute a verificação, excepto pedidos excluídos como estáticos/health/robots/ads. **Não existe um agendador autónomo de publicação**. As datas internas usam UTC sem timezone; não assumir conversão automática do campo `datetime-local` para a hora local.
 
 O editor fornece ferramentas Markdown, imagem/vídeo, gráficos, citações e pré-visualização. O HTML sanitizado no servidor é a referência final; a pré-visualização JavaScript não substitui a validação do servidor. Nas revistas, o botão de rascunho e a opção de publicação controlam visibilidade; não há programação temporal de revistas.
 
@@ -173,7 +195,7 @@ A eliminação de uma revista ligada a submissões ou configuração editorial �
 
 O administrador principal pode ser definido por variáveis de ambiente; contas adicionais ficam em `AdminUser`. Em produção, a autenticação por ambiente exige hash da palavra-passe e segredo TOTP. `ADMIN_PASSWORD` em texto simples só é aceite no modo de desenvolvimento.
 
-Contas administrativas na base de dados precisam concluir a configuração de 2FA antes de usar as áreas protegidas. A interface produz oito códigos de recuperação, guardados como hashes. A conta gerida por ambiente usa `ADMIN_TOTP_SECRET`; a configuração não é feita nesse formulário. A inactividade administrativa expira por padrão após 15 minutos, ajustável entre 1 e 120.
+Contas administrativas na base de dados precisam concluir a configuração de 2FA antes de usar as áreas protegidas. A interface produz oito códigos de recuperação, guardados como hashes. A conta gerida por ambiente usa `ADMIN_TOTP_SECRET`; a configuração não é feita nesse formulário. A inactividade administrativa expira por padrão após 15 minutos, ajustável entre 1 e 120. Sessões e desafios são associados às credenciais/permissões atuais; alterações invalidam o acesso anterior. O desafio de 2FA expira em cinco minutos. Pré-visualizações HTML, Markdown e PDF exigem as mesmas protecções do painel. Ver [docs/security-hardening-20261006.md](docs/security-hardening-20261006.md).
 
 ## Submissões e produção editorial
 
@@ -293,7 +315,7 @@ Agendar, por exemplo, a cada minuto, no ambiente com a mesma base e segredos. O 
 
 A interface gere escolhas de cookies necessários, analytics e publicidade, persiste consentimento `cookie_consent_v3` durante 180 dias e actualiza consentimento Google. Scripts opcionais seguem as escolhas previstas no código. GTM e verificação Search Console são configuráveis; atribuir os IDs da instalação efectiva. O tema claro/escuro usa `sessionStorage`, enquanto a colecção educativa usa `localStorage`.
 
-As ligações de Facebook, Instagram, YouTube, LinkedIn, X e WhatsApp podem ser definidas por ambiente. Conteúdo/links adicionais nos templates devem ser alterados no código. A configuração de consentimento não substitui a revisão das políticas publicadas e dos scripts configurados no GTM.
+As ligações de Facebook, Instagram, YouTube, LinkedIn, X e WhatsApp podem ser definidas por ambiente. O rodapé inclui também [Bluesky](https://bsky.app/profile/sussurrosdosaber.com) e [Reddit](https://www.reddit.com/user/sussurrosdosaber/), definidos no template partilhado. A configuração de consentimento não substitui a revisão das políticas publicadas e dos scripts configurados no GTM.
 
 ## Dados e persistência
 
@@ -318,7 +340,9 @@ As ligações de Facebook, Instagram, YouTube, LinkedIn, X e WhatsApp podem ser 
 
 SQLite é o padrão local (`sqlite:///sussurros.db`, normalmente na pasta `instance/`). Para produção, configurar PostgreSQL persistente por `DATABASE_URL`; o código normaliza `postgres://` para `postgresql://`. A versão exacta do servidor PostgreSQL é definida pela infraestrutura, não pelo repositório.
 
-Ao importar a aplicação, são executados `db.create_all()`, alterações leves de colunas existentes e seed quando as tabelas de conteúdo estão vazias. `create_all()` não migra sozinho colunas de tabelas antigas. Não há Alembic nem ferramenta geral de downgrade; fazer backup antes de upgrades e testar uma cópia da base. Uma base de conteúdo vazia pode receber exemplos iniciais automaticamente.
+Ao importar a aplicação, `AUTO_SCHEMA_UPGRADE=true` (padrão quando ausente) permite `db.create_all()` e alterações leves de colunas antes das consultas ORM. O seed pode criar exemplos quando as tabelas de conteúdo estão vazias. `create_all()` não migra sozinho colunas de tabelas antigas.
+
+Há uma baseline Alembic histórica de 30/09/2026: `alembic upgrade head` cria esse esquema numa base vazia ou valida as tabelas, colunas, tipos e relações históricos numa base existente, aceitando acréscimos posteriores. Um esquema histórico incompleto é recusado; o downgrade destrutivo está bloqueado. **Esta baseline não cobre todas as funcionalidades adicionadas posteriormente. Mantenha `AUTO_SCHEMA_UPGRADE=true` até existirem migrações explícitas para o esquema atual completo.** Fazer backup e testar numa cópia isolada antes de aplicar migrações.
 
 Comando específico para as tabelas Google/favoritos:
 
@@ -382,7 +406,7 @@ docker build -t sussurros-do-saber:local .
 docker run --rm -p 8000:8000 --env-file /caminho/seguro/config.local sussurros-do-saber:local
 ```
 
-O ficheiro de ambiente é fornecido pelo Docker, não carregado pela aplicação. Para persistência, usar PostgreSQL externo; não confiar no SQLite dentro de um contentor efémero. A imagem constrói CSS com Node 22, instala Python 3.11, usa utilizador sem privilégios e inicia Gunicorn com um worker, timeout de 120 segundos e porta `PORT` (padrão 8000).
+O ficheiro de ambiente é fornecido pelo Docker, não carregado pela aplicação. Para persistência, usar PostgreSQL externo; não confiar no SQLite dentro de um contentor efémero. A imagem constrói CSS com Node 22, instala Python 3.11, usa utilizador sem privilégios e inicia Gunicorn com dois workers por padrão (`WEB_CONCURRENCY`), preload, timeout de 120 segundos e porta `PORT` (padrão 8000). `gunicorn.conf.py` reinicia o pool de ligação em cada worker após fork. O Docker verifica `/healthz` a cada 30 segundos, com timeout de 5 segundos e período inicial de 60 segundos; falhas de base de dados devolvem 503 sem detalhes privados.
 
 ## Configuração
 
@@ -409,6 +433,10 @@ Segredos pertencem às variáveis protegidas do serviço/Worker. Os valores abai
 | `SESSION_COOKIE_SECURE` | Pode forçar cookie Secure fora de produção; em produção fica activo |
 | `FLASK_DEBUG` | Debug local explícito, ignorado em produção |
 | `PORT` | Porta do comando Gunicorn no Docker; padrão 8000 |
+| `WEB_CONCURRENCY` | Workers Gunicorn no Docker; padrão 2 |
+| `AUTO_SCHEMA_UPGRADE` | Actualização leve de esquema na inicialização; padrão true; manter activa nesta etapa |
+| `PROXY_FIX_X_FOR`, `PROXY_FIX_X_PROTO` | Saltos de proxy confiáveis para IP/protocolo; padrão 1 |
+| `PROXY_FIX_X_HOST` | Saltos confiáveis para host encaminhado; padrão 0 |
 
 ### Media, identidade e assistente
 
@@ -457,6 +485,16 @@ O projecto é compatível com execução Docker no Coolify e PostgreSQL/Redis ex
 
 `/healthz` executa uma consulta simples à base e devolve estado apropriado. Não verifica entrega SMTP, Redis, Cloudinary, Worker AI, Google, DNS ou qualidade do conteúdo. Usar monitorização externa e alertas separados para esses componentes e para disco/memória/processo.
 
+### Imagens versionadas no GitHub Packages
+
+O workflow [publish-package.yml](.github/workflows/publish-package.yml) constrói a imagem do código da tag de lançamento e publica em `ghcr.io/mergiorgoriate/sussurros-do-saber`. Executa ao publicar uma Release ou manualmente, com uma tag existente como `v2.0.0`. Usa `GITHUB_TOKEN` com `contents: read` e `packages: write`.
+
+Uma versão `v2.0.0` gera as tags `2.0.0` e `v2.0.0`; versões sem sufixo também actualizam `latest`. Preferir versão explícita ou digest para deployments reproduzíveis. O workflow verifica a construção e importação de Flask/Gunicorn; isso não comprova reprodução de vídeos, SMTP ou funcionamento completo em produção. Publicar a imagem não configura nem executa deploy no Coolify. O acesso ao pacote depende das permissões/visibilidade no GHCR.
+
+### Ensaio de recuperação PostgreSQL
+
+[scripts/restore_drill.py](scripts/restore_drill.py) verifica o arquivo e restaura numa base nova e isolada, com contagens, relações e relatório privado. Recusa usar a base da aplicação como destino administrativo. O teste CI usa uma cópia sintética; backups reais no R2 e revisão editorial dos conteúdos restaurados continuam a exigir um ensaio próprio. O relatório distingue restauração concluída de revisão de conteúdo concluída.
+
 ### DNS e e-mail
 
 O registo do domínio e a autoridade DNS são funções diferentes. Se Cloudflare for a autoridade, os nameservers no registador devem coincidir exactamente com os atribuídos à zona. Os registos DNS do site/e-mail devem ser mantidos no provedor autoritativo. O estado visual de propagação num painel não basta para comprovar resolução mundial ou entrega de e-mail.
@@ -478,7 +516,7 @@ Coolify executa a aplicação; não é o local de delegação de nameservers. N�
 - CSRF para mutações, validação de campos e permissões no servidor, hashes de palavras-passe, tokens temporários de confirmação/recuperação e nonce de conta.
 - Flask-Limiter aplica limites gerais (300/dia, 100/hora) e específicos por operação. Usar Redis partilhado evita contadores independentes por worker em produção.
 - CSP com nonce/scripts autorizados, `nosniff`, política de referência, restrições de permissões e HSTS quando HTTPS. A política mantém estilos inline permitidos para a interface existente; não declarar uma CSP sem qualquer inline.
-- `ProxyFix` confia em um salto de proxy para IP/protocolo/host. A implantação deve corresponder a essa topologia e não expor confiança em cabeçalhos arbitrários directamente à aplicação.
+- `ProxyFix` tem confiança configurável em cabeçalhos encaminhados: por padrão, um salto para IP/protocolo e nenhum para host. Ajustar apenas à topologia real de Cloudflare/Coolify; não aceitar cabeçalhos arbitrários directamente na aplicação.
 - Respostas administrativas, contas, Google e submissões usam cache privado/no-store; áreas privadas também recebem restrições de indexação quando previstas.
 - Gzip para texto elegível, respeitando negociação; cache curto nas páginas públicas elegíveis e cache longo de estáticos versionados. Não aplicar cache público ao HTML com sessão/formulário privado.
 - Imagens responsivas/lazy loading, optimização Cloudinary e listas que evitam carregar corpos desnecessários. CSS Tailwind é compilado no build.
@@ -508,7 +546,7 @@ npm run test:e2e
 
 O Playwright espera aplicação em `http://127.0.0.1:5000`, com fixtures/configuração próprias. Consultar [playwright.config.js](playwright.config.js), `tests/browser/` e a sequência completa de preparação em [.github/workflows/ci.yml](.github/workflows/ci.yml); executar apenas o comando não inicia nem prepara automaticamente o servidor.
 
-A CI de `main`/pull requests executa testes Python, auditoria pip, build CSS, auditoria npm de dependências de produção, navegador Chromium e upload de diagnóstico. O workflow separado constrói Docker. Dependabot está configurado para dependências do projecto. Ver o resultado do commit específico no GitHub Actions; a presença de testes não significa que passaram num deployment diferente.
+A CI de `main`/pull requests executa testes Python, auditoria pip, build CSS, auditoria npm de dependências de produção, navegador Chromium e upload de diagnóstico. O workflow separado constrói Docker. A CI inclui ensaios de baseline e restauração PostgreSQL 18 com dados sintéticos, verificando preservação do conteúdo e isolamento da base restaurada. Dependabot está configurado para dependências do projecto. Ver o resultado do commit específico no GitHub Actions; a presença de testes não significa que passaram num deployment diferente.
 
 [docs/site-audit-20261005.md](docs/site-audit-20261005.md) guarda uma auditoria histórica com escopo/commit e limitações próprias. Não usar as contagens ou observações daquele documento como prova automática do estado actual. Nesta revisão do README, a verificação é documental contra o código, não um novo ensaio completo de produção.
 
@@ -523,7 +561,7 @@ A CI de `main`/pull requests executa testes Python, auditoria pip, build CSS, au
 - O catálogo educativo é definido no código; as preferências educativas locais não sincronizam entre dispositivos.
 - O assistente chama um modelo com uma pergunta, sem pesquisa de fontes ou contexto completo da base editorial.
 - Programação de artigos é verificada em pedidos, não por cron autónomo. Revistas não têm agendamento de publicação equivalente.
-- Não há migrações versionadas Alembic, downgrade automático, antivírus de anexos ou prova de configuração/backup de infraestrutura apenas pela leitura deste repositório.
+- A baseline Alembic histórica não substitui migrações completas do esquema atual. Não há downgrade automático destrutivo, antivírus de anexos ou prova de configuração/backup real de infraestrutura apenas pela leitura deste repositório.
 
 ## Inventário completo de rotas
 
@@ -683,8 +721,3 @@ Os formulários e JavaScript do repositório definem os nomes exactos dos campos
 
 Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates ou tarefas de operação, actualizar esta documentação e os guias relacionados no mesmo trabalho. Separar claramente o que está implementado, o que é configuração do deployment e o que ainda é futuro. Não marcar uma integração como validada só porque há um botão ou uma variável.
 
-## Ferramentas de migração e recuperação (PR #86)
-
-O comando `alembic upgrade head` regista ou cria a baseline histórica de 30/09/2026. A baseline não substitui as atualizações de esquema adicionadas posteriormente: mantenha `AUTO_SCHEMA_UPGRADE=true` até existirem migrações explícitas para todas as tabelas e colunas atuais. Nunca desative a atualização automática apenas por ter aplicado a baseline.
-
-`scripts/restore_drill.py` restaura um arquivo PostgreSQL numa base nova e isolada e gera um relatório privado. O ensaio automatizado usa dados sintéticos; backups reais e revisão dos conteúdos restaurados precisam de validação separada. O healthcheck devolve 503 quando a ligação à base de dados falha.
