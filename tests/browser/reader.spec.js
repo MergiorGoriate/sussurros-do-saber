@@ -1,0 +1,111 @@
+const {test, expect}=require('@playwright/test');
+const {execFileSync}=require('node:child_process');
+const fixtureScript=require('node:path').join(__dirname,'reader_fixture.py');
+const fixture=()=>JSON.parse(execFileSync('python',[fixtureScript],{encoding:'utf8'}));
+async function login(page, user){
+  await page.locator('#reader-auth-form [name="email"]').fill(user.email);
+  await page.locator('#reader-auth-form [name="password"]').fill(user.password);
+  await page.locator('#reader-submit').click();
+  await expect(page.locator('#reader-dialog')).toBeHidden();
+}
+test.beforeEach(async({page})=>{
+  await page.route('https://pagead2.googlesyndication.com/**',r=>r.fulfill({contentType:'application/javascript',body:''}));
+});
+for(const width of [320,768,1440])test(`real favorite persists, appears in library and can be removed at ${width}px`,async({page})=>{
+  const user=fixture();
+  await page.setViewportSize({width,height:800});
+  await page.goto('/artigo/'+user.article_slug);
+  await page.locator('#cookieReject').click();
+  await page.locator('.bookmark').first().click();
+  await login(page,user);
+  await expect(page.locator('.bookmark').first()).toHaveAttribute('aria-pressed','true');
+  await page.reload();
+  await expect(page.locator('.bookmark').first()).toHaveAttribute('aria-pressed','true');
+  await page.goto('/conta/biblioteca');
+  await expect(page.locator('[data-reader-library]')).toContainText(user.article_title);
+  await expect(page.locator('.reader-favorite-card h2').first()).toBeVisible();
+  await expect(page.locator('.reader-favorite-cover img').first()).toHaveAttribute('width','640');
+  const columns=await page.locator('.reader-favorites-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+  expect(columns).toBe(width>=1100?3:width>=640?2:1);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  await page.locator('[data-reader-remove-article="'+user.article_id+'"]').click();
+  await expect(page.locator('[data-reader-library]')).not.toContainText(user.article_title);
+  await page.reload();
+  await expect(page.locator('[data-reader-library]')).not.toContainText(user.article_title);
+  await page.goto('/artigo/'+user.article_slug);
+  await expect(page.locator('.bookmark').first()).toHaveAttribute('aria-pressed','false');
+});
+test('following an article produces a real notification and disabling it clears the badge',async({page})=>{
+  const user=fixture();
+  await page.goto('/revistas/'+user.journal_slug);
+  await page.locator('#cookieReject').click();
+  await page.locator('.journal-alert-btn').click();
+  await login(page,user);
+  await expect(page.locator('.journal-alert-btn')).toHaveAttribute('aria-pressed','true');
+  execFileSync('python',[fixtureScript,user.journal_slug]);
+  await page.reload();
+  await expect(page.locator('[data-reader-notification-count]')).toHaveText('1');
+  await page.locator('.reader-header-notifications').click();
+  await expect(page.locator('[data-reader-library]')).toContainText(user.journal_title);
+  for (const width of [320,1440]) {
+    await page.setViewportSize({width,height:800});
+    await expect(page.locator('.reader-notification-card h2')).toHaveText(user.journal_title);
+    await expect(page.locator('.reader-notification-card img')).toBeVisible();
+    await expect(page.locator('.reader-notification-card .reader-favorite-category')).toHaveText('Biologia');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
+  await page.locator('[data-reader-mark-read]').click();
+  await expect(page.locator('[data-reader-notification-count]')).toBeHidden();
+  await expect(page.locator('[data-reader-notification-status]')).toContainText('Sem novas actualizações');
+  await page.reload();
+  await expect(page.locator('[data-reader-library]')).toContainText(user.journal_title);
+  await page.locator('[data-reader-unfollow]').click();
+  await expect(page.locator('[data-reader-library]')).not.toContainText(user.journal_title);
+  await expect(page.locator('[data-reader-notification-count]')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('[data-reader-library]')).not.toContainText(user.journal_title);
+});
+test('old browser favorites appear immediately when opening the library',async({page})=>{
+  const user=fixture();
+  await page.goto('/');
+  await page.locator('#cookieReject').click();
+  await page.locator('.reader-header-login').click();
+  await login(page,user);
+  await page.evaluate(id=>localStorage.setItem('savedArticles',JSON.stringify([id,id])),user.article_id);
+  await page.goto('/conta/biblioteca');
+  await expect(page.locator('[data-reader-library]')).toContainText(user.article_title);
+  await expect(page.locator('[data-reader-remove-article]')).toHaveCount(1);
+  expect(await page.evaluate(()=>localStorage.getItem('savedArticles'))).toBeNull();
+});
+test('failed favorite request is visible and leaves the control retryable',async({page})=>{
+  const user=fixture();
+  await page.goto('/artigo/'+user.article_slug);
+  await page.locator('#cookieReject').click();
+  await page.locator('.reader-header-login').click();
+  await login(page,user);
+  await page.route('**/conta/artigos/*',r=>r.fulfill({status:503,json:{ok:false,message:'Tente novamente.'}}));
+  await page.locator('.bookmark').first().click();
+  await expect(page.locator('#reader-action-feedback')).toHaveText('Tente novamente.');
+  await expect(page.locator('.bookmark').first()).toBeEnabled();
+  await expect(page.locator('.bookmark').first()).toHaveAttribute('aria-pressed','false');
+});
+
+test('saved journal article uses the same card layout and can be removed in dark mode',async({page})=>{
+  const user=fixture();
+  await page.setViewportSize({width:360,height:800});
+  await page.goto('/revistas/'+user.journal_slug);
+  await page.locator('#cookieReject').click();
+  await page.locator('.journal-save-btn').click();
+  await login(page,user);
+  await page.goto('/conta/biblioteca');
+  await page.locator('#themeToggle').click();
+  await expect(page.locator('.reader-favorite-card h2')).toHaveText(user.journal_title);
+  await expect(page.locator('.reader-favorite-category')).toHaveText('Biologia');
+  await expect(page.locator('.reader-favorite-cover img')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await page.locator('[data-reader-remove-journal]').click();
+  await expect(page.locator('.reader-favorite-card')).toHaveCount(0);
+  await expect(page.locator('[data-reader-library-empty]')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('[data-reader-empty]')).toBeVisible();
+});

@@ -49,6 +49,14 @@
   };
   const render = () => {
     const html = escape(editor.value)
+      .replace(/^\[destaque:\s*([^\]\n]+)\]\s*$/gm, (_,details) => {
+        const [text,author='']=details.split('|');
+        return '<figure class="article-pullquote"><blockquote><p>'+text+'</p></blockquote><figcaption>'+author+'</figcaption></figure>';
+      })
+      .replace(/\[portrait:\s*([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_,details,url) => {
+        const [alt,caption='',credit='']=details.split('|');
+        return '<figure class="article-portrait"><img src="'+url+'" alt="'+alt+'" loading="lazy"><figcaption>'+caption+'<small>'+credit+'</small></figcaption></figure>';
+      })
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
@@ -116,7 +124,13 @@
     inlineStatus.textContent=file?'A carregar imagem...':'A inserir imagem...';
     try{
       if(file)url=await uploadImage(file);
-      const markdown=`\n\n![${alt}](${url})${caption?`\n*${caption}*`:''}\n\n`;
+      const layout=document.querySelector('#inlineImageLayout').value;
+      const credit=cleanText(document.querySelector('#inlineImageCredit').value);
+      const safeUrl=url.replace(/\(/g,'%28').replace(/\)/g,'%29');
+      const parts=[alt,caption,credit].map(text=>text.replace(/\|/g,' '));
+      const markdown=layout==='portrait'
+        ? '\n\n[portrait: '+parts.join('|')+']('+safeUrl+')\n\n'
+        : '\n\n!['+alt+']('+safeUrl+')'+(caption?'\n*'+caption+'*':'')+(credit?'\n*Crédito: '+credit+'*':'')+'\n\n';
       editor.setRangeText(markdown,insertionPoint,insertionPoint,'end');
       render();
       inlineFile.value='';inlineUrl.value='';inlineAlt.value='';inlineCaption.value='';
@@ -142,8 +156,24 @@
   };
   openVideo?.addEventListener('click',()=>setVideoPanel(videoPanel.hidden));
   closeVideo?.addEventListener('click',()=>setVideoPanel(false));
-  insertVideo?.addEventListener('click',()=>{
-    const url=videoUrl.value.trim(),title=cleanText(videoTitle.value);
+  insertVideo?.addEventListener('click',async()=>{
+    let url=videoUrl.value.trim();
+    const title=cleanText(videoTitle.value),file=document.querySelector('#inlineVideoFile').files[0];
+    if(file && (file.size > 50*1024*1024 || !/\.(mp4|webm|ogg)$/i.test(file.name))){videoStatus.textContent='Use MP4, WebM ou OGG com no máximo 50 MB.';return}
+    if(file){
+      if(!title){videoStatus.textContent='Escreva um título ou uma legenda para o vídeo.';return}
+      insertVideo.disabled=true;videoStatus.textContent='A carregar vídeo...';
+      try{
+        const data=new FormData();
+        data.append('csrf_token',document.querySelector('input[name="csrf_token"]').value);
+        data.append('video',file);
+        const response=await fetch('/admin/api/videos',{method:'POST',body:data,headers:{'Accept':'application/json'}});
+        const result=await response.json().catch(()=>({error:'Não foi possível carregar o vídeo. Verifique o tamanho e tente novamente.'}));
+        if(!response.ok||!result.ok)throw new Error(result.error||'Não foi possível carregar o vídeo.');
+        url=result.url;videoUrl.value=url;document.querySelector('#inlineVideoFile').value='';
+      }catch(error){videoStatus.textContent=error.message;return}
+      finally{insertVideo.disabled=false}
+    }
     if(!/^https?:\/\//i.test(url)){videoStatus.textContent='Informe um endereço válido iniciado por https://.';videoUrl.focus();return}
     if(!title){videoStatus.textContent='Escreva um título ou uma legenda para o vídeo.';videoTitle.focus();return}
     try{
@@ -185,6 +215,17 @@
     render();chartTitle.value='';chartLabels.value='';chartValues.value='';chartStatus.textContent='Gráfico inserido no artigo.';setChartPanel(false);editor.focus();
   });
 
+  document.querySelector('#insertPullQuote')?.addEventListener('click',()=>{
+    const start=editor.selectionStart,end=editor.selectionEnd;
+    const text=window.prompt('Texto da citação em destaque:',editor.value.slice(start,end));
+    if(text===null)return;
+    if(!text.trim()){window.alert('Escreva o texto da citação.');return;}
+    const author=window.prompt('Autor e instituição (opcional):','');
+    if(author===null)return;
+    const clean=value=>value.trim().replace(/[\r\n\[\]|]+/g,' ');
+    editor.setRangeText('\n\n[destaque: '+clean(text)+'|'+clean(author)+']\n\n',start,end,'end');
+    editor.focus();editor.dispatchEvent(new Event('input',{bubbles:true}));
+  });
   editor.addEventListener('input', render);
   render();
 

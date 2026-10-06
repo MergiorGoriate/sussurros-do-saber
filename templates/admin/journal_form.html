@@ -1,26 +1,87 @@
 {% extends 'admin/base.html' %}
-{% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}{% endblock %}
-{% block content %}
-<header class="admin-header"><div><span>Catálogo científico</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
-<form method="post" enctype="multipart/form-data" class="editor-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<section class="editor-main">
-<label>Título<input name="title" required minlength="3" maxlength="180" value="{{ journal.title or '' }}"></label>
-<label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="6">{{ journal.description or '' }}</textarea></label>
-<label>Diretrizes editoriais<textarea name="guidelines" rows="14" placeholder="Escopo, critérios, formato, ética, revisão e submissão...">{{ journal.guidelines or '' }}</textarea><small>Aceita Markdown.</small></label>
-<label>Capa via Cloudinary<input name="cover_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
-<label>Ou URL da capa<input name="cover_image" type="url" value="{{ journal.cover_image or '' }}" placeholder="https://..."></label>
-<label>Texto alternativo da capa<input name="cover_alt" maxlength="300" value="{{ journal.cover_alt or '' }}"></label>
-{% if journal.cover_image %}<img class="image-preview" src="{{ journal.cover_image|image_variant(800) }}" alt="Pré-visualização da capa">{% endif %}
-</section>
-<aside class="editor-side">
-<label>Abreviatura<input name="abbreviation" maxlength="30" value="{{ journal.abbreviation or '' }}"></label>
-<label>Área científica<input name="field" required maxlength="140" value="{{ journal.field or '' }}"></label>
-<label>ISSN<input name="issn" maxlength="9" pattern="[0-9]{4}-[0-9]{3}[0-9Xx]" value="{{ journal.issn or '' }}" placeholder="1234-567X"></label>
-<label>Periodicidade<input name="frequency" maxlength="80" value="{{ journal.frequency or '' }}" placeholder="Semestral"></label>
-<label>Edição atual<input name="current_issue" maxlength="120" value="{{ journal.current_issue or '' }}" placeholder="Vol. 1 · N.º 1"></label>
-<label>Slug<input name="slug" maxlength="200" value="{{ journal.slug or '' }}" placeholder="gerado automaticamente"></label>
-<label class="check"><input name="published" type="checkbox" {% if journal.published %}checked{% endif %}> Publicada no catálogo</label>
-<button class="admin-primary">Guardar revista</button>
-</aside></form>
+{% block title %}{{ 'Editar revista' if journal.id else 'Nova revista' }}
 {% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-journals.css', v='20261004-capitular-v1') }}">{% endblock %}
+{% macro author_card(author) %}
+<fieldset class="journal-author-card" data-author-card>
+<legend>Autor</legend>
+<label>Nome do autor<input name="author_name" maxlength="180" value="{{ author.name }}" placeholder="Nome completo"></label>
+<label>URL do ORCID<input name="author_orcid" maxlength="180" value="{{ author.orcid }}" placeholder="https://orcid.org/0000-0002-1825-0097"><small>O ícone abrirá o perfil ORCID diretamente. Pode indicar também apenas o identificador.</small></label>
+<label>Descrição do autor<textarea name="author_description" rows="4" maxlength="4000" placeholder="Afiliação, formação, áreas de investigação e contribuição para o artigo.">{{ author.description }}</textarea></label>
+<button type="button" class="admin-secondary" data-remove-author>Remover autor</button>
+</fieldset>
+{% endmacro %}
+{% block content %}
+{% if journal.id %}<p><a href="{{ url_for('admin.submission_settings',journal_id=journal.id) }}">Configurar submissões desta revista</a></p>{% endif %}
+
+<header class="admin-header journal-editor-header"><div><span>Catálogo científico</span><h1>{{ 'Editar revista' if journal.id else 'Nova revista' }}</h1></div><a href="{{ url_for('admin.journals') }}">← Voltar</a></header>
+<form method="post" enctype="multipart/form-data" class="editor-form journal-editor" data-preview-url="{{ url_for('journal_markdown_preview') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<section class="editor-main"><h2>Identificação da revista</h2>
+<div class="journal-title-fields"><label>Título da revista<input name="title" required minlength="3" maxlength="180" value="{{ request.form.get('title', journal.title or '') }}"><small>Nome da revista no catálogo.</small></label>
+<label>Título do artigo<input name="article_title" maxlength="300" value="{{ request.form.get('article_title', journal.article_title or '') }}"><small>Nome do artigo na página, na citação e no PDF. Se ficar vazio, usa o título # do conteúdo ou o nome da revista.</small></label></div>
+<label>Título do artigo em inglês (opcional)<input name="article_title_en" maxlength="300" value="{{ request.form.get('article_title_en', journal.article_title_en or '') }}"><small>Apresentado abaixo do título principal no PDF académico.</small></label>
+<label>Autor para correspondência (opcional)<textarea name="corresponding_author" rows="2" maxlength="2000">{{ request.form.get('corresponding_author', journal.corresponding_author or '') }}</textarea><small>Nome e contacto do autor responsável, para o cabeçalho do PDF.</small></label>
+<label>Descrição<textarea name="description" required minlength="20" maxlength="4000" rows="4">{{ request.form.get('description', journal.description or '') }}</textarea></label>
+<div class="journal-editor-note"><strong>Conteúdo público da revista</strong><p>Estes campos controlam o artigo, os metadados editoriais, o índice, as referências e as ações exibidas na página pública.</p></div>
+<h2>Autores do artigo</h2>
+<p class="journal-editor-help">O nome abrirá a aba Autores com a descrição. O ORCID terá uma ligação independente. Adicione um cartão por autor.</p>
+<input type="hidden" name="authors_structured" value="1">
+<div id="journal-authors-editor">
+{% for author in journal_authors %}{{ author_card(author) }}{% else %}{{ author_card({'name':'', 'orcid':'', 'description':''}) }}{% endfor %}
+</div>
+<button type="button" class="admin-secondary" id="journal-add-author">Adicionar autor</button>
+<template id="journal-author-template">{{ author_card({'name':'', 'orcid':'', 'description':''}) }}</template>
+<h2>Artigo científico</h2><p class="journal-editor-help">Os campos abaixo são opcionais. Apenas os preenchidos aparecem no artigo e no PDF, nesta ordem.</p><label>Resumo<textarea class="journal-article-field" name="summary" rows="6" maxlength="20000">{{ request.form.get('summary', journal.summary or '') }}</textarea></label>
+<label>Palavras-chave<textarea class="journal-article-field" name="keywords" rows="2" maxlength="2000">{{ request.form.get('keywords', journal.keywords or '') }}</textarea><small>Separe os termos por ponto e vírgula.</small></label>
+<label>Abstract<textarea class="journal-article-field" name="abstract" rows="6" maxlength="20000">{{ request.form.get('abstract', journal.abstract or '') }}</textarea></label>
+<label>Keywords<textarea class="journal-article-field" name="abstract_keywords" rows="2" maxlength="2000">{{ request.form.get('abstract_keywords', journal.abstract_keywords or '') }}</textarea><small>Keywords in English, separated by semicolons.</small></label>
+<h2>Conteúdo do artigo</h2><p class="journal-editor-help">Defina o título do artigo no campo próprio. Use ## ou ### para as secções do índice. Os títulos # já guardados continuam compatíveis.</p><label>Conteúdo do artigo em Markdown
+<div class="markdown-toolbar" data-md-toolbar>
+<button type="button" data-md="heading">Título</button><button type="button" data-md="section">Secção</button><button type="button" data-md="bold"><strong>Negrito</strong></button><button type="button" data-md="italic"><em>Itálico</em></button><button type="button" data-md="quote">Citação</button><button type="button" data-md="list">Lista</button><button type="button" data-md="dropcap" title="Destacar a primeira letra do parágrafo">Capitular</button><button type="button" data-md="link">Hiperligação</button><button type="button" data-md="reference">Referência</button><button type="button" data-md="image">Imagem</button><button type="button" data-md="video">Vídeo</button><button type="button" data-md="table">Tabela</button><button type="button" data-md="chart">Gráfico</button>
+</div>
+<p id="journal-word-count" class="journal-editor-help" aria-live="polite"></p><div class="markdown-editor-grid"><textarea id="journal-content-md" class="journal-article-field" maxlength="400000" name="content_markdown" rows="22" placeholder="Escreva em Markdown...">{{ request.form.get('content_markdown', journal.content_markdown or '') }}</textarea><div><strong>Pré-visualização</strong><div class="markdown-preview" data-md-preview></div><h3>Referências bibliográficas e notas</h3><div class="markdown-preview" data-reference-preview></div></div></div>
+</label>
+<label>Contribuição dos autores<textarea class="journal-article-field" name="author_contributions" rows="4" maxlength="20000">{{ request.form.get('author_contributions', journal.author_contributions or '') }}</textarea><small>Descreva o contributo de cada autor; pode usar a taxonomia CRediT.</small></label>
+<label>Agradecimentos<textarea class="journal-article-field" name="acknowledgements" rows="4" maxlength="20000">{{ request.form.get('acknowledgements', journal.acknowledgements or '') }}</textarea></label>
+<label>Financiamento<textarea class="journal-article-field" name="funding" rows="4" maxlength="20000">{{ request.form.get('funding', journal.funding or '') }}</textarea><small>Entidades financiadoras, bolsas e projetos, se aplicável.</small></label>
+<label>Conflitos de interesse<textarea class="journal-article-field" name="conflicts_of_interest" rows="4" maxlength="20000">{{ request.form.get('conflicts_of_interest', journal.conflicts_of_interest or '') }}</textarea></label>
+<label>Aprovação ética (quando aplicável)<textarea class="journal-article-field" name="ethics_approval" rows="4" maxlength="20000">{{ request.form.get('ethics_approval', journal.ethics_approval or '') }}</textarea><small>Comissão de ética, instituição, referência e data de aprovação, quando aplicável.</small></label>
+<label>Consentimento informado (quando aplicável)<textarea class="journal-article-field" name="informed_consent" rows="4" maxlength="20000">{{ request.form.get('informed_consent', journal.informed_consent or '') }}</textarea><small>Indique o consentimento obtido, quando aplicável.</small></label>
+<label>Disponibilidade de dados<textarea class="journal-article-field" name="data_availability" rows="4" maxlength="20000">{{ request.form.get('data_availability', journal.data_availability or '') }}</textarea><small>Descreva o acesso aos dados e, se existir, a ligação ao repositório.</small></label>
+<label>Referências bibliográficas<textarea class="journal-article-field" name="references" rows="10" maxlength="100000">{{ request.form.get('references', journal.references or '') }}</textarea><small>Aceita Markdown e ligações. As referências existentes são mantidas.</small></label>
+<label>Notas (opcional)<textarea class="journal-article-field" name="notes" rows="4" maxlength="20000">{{ request.form.get('notes', journal.notes or '') }}</textarea></label>
+<h2>Capa e acessibilidade</h2><label>Capa via Cloudinary<input name="cover_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
+<label>Ou URL da capa<input name="cover_image" type="url" value="{{ request.form.get('cover_image', journal.cover_image or '') }}" placeholder="https://..."></label>
+<label>Texto alternativo da capa<input name="cover_alt" maxlength="300" value="{{ request.form.get('cover_alt', journal.cover_alt or '') }}"></label>
+<img id="journal-cover-preview" class="image-preview" src="{{ journal.cover_image|image_variant(800) if journal.cover_image else '' }}" alt="Pré-visualização da capa" {% if not journal.cover_image %}hidden{% endif %}>
+<h2>Informações editoriais do artigo</h2>
+<p class="journal-editor-help">A capa, edição e data usam os campos da revista. Os textos abaixo aparecem na aba Informações. Preencha apenas dados confirmados; nenhum direito ou licença é atribuído automaticamente. Aceita Markdown e ligações.</p>
+<label>Direitos autorais<textarea name="copyright_policy" rows="4" maxlength="20000">{{ request.form.get('copyright_policy', journal.copyright_policy or '') }}</textarea></label>
+<label>Histórico de submissões<textarea name="submission_history" rows="4" maxlength="20000" placeholder="Datas de submissão, revisão e aceitação.">{{ request.form.get('submission_history', journal.submission_history or '') }}</textarea></label>
+<label>Informações sobre a licença<textarea name="license_info" rows="4" maxlength="20000" placeholder="Nome da licença, condições e URL oficial.">{{ request.form.get('license_info', journal.license_info or '') }}</textarea></label>
+</section>
+<aside class="editor-side"><h2>Publicação e metadados</h2>
+<label>Abreviatura<input name="abbreviation" maxlength="30" value="{{ request.form.get('abbreviation', journal.abbreviation or '') }}"></label>
+<label>Área científica<input name="field" required maxlength="140" value="{{ request.form.get('field', journal.field or '') }}"></label>
+<label>ISSN<input name="issn" maxlength="9" pattern="[0-9]{4}-[0-9]{3}[0-9Xx]" value="{{ request.form.get('issn', journal.issn or '') }}" placeholder="1234-567X"></label>
+<label>Periodicidade<input name="frequency" maxlength="80" value="{{ request.form.get('frequency', journal.frequency or '') }}" placeholder="Semestral"></label>
+<label>Edição atual<input name="current_issue" maxlength="120" value="{{ request.form.get('current_issue', journal.current_issue or '') }}" placeholder="Vol. 1 · N.º 1"></label>
+<div class="journal-editor-note"><strong>Metadados científicos</strong><p>Informação apresentada na barra editorial pública da revista.</p></div>
+
+<label>DOI<input name="doi" maxlength="180" value="{{ request.form.get('doi', journal.doi or '') }}" placeholder="10.xxxx/xxxxx"></label>
+<label>Data de publicação<input name="publication_date" type="date" value="{{ request.form.get('publication_date', journal.publication_date.isoformat() if journal.publication_date else '') }}"></label>
+<label>Slug<input name="slug" maxlength="200" value="{{ request.form.get('slug', journal.slug or '') }}" placeholder="gerado automaticamente"></label>
+<label class="check"><input name="published" type="checkbox" {% if request.form.get('published') == 'on' or (request.method != 'POST' and journal.published) %}checked{% endif %}> Publicada no catálogo</label>
+<div class="journal-editor-note"><strong>Funcionalidades públicas</strong><p>Índice responsivo gerado automaticamente pelos títulos H2/H3. URLs tornam-se clicáveis. Os botões Acompanhar, Guardar, Citar e Baixar PDF são disponibilizados automaticamente na página pública. O acompanhamento informa atualizações ao regressar à página, neste navegador.</p></div>
+{% if journal.id %}
+<a class="secondary-btn" href="{{ url_for('journal_preview', journal_id=journal.id) }}" target="_blank" rel="noopener">Pré-visualizar revista</a>
+<a class="secondary-btn" href="{{ url_for('journal_preview_pdf', journal_id=journal.id) }}" target="_blank" rel="noopener">Testar PDF</a>
+{% endif %}
+<div class="journal-save-actions"><button class="admin-primary" type="submit">Guardar alterações</button><button class="admin-secondary" type="submit" name="save_mode" value="draft">Guardar rascunho</button></div><p id="journal-editor-status" role="status" aria-live="polite">Sem alterações por guardar.</p>
+</aside></form>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-journals.js', v='20261004-capitular-v1') }}" defer></script>
+{% endblock %}
+
+
+

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block title %}{{ 'Notificações' if notifications else 'Os meus favoritos' }} — Sussurros do Saber{% endblock %}
+{% macro favorite_card(link, title, image, category, summary, date, id='', slug='') %}
+<li class="reader-favorite-card">
+  <div class="reader-favorite-cover">
+    <a href="{{ link }}" tabindex="-1" aria-hidden="true"><img src="{{ image|image_variant(640) if image else url_for('static', filename='img/image-fallback.svg') }}" {% if image %}srcset="{{ image|image_srcset([360, 640]) }}" sizes="(max-width: 639px) 100vw, (max-width: 1099px) 50vw, 33vw"{% endif %} width="640" height="360" alt="" loading="lazy" decoding="async"></a>
+    <button type="button" class="reader-favorite-remove" {% if id %}data-reader-remove-article="{{ id }}"{% else %}data-reader-remove-journal="{{ slug }}"{% endif %} aria-label="Remover dos favoritos: {{ title }}" title="Remover dos favoritos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z" fill="currentColor"/></svg></button>
+  </div>
+  <p class="reader-favorite-category">{{ category }}</p>
+  <h2><a href="{{ link }}">{{ title }}</a></h2>
+  {% if summary %}<p class="reader-favorite-summary">{{ summary }}</p>{% endif %}
+  {% if date %}<p class="reader-favorite-date">{{ date }}</p>{% endif %}
+</li>
+{% endmacro %}
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 py-12 reader-library-page">
+  <h1 class="font-serif text-4xl">{{ 'Notificações de artigos' if notifications else 'Os meus favoritos' }}</h1>
+  <p class="reader-library-intro">{{ 'Actualizações dos artigos que acompanha.' if notifications else 'Para ler mais tarde no computador, tablet ou telemóvel. Os artigos ficam guardados na sua conta.' }}</p>
+  {% if not reader_account %}
+  <p class="mt-6">Entre ou crie uma conta para consultar esta página.</p>
+  <button type="button" data-reader-open class="primary-btn mt-4">Entrar / Criar conta</button>
+  {% else %}
+  {% if notifications and not reader_account.verified %}<p><a href="{{ url_for('submissions.verify_notice') }}">Confirme o seu e-mail para activar notificações.</a></p>{% endif %}
+  <ul class="reader-favorites-grid" data-reader-library>
+    {% if not notifications %}
+      {% for row in reader_articles|default([]) %}
+        {{ favorite_card(url_for('article', slug=row.article.slug), row.article.title, row.article.image, row.article.category, row.article.summary, row.article.date, id=row.article_id) }}
+      {% endfor %}
+      {% for row in reader_rows %}
+        {{ favorite_card(url_for('journal_detail', slug=row.journal.slug), row.journal|reader_article_title, row.journal.cover_image, row.journal.field, row.journal.description, row.journal.updated_at.strftime('%d/%m/%Y'), slug=row.journal.slug) }}
+      {% endfor %}
+    {% else %}
+      {% for row in reader_rows %}
+      <li class="reader-favorite-card reader-notification-card">
+        <div class="reader-favorite-cover"><a href="{{ url_for('journal_detail', slug=row.journal.slug) }}" tabindex="-1" aria-hidden="true"><img src="{{ row.journal.cover_image|image_variant(640) if row.journal.cover_image else url_for('static', filename='img/image-fallback.svg') }}" {% if row.journal.cover_image %}srcset="{{ row.journal.cover_image|image_srcset([360, 640]) }}" sizes="(max-width: 639px) 100vw, (max-width: 1099px) 50vw, 33vw"{% endif %} width="640" height="360" alt="" loading="lazy" decoding="async"></a></div>
+        <p class="reader-favorite-category">{{ row.journal.field }}</p>
+        <h2><a href="{{ url_for('journal_detail', slug=row.journal.slug) }}">{{ row.journal|reader_article_title }}</a></h2>
+        <p class="reader-favorite-date">{% if reader_notification_authors.get(row.journal_id) %}Por {{ reader_notification_authors[row.journal_id]|join(', ') }} · {% endif %}{{ row.journal.updated_at.strftime('%d/%m/%Y') }}</p>
+        <div class="reader-notification-actions">{% if row.followed_at and row.journal.updated_at > row.followed_at %}<p data-reader-notification-status>Nova actualização em {{ row.journal.updated_at.strftime('%d/%m/%Y') }}.</p><button type="button" class="primary-btn" data-reader-mark-read="{{ row.journal.slug }}" data-reader-revision="{{ row.journal.updated_at.isoformat() }}">Marcar como vista</button>{% else %}<p data-reader-notification-status>Sem novas actualizações. Está a acompanhar este artigo.</p>{% endif %}<button type="button" class="primary-btn" data-reader-unfollow="{{ row.journal.slug }}">Desactivar notificações</button></div></li>
+      {% endfor %}
+    {% endif %}
+    {% if not reader_rows and not reader_articles|default([]) %}<li data-reader-empty>{{ 'Ainda não acompanha artigos. Active o sino num artigo de revista para receber actualizações aqui.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</li>{% endif %}
+  </ul>
+  <p data-reader-library-empty hidden>{{ 'Ainda não acompanha artigos. Active o sino num artigo de revista para receber actualizações aqui.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</p>
+  {% endif %}
+</section>
+{% endblock %}

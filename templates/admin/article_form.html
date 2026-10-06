@@ -5,10 +5,10 @@
 <form method="post" enctype="multipart/form-data" class="editor-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <section class="editor-main">
-    <label>Título<input id="titleField" name="title" value="{{ article.title or '' }}" required minlength="5"></label>
-    <label>Resumo<textarea name="summary" rows="3" required>{{ article.summary or '' }}</textarea></label>
+    <label>Título<input id="titleField" name="title" maxlength="240" value="{{ request.form.get('title', article.title or '') }}" required minlength="5"></label>
+    <label>Resumo<textarea name="summary" maxlength="2000" rows="3" required>{{ request.form.get('summary', article.summary or '') }}</textarea></label>
     <div class="editor-field"><span class="editor-label">Conteúdo em Markdown</span>
-      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button><button type="button" id="openTable" aria-expanded="false" aria-controls="tablePanel">Tabela</button><button type="button" id="openChart" aria-expanded="false" aria-controls="chartPanel">Gráfico</button></div>
+      <div class="editor-toolbar" aria-label="Ferramentas do editor"><button type="button" data-before="## ">Título</button><button type="button" data-before="**" data-after="**"><strong>Negrito</strong></button><button type="button" data-before="*" data-after="*"><em>Itálico</em></button><button type="button" data-before="> ">Citação</button><button type="button" data-before="- ">Lista</button><button type="button" data-before="[" data-after="](https://)">Referência</button><button type="button" id="insertPullQuote">Citação em destaque</button><button type="button" id="openInlineImage" aria-expanded="false" aria-controls="inlineImagePanel">Imagem</button><button type="button" id="openInlineVideo" aria-expanded="false" aria-controls="inlineVideoPanel">Vídeo</button><button type="button" id="openTable" aria-expanded="false" aria-controls="tablePanel">Tabela</button><button type="button" id="openChart" aria-expanded="false" aria-controls="chartPanel">Gráfico</button></div>
       <section id="inlineImagePanel" class="inline-image-panel" hidden aria-labelledby="inlineImageTitle">
         <div class="inline-image-head"><div><strong id="inlineImageTitle">Inserir imagem no texto</strong><small>A imagem será colocada na posição actual do cursor.</small></div><button type="button" id="closeInlineImage" aria-label="Fechar">×</button></div>
         <div class="inline-image-fields">
@@ -16,6 +16,8 @@
           <span class="field-separator">ou</span>
           <label>Endereço externo<input id="inlineImageUrl" type="url" inputmode="url" placeholder="https://..."></label>
           <label>Descrição acessível<input id="inlineImageAlt" maxlength="180" placeholder="Descreva o que aparece na imagem"></label>
+          <label>Apresentação<select id="inlineImageLayout"><option value="full">Imagem normal</option><option value="portrait">Retrato circular à direita do texto</option></select></label>
+          <label>Crédito da imagem (opcional)<input id="inlineImageCredit" maxlength="180" placeholder="Fotógrafo, instituição ou fonte"></label>
           <label>Legenda <span class="optional">(opcional)</span><input id="inlineImageCaption" maxlength="300" placeholder="Fonte, autor ou explicação breve"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineImage" class="admin-primary">Inserir no artigo</button><span id="inlineImageStatus" role="status" aria-live="polite"></span></div>
@@ -23,7 +25,8 @@
       <section id="inlineVideoPanel" class="inline-image-panel inline-video-panel" hidden aria-labelledby="inlineVideoTitle">
         <div class="inline-image-head"><div><strong id="inlineVideoTitle">Inserir vídeo no texto</strong><small>Compatível com YouTube, Vimeo e ficheiros MP4, WebM ou OGG.</small></div><button type="button" id="closeInlineVideo" aria-label="Fechar">×</button></div>
         <div class="inline-video-fields">
-          <label>Endereço do vídeo<input id="inlineVideoUrl" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=..."></label>
+          <label>Carregar vídeo do dispositivo (máximo 50 MB)<input id="inlineVideoFile" type="file" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"></label>
+          <label>Ou endereço do vídeo<input id="inlineVideoUrl" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=..."></label>
           <label>Título ou legenda<input id="inlineVideoTitleInput" maxlength="180" placeholder="Descreva brevemente o conteúdo do vídeo"></label>
         </div>
         <div class="inline-image-actions"><button type="button" id="insertInlineVideo" class="admin-primary">Inserir vídeo no artigo</button><span id="inlineVideoStatus" role="status" aria-live="polite"></span></div>
@@ -46,26 +49,29 @@
         </div>
         <div class="inline-image-actions"><button type="button" id="insertChart" class="admin-primary">Inserir gráfico</button><span id="chartStatus" role="status" aria-live="polite"></span></div>
       </section>
-      <div class="editor-workspace"><textarea id="bodyEditor" name="body" rows="20" placeholder="Escreva em Markdown...">{{ article.body or '' }}</textarea><div><span class="preview-title">Pré-visualização</span><div id="markdownPreview" class="markdown-preview"></div></div></div>
+      <div class="editor-workspace"><textarea id="bodyEditor" name="body" maxlength="400000" rows="20" placeholder="Escreva em Markdown...">{{ request.form.get('body', article.body or '') }}</textarea><div><span class="preview-title">Pré-visualização</span><div id="markdownPreview" class="markdown-preview"></div></div></div>
     </div>
-    <label>Referências bibliográficas<textarea name="references" rows="8" placeholder="## Referências&#10;&#10;1. Autor. Título. Revista...&#10;2. DOI: https://doi.org/...">{{ article.references or '' }}</textarea><small>Aceita Markdown. Inclua DOI ou URL quando disponíveis.</small></label>
-    <label>Palavras-chave<input name="keywords" value="{{ article.keywords or '' }}" placeholder="biologia, microbiologia, educação"></label>
-    <label>DOI<input name="doi" value="{{ article.doi or '' }}" placeholder="10.xxxx/xxxxx"></label>
+    <label>Referências bibliográficas<textarea name="references" maxlength="100000" rows="8" placeholder="## Referências&#10;&#10;1. Autor. Título. Revista...&#10;2. DOI: https://doi.org/...">{{ request.form.get('references', article.references or '') }}</textarea><small>Aceita Markdown. Inclua DOI ou URL quando disponíveis.</small></label>
+    <label>Palavras-chave<input name="keywords" maxlength="500" value="{{ request.form.get('keywords', article.keywords or '') }}" placeholder="biologia, microbiologia, educação"></label>
+    <label>DOI<input name="doi" maxlength="180" value="{{ request.form.get('doi', article.doi or '') }}" placeholder="10.xxxx/xxxxx"></label>
+<label>Carregar vídeo principal do dispositivo (MP4, WebM ou OGG; máximo 50 MB)<input name="cover_video_file" type="file" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"><small>O ficheiro seleccionado tem prioridade sobre a ligação abaixo. Guarde o artigo para concluir o carregamento.</small></label>
+<label>Vídeo principal (opcional)<input name="cover_video" type="url" maxlength="1000" value="{{ request.form.get('cover_video', article.cover_video or '') }}" placeholder="https://www.youtube.com/watch?v=..."><small>Aceita YouTube, Vimeo ou URL de MP4, WebM e OGG. Substitui a imagem principal na página do artigo. Mantenha uma imagem para os cartões e as partilhas. Apague a URL para voltar à imagem.</small></label>
     <label>Carregar imagem (JPG, PNG ou WebP; máximo 8 MB)<input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
-    <label>Ou endereço externo da imagem<input id="imageUrl" name="image" type="url" value="{{ article.image|safe_image_url }}" placeholder="https://..."></label>
-    <img id="imagePreview" class="image-preview" src="{{ article.image|safe_image_url }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}>
+    <label>Ou endereço externo da imagem<input id="imageUrl" name="image" type="url" value="{{ request.form.get('image', article.image or '')|safe_image_url }}" placeholder="https://..."></label>
+    <img id="imagePreview" class="image-preview" src="{{ request.form.get('image', article.image or '')|safe_image_url }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}>
   </section>
   <aside class="editor-side">
-    <label>Estado<select name="status"><option value="draft" {% if article.status=='draft' %}selected{% endif %}>Rascunho</option><option value="published" {% if article.status=='published' %}selected{% endif %}>Publicado</option><option value="scheduled" {% if article.status=='scheduled' %}selected{% endif %}>Programado</option></select></label>
-    <label>Programar para<input name="scheduled_at" type="datetime-local" value="{{ article.scheduled_at.strftime('%Y-%m-%dT%H:%M') if article.scheduled_at else '' }}"></label>
-    <label>Autor<select name="author_id" required>{% for author in authors %}<option value="{{ author.id }}" {% if article.author_id==author.id %}selected{% endif %}>{{ author.name }}</option>{% endfor %}</select></label>
-    <label>Categoria<select name="category_id" required>{% for category in categories %}<option value="{{ category.id }}" {% if article.category_id==category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
-    <label>Tempo de leitura<input name="read_minutes" type="number" min="1" value="{{ article.read_minutes or 5 }}"></label>
+    <label>Estado<select name="status"><option value="draft" {% if request.form.get('status', article.status)=='draft' %}selected{% endif %}>Rascunho</option><option value="published" {% if request.form.get('status', article.status)=='published' %}selected{% endif %}>Publicado</option><option value="scheduled" {% if request.form.get('status', article.status)=='scheduled' %}selected{% endif %}>Programado</option></select></label>
+    <label>Programar para<input name="scheduled_at" type="datetime-local" value="{{ request.form.get('scheduled_at', article.scheduled_at.strftime('%Y-%m-%dT%H:%M') if article.scheduled_at else '') }}"></label>
+    <label>Autor<select name="author_id" required>{% for author in authors %}<option value="{{ author.id }}" {% if request.form.get('author_id', article.author_id)|string==author.id|string %}selected{% endif %}>{{ author.name }}</option>{% endfor %}</select></label>
+    <label>Categoria<select name="category_id" required>{% for category in categories %}<option value="{{ category.id }}" {% if request.form.get('category_id', article.category_id)|string==category.id|string %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+    <label>Tempo de leitura<input name="read_minutes" type="number" min="1" value="{{ request.form.get('read_minutes', article.read_minutes or 5) }}"></label>
     <label>Endereço personalizado
-      <div class="slug-field"><span>/artigo/</span><input id="slugField" name="slug" value="{{ article.slug or '' }}" placeholder="gerado-a-partir-do-titulo" maxlength="260" autocapitalize="none" autocomplete="off" spellcheck="false"></div>
+      <div class="slug-field"><span>/artigo/</span><input id="slugField" name="slug" value="{{ request.form.get('slug', article.slug or '') }}" placeholder="gerado-a-partir-do-titulo" maxlength="260" autocapitalize="none" autocomplete="off" spellcheck="false"></div>
       <small id="slugPreview" class="url-preview">URL: {{ site_url }}/artigo/{{ article.slug or 'gerado-a-partir-do-titulo' }}</small>
     </label>
-    <label class="check"><input name="featured" type="checkbox" {% if article.featured %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
+    <label class="check"><input name="featured" type="checkbox" {% if (request.method=='POST' and request.form.get('featured')=='on') or (request.method!='POST' and article.featured) %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261004-video-upload-v2') }}"></script>
 {% endblock %}
+

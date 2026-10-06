@@ -589,3 +589,35 @@ input,textarea,select,button{font-size:16px}
 .docs-section p:last-child,.docs-section ol:last-child,.docs-section ul:last-child{margin-bottom:0}
 .docs-section a{color:#1e4e8c;text-underline-offset:2px}
 @media(max-width:850px){.docs-section{scroll-margin-top:125px}}
+
+.editorial-policy-editor .editor-side{position:static}
+
+
+.editorial-policy-editor .editor-main{min-width:0}
+.policy-preview-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}
+.policy-preview{border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:20px;overflow-wrap:anywhere;line-height:1.7;overflow-x:auto}
+.policy-preview img{max-width:100%;height:auto}.policy-preview table{border-collapse:collapse}.policy-preview td,.policy-preview th{border:1px solid var(--line);padding:8px}
+.policy-other{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}.policy-other summary{cursor:pointer;font-weight:700;margin-bottom:20px}
+
+.markdown-preview figure.article-portrait {
+  float: right; width: min(38%, 320px); margin: 0 0 1.5rem 2rem;
+}
+.markdown-preview figure.article-portrait img {
+  display: block; width: 100%; height: auto; max-height: none; margin: 0; aspect-ratio: 1; object-fit: cover;
+  border-radius: 50%;
+}
+.markdown-preview figure.article-portrait figcaption { margin-top: 1rem; font-size: .9em; line-height: 1.5; }
+.markdown-preview figure.article-portrait figcaption small { display: block; margin-top: .8rem; font-family: sans-serif; font-size: .75em; }
+@media (max-width: 640px) {
+  .markdown-preview figure.article-portrait { float: none; width: min(100%, 300px); margin: 1.5rem auto; }
+}
+
+.markdown-preview figure.article-pullquote { float:right; width:min(40%,340px); margin:0 0 2rem 2rem; padding:1rem; text-align:center; }
+.markdown-preview figure.article-pullquote blockquote { border:0; padding:0; margin:0; background:none; font-style:normal; }
+.markdown-preview figure.article-pullquote blockquote::before,
+.markdown-preview figure.article-pullquote blockquote::after { display:block; font-family:Georgia,serif; font-size:3rem; line-height:1; color:#1e4e8c; }
+.markdown-preview figure.article-pullquote blockquote::before { content:"“"; }
+.markdown-preview figure.article-pullquote blockquote::after { content:"”"; }
+.markdown-preview figure.article-pullquote blockquote p { font-family:Georgia,serif; font-size:1.4rem; line-height:1.5; margin:1rem 0; text-align:center; }
+.markdown-preview figure.article-pullquote figcaption { font-size:.85rem; line-height:1.5; margin-top:1rem; opacity:.8; }
+@media(max-width:640px) { .markdown-preview figure.article-pullquote { float:none; width:100%; margin:1.5rem 0; box-sizing:border-box; } }

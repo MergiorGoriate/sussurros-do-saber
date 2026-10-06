@@ -20,6 +20,8 @@ from sqlalchemy import inspect
 from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E402
 
 
+from security_test_support import authenticate_test_session
+
 class PlatformTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -88,7 +90,9 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b'<meta name="robots" content="noindex,follow">', filtered.data)
         self.assertEqual(filtered.headers["X-Robots-Tag"], "noindex, follow")
         favorites = self.client.get("/favoritos")
-        self.assertIn(b'<meta name="robots" content="noindex,follow">', favorites.data)
+        self.assertEqual(favorites.status_code, 302)
+        self.assertEqual(favorites.location, '/conta/biblioteca')
+        self.assertIn('noindex', self.client.get(favorites.location).headers['X-Robots-Tag'])
         missing = self.client.get("/artigo/nao-existe")
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(missing.headers["X-Robots-Tag"], "noindex, nofollow")
@@ -319,6 +323,30 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("max-age=31536000", response.headers.get("Cache-Control", ""))
         self.assertIn("immutable", response.headers.get("Cache-Control", ""))
 
+    def test_static_gzip_respects_negotiation_ranges_and_cache(self):
+        import gzip
+        path = '/static/css/style.css'
+        plain = self.client.get(path)
+        encoded = self.client.get(path, headers={'Accept-Encoding': 'gzip'})
+        self.assertEqual(encoded.headers.get('Content-Encoding'), 'gzip')
+        self.assertEqual(gzip.decompress(encoded.data), plain.data)
+        self.assertLess(len(encoded.data), len(plain.data) // 2)
+        self.assertIn('Accept-Encoding', plain.headers['Vary'])
+        self.assertIn('Accept-Encoding', encoded.headers['Vary'])
+        self.assertNotEqual(plain.headers.get('ETag'), encoded.headers.get('ETag'))
+        refused = self.client.get(path, headers={'Accept-Encoding': 'gzip;q=0'})
+        self.assertNotIn('Content-Encoding', refused.headers)
+        partial = self.client.get(path, headers={'Accept-Encoding': 'gzip', 'Range': 'bytes=0-99'})
+        self.assertEqual(partial.status_code, 206)
+        self.assertNotIn('Content-Encoding', partial.headers)
+        self.assertEqual(partial.data, plain.data[:100])
+        for response in (plain, encoded, refused, partial):
+            response.close()
+        script = self.client.get('/static/js/reader-accounts.js', headers={'Accept-Encoding': 'gzip'})
+        self.assertEqual(script.headers.get('Content-Encoding'), 'gzip')
+        self.assertIn(b'const dialog', gzip.decompress(script.data))
+        script.close()
+
     def test_articles_are_paginated(self):
         response = self.client.get("/artigos?page=1")
         self.assertEqual(response.status_code, 200)
@@ -346,6 +374,160 @@ class PlatformTests(unittest.TestCase):
     def test_invalid_chart_data_is_not_embedded(self):
         chart = render_markdown("[chart: pie|Teste|A=texto]")
         self.assertNotIn('class="article-chart"', str(chart))
+
+    def test_markdown_linkifies_bare_http_urls_without_nesting_links(self):
+        rendered = str(render_markdown(
+            "Fonte: https://example.org/estudo.\n\n"
+            "[DOI](https://doi.org/10.1000/teste)"
+        ))
+        self.assertIn(
+            '<a href="https://example.org/estudo" rel="noopener noreferrer">https://example.org/estudo</a>.',
+            rendered,
+        )
+        self.assertEqual(rendered.count('href="https://doi.org/10.1000/teste"'), 1)
+        self.assertNotIn("<a href=\"<a", rendered)
+
+    def test_markdown_preserves_url_labels_code_and_query_parameters(self):
+        rendered = str(render_markdown(
+            "# Título\n\n[https://example.org](https://example.org)\n\n"
+            "`https://example.org/code`\n\nhttps://example.org/?a=1&b=2"
+        ))
+        self.assertIn("<h1>Título</h1>", rendered)
+        self.assertEqual(rendered.count('href="https://example.org"'), 1)
+        self.assertIn('<code>https://example.org/code</code>', rendered)
+        self.assertIn('href="https://example.org/?a=1&amp;b=2"', rendered)
+        self.assertNotIn("&amp;amp;", rendered)
+
+    def test_journal_title_is_rendered_without_removing_introduction(self):
+        with app.app_context():
+            journal = Journal(title="Revista editorial", slug="titulo-regressao", field="Biologia",
+                              description="Uma revista com conteúdo de teste.", published=True,
+                              content_markdown="# Título do artigo\n\n## Introdução\n\nPrimeiro parágrafo.")
+            db.session.add(journal)
+            db.session.commit()
+        response = self.client.get("/revistas/titulo-regressao")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('id="journal-article-title">Título do artigo</h1>'.encode(), response.data)
+        self.assertIn("<h2>Introdução</h2>".encode(), response.data)
+        self.assertNotIn(b"heading.remove()", response.data)
+        with app.app_context():
+            journal = Journal.query.filter_by(slug="titulo-regressao").first()
+            journal.content_markdown = "## Introdução\n\nPrimeiro parágrafo."
+            db.session.commit()
+        response = self.client.get("/revistas/titulo-regressao")
+        self.assertIn('id="journal-article-title">Revista editorial</h1>'.encode(), response.data)
+        self.assertIn("<h2>Introdução</h2>".encode(), response.data)
+
+    def test_journal_draft_preview_and_pdf_require_administrator(self):
+        with app.app_context():
+            journal = Journal(title="Revista rascunho", slug="rascunho-regressao", field="Biologia",
+                              description="Uma revista ainda em preparação.", published=False,
+                              content_markdown="## Introdução\n\nConteúdo reservado.")
+            db.session.add(journal)
+            db.session.commit()
+            identifier = journal.id
+        self.assertEqual(self.client.get("/revistas/rascunho-regressao").status_code, 404)
+        self.assertEqual(self.client.get("/revistas/rascunho-regressao/baixar.pdf").status_code, 404)
+        with self.client.session_transaction() as session:
+            session.clear()
+        preview = f"/admin/revistas/{identifier}/previsualizar"
+        pdf = f"/admin/revistas/{identifier}/baixar.pdf"
+        self.assertEqual(self.client.get(preview).status_code, 302)
+        self.assertEqual(self.client.get(pdf).status_code, 302)
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            authenticate_test_session(session)
+        response = self.client.get(preview)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        response = self.client.get(pdf)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data.startswith(b"%PDF-"))
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+    def test_static_and_health_requests_do_not_update_editorial_database(self):
+        with patch("app.Article.publish_due_scheduled") as publish:
+            self.client.get("/static/css/style.css").close()
+            self.client.get("/healthz")
+            publish.assert_not_called()
+            self.client.get("/artigos")
+            publish.assert_called_once()
+
+    def test_journal_cover_url_with_s_is_accepted_and_long_metadata_rejected(self):
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "cover-csrf"
+            authenticate_test_session(session)
+        data = {"csrf_token": "cover-csrf", "title": "Revista de capa", "slug": "capa-regressao",
+                "description": "Uma descrição suficientemente longa para validação.",
+                "field": "Biologia", "cover_image": "https://images.example.org/cover.webp"}
+        self.assertEqual(self.client.post("/admin/revistas/nova", data=data).status_code, 302)
+        with app.app_context():
+            self.assertEqual(Journal.query.filter_by(slug="capa-regressao").first().cover_image, data["cover_image"])
+        data.update(slug="metadata-invalida", doi="x" * 181)
+        response = self.client.post("/admin/revistas/nova", data=data)
+        self.assertEqual(response.status_code, 200)
+        with app.app_context():
+            self.assertIsNone(Journal.query.filter_by(slug="metadata-invalida").first())
+
+    def test_journal_markdown_preview_requires_login_and_csrf(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+        endpoint = "/admin/revistas/previsualizar-markdown"
+        self.assertEqual(self.client.post(endpoint).status_code, 302)
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "preview-token"
+            authenticate_test_session(session)
+        self.assertEqual(self.client.post(endpoint, data={"content": "# Título"}).status_code, 400)
+        response = self.client.post(endpoint, data={
+            "csrf_token": "preview-token", "content": "# Título\n\n| A | B |\n| --- | --- |\n| 1 | 2 |",
+            "references": "https://example.org/fonte",
+            "summary": "Resumo da pré-visualização.", "abstract": "English preview.",
+            "author_contributions": "Contributos no preview.", "notes": "Nota do preview.",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<table>", response.json["html"])
+        self.assertIn("Resumo da pré-visualização.", response.json["html"])
+        self.assertIn("English preview.", response.json["html"])
+        self.assertIn("Contributos no preview.", response.json["html"])
+        self.assertIn("Nota do preview.", response.json["references"])
+        self.assertIn("<h1>Título</h1>", response.json["html"])
+        self.assertIn('href="https://example.org/fonte"', response.json["references"])
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+    def test_journal_explicit_draft_and_invalid_form_preserve_input(self):
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "draft-token"
+            authenticate_test_session(session)
+        data = {"csrf_token": "draft-token", "title": "Revista em preparação",
+                "slug": "editor-rascunho", "field": "Biologia",
+                "description": "Descrição científica com dimensão suficiente.",
+                "content_markdown": "## Introdução", "published": "on", "save_mode": "draft"}
+        response = self.client.post("/admin/revistas/nova", data=data)
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            self.assertFalse(Journal.query.filter_by(slug="editor-rascunho").first().published)
+        data.update(title="Título preservado", slug="editor-invalido", description="Curta")
+        response = self.client.post("/admin/revistas/nova", data=data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('value="Título preservado"'.encode(), response.data)
+        self.assertIn("## Introdução".encode(), response.data)
+
+    def test_journal_template_uses_references_and_notes_after_content(self):
+        template = Path(app.root_path, "templates", "journal.html").read_text(encoding="utf-8")
+        content_position = template.index('id="conteudo-revista"')
+        references_position = template.index('id="referencias"')
+        self.assertGreater(references_position, content_position)
+        self.assertIn("<h2>Referências bibliográficas</h2>", template)
+        self.assertIn("<h2>Notas</h2>", template)
+        self.assertGreater(template.index('id="notas"'), references_position)
 
     def test_gzip_compression_for_public_html(self):
         response = self.client.get("/", headers={"Accept-Encoding": "gzip"})
@@ -433,6 +615,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["admin_superuser"] = False
+            authenticate_test_session(session)
         response = self.client.get("/admin/docs")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'<meta name="robots" content="noindex,nofollow">', response.data)
@@ -448,6 +631,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "test-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/administradores", data={
             "csrf_token": "test-csrf",
             "display_name": "Editor Científico",
@@ -472,6 +656,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "manage-csrf"
+            authenticate_test_session(session)
         with app.app_context():
             administrator = AdminUser.query.filter_by(username="editor.cientifico").first()
             administrator_id = administrator.id
@@ -520,6 +705,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = False
             session["admin_2fa_verified"] = False
             session["admin_last_activity_at"] = time.time()
+            authenticate_test_session(session)
         response = self.client.get("/admin")
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.location.endswith("/admin/seguranca/2fa"))
@@ -582,6 +768,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-csrf",
             "name": "Autora com Fotografia",
@@ -602,6 +789,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-profile-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-profile-csrf",
             "name": "Investigadora Perfil",
@@ -665,6 +853,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "author-validation-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/autores", data={
             "csrf_token": "author-validation-csrf",
             "name": "Perfil ORCID inválido",
@@ -672,6 +861,127 @@ class PlatformTests(unittest.TestCase):
             "orcid": "orcid-invalido",
         }, follow_redirects=True)
         self.assertIn(b"Esta URL de autor j\xc3\xa1 est\xc3\xa1 em uso.", response.data)
+
+    def test_author_guidelines_custom_content_has_working_anchors(self):
+        from types import SimpleNamespace
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = SimpleNamespace(author_guidelines="## Tipos de manuscritos\n\n- Investigação original\n- Revisão\n\n## Estrutura\n\n| Campo | Requisito |\n| --- | --- |\n| Resumo | 250 palavras |")
+            response = self.client.get("/diretrizes-para-autores")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'href="#tipos"', response.data)
+        self.assertIn(b'<h2 id="tipos">Tipos de manuscritos</h2>', response.data)
+        self.assertIn(b'class="article-markdown"', response.data)
+        self.assertIn(b"<table>", response.data)
+        self.assertIn(b"/diretrizes-para-autores", self.client.get("/sitemap.xml").data)
+
+    def test_editorial_page_migration_preserves_existing_policies(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+        from sqlalchemy import create_engine, text
+        from app import ensure_editorial_policy_columns
+        engine = create_engine("sqlite://")
+        try:
+            with engine.begin() as connection:
+                connection.execute(text("CREATE TABLE editorial_policy (id INTEGER PRIMARY KEY, ethics_policy TEXT)"))
+                connection.execute(text("INSERT INTO editorial_policy (ethics_policy) VALUES ('Preservar ética')"))
+            with patch("app.db", SimpleNamespace(engine=engine, session=Mock())):
+                ensure_editorial_policy_columns()
+                ensure_editorial_policy_columns()
+            with engine.connect() as connection:
+                row = connection.execute(text("SELECT ethics_policy, page_title, page_description, page_content FROM editorial_policy")).one()
+                self.assertEqual(tuple(row), ("Preservar ética", "", "", ""))
+        finally:
+            engine.dispose()
+
+    def test_editorial_policies_public_routes_show_admin_content(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        policy = SimpleNamespace(page_title="Política configurada", page_description="Descrição configurada.", page_content="## Missão editável\n\nTexto geral gerido no painel.", author_guidelines="Autores configurados.", reviewer_guidelines="## Avaliação\n\nRevisão configurada.", ethics_policy="Ética configurada.", ai_policy="<script>alert(1)</script>", data_policy="", fees_policy="Sem taxas configuradas.", open_access_policy="Licença configurada.")
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = policy
+            for path in ("/politica-editorial", "/politicas-editoriais"):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                html = response.get_data(as_text=True)
+                self.assertIn("Revisão configurada.", html)
+                self.assertIn("Política configurada", html)
+                self.assertIn("Descrição configurada.", html)
+                self.assertIn("Texto geral gerido no painel.", html)
+                self.assertIn("Autores configurados.", html)
+                self.assertNotIn("Missão e independência", html)
+                self.assertNotIn("Os princípios que orientam", html)
+                self.assertIn("Licença configurada.", html)
+                self.assertIn("/diretrizes-para-autores", html)
+                self.assertNotIn("<script>alert(1)</script>", html)
+            model.query.first.return_value = None
+            empty = self.client.get("/politicas-editoriais")
+            self.assertEqual(empty.status_code, 200)
+            self.assertNotIn("Missão e independência", empty.get_data(as_text=True))
+            self.assertNotIn('id="author-guidelines"', empty.get_data(as_text=True))
+
+    def test_author_guidelines_without_types_use_a_valid_content_link(self):
+        from types import SimpleNamespace
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = SimpleNamespace(author_guidelines="## Preparação\n\nTexto personalizado.")
+            response = self.client.get("/diretrizes-para-autores")
+        self.assertIn(b'href="#diretrizes-conteudo"', response.data)
+        self.assertIn(b'id="diretrizes-conteudo"', response.data)
+        self.assertIn(b"Consultar diretrizes", response.data)
+        with patch("app.EditorialPolicy") as model:
+            model.query.first.return_value = None
+            default = self.client.get("/diretrizes-para-autores")
+        self.assertEqual(default.status_code, 200)
+        self.assertIn(b'<h2 id="tipos">Tipos de manuscrito</h2>', default.data)
+
+    def test_editorial_guidelines_save_and_validate_without_writes_on_get(self):
+        from models import EditorialPolicy
+        with app.app_context():
+            EditorialPolicy.query.delete()
+            db.session.commit()
+        with self.client.session_transaction() as session:
+            session.clear()
+        self.assertEqual(self.client.get("/admin/politicas-editoriais").status_code, 302)
+        with self.client.session_transaction() as session:
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "guidelines-csrf"
+            authenticate_test_session(session)
+        form = self.client.get("/admin/politicas-editoriais")
+        self.assertEqual(form.status_code, 200)
+        self.assertNotIn(b">None</textarea>", form.data)
+        self.assertIn(b'/admin/politicas-editoriais', form.data)
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.count(), 0)
+        self.assertEqual(self.client.post("/admin/politicas-editoriais", data={"author_guidelines": "invalid csrf"}).status_code, 400)
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.count(), 0)
+        content = "## Tipos de manuscritos\n\nTexto guardado pelo painel."
+        response = self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": content, "page_title": "Título editável", "page_description": "Descrição editável", "page_content": "## Política geral\n\nInformações guardadas."})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("Informações guardadas.", self.client.get("/politicas-editoriais").get_data(as_text=True))
+        self.assertIn(b"Texto guardado pelo painel.", self.client.get("/diretrizes-para-autores").data)
+        invalid = self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": "x" * 100001})
+        self.assertEqual(invalid.status_code, 200)
+        self.assertIn(b"100000 caracteres", invalid.data)
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.first().author_guidelines, content)
+        preview = self.client.post("/admin/politicas-editoriais/previsualizar", data={"csrf_token": "guidelines-csrf", "author_guidelines": "## Tipos de manuscritos\n\n<script>alert(1)</script>"})
+        self.assertEqual(preview.status_code, 200)
+        self.assertIn('id="tipos"', preview.json["html"])
+        self.assertNotIn("<script>", preview.json["html"])
+        self.assertEqual(self.client.post("/admin/politicas-editoriais/previsualizar", data={"author_guidelines": "test"}).status_code, 400)
+        self.assertEqual(self.client.post("/admin/politicas-editoriais/previsualizar", data={"csrf_token": "guidelines-csrf", "author_guidelines": "x" * 100001}).status_code, 400)
+        default_preview = self.client.post("/admin/politicas-editoriais/previsualizar", data={"csrf_token": "guidelines-csrf"})
+        self.assertTrue(default_preview.json["default"])
+        self.assertIn("Princípios gerais", default_preview.json["html"])
+        with app.app_context():
+            EditorialPolicy.query.first().reviewer_guidelines = "Preservar revisão"
+            db.session.commit()
+        self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": content})
+        with app.app_context():
+            self.assertEqual(EditorialPolicy.query.first().reviewer_guidelines, "Preservar revisão")
+        self.client.post("/admin/politicas-editoriais", data={"csrf_token": "guidelines-csrf", "author_guidelines": "   "})
+        self.assertIn("Princípios gerais".encode(), self.client.get("/diretrizes-para-autores").data)
 
     def test_journal_schema_contains_all_management_columns(self):
         with app.app_context():
@@ -681,12 +991,115 @@ class PlatformTests(unittest.TestCase):
             "cover_image", "cover_alt", "published", "created_at", "updated_at",
         }.issubset(columns))
 
+    def test_journal_article_migration_preserves_legacy_content(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from sqlalchemy import create_engine, text
+        from app import ensure_journal_columns
+        from journal_article import ARTICLE_FIELD_LIMITS
+        engine = create_engine("sqlite://")
+        try:
+            with engine.begin() as connection:
+                connection.execute(text("CREATE TABLE journal (id INTEGER PRIMARY KEY, content_markdown TEXT, \"references\" TEXT, acknowledgements TEXT, funding TEXT)"))
+                connection.execute(text("INSERT INTO journal VALUES (1, 'Conteúdo original', 'Referências originais', 'Agradecimentos originais', 'Financiamento original')"))
+            with patch("app.db", SimpleNamespace(engine=engine, session=Mock())):
+                ensure_journal_columns()
+                ensure_journal_columns()
+            with engine.connect() as connection:
+                row = connection.execute(text("SELECT * FROM journal")).mappings().one()
+                self.assertEqual(row["content_markdown"], "Conteúdo original")
+                self.assertEqual(row["references"], "Referências originais")
+                self.assertEqual(row["acknowledgements"], "Agradecimentos originais")
+                self.assertEqual(row["funding"], "Financiamento original")
+                self.assertEqual(row["article_title"], "")
+                for name in set(ARTICLE_FIELD_LIMITS) - {"acknowledgements", "funding"}:
+                    self.assertEqual(row[name], "")
+        finally:
+            engine.dispose()
+
+    def test_separate_article_title_keeps_legacy_fallback_and_pdf_title(self):
+        from types import SimpleNamespace
+        from app import journal_article_content, render_journal_pdf
+        from unittest.mock import patch
+        journal = SimpleNamespace(title="Nome da revista", article_title="Título explícito",
+                                  content_markdown="# Título antigo\n\n## Introdução\n\nTexto preservado.",
+                                  guidelines="", slug="titulo-separado", description="Descrição",
+                                  cover_image="", references="", notes="")
+        title, body = journal_article_content(journal)
+        self.assertEqual(title, "Título explícito")
+        self.assertNotIn("Título antigo", body)
+        self.assertIn("Texto preservado.", body)
+        from reportlab.platypus import SimpleDocTemplate
+        with app.test_request_context(), patch("app.SimpleDocTemplate", wraps=SimpleDocTemplate) as document:
+            response = render_journal_pdf(journal)
+        self.assertTrue(response.data.startswith(b"%PDF-"))
+        self.assertEqual(document.call_args.kwargs["title"], "Título explícito")
+        journal.article_title = ""
+        self.assertEqual(journal_article_content(journal)[0], "Título antigo")
+        journal.content_markdown = "## Introdução\n\nTexto preservado."
+        self.assertEqual(journal_article_content(journal)[0], "Nome da revista")
+
+    def test_journal_structured_article_round_trip_order_optional_and_limits(self):
+        from bs4 import BeautifulSoup
+        from journal_article import ARTICLE_FIELD_LIMITS
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "article-fields-csrf"
+            authenticate_test_session(session)
+        fields = {name: "Texto " + name for name in ARTICLE_FIELD_LIMITS}
+        fields.update({"csrf_token": "article-fields-csrf", "title": "Revista estruturada",
+                       "article_title": "Título do artigo separado",
+                       "article_title_en": "Separate article title", "corresponding_author": "Autora, contacto@example.org",
+                       "slug": "artigo-estruturado", "field": "Biologia", "published": "on",
+                       "description": "Descrição completa da revista de artigo estruturado.",
+                       "content_markdown": "# Título científico\n\n## Introdução\n\nTexto científico.",
+                       "references": "Referência verificável."})
+        response = self.client.post("/admin/revistas/nova", data=fields)
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            journal = Journal.query.filter_by(slug="artigo-estruturado").one()
+            identifier = journal.id
+            self.assertEqual(journal.article_title_en, "Separate article title")
+            self.assertEqual(journal.corresponding_author, "Autora, contacto@example.org")
+            for name in ARTICLE_FIELD_LIMITS:
+                self.assertEqual(getattr(journal, name), fields[name])
+        page = self.client.get("/revistas/artigo-estruturado")
+        soup = BeautifulSoup(page.data, "html.parser")
+        self.assertEqual(soup.select_one("#journal-article-title").get_text(), "Título do artigo separado")
+        self.assertNotIn("Título científico", soup.select_one(".journal-sections").get_text())
+        headings = [item.get_text() for item in soup.select(".journal-sections h2")]
+        self.assertEqual(headings, ["Resumo", "Palavras-chave", "Abstract", "Keywords", "Introdução",
+                                   "Contribuição dos autores", "Agradecimentos", "Financiamento",
+                                   "Conflitos de interesse", "Aprovação ética", "Consentimento informado",
+                                   "Disponibilidade de dados", "Referências bibliográficas", "Notas"])
+        form = self.client.get(f"/admin/revistas/{identifier}/editar")
+        editor = BeautifulSoup(form.data, "html.parser")
+        for name in ARTICLE_FIELD_LIMITS:
+            controls = editor.select(f'[name="{name}"]')
+            self.assertEqual(len(controls), 1)
+            self.assertFalse(controls[0].has_attr("required"))
+            self.assertEqual(controls[0].get_text(), fields[name])
+        invalid = dict(fields, keywords="x" * 2001)
+        response = self.client.post(f"/admin/revistas/{identifier}/editar", data=invalid)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("2000", response.get_data(as_text=True))
+        with app.app_context():
+            self.assertEqual(db.session.get(Journal, identifier).keywords, fields["keywords"])
+        # Empty optional declarations remove their public sections without removing the body.
+        cleared = dict(fields, **{name: "" for name in ARTICLE_FIELD_LIMITS})
+        self.assertEqual(self.client.post(f"/admin/revistas/{identifier}/editar", data=cleared).status_code, 302)
+        soup = BeautifulSoup(self.client.get("/revistas/artigo-estruturado").data, "html.parser")
+        self.assertEqual([item.get_text() for item in soup.select(".journal-sections h2")], ["Introdução", "Referências bibliográficas"])
+
     def test_journal_can_be_managed_and_published(self):
         with self.client.session_transaction() as session:
             session.clear()
             session["admin_authenticated"] = True
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "journal-csrf"
+            authenticate_test_session(session)
         response = self.client.post("/admin/revistas/nova", data={
             "csrf_token": "journal-csrf",
             "title": "Revista de Teste Científico",
@@ -708,6 +1121,67 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Revista de Teste Científico".encode(), response.data)
 
+    def test_journal_authors_and_editorial_information_round_trip(self):
+        from journal_metadata import journal_authors
+        with self.client.session_transaction() as session:
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_last_activity_at"] = time.time()
+            session["csrf_token"] = "journal-metadata-csrf"
+            authenticate_test_session(session)
+        fields = {
+            "csrf_token": "journal-metadata-csrf", "title": "Revista metadata regressao",
+            "description": "Descrição científica completa para verificar as informações editoriais.",
+            "field": "Biologia", "slug": "metadata-regressao", "published": "on",
+            "content_markdown": "# Artigo com autores\n\n## Resultados\n\nConteúdo.",
+            "authors_structured": "1", "author_name": ["Autora Um", "Autor Dois"],
+            "author_orcid": ["http://orcid.org/0000-0002-1825-0097", ""],
+            "author_description": ["Investigadora de Biologia.", "Contribuição: análise dos resultados."],
+            "copyright_policy": "Direitos confirmados pelos autores.",
+            "submission_history": "Submetido em 01/10/2026.",
+            "acknowledgements": "Agradecemos à equipa de laboratório.",
+            "funding": "Financiamento do projeto de teste.",
+            "license_info": "[Licença de teste](https://example.org/licenca)",
+            "cover_image": "https://example.org/capa.png"
+        }
+        response = self.client.post("/admin/revistas/nova", data=fields)
+        self.assertEqual(response.status_code, 302)
+        with app.app_context():
+            journal = Journal.query.filter_by(slug="metadata-regressao").one()
+            identifier = journal.id
+            authors = journal_authors(journal)
+            self.assertEqual(len(authors), 2)
+            self.assertEqual(authors[0]["orcid"], "https://orcid.org/0000-0002-1825-0097")
+            self.assertEqual(authors[1]["description"], fields["author_description"][1])
+            self.assertIn("Autora Um", journal.authors_orcid)
+            self.assertEqual(journal.funding, fields["funding"])
+        public = self.client.get("/revistas/metadata-regressao")
+        self.assertEqual(public.status_code, 200)
+        for value in ("Autora Um", "Autor Dois", "Investigadora de Biologia.", "fa-brands fa-orcid",
+                      "https://orcid.org/0000-0002-1825-0097", "Direitos autorais", "Histórico de submissões",
+                      "Agradecimentos", "Financiamento", "Informações sobre a licença",
+                      "Financiamento do projeto de teste.", 'href="https://example.org/licenca"'):
+            self.assertIn(value.encode(), public.data)
+        editor = self.client.get(f"/admin/revistas/{identifier}/editar")
+        self.assertIn(b"Investigadora de Biologia.", editor.data)
+        self.assertIn(b"Financiamento do projeto de teste.", editor.data)
+        fields.update(author_name=["Autora Atualizada"], author_orcid=[""], author_description=["Descrição atualizada."])
+        self.assertEqual(self.client.post(f"/admin/revistas/{identifier}/editar", data=fields).status_code, 302)
+        with app.app_context():
+            journal = db.session.get(Journal, identifier)
+            self.assertEqual(len(journal_authors(journal)), 1)
+            self.assertEqual(journal_authors(journal)[0]["name"], "Autora Atualizada")
+        fields.update(author_name=[""], author_orcid=["https://orcid.org.evil.test/0000-0002-1825-0097"], author_description=[""])
+        invalid = self.client.post(f"/admin/revistas/{identifier}/editar", data=fields)
+        self.assertEqual(invalid.status_code, 200)
+        self.assertIn("Informe uma URL ORCID válida".encode(), invalid.data)
+        with app.app_context():
+            self.assertEqual(journal_authors(db.session.get(Journal, identifier))[0]["name"], "Autora Atualizada")
+        fields.update(author_name=[], author_orcid=[], author_description=[])
+        self.assertEqual(self.client.post(f"/admin/revistas/{identifier}/editar", data=fields).status_code, 302)
+        with app.app_context():
+            self.assertEqual(journal_authors(db.session.get(Journal, identifier)), [])
+
     def test_secondary_administrator_cannot_manage_accounts(self):
         with self.client.session_transaction() as session:
             session.clear()
@@ -715,6 +1189,7 @@ class PlatformTests(unittest.TestCase):
             session["admin_superuser"] = False
             session["admin_last_activity_at"] = time.time()
             session["csrf_token"] = "secondary-csrf"
+            authenticate_test_session(session)
         self.assertEqual(self.client.get("/admin/administradores").status_code, 403)
 
     def test_homepage_uses_four_most_read_and_nine_latest_discoveries(self):
@@ -748,11 +1223,21 @@ class PlatformTests(unittest.TestCase):
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():
             Article.query.delete()
-            db.session.commit()
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Novos artigos estão a ser preparados".encode(), response.data)
+            try:
+                response = self.client.get("/")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("Novos artigos estão a ser preparados".encode(), response.data)
+            finally:
+                db.session.rollback()
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+
+
+
+
+

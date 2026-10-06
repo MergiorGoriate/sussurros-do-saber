@@ -8,20 +8,21 @@ const updateBrandLogo=dark=>{if(brandLogoSource)brandLogoSource.srcset=dark?bran
 document.documentElement.classList.toggle('dark',sessionTheme==='dark');
 updateBrandLogo(sessionTheme==='dark');
 const themeToggle=$('#themeToggle');themeToggle?.setAttribute('aria-pressed',String(sessionTheme==='dark'));themeToggle?.addEventListener('click',()=>{document.documentElement.classList.toggle('dark');const dark=document.documentElement.classList.contains('dark');updateBrandLogo(dark);try{sessionStorage.setItem('theme',dark?'dark':'light')}catch{}themeToggle.setAttribute('aria-pressed',String(dark))});
-let scrollFrame=0;addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{const h=document.documentElement,total=h.scrollHeight-h.clientHeight,p=total>0?h.scrollTop/total*100:0,progress=$('#readingProgress');if(progress)progress.style.width=`${p}%`;scrollFrame=0})},{passive:true});
+let scrollFrame=0;
+const scrollTasks=[];
+const scheduleScrollUpdate=()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;const h=document.documentElement,total=h.scrollHeight-h.clientHeight,top=h.scrollTop,percent=total>0?top/total*100:0;const progress=$('#readingProgress');if(progress)progress.style.width=`${percent}%`;scrollTasks.forEach(task=>task(top,percent))})};
+addEventListener('scroll',scheduleScrollUpdate,{passive:true});
 const backToTop=$('#backToTop');
 if(backToTop){
   const updateBackToTop=()=>{backToTop.hidden=window.scrollY<320};
   updateBackToTop();
-  addEventListener('scroll',updateBackToTop,{passive:true});
+  scrollTasks.push(updateBackToTop);
   backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
 }
 
-const savedIds=()=>{try{const value=JSON.parse(localStorage.savedArticles||'[]');return Array.isArray(value)?value.map(String):[]}catch{return[]}};function wireBookmarks(){document.querySelectorAll('.bookmark').forEach(btn=>{const render=()=>{const saved=savedIds().includes(btn.dataset.id);btn.textContent=saved?'♥':'♡';btn.classList.toggle('saved',saved);btn.setAttribute('aria-pressed',String(saved))};render();btn.addEventListener('click',()=>{let ids=savedIds();ids=ids.includes(btn.dataset.id)?ids.filter(id=>id!==btn.dataset.id):[...ids,btn.dataset.id];localStorage.savedArticles=JSON.stringify(ids);render()})})}wireBookmarks();
 $('#newsletterForm')?.addEventListener('submit',async e=>{e.preventDefault();const m=$('#newsletterMessage'),email=e.currentTarget.querySelector('input').value;m.textContent='A confirmar...';try{const r=await fetch('/api/newsletter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}),d=await r.json();m.textContent=d.message;if(d.ok)e.currentTarget.reset()}catch{m.textContent='Não foi possível concluir agora.'}});
-$('#calculateStats')?.addEventListener('click',()=>{const v=$('#dataValues').value.split(/[,;\s]+/).map(Number).filter(Number.isFinite).sort((a,b)=>a-b),o=$('#statsResult');if(!v.length){o.innerHTML='<p>Introduza valores válidos.</p>';return}const m=Math.floor(v.length/2),med=v.length%2?v[m]:(v[m-1]+v[m])/2,avg=v.reduce((a,b)=>a+b,0)/v.length;o.innerHTML=`<div><strong>${v.length}</strong><span>N</span></div><div><strong>${avg.toFixed(2)}</strong><span>Média</span></div><div><strong>${med}</strong><span>Mediana</span></div><div><strong>${v[0]}–${v.at(-1)}</strong><span>Amplitude</span></div>`});
+$('#calculateStats')?.addEventListener('click',()=>{const v=$('#dataValues').value.trim().split(/[,;\s]+/).filter(Boolean).map(Number).filter(Number.isFinite).sort((a,b)=>a-b),o=$('#statsResult');if(!v.length){o.innerHTML='<p>Introduza valores válidos.</p>';return}const m=Math.floor(v.length/2),med=v.length%2?v[m]:(v[m-1]+v[m])/2,avg=v.reduce((a,b)=>a+b,0)/v.length;o.innerHTML=`<div><strong>${v.length}</strong><span>N</span></div><div><strong>${avg.toFixed(2)}</strong><span>Média</span></div><div><strong>${med}</strong><span>Mediana</span></div><div><strong>${v[0]}–${v.at(-1)}</strong><span>Amplitude</span></div>`});
 $('#generateCitation')?.addEventListener('click',()=>{const v=id=>$(id).value.trim(),a=v('#citeAuthor'),y=v('#citeYear'),t=v('#citeTitle'),j=v('#citeJournal');$('#citationResult').textContent=a&&y&&t&&j?`${a} (${y}). ${t}. ${j}.`:'Preencha todos os campos.'});const terms=[['Amostra','Parte de uma população seleccionada para o estudo.'],['Correlação','Medida da associação entre duas variáveis.'],['Endófito','Organismo que vive no interior de uma planta sem causar dano aparente.'],['Hipótese','Proposição verificável que orienta uma investigação.'],['Microbiota','Conjunto de microrganismos presentes num ambiente.'],['Variável','Característica que pode assumir valores ou categorias diferentes.']],list=$('#glossaryList'),render=q=>{if(list)list.innerHTML=terms.filter(t=>t.join(' ').toLowerCase().includes(q.toLowerCase())).map(t=>`<div class="term"><strong>${t[0]}</strong><p>${t[1]}</p></div>`).join('')};render('');$('#glossarySearch')?.addEventListener('input',e=>render(e.target.value));
-if($('#favoritesGrid')){const ids=savedIds().filter(id=>/^\d+$/.test(id)).slice(0,50),grid=$('#favoritesGrid');if(!ids.length){$('#favoritesEmpty').classList.remove('hidden')}else fetch('/api/artigos?ids='+encodeURIComponent(ids.join(','))).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(items=>{if(!items.length){$('#favoritesEmpty').classList.remove('hidden');return}items.forEach(a=>{const link=document.createElement('a');link.className='story-card';link.href=`/artigo/${encodeURIComponent(a.slug||a.id)}`;const img=document.createElement('img');img.src=a.image;img.alt=`Imagem de apoio: ${a.title}`;img.loading='lazy';img.decoding='async';img.width=640;img.height=400;img.className='w-full aspect-[16/10] object-cover';const body=document.createElement('div');body.className='p-5';const category=document.createElement('span');category.className='eyebrow';category.textContent=a.category;const title=document.createElement('h2');title.className='font-serif text-2xl mt-2';title.textContent=a.title;const summary=document.createElement('p');summary.className='mt-2 opacity-60';summary.textContent=a.summary;body.append(category,title,summary);link.append(img,body);grid.appendChild(link)})}).catch(()=>{const empty=$('#favoritesEmpty');empty.classList.remove('hidden');empty.querySelector('p').textContent='Não foi possível carregar os favoritos agora.'})}
 let proseSize=1.13;$('#increaseFont')?.addEventListener('click',()=>{$('.prose-article').style.fontSize=`${proseSize=Math.min(1.45,proseSize+.08)}rem`});$('#decreaseFont')?.addEventListener('click',()=>{$('.prose-article').style.fontSize=`${proseSize=Math.max(.95,proseSize-.08)}rem`});$('#shareArticle')?.addEventListener('click',async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else{await navigator.clipboard.writeText(location.href);$('#shareMessage').textContent='Ligação copiada.'}}catch{}});
 const quiz=[{q:'Qual organelo produz a maior parte do ATP?',o:['Núcleo','Mitocôndria','Ribossoma'],a:1},{q:'O valor de p é usado principalmente para:',o:['Medir a amostra','Avaliar evidência contra a hipótese nula','Calcular a média'],a:1},{q:'Bactérias endofíticas vivem:',o:['Dentro dos tecidos vegetais','Apenas na água','Somente no solo'],a:0}];let qi=0,score=0;function showQuiz(){if(!$('#quizQuestion'))return;const x=quiz[qi];$('#quizQuestion').textContent=`${qi+1}. ${x.q}`;$('#quizOptions').innerHTML=x.o.map((o,i)=>`<button data-answer="${i}">${o}</button>`).join('');$('#quizFeedback').textContent='';$('#nextQuestion').classList.add('hidden');document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-answer]').forEach(x=>x.disabled=true);const ok=Number(b.dataset.answer)===x.a;if(ok)score++;b.classList.add(ok?'correct':'wrong');$('#quizFeedback').textContent=ok?'Correcto!':'Resposta correcta: '+x.o[x.a];$('#nextQuestion').classList.remove('hidden')})}$('#nextQuestion')?.addEventListener('click',()=>{qi++;if(qi<quiz.length)showQuiz();else $('#quizBox').innerHTML=`<div class="quiz-score"><strong>${score}/${quiz.length}</strong><p>Desafio concluído.</p><button class="primary-btn mt-4" data-reload-page>Tentar novamente</button></div>`});showQuiz();
 
@@ -48,12 +49,13 @@ window.sdsTrack=pushAnalyticsEvent;
   if(!banner)return;
   const preferences=document.querySelector('#cookiePreferences');
   const analytics=document.querySelector('#analyticsConsent');
+  const ads=document.querySelector('#adsConsent');
   const customize=document.querySelector('#cookieCustomize');
   const accept=document.querySelector('#cookieAccept');
   const reject=document.querySelector('#cookieReject');
   const save=document.querySelector('#cookieSave');
   const settings=document.querySelector('#cookieSettingsLink');
-  const cookieName='cookie_consent_v2';
+  const cookieName='cookie_consent_v3';
   const read=()=>{
     const item=document.cookie.split('; ').find(value=>value.startsWith(cookieName+'='));
     if(!item)return null;
@@ -61,15 +63,16 @@ window.sdsTrack=pushAnalyticsEvent;
   };
   const updateGoogleConsent=consent=>{
     const state=consent.analytics?'granted':'denied';
+    const advertising=consent.ads?'granted':'denied';
     if(typeof window.gtag==='function')window.gtag('consent','update',{
       analytics_storage:state,
-      ad_storage:'denied',
-      ad_user_data:'denied',
-      ad_personalization:'denied',
+      ad_storage:advertising,
+      ad_user_data:advertising,
+      ad_personalization:advertising,
       functionality_storage:'granted',
       security_storage:'granted'
     });
-    pushAnalyticsEvent('consent_update',{analytics_consent:state});
+    pushAnalyticsEvent('consent_update',{analytics_consent:state,ads_consent:advertising});
   };
   const activateOptionalScripts=consent=>{
     document.querySelectorAll('script[type="text/plain"][data-cookie-category]').forEach(source=>{
@@ -94,6 +97,7 @@ window.sdsTrack=pushAnalyticsEvent;
   const open=()=>{
     const current=read();
     analytics.checked=Boolean(current?.analytics);
+    ads.checked=Boolean(current?.ads);
     preferences.hidden=true;
     save.hidden=true;
     accept.hidden=false;
@@ -108,9 +112,9 @@ window.sdsTrack=pushAnalyticsEvent;
     accept.hidden=expanded;
     customize.setAttribute('aria-expanded',String(expanded));
   });
-  accept.addEventListener('click',()=>persist({essential:true,analytics:true,updatedAt:new Date().toISOString()}));
-  reject.addEventListener('click',()=>persist({essential:true,analytics:false,updatedAt:new Date().toISOString()}));
-  save.addEventListener('click',()=>persist({essential:true,analytics:analytics.checked,updatedAt:new Date().toISOString()}));
+  accept.addEventListener('click',()=>persist({essential:true,analytics:true,ads:true,updatedAt:new Date().toISOString()}));
+  reject.addEventListener('click',()=>persist({essential:true,analytics:false,ads:false,updatedAt:new Date().toISOString()}));
+  save.addEventListener('click',()=>persist({essential:true,analytics:analytics.checked,ads:ads.checked,updatedAt:new Date().toISOString()}));
   settings?.addEventListener('click',open);
   const current=read();
   if(current){updateGoogleConsent(current);activateOptionalScripts(current)}else open();
@@ -141,23 +145,22 @@ window.sdsTrack=pushAnalyticsEvent;
     }catch{}
   });
   const sent=new Set();
-  addEventListener('scroll',()=>{
-    const total=document.documentElement.scrollHeight-innerHeight;
-    if(total<=0)return;
-    const percent=Math.round(scrollY/total*100);
+  scrollTasks.push((_top,scrollPercent)=>{
+    if(document.documentElement.scrollHeight-innerHeight<=0)return;
+    const percent=Math.round(scrollPercent);
     [25,50,75,90].forEach(depth=>{
       if(percent>=depth&&!sent.has(depth)){
         sent.add(depth);
         pushAnalyticsEvent('scroll_depth',{percent_scrolled:depth,page_type:pageType});
       }
     });
-  },{passive:true});
+  });
 })();
 
 
 // Mantém cartões e artigos legíveis quando uma origem externa remove ou bloqueia a imagem.
 const applyImageFallback = (image) => {
-  if (!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied === 'true') return;
+  if (!(image instanceof HTMLImageElement) || image.hasAttribute('data-reader-avatar') || image.dataset.fallbackApplied === 'true') return;
   image.dataset.fallbackApplied = 'true';
   image.removeAttribute('srcset');
   image.removeAttribute('sizes');
@@ -178,3 +181,4 @@ document.querySelectorAll('img').forEach((image) => {
 document.addEventListener('click', (event) => {
   if (event.target.closest('[data-reload-page]')) window.location.reload();
 });
+
