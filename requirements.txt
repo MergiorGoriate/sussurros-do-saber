@@ -10,7 +10,7 @@ Markdown==3.11
 bleach==6.4.0
 Flask-Limiter==4.1.1
 redis>=6.4,<7
-reportlab==4.4.4
+reportlab==5.0.1
 
 
 beautifulsoup4==4.15.0
