@@ -85,3 +85,45 @@ def upload_journal_cover(file):
         folder=os.getenv("CLOUDINARY_JOURNAL_FOLDER", "sussurros-do-saber/revistas"),
         max_dimensions=(1600, 2200),
     )
+
+
+MAX_VIDEO_BYTES = 50 * 1024 * 1024
+
+
+class VideoUploadError(ValueError):
+    pass
+
+
+def upload_article_video(file):
+    if not file or not file.filename:
+        raise VideoUploadError("Seleccione um vídeo para carregar.")
+    extension = os.path.splitext(file.filename)[1].lower()
+    if extension not in {".mp4", ".webm", ".ogg"}:
+        raise VideoUploadError("Use um vídeo MP4, WebM ou OGG.")
+    payload = file.read(MAX_VIDEO_BYTES + 1)
+    if not payload or len(payload) > MAX_VIDEO_BYTES:
+        raise VideoUploadError("O vídeo deve ter entre 1 byte e 50 MB.")
+    valid = (
+        (extension == ".mp4" and len(payload) >= 12 and payload[4:8] == b"ftyp")
+        or (extension == ".webm" and payload.startswith(b"\x1a\x45\xdf\xa3"))
+        or (extension == ".ogg" and payload.startswith(b"OggS"))
+    )
+    if not valid:
+        raise VideoUploadError("O ficheiro não corresponde ao formato de vídeo seleccionado.")
+    if not all(os.getenv(key) for key in ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")):
+        raise VideoUploadError("O armazenamento de vídeos ainda não está configurado.")
+    cloudinary.config(cloud_name=os.environ["CLOUDINARY_CLOUD_NAME"],
+                      api_key=os.environ["CLOUDINARY_API_KEY"],
+                      api_secret=os.environ["CLOUDINARY_API_SECRET"], secure=True)
+    try:
+        result = cloudinary.uploader.upload(
+            io.BytesIO(payload), resource_type="video", format="mp4",
+            public_id=uuid.uuid4().hex,
+            folder=os.getenv("CLOUDINARY_VIDEO_FOLDER", "sussurros-do-saber/videos"),
+            overwrite=False, timeout=120,
+        )
+    except CloudinaryError as error:
+        raise VideoUploadError("Não foi possível carregar o vídeo. Tente novamente.") from error
+    if not result.get("secure_url"):
+        raise VideoUploadError("O armazenamento não devolveu o endereço do vídeo.")
+    return result["secure_url"]

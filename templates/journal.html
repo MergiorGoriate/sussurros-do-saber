@@ -3,13 +3,186 @@
 {% block meta_description %}{{ journal.description }}{% endblock %}
 {% block canonical %}{{ site_url }}{{ url_for('journal_detail', slug=journal.slug) }}{% endblock %}
 {% block content %}
-<article class="max-w-6xl mx-auto px-4 py-14">
-<div class="grid md:grid-cols-[300px_1fr] gap-10 items-start">
-{% if journal.cover_image %}<img class="w-full rounded-2xl shadow-xl" src="{{ journal.cover_image|image_variant(800) }}" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}">{% endif %}
-<div><span class="eyebrow">{{ journal.field }}</span><h1 class="font-serif text-5xl mt-3">{{ journal.title }}</h1><p class="text-xl opacity-70 mt-5">{{ journal.description }}</p>
+<article data-reader-journal="{{ journal.slug }}" class="journal-page max-w-6xl mx-auto px-4 py-14">
+<header class="journal-hero grid md:grid-cols-[300px_1fr] gap-10 items-start">
+{% if journal.cover_image %}<img class="w-full rounded-2xl shadow-xl" src="{{ journal.cover_image|image_variant(480) }}" srcset="{{ journal.cover_image|image_srcset([320, 480, 800]) }}" sizes="(max-width: 767px) 100vw, 300px" width="480" height="640" decoding="async" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}">{% endif %}
+<div class="journal-hero-copy"><div class="journal-kicker"><span class="eyebrow">{{ journal.field }}</span><span class="journal-open-badge">Acesso aberto</span></div><h1 class="font-serif text-5xl mt-3">{{ journal.title }}</h1><p class="journal-description text-xl opacity-70 mt-5">{{ journal.description }}</p>
 <dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
-<div class="mt-8 flex gap-3"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
-</div>
-<section class="prose-article mt-14"><h2>Diretrizes para autores</h2><div class="article-markdown">{{ journal.guidelines|markdown }}</div></section>
+<div class="journal-actions mt-8 flex gap-3 flex-wrap"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
+</header>
+<section class="journal-article-header" id="journal-article-heading">
+  <div class="journal-article-topline">
+    <div class="journal-article-type"><i class="fa-solid fa-lock-open" aria-hidden="true"></i><span>{{ journal.field or 'Artigo científico' }}</span></div>
+    <div class="journal-article-share" aria-label="Partilhar artigo">
+      <a href="https://www.facebook.com/sharer/sharer.php?u={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+      <a href="https://twitter.com/intent/tweet?url={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+      <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+      <a href="https://api.whatsapp.com/send?text={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+      <a href="mailto:?subject={{ journal.title|urlencode }}&body={{ public_url|urlencode }}" aria-label="E-mail"><i class="fa-solid fa-envelope"></i></a>
+    </div>
+  </div>
+  <h1 id="journal-article-title">{{ article_title }}</h1>
+  <div class="journal-article-authors">
+  {% if journal_authors %}
+    {% for author in journal_authors %}
+      <span class="journal-article-author">
+        {% if author.name %}<button type="button" class="journal-author-trigger" data-journal-details="authors" data-author-index="{{ loop.index0 }}" aria-haspopup="dialog" aria-controls="journal-details-dialog">{{ author.name }}</button>{% endif %}
+        {% if author.orcid %}<a class="journal-orcid-link" href="{{ author.orcid }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID{% if author.name %} de {{ author.name }}{% endif %}" title="Abrir perfil ORCID"><i class="fa-brands fa-orcid" aria-hidden="true"></i></a>{% endif %}
+      </span>{% if not loop.last %}<span class="journal-author-comma">,</span>{% endif %}
+    {% endfor %}
+  {% else %}<span>Autores a indicar</span>{% endif %}
+  </div>
+  <div class="journal-article-meta">
+    <strong>Revista Científica Sussurros do Saber</strong>
+    <span>•</span><span>{{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'Data a definir' }}</span>
+    <span>•</span><span>{{ journal.current_issue or 'Edição em preparação' }}</span>
+    {% if journal.doi %}<span>•</span><span>DOI: {{ journal.doi }}</span>{% endif %}
+  </div>
+  <div class="journal-article-actions" aria-label="Ações do artigo">
+    <button type="button" class="journal-alert-btn" aria-label="Receber notificações de artigos na minha conta" title="Receber notificações de artigos na minha conta" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
+    <button type="button" class="journal-save-btn" aria-label="Guardar artigo" title="Guardar artigo" aria-pressed="false"><i class="fa-regular fa-bookmark"></i></button>
+    <button type="button" class="journal-cite-btn" aria-label="Citar artigo" title="Citar artigo" aria-haspopup="dialog" aria-controls="journal-citation-dialog"><i class="fa-solid fa-quote-right"></i></button>
+    <button type="button" class="journal-information-btn" data-journal-details="information" aria-label="Informações do artigo" title="Informações do artigo" aria-haspopup="dialog" aria-controls="journal-details-dialog"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
+    <a class="journal-article-pdf" href="{{ (url_for('journal_preview_pdf', journal_id=journal.id) if request.endpoint == 'journal_preview' else url_for('journal_download_pdf', slug=journal.slug)) }}" download aria-label="Baixar PDF" title="Baixar PDF"><i class="fa-regular fa-file-pdf"></i></a>
+  </div>
+  <p id="journal-action-status" class="sr-only" role="status" aria-live="polite"></p>
+</section>
+<div class="journal-information">
+<details class="journal-mobile-toc" id="journal-mobile-toc">
+<summary aria-label="Abrir índice do conteúdo" title="Índice do conteúdo"><i class="fa-solid fa-list-ul" aria-hidden="true"></i><span class="sr-only">Índice do conteúdo</span></summary>
+<nav class="journal-toc" id="journal-toc" aria-label="Índice do conteúdo"><strong>Índice do conteúdo</strong>
+{% if journal_content %}<div id="journal-content-index" class="journal-content-index" aria-label="Secções do conteúdo"></div>{% endif %}
+</nav>
+</details>
+<div class="journal-sections">
+{% if journal_content %}
+<section id="conteudo-revista" class="journal-info-section"><div class="article-markdown">{{ journal_content }}</div></section>
+{% endif %}
+{% if journal.references %}
+<section id="referencias" class="journal-info-section">
+<h2>Referências bibliográficas</h2><div class="article-markdown">{{ journal.references|markdown }}</div>
+</section>
+{% endif %}
+{% if journal.notes %}<section id="notas" class="journal-info-section"><h2>Notas</h2><div class="article-markdown">{{ journal.notes|markdown }}</div></section>{% endif %}
+</div></div>
+
+<dialog id="journal-details-dialog" class="journal-details-dialog" aria-labelledby="journal-details-title">
+  <div class="journal-details-heading"><h2 id="journal-details-title">Informações e Autores</h2><button type="button" id="journal-details-close" aria-label="Fechar informações e autores"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+  <div class="journal-details-tabs" role="tablist" aria-label="Dados do artigo">
+    <button type="button" id="journal-tab-information" role="tab" aria-controls="journal-panel-information" aria-selected="true" tabindex="0" data-details-tab="information">Informações</button>
+    <button type="button" id="journal-tab-authors" role="tab" aria-controls="journal-panel-authors" aria-selected="false" tabindex="-1" data-details-tab="authors">Autores</button>
+  </div>
+  <div class="journal-details-body">
+    <section id="journal-panel-information" role="tabpanel" aria-labelledby="journal-tab-information" tabindex="0">
+      <section class="journal-editorial-section"><h3>Revista e capa</h3><div class="journal-publication-card">
+        {% if journal.cover_image %}<img src="{{ journal.cover_image|image_variant(480) }}" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}" width="160" loading="lazy" decoding="async">{% endif %}
+        <div><strong>{{ journal.title }}</strong>{% if journal.current_issue %}<p>{{ journal.current_issue }}</p>{% endif %}{% if journal.publication_date %}<p>Publicado em {{ journal.publication_date.strftime('%d/%m/%Y') }}</p>{% endif %}{% if journal.issn %}<p>ISSN {{ journal.issn }}</p>{% endif %}</div>
+      </div></section>
+      {% for label, value in [('Direitos autorais',journal.copyright_policy),('Histórico de submissões',journal.submission_history),('Agradecimentos',journal.acknowledgements),('Financiamento',journal.funding),('Informações sobre a licença',journal.license_info)] %}
+      <section class="journal-editorial-section"><h3>{{ label }}</h3>{% if value %}<div class="article-markdown">{{ value|markdown }}</div>{% else %}<p class="journal-details-empty">Informação não adicionada.</p>{% endif %}</section>
+      {% endfor %}
+    </section>
+    <section id="journal-panel-authors" role="tabpanel" aria-labelledby="journal-tab-authors" tabindex="0" hidden>
+      {% for author in journal_authors %}
+      <details class="journal-author-details" data-details-author="{{ loop.index0 }}">
+        <summary>{{ author.name or 'Autor (ORCID)' }}</summary>
+        <div class="journal-author-description">{% if author.description %}<p>{{ author.description }}</p>{% else %}<p class="journal-details-empty">Descrição não adicionada.</p>{% endif %}
+          {% if author.orcid %}<a class="journal-author-orcid" href="{{ author.orcid }}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-orcid" aria-hidden="true"></i> Ver perfil ORCID</a>{% endif %}
+        </div>
+      </details>
+      {% else %}<p class="journal-details-empty">Autores não adicionados.</p>{% endfor %}
+    </section>
+  </div>
+</dialog>
+<dialog id="journal-citation-dialog" class="journal-citation-dialog" aria-labelledby="journal-citation-title" aria-describedby="journal-citation-help">
+  <div class="journal-citation-heading">
+    <h2 id="journal-citation-title">Citar este artigo</h2>
+    <button type="button" id="journal-citation-close" aria-label="Fechar citação"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+  </div>
+  <p id="journal-citation-help">Use esta referência para citar o artigo no seu trabalho.</p>
+  <label for="journal-citation-text" class="sr-only">Citação do artigo</label>
+  <textarea id="journal-citation-text" readonly rows="6"></textarea>
+  <div class="journal-citation-footer">
+    <button type="button" class="primary-btn" id="journal-citation-copy">Copiar citação</button>
+    <p id="journal-citation-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
 </article>
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded',()=>{
+ const mobileToc=document.getElementById('journal-mobile-toc');
+ const toc=document.getElementById('journal-toc');
+ const mobileTocMedia=window.matchMedia('(max-width: 899px)');
+ const syncToc=()=>{if(mobileToc)mobileToc.open=!mobileTocMedia.matches;};
+ syncToc();
+ mobileTocMedia.addEventListener('change',syncToc);
+ const closeToc=()=>{if(mobileTocMedia.matches)mobileToc?.removeAttribute('open');};
+ document.addEventListener('keydown',e=>{if(mobileTocMedia.matches&&mobileToc?.open&&e.key==='Escape'&&!document.querySelector('dialog[open]')){closeToc();mobileToc.querySelector('summary')?.focus();}});
+ mobileToc?.addEventListener('click',e=>{if(e.target===mobileToc)closeToc();});
+ mobileToc?.addEventListener('toggle',()=>{if(!mobileTocMedia.matches&&!mobileToc.open)mobileToc.open=true;});
+ if(mobileToc&&toc){
+   toc.addEventListener('click',e=>{if(e.target.closest('a'))closeToc();});
+ }
+ const box=document.getElementById('journal-content-index');
+ const root=document.querySelector('#conteudo-revista .article-markdown');
+ if(!box||!root)return;
+ const headings=[...document.querySelectorAll('.journal-sections h2,.journal-sections h3')];
+ const used=new Set();
+ const slugify=s=>(s||'secao').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'secao';
+ headings.forEach((h,i)=>{
+   if(!h.id){let base=slugify(h.textContent),id=base,n=2;while(document.getElementById(id)||used.has(id))id=base+'-'+n++;h.id=id;}
+   used.add(h.id);
+   const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent.trim();a.className='journal-index-link '+(h.tagName==='H3'?'journal-index-sub':'');
+   box.appendChild(a);
+ });
+ if(!headings.length)box.hidden=true;
+});
+</script>
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded',()=>{
+ const slug={{ journal.slug|tojson }};
+ const title={{ article_title|tojson }};
+ const journalTitle={{ 'Revista Científica Sussurros do Saber'|tojson }};
+ const issue={{ (journal.current_issue or 'Edição em preparação')|tojson }};
+ const doi={{ (journal.doi or '')|tojson }};
+ const url={{ public_url|tojson }};
+ const alertBtn=document.querySelector('.journal-alert-btn');
+ const saveBtn=document.querySelector('.journal-save-btn');
+ const citeBtn=document.querySelector('.journal-cite-btn');
+ const status=document.getElementById('journal-action-status');
+ const message=text=>{if(status)status.textContent=text;};
+ const citationDialog=document.getElementById('journal-citation-dialog');
+ const citationText=document.getElementById('journal-citation-text');
+ const citationStatus=document.getElementById('journal-citation-status');
+ citeBtn?.addEventListener('click',()=>{
+   const authors={{ journal_authors|map(attribute='name')|select|join(', ')|tojson }};
+   const year={{ (journal.publication_date.year|string if journal.publication_date else 's.d.')|tojson }};
+   const citation=(authors?authors+'. ':'')+'('+year+'). '+title+'. '+journalTitle+'. '+issue+'. '+(doi?'https://doi.org/'+doi.replace(/^https?:\/\/doi\.org\//,''):url);
+   citationText.value=citation;
+   citationStatus.textContent='';
+   if(!citationDialog.open)citationDialog.showModal();
+ });
+ document.getElementById('journal-citation-close')?.addEventListener('click',()=>citationDialog.close());
+ citationDialog?.addEventListener('click',event=>{
+   if(event.target!==citationDialog)return;
+   const bounds=citationDialog.getBoundingClientRect();
+   if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)citationDialog.close();
+ });
+ citationDialog?.addEventListener('close',()=>citeBtn?.focus());
+ document.getElementById('journal-citation-copy')?.addEventListener('click',async()=>{
+   try{
+     await navigator.clipboard.writeText(citationText.value);
+     citationStatus.textContent='Citação copiada.';
+   }catch{
+     citationText.focus();
+     citationText.select();
+     citationStatus.textContent='Selecione e copie a citação com o menu do navegador ou Ctrl+C.';
+   }
+ });
+});
+</script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/journal-details.js', v='20261003-1') }}" defer></script>
 {% endblock %}
+
+
+

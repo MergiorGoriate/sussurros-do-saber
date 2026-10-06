@@ -17,7 +17,7 @@
       <h2><a href="{{ url_for('author_detail', slug=author.slug) }}">{{ author.name }}</a></h2>
       {% if author.institution %}<p class="editorial-institution">{{ author.institution }}</p>{% endif %}
       <p>{{ author.headline or author.bio or 'Autor do Sussurros do Saber.' }}</p>
-      <div class="editorial-member-footer"><span>{{ author.articles|length }} artigo{% if author.articles|length != 1 %}s{% endif %}</span><a class="modern-link" href="{{ url_for('author_detail', slug=author.slug) }}">Ver perfil completo →</a></div>
+      <div class="editorial-member-footer"><span>{{ author.published_article_count }} artigo{% if author.published_article_count != 1 %}s{% endif %}</span><a class="modern-link" href="{{ url_for('author_detail', slug=author.slug) }}">Ver perfil completo →</a></div>
     </div>
   </article>
   {% else %}

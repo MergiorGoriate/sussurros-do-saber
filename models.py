@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy import event, inspect as sqlalchemy_inspect
 
 db = SQLAlchemy()
 
@@ -23,6 +24,18 @@ class AdminUser(db.Model):
     two_factor_enabled = db.Column(db.Boolean, default=False, nullable=False)
     totp_secret = db.Column(db.String(64))
     recovery_code_hashes = db.Column(db.Text, default="", nullable=False)
+    security_version = db.Column(db.Integer, default=1, nullable=False)
+
+
+@event.listens_for(AdminUser, "before_update")
+def invalidate_changed_admin_credentials(mapper, connection, administrator):
+    """Revoke existing sessions and challenges on security-sensitive changes."""
+    state = sqlalchemy_inspect(administrator)
+    if any(state.attrs[name].history.has_changes() for name in (
+        "password_hash", "username", "active", "is_superadmin",
+        "two_factor_enabled", "totp_secret",
+    )):
+        administrator.security_version = (administrator.security_version or 1) + 1
 
 
 class Author(db.Model):
@@ -48,6 +61,14 @@ class Author(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     articles = db.relationship("Article", back_populates="author_rel")
 
+    @property
+    def published_article_count(self):
+        """Número de artigos efetivamente publicados deste autor."""
+        return Article.query.filter(
+            Article.author_id == self.id,
+            Article.status == "published",
+        ).count()
+
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -58,6 +79,20 @@ class Category(db.Model):
 
 class Journal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    article_title = db.Column(db.String(300), default="")
+    article_title_en = db.Column(db.String(300), default="")
+    corresponding_author = db.Column(db.Text, default="")
+    summary = db.Column(db.Text, default="")
+    keywords = db.Column(db.Text, default="")
+    abstract = db.Column(db.Text, default="")
+    abstract_keywords = db.Column(db.Text, default="")
+    author_contributions = db.Column(db.Text, default="")
+    conflicts_of_interest = db.Column(db.Text, default="")
+    ethics_approval = db.Column(db.Text, default="")
+    informed_consent = db.Column(db.Text, default="")
+    data_availability = db.Column(db.Text, default="")
+    notes = db.Column(db.Text, default="")
+
     title = db.Column(db.String(180), nullable=False)
     slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
     abbreviation = db.Column(db.String(30), default="")
@@ -66,11 +101,47 @@ class Journal(db.Model):
     issn = db.Column(db.String(9), default="")
     frequency = db.Column(db.String(80), default="")
     current_issue = db.Column(db.String(120), default="")
+    doi = db.Column(db.String(180), default="")
+    publication_date = db.Column(db.Date)
+    authors_orcid = db.Column(db.Text, default="")
+    authors_data = db.Column(db.Text, default="")
+    submission_history = db.Column(db.Text, default="")
+    acknowledgements = db.Column(db.Text, default="")
+    funding = db.Column(db.Text, default="")
+    license_info = db.Column(db.Text, default="")
+    content_markdown = db.Column(db.Text, default="")
+    references = db.Column(db.Text, default="")
     guidelines = db.Column(db.Text, default="")
+    aims_scope = db.Column(db.Text, default="")
+    editorial_policy = db.Column(db.Text, default="")
+    peer_review = db.Column(db.Text, default="")
+    publication_ethics = db.Column(db.Text, default="")
+    submission_guidelines = db.Column(db.Text, default="")
+    article_types = db.Column(db.Text, default="")
+    open_access_policy = db.Column(db.Text, default="")
+    copyright_policy = db.Column(db.Text, default="")
+    fees_policy = db.Column(db.Text, default="")
+    editorial_board = db.Column(db.Text, default="")
+    contact_info = db.Column(db.Text, default="")
     cover_image = db.Column(db.String(600), default="")
     cover_alt = db.Column(db.String(300), default="")
     published = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class EditorialPolicy(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    page_title = db.Column(db.Text, default="", nullable=False)
+    page_description = db.Column(db.Text, default="", nullable=False)
+    page_content = db.Column(db.Text, default="", nullable=False)
+    author_guidelines = db.Column(db.Text, default="", nullable=False)
+    reviewer_guidelines = db.Column(db.Text, default="", nullable=False)
+    ethics_policy = db.Column(db.Text, default="", nullable=False)
+    ai_policy = db.Column(db.Text, default="", nullable=False)
+    data_policy = db.Column(db.Text, default="", nullable=False)
+    fees_policy = db.Column(db.Text, default="", nullable=False)
+    open_access_policy = db.Column(db.Text, default="", nullable=False)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
 
@@ -84,6 +155,7 @@ class Article(db.Model):
     keywords = db.Column(db.String(500), default="")
     doi = db.Column(db.String(180), default="")
     image = db.Column(db.String(600), default="")
+    cover_video = db.Column(db.String(1000), default="")
     status = db.Column(db.String(20), default="draft", nullable=False)
     read_minutes = db.Column(db.Integer, default=5, nullable=False)
     featured = db.Column(db.Boolean, default=False, nullable=False)
@@ -114,13 +186,40 @@ class Article(db.Model):
     def read_time(self):
         return f"{self.read_minutes} min"
 
+    @property
+    def is_public(self):
+        return self.status == "published"
+
+    @classmethod
+    def publish_due_scheduled(cls):
+        """Promove artigos programados vencidos para publicados.
+
+        O agendamento é guardado em UTC sem timezone, tal como utcnow().
+        A atualização em lote mantém o estado persistido coerente no /admin.
+        """
+        now = utcnow()
+        due = cls.query.filter(
+            cls.status == "scheduled",
+            cls.scheduled_at.isnot(None),
+            cls.scheduled_at <= now,
+        )
+        changed = due.update(
+            {
+                cls.status: "published",
+                cls.published_at: db.func.coalesce(cls.published_at, cls.scheduled_at),
+                cls.updated_at: now,
+            },
+            synchronize_session=False,
+        )
+        if changed:
+            db.session.commit()
+        return changed
+
     @classmethod
     def public_query(cls):
-        now = utcnow()
-        return cls.query.filter(or_(
-            cls.status == "published",
-            and_(cls.status == "scheduled", cls.scheduled_at.isnot(None), cls.scheduled_at <= now),
-        ))
+        # Artigos futuros/programados nunca entram nas consultas públicas.
+        # publish_due_scheduled() converte os vencidos antes de cada pedido.
+        return cls.query.filter(cls.status == "published")
 
     @classmethod
     def public_card_query(cls):
@@ -162,3 +261,7 @@ class Subscriber(db.Model):
     email = db.Column(db.String(180), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+
+
+

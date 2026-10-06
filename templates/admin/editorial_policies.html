@@ -1,0 +1,32 @@
+{% extends 'admin/base.html' %}
+{% block title %}Políticas Editoriais{% endblock %}
+{% block content %}
+<header class="admin-header"><div><span>Governança editorial</span><h1>Políticas Editoriais</h1><p>Edite as políticas institucionais da publicação. Os campos aceitam Markdown.</p></div><a href="{{ url_for('editorial_policy') }}" target="_blank" rel="noopener">Ver Políticas Editoriais ↗</a></header>
+<form method="post" class="editor-form editorial-policy-editor" data-preview-url="{{ url_for('admin.preview_author_guidelines') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<section class="editor-main">
+<h2>Página de Políticas Editoriais</h2>
+<p>Todos os textos públicos são definidos aqui. Campos vazios não apresentam conteúdo predefinido nesta página.</p>
+<label>Título da página<input name="page_title" maxlength="100000" placeholder="Políticas Editoriais" value="{{ request.form.get('page_title', (policy.page_title or '') if policy else '') }}"><small>Se ficar vazio, o título de navegação será Políticas Editoriais.</small></label>
+<label>Descrição da página<textarea name="page_description" rows="3" maxlength="100000">{{ request.form.get('page_description', (policy.page_description or '') if policy else '') }}</textarea></label>
+<label>Conteúdo geral das Políticas Editoriais<textarea name="page_content" rows="14" maxlength="100000">{{ request.form.get('page_content', (policy.page_content or '') if policy else '') }}</textarea><small>Use Markdown para criar secções, princípios, listas e ligações. Apenas o texto guardado será publicado.</small></label>
+
+<label>Diretrizes para Autores<textarea name="author_guidelines" id="author-guidelines" rows="18" aria-describedby="guidelines-help" maxlength="100000">{{ request.form.get('author_guidelines', (policy.author_guidelines or '') if policy else '') }}</textarea><small id="guidelines-help">O conteúdo guardado substitui as diretrizes públicas. Use ## para as secções e ### para as subsecções. Se deixar este campo vazio, esta secção não aparece nas Políticas Editoriais. A página separada de Diretrizes para Autores mantém as suas diretrizes predefinidas.</small></label>
+<div class="policy-preview-actions"><button type="button" class="admin-secondary" id="preview-guidelines">Pré-visualizar diretrizes</button><span id="guidelines-preview-status" role="status" aria-live="polite"></span></div>
+<section id="guidelines-preview" class="policy-preview" aria-label="Pré-visualização das diretrizes" hidden></section>
+<button class="admin-primary" type="submit">Guardar políticas</button>
+<details class="policy-other" open><summary>Outras políticas editoriais</summary>
+<label>Diretrizes para Revisores<textarea name="reviewer_guidelines" rows="12" maxlength="100000">{{ request.form.get('reviewer_guidelines', (policy.reviewer_guidelines or '') if policy else '') }}</textarea></label>
+<label>Ética e Integridade Científica<textarea name="ethics_policy" rows="12" maxlength="100000">{{ request.form.get('ethics_policy', (policy.ethics_policy or '') if policy else '') }}</textarea></label>
+<label>Política de Inteligência Artificial<textarea name="ai_policy" rows="10" maxlength="100000">{{ request.form.get('ai_policy', (policy.ai_policy or '') if policy else '') }}</textarea></label>
+<label>Política de Dados de Investigação<textarea name="data_policy" rows="10" maxlength="100000">{{ request.form.get('data_policy', (policy.data_policy or '') if policy else '') }}</textarea></label>
+<label>Taxas / APC<textarea name="fees_policy" rows="8" maxlength="100000">{{ request.form.get('fees_policy', (policy.fees_policy or '') if policy else '') }}</textarea></label>
+<label>Acesso Aberto e Licenciamento<textarea name="open_access_policy" rows="10" maxlength="100000">{{ request.form.get('open_access_policy', (policy.open_access_policy or '') if policy else '') }}</textarea></label>
+</details>
+</section>
+<aside class="editor-side"><h2>Publicação</h2><p>Guarde aqui as políticas editoriais. As Diretrizes para Autores podem ser publicadas diretamente na página pública existente.</p><button class="admin-primary" type="submit">Guardar todas as políticas</button></aside>
+</form>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-policies.js', v='20261003-editor-v1') }}" defer></script>
+{% endblock %}
+
+

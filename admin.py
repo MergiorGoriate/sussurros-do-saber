@@ -14,11 +14,13 @@ from datetime import datetime
 from functools import wraps
 from urllib.parse import quote
 import requests
-from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
-from storage import ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
+from journal_article import ARTICLE_FIELD_LIMITS
+from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
+from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
+from storage import VideoUploadError, upload_article_video, ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -38,6 +40,23 @@ def slugify(value):
     return value.strip("-")[:260]
 
 
+def admin_security_stamp(administrator=None):
+    """Bind cookies to current credentials without exposing credential hashes."""
+    if administrator is not None:
+        values = [administrator.id, administrator.security_version,
+                  administrator.username, administrator.password_hash,
+                  administrator.active, administrator.is_superadmin,
+                  administrator.two_factor_enabled, administrator.totp_secret]
+    else:
+        values = [os.getenv(name, "") for name in (
+            "ADMIN_USERNAME", "ADMIN_PASSWORD_HASH", "ADMIN_TOTP_SECRET",
+            "ADMIN_SECURITY_VERSION",
+        )]
+        values.append(None if production_mode() else os.getenv("ADMIN_PASSWORD", ""))
+    return hmac.new(current_app.secret_key.encode(),
+                    json.dumps(values).encode(), hashlib.sha256).hexdigest()
+
+
 def admin_session_valid():
     if not session.get("admin_authenticated"):
         return False
@@ -55,11 +74,18 @@ def admin_session_valid():
         administrator = db.session.get(AdminUser, administrator_id)
         if not administrator or not administrator.active:
             return False
+        if session.get("admin_security_stamp") != admin_security_stamp(administrator):
+            return False
+        session["admin_superuser"] = bool(administrator.is_superadmin)
         if administrator.two_factor_enabled and not session.get("admin_2fa_verified"):
             return False
     else:
         configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
-        if not configured_totp or not session.get("admin_2fa_verified"):
+        if (not os.getenv("ADMIN_USERNAME", "").strip() or not configured_totp
+                or session.get("admin_security_stamp") != admin_security_stamp()):
+            return False
+        session["admin_superuser"] = True
+        if configured_totp and not session.get("admin_2fa_verified"):
             return False
 
     session["admin_last_activity_at"] = now
@@ -69,22 +95,25 @@ def admin_session_valid():
 PUBLIC_ADMIN_ENDPOINTS = {"admin.login", "admin.verify_two_factor"}
 
 
+def require_admin_enrollment():
+    administrator_id = session.get("admin_id")
+    administrator = db.session.get(AdminUser, administrator_id) if administrator_id else None
+    if (administrator is not None and not administrator.two_factor_enabled
+            and request.endpoint not in {"admin.two_factor_settings", "admin.logout"}):
+        if request.path.startswith("/admin/api/") or request.endpoint == "journal_markdown_preview":
+            return jsonify(ok=False, error="Conclua a configuração de dois fatores."), 403
+        flash("A autenticação de dois fatores é obrigatória. Conclua a configuração para continuar.", "warning")
+        return redirect(url_for("admin.two_factor_settings"))
+    return None
+
+
 @admin_bp.before_request
 def enforce_admin_authentication():
     """Protege centralmente todas as rotas administrativas presentes e futuras."""
     if request.endpoint in PUBLIC_ADMIN_ENDPOINTS:
         return None
     if admin_session_valid():
-        administrator_id = session.get("admin_id")
-        administrator = db.session.get(AdminUser, administrator_id) if administrator_id else None
-        if (
-            administrator is not None
-            and not administrator.two_factor_enabled
-            and request.endpoint not in {"admin.two_factor_settings", "admin.logout"}
-        ):
-            flash("A autenticação de dois fatores é obrigatória. Conclua a configuração para continuar.", "warning")
-            return redirect(url_for("admin.two_factor_settings"))
-        return None
+        return require_admin_enrollment()
     session.clear()
     if request.path.startswith("/admin/api/"):
         return jsonify(
@@ -105,6 +134,9 @@ def login_required(view):
                     error="Autenticação administrativa necessária.",
                 ), 401
             return redirect(url_for("admin.login", next=request.path))
+        enrollment = require_admin_enrollment()
+        if enrollment is not None:
+            return enrollment
         return view(*args, **kwargs)
     return wrapped
 
@@ -117,6 +149,9 @@ def superadmin_required(view):
             return redirect(url_for("admin.login", next=request.path))
         if not session.get("admin_superuser"):
             abort(403)
+        enrollment = require_admin_enrollment()
+        if enrollment is not None:
+            return enrollment
         return view(*args, **kwargs)
     return wrapped
 
@@ -244,6 +279,7 @@ def complete_admin_login(administrator=None, *, username=None, superuser=False):
     session["admin_id"] = administrator.id if administrator is not None else None
     session["admin_username"] = username
     session["admin_superuser"] = superuser
+    session["admin_security_stamp"] = admin_security_stamp(administrator)
     session["admin_2fa_verified"] = bool(
         administrator.two_factor_enabled if administrator is not None
         else os.getenv("ADMIN_TOTP_SECRET", "").strip()
@@ -259,7 +295,8 @@ def begin_two_factor_challenge(*, administrator=None, username=None, superuser=F
     session["pending_2fa_admin_id"] = administrator.id if administrator is not None else None
     session["pending_2fa_username"] = username
     session["pending_2fa_superuser"] = superuser
-    session["pending_2fa_started_at"] = time.time()
+    session["pending_2fa_expires_at"] = time.time() + 300
+    session["pending_2fa_security_stamp"] = admin_security_stamp(administrator)
     session["csrf_token"] = secrets.token_urlsafe(32)
     return redirect(url_for("admin.verify_two_factor"))
 
@@ -313,14 +350,18 @@ def login():
 @admin_bp.route("/verificar-2fa", methods=["GET", "POST"])
 @limiter.limit("6 per minute; 20 per hour")
 def verify_two_factor():
-    started_at = session.get("pending_2fa_started_at")
-    if not isinstance(started_at, (int, float)) or not 0 <= time.time() - started_at <= 300:
-        session.clear()
-        flash("O pedido de autenticação expirou. Inicie sessão novamente.", "warning")
-        return redirect(url_for("admin.login"))
     pending_id = session.get("pending_2fa_admin_id")
     pending_username = session.get("pending_2fa_username")
     if pending_id is None and not pending_username:
+        return redirect(url_for("admin.login"))
+    administrator = db.session.get(AdminUser, pending_id) if pending_id is not None else None
+    expires_at = session.get("pending_2fa_expires_at")
+    if (not isinstance(expires_at, (int, float)) or time.time() >= expires_at
+            or (pending_id is not None and (administrator is None or not administrator.active
+                                          or not administrator.two_factor_enabled))
+            or session.get("pending_2fa_security_stamp") != admin_security_stamp(administrator)):
+        session.clear()
+        flash("O pedido de autenticação expirou ou as credenciais mudaram. Entre novamente.", "warning")
         return redirect(url_for("admin.login"))
     if request.method == "POST":
         validate_csrf()
@@ -386,6 +427,7 @@ def two_factor_settings():
                 db.session.commit()
                 session.pop("totp_setup_secret", None)
                 session["admin_2fa_verified"] = True
+                session["admin_security_stamp"] = admin_security_stamp(administrator)
                 setup_secret = None
                 flash("Autenticação de dois fatores ativada.", "success")
         elif action == "regenerate":
@@ -427,6 +469,43 @@ def logout():
     return redirect(url_for("admin.login"))
 
 
+@admin_bp.route("/politicas-editoriais", methods=["GET", "POST"])
+@login_required
+def editorial_policies():
+    policy = EditorialPolicy.query.first()
+    fields = ("page_title", "page_description", "page_content", "author_guidelines", "reviewer_guidelines", "ethics_policy", "ai_policy", "data_policy", "fees_policy", "open_access_policy")
+    if request.method == "POST":
+        validate_csrf()
+        values = {field: request.form[field].strip() for field in fields if field in request.form}
+        if any(len(value) > 100000 for value in values.values()):
+            flash("Cada política deve ter até 100000 caracteres. Reduza o texto e tente novamente.", "error")
+        else:
+            if policy is None:
+                policy = EditorialPolicy()
+                db.session.add(policy)
+            for field, value in values.items():
+                setattr(policy, field, value)
+            db.session.commit()
+            flash("Políticas editoriais guardadas com sucesso.", "success")
+            return redirect(url_for("admin.editorial_policies"))
+    return render_template("admin/editorial_policies.html", policy=policy)
+
+
+@admin_bp.post("/politicas-editoriais/previsualizar")
+@login_required
+@limiter.limit("60 per minute")
+def preview_author_guidelines():
+    validate_csrf()
+    content = request.form.get("author_guidelines", "").strip()
+    if len(content) > 100000:
+        return jsonify(error="As diretrizes devem ter até 100000 caracteres."), 400
+    from app import render_markdown
+    from editorial_content import prepare_guidelines
+    html = render_markdown(content) if content else render_template("partials/author_guidelines_default.html")
+    html, _ = prepare_guidelines(html)
+    return jsonify(html=str(html), default=not bool(content))
+
+
 @admin_bp.get("/docs")
 @login_required
 def docs():
@@ -436,7 +515,7 @@ def docs():
 @admin_bp.get("")
 @login_required
 def dashboard():
-    return render_template("admin/dashboard.html", article_count=Article.query.count(), draft_count=Article.query.filter_by(status="draft").count(), contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(), recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all())
+    return render_template("admin/dashboard.html", article_count=Article.query.count(), draft_count=Article.query.filter_by(status="draft").count(), scheduled_count=Article.query.filter_by(status="scheduled").count(), contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(), recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all())
 
 
 @admin_bp.route("/administradores", methods=["GET", "POST"])
@@ -557,6 +636,18 @@ def parse_datetime(value):
     return datetime.fromisoformat(value) if value else None
 
 
+@admin_bp.post("/api/videos")
+@login_required
+@limiter.limit("10 per hour")
+def upload_inline_video():
+    validate_csrf()
+    try:
+        video_url = upload_article_video(request.files.get("video"))
+    except VideoUploadError as error:
+        return jsonify(ok=False, error=str(error)), 400
+    return jsonify(ok=True, url=video_url)
+
+
 @admin_bp.post("/api/imagens")
 @login_required
 @limiter.limit("20 per hour")
@@ -602,9 +693,29 @@ def article_form(article_id=None):
             if status in {"approved", "published", "scheduled"} and len(body) < 50:
                 flash("Artigos aprovados, publicados ou programados precisam de conteúdo completo.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            limits = {"body": 400000, "references": 100000, "keywords": 500, "doi": 180, "slug": 260}
+            if any(len(request.form.get(name, "")) > maximum for name, maximum in limits.items()):
+                flash("Um dos campos excede o limite permitido. Reduza o conteúdo e tente novamente.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if status == "scheduled" and not scheduled_at:
+                flash("Informe a data e hora da publicação programada.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            from app import article_cover_video
+            cover_video = request.form.get("cover_video", "").strip()
+            video_file = request.files.get("cover_video_file")
+            if video_file and video_file.filename:
+                try:
+                    cover_video = upload_article_video(video_file)
+                except VideoUploadError as error:
+                    flash(str(error), "error")
+                    return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if cover_video and (len(cover_video) > 1000 or not article_cover_video(cover_video, title)):
+                flash("Use uma URL válida do YouTube, Vimeo ou de um vídeo MP4, WebM ou OGG.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            article.cover_video = cover_video
             article.title = title
             base_slug = slugify(request.form.get("slug") or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
             candidate, number = base_slug, 2
@@ -798,6 +909,11 @@ def journals():
     )
 
 
+def render_journal_form(journal):
+    authors = submitted_author_rows(request.form) if request.method == "POST" and ("authors_structured" in request.form or "author_name" in request.form) else journal_authors(journal)
+    return render_template("admin/journal_form.html", journal=journal, journal_authors=authors)
+
+
 @admin_bp.route("/revistas/nova", methods=["GET", "POST"])
 @admin_bp.route("/revistas/<int:journal_id>/editar", methods=["GET", "POST"])
 @login_required
@@ -816,6 +932,26 @@ def journal_form(journal_id=None):
         duplicate = Journal.query.filter(Journal.slug == base_slug, Journal.id != journal.id).first()
         cover_url = request.form.get("cover_image", "").strip()
         cover_file = request.files.get("cover_file")
+        submitted_authors = None
+        if ("authors_structured" in request.form or "author_name" in request.form):
+            try:
+                submitted_authors = validate_authors(submitted_author_rows(request.form))
+            except ValueError as error:
+                flash(str(error), "error")
+                return render_journal_form(journal)
+        if any(len(request.form.get(name, "").strip()) > 20000 for name in (*EDITORIAL_FIELDS, "authors_orcid")):
+            flash("As informações editoriais devem ter até 20000 caracteres por campo.", "error")
+            return render_journal_form(journal)
+        if any(len(request.form.get(name, "").strip()) > maximum for name, maximum in ARTICLE_FIELD_LIMITS.items()):
+            flash("Os campos do artigo devem ter até 20000 caracteres; palavras-chave até 2000.", "error")
+            return render_journal_form(journal)
+        if len(request.form.get("content_markdown", "")) > 400000 or len(request.form.get("references", "")) > 100000:
+            flash("O conteúdo do artigo deve ter até 400000 caracteres e as referências até 100000.", "error")
+            return render_journal_form(journal)
+        invalid_length = any(len(request.form.get(name, "").strip()) > maximum for name, maximum in {
+            "article_title": 300, "article_title_en": 300, "corresponding_author": 2000, "slug": 200, "abbreviation": 30, "frequency": 80, "current_issue": 120,
+            "doi": 180, "cover_image": 600, "cover_alt": 300,
+        }.items())
 
         if not 3 <= len(title) <= 180:
             flash("O título deve ter entre 3 e 180 caracteres.", "error")
@@ -827,9 +963,11 @@ def journal_form(journal_id=None):
             flash("Não foi possível gerar o endereço da revista.", "error")
         elif duplicate:
             flash("Já existe uma revista com este endereço.", "error")
+        elif invalid_length:
+            flash("Um dos campos excede o tamanho permitido. Reduza o texto e tente novamente.", "error")
         elif issn and not re.fullmatch(r"[0-9]{4}-[0-9]{3}[0-9X]", issn):
             flash("O ISSN deve seguir o formato 1234-567X.", "error")
-        elif cover_url and not re.fullmatch(r"https?://[^\\s]+", cover_url, re.I):
+        elif cover_url and not re.fullmatch(r"https?://[^\s]+", cover_url, re.I):
             flash("Informe um endereço válido para a capa.", "error")
         else:
             try:
@@ -837,8 +975,11 @@ def journal_form(journal_id=None):
                     cover_url = upload_journal_cover(cover_file)
             except ImageUploadError as error:
                 flash(str(error), "error")
-                return render_template("admin/journal_form.html", journal=journal)
+                return render_journal_form(journal)
 
+            for name in ("article_title", "article_title_en", "corresponding_author"):
+                if name in request.form:
+                    setattr(journal, name, request.form[name].strip())
             journal.title = title
             journal.slug = base_slug
             journal.abbreviation = request.form.get("abbreviation", "").strip().upper()
@@ -847,17 +988,40 @@ def journal_form(journal_id=None):
             journal.issn = issn
             journal.frequency = request.form.get("frequency", "").strip()
             journal.current_issue = request.form.get("current_issue", "").strip()
-            journal.guidelines = request.form.get("guidelines", "").strip()
+            journal.doi = request.form.get("doi", "").strip()
+            if submitted_authors is not None:
+                journal.authors_data = json.dumps(submitted_authors, ensure_ascii=False)
+                journal.authors_orcid = legacy_author_lines(submitted_authors)
+            else:
+                journal.authors_orcid = request.form.get("authors_orcid", "").strip()
+                journal.authors_data = ""
+            for name in EDITORIAL_FIELDS:
+                setattr(journal, name, request.form.get(name, "").strip())
+            publication_date_raw = request.form.get("publication_date", "").strip()
+            try:
+                journal.publication_date = datetime.strptime(publication_date_raw, "%Y-%m-%d").date() if publication_date_raw else None
+            except ValueError:
+                flash("Informe uma data de publicação válida.", "error")
+                return render_journal_form(journal)
+            for name in ARTICLE_FIELD_LIMITS:
+                if name in request.form:
+                    setattr(journal, name, request.form[name].strip())
+            journal.content_markdown = request.form.get("content_markdown", "").strip()
+            journal.references = request.form.get("references", "").strip()
+            journal.editorial_policy = request.form.get("editorial_policy", "").strip()
+            journal.copyright_policy = request.form.get("copyright_policy", "").strip()
             journal.cover_image = cover_url
             journal.cover_alt = request.form.get("cover_alt", "").strip()
-            journal.published = request.form.get("published") == "on"
+            journal.published = request.form.get("save_mode") != "draft" and request.form.get("published") == "on"
             if not journal.id:
                 db.session.add(journal)
+            from submissions import publication_saved
+            publication_saved(journal)
             db.session.commit()
             flash("Revista guardada com sucesso.", "success")
             return redirect(url_for("admin.journals"))
 
-    return render_template("admin/journal_form.html", journal=journal)
+    return render_journal_form(journal)
 
 
 @admin_bp.post("/revistas/<int:journal_id>/publicacao")
@@ -866,6 +1030,8 @@ def toggle_journal(journal_id):
     validate_csrf()
     journal = db.get_or_404(Journal, journal_id)
     journal.published = not journal.published
+    from submissions import publication_saved
+    publication_saved(journal)
     db.session.commit()
     flash("Revista publicada." if journal.published else "Revista ocultada.", "success")
     return redirect(url_for("admin.journals"))
@@ -876,6 +1042,9 @@ def toggle_journal(journal_id):
 def delete_journal(journal_id):
     validate_csrf()
     journal = db.get_or_404(Journal, journal_id)
+    from submission_models import Manuscript, SubmissionSetting
+    if Manuscript.query.filter(db.or_(Manuscript.journal_id == journal_id, Manuscript.publication_id == journal_id)).first() or db.session.get(SubmissionSetting, journal_id):
+        abort(409, description="Esta revista está ligada ao fluxo editorial. Oculte-a em vez de eliminar os registos.")
     db.session.delete(journal)
     db.session.commit()
     flash("Revista eliminada.", "success")
@@ -987,3 +1156,8 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
+
+
+
+

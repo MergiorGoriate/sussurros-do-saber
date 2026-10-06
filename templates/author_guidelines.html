@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Diretrizes para Autores — Sussurros do Saber{% endblock %}
+{% block meta_description %}Diretrizes de submissão, estrutura de manuscritos, revisão por pares, ética, referências e acesso aberto do Sussurros do Saber.{% endblock %}
+{% block canonical %}{{ site_url }}{{ url_for('author_guidelines') }}{% endblock %}
+{% block content %}
+<section class="institutional-hero"><div class="max-w-5xl mx-auto px-4 py-14">
+<span class="eyebrow">Publicação científica</span>
+<h1 class="font-serif text-5xl md:text-6xl mt-3">Diretrizes para Autores</h1>
+<p class="mt-4 text-lg opacity-65 max-w-3xl">Requisitos para preparar e submeter manuscritos científicos ao Sussurros do Saber.</p>
+<div class="flex flex-wrap gap-3 mt-7"><a class="primary-btn" href="#{{ manuscript_types_id or 'diretrizes-conteudo' }}">{{ 'Tipos de manuscrito' if manuscript_types_id else 'Consultar diretrizes' }}</a><a class="secondary-btn" href="/contacto?assunto=Submiss%C3%A3o%20cient%C3%ADfica">Contactar a equipa editorial</a></div>
+</div></section>
+<article id="diretrizes-conteudo" class="max-w-4xl mx-auto px-4 legal-content author-guidelines-content">
+<div class="article-markdown">{{ guidelines_content }}</div>
+</article>
+{% endblock %}

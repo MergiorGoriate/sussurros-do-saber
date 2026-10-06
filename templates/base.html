@@ -2,23 +2,37 @@
 <html lang="pt-MZ">
 <head>
 <meta charset="utf-8">
+<meta name="msvalidate.01" content="DAAF54BC6711A0B43659454F1E941B93" />
+<meta name="yandex-verification" content="6eca0e8e91f59b4a" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script nonce="{{ csp_nonce }}">
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{
+  ad_storage:'denied', analytics_storage:'denied',
+  ad_user_data:'denied', ad_personalization:'denied',
+  functionality_storage:'granted', security_storage:'granted',
+  wait_for_update:500
+});
+</script>
+<script nonce="{{ csp_nonce }}">
+// Give the cover and essential styles the first network/CPU budget.
+window.addEventListener('load',()=>{
+  const loadAds=()=>{
+    const script=document.createElement('script');
+    script.async=true; script.crossOrigin='anonymous';
+    script.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7920973591685812';
+    document.head.appendChild(script);
+  };
+  if('requestIdleCallback' in window)requestIdleCallback(loadAds,{timeout:4000});
+  else setTimeout(loadAds,1500);
+},{once:true});
+</script>
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% if gtm_container_id %}
 <script nonce="{{ csp_nonce }}">
-window.dataLayer=window.dataLayer||[];
-function gtag(){dataLayer.push(arguments);}
-gtag('consent','default',{
-  ad_storage:'denied',
-  analytics_storage:'denied',
-  ad_user_data:'denied',
-  ad_personalization:'denied',
-  functionality_storage:'granted',
-  security_storage:'granted',
-  wait_for_update:500
-});
 window.dataLayer.push({event:'default_consent'});
 </script>
 <script nonce="{{ csp_nonce }}">
@@ -30,8 +44,14 @@ window.dataLayer.push({event:'default_consent'});
     script.src='https://www.googletagmanager.com/gtm.js?id={{ gtm_container_id|e }}';
     document.head.appendChild(script);
   };
-  // A análise aguarda o primeiro carregamento; uma escolha afirmativa inicia-a logo.
-  window.addEventListener('load',()=>setTimeout(loadGtm,2500),{once:true});
+  // Carrega GTM apenas quando existe consentimento de análise, reduzindo
+  // pedidos externos e execução de JavaScript na primeira visita.
+  const hasAnalyticsConsent=()=>{
+    const raw=document.cookie.split('; ').find(part=>part.startsWith('cookie_consent_v3='));
+    if(!raw)return false;
+    try{return JSON.parse(decodeURIComponent(raw.slice('cookie_consent_v3='.length))).analytics===true}catch{return false}
+  };
+  if(hasAnalyticsConsent())loadGtm();
   window.addEventListener('cookieconsentchange',event=>{if(event.detail?.analytics)loadGtm()});
 })();
 </script>
@@ -60,14 +80,25 @@ window.dataLayer.push({event:'default_consent'});
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css',v=tailwind_version) }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link id="siteFont" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print">
-<script nonce="{{ csp_nonce }}">document.getElementById("siteFont").addEventListener("load",function(){this.media="all"});</script>
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<script nonce="{{ csp_nonce }}">
+// Attach the listener before insertion: compatible with nonce-only CSP.
+(()=>{
+  const fonts=document.createElement('link');
+  fonts.rel='stylesheet'; fonts.media='print';
+  fonts.href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=optional';
+  fonts.addEventListener('load',()=>{fonts.media='all'},{once:true});
+  document.head.appendChild(fonts);
+})();
+</script>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=optional"></noscript>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+
 <link rel="alternate" type="application/rss+xml" title="Sussurros do Saber" href="/feed.xml">
 <link rel="icon" type="image/png" href="{{ url_for('static',filename='img/favicon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20260930-light-logo') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261004-article-title-v28') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-notification-cards-v9') }}">
 {% block head_extra %}{% endblock %}
 </head>
 <body class="bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
@@ -85,9 +116,11 @@ window.dataLayer.push({event:'default_consent'});
 <div class="max-w-7xl mx-auto px-4">
 <div class="h-20 flex items-center justify-between">
 <a href="/" class="brand-link" aria-label="Sussurros do Saber — página inicial">
-<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async"></picture>
+<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async" fetchpriority="high"></picture>
 </a>
-<div class="flex gap-2">
+<div class="flex gap-2 reader-header-controls">
+<a href="{{ url_for('reader.notifications') }}" class="reader-header-notifications" aria-label="Notificações" hidden><i class="fa-regular fa-bell" aria-hidden="true"></i><span data-reader-notification-count class="reader-notification-count" aria-hidden="true" hidden></span></a>
+<button type="button" data-reader-open class="reader-header-login" aria-label="Entrar" aria-haspopup="dialog" aria-controls="reader-dialog"><img data-reader-avatar class="reader-avatar" alt="" referrerpolicy="no-referrer" hidden><span data-reader-login-label>Entrar</span><i class="fa-solid fa-chevron-down reader-account-chevron" aria-hidden="true" hidden></i></button>
 <button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
 <button id="searchToggle" class="icon-btn" aria-label="Abrir pesquisa" aria-expanded="false" aria-controls="searchPanel">⌕</button>
 <button id="menuToggle" class="md:hidden icon-btn" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainNav">☰</button>
@@ -101,7 +134,7 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/revistas">Revistas</a>
 <a href="/recursos" class="nav-feature">Recursos</a>
 <a href="/servicos">Serviços</a>
-<a href="/favoritos">Favoritos</a>
+<a href="/conta/biblioteca">Os meus favoritos</a>
 <a href="/sobre">Sobre Nós</a>
 </nav>
 <form id="searchPanel" action="/artigos" class="hidden py-4 border-t border-black/10">
@@ -112,7 +145,7 @@ window.dataLayer.push({event:'default_consent'});
 </form>
 </div>
 </header>
-<main id="conteudo">{% block content %}{% endblock %}</main>
+<main id="conteudo"><p id="reader-action-feedback" class="max-w-6xl mx-auto px-4 py-2" role="status" aria-live="polite" hidden></p>{% block content %}{% endblock %}</main>
 <footer class="bg-ink text-white mt-20">
 <div class="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-9">
 <div>
@@ -128,6 +161,8 @@ window.dataLayer.push({event:'default_consent'});
 <a href="{{ social_links.linkedin }}" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no LinkedIn" title="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.5h4V20H5zM7 3a2.3 2.3 0 1 1 0 4.6A2.3 2.3 0 0 1 7 3Zm4 5.5h3.8V10c.8-1.2 2-1.9 3.7-1.9 3.8 0 4.5 2.5 4.5 5.8V20h-4v-5.4c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9V20h-4Z"/></svg></a>
 {% endif %}
 <a href="{{ social_links.x }}" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no X" title="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h4.8l4.1 5.5L17.6 4H20l-6 7.3L20.5 20h-4.8l-4.6-6.1L6 20H3.5l6.5-7.9Z"/></svg></a>
+<a href="https://bsky.app/profile/sussurrosdosaber.com" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no Bluesky" title="Bluesky"><i class="fa-brands fa-bluesky text-xl" aria-hidden="true"></i></a>
+<a href="https://www.reddit.com/user/sussurrosdosaber/" target="_blank" rel="me noopener noreferrer" aria-label="Siga-nos no Reddit" title="Reddit"><i class="fa-brands fa-reddit-alien text-xl" aria-hidden="true"></i></a>
 <a href="{{ social_links.whatsapp }}" target="_blank" rel="me noopener noreferrer" aria-label="Contacte-nos pelo WhatsApp" title="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.7 13.7L3 21l4.4-1.2A9 9 0 1 0 12 3Zm0 16a7 7 0 0 1-3.6-1l-.4-.2-2.6.7.7-2.5-.2-.4A7 7 0 1 1 12 19Zm3.8-5.2c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a5.8 5.8 0 0 1-2.8-2.5c-.2-.3.2-.4.5-1 .1-.1 0-.3 0-.4l-.7-1.6c-.2-.4-.4-.3-.5-.3h-.4c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2 0 1.2.9 2.4 1 2.5.1.2 1.7 2.7 4.2 3.7 1.6.7 2.5.7 3.4.6 1-.2 1.8-.8 2-1.5.3-.7.3-1.3.2-1.5-.1-.1-.2-.2-.4-.3Z"/></svg></a>
 </div>
 </div>
@@ -138,7 +173,7 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/artigos">Artigos</a>
 <a href="/revistas">Revistas</a>
 <a href="/recursos">Recursos</a>
-<a href="/favoritos">Favoritos</a>
+<a href="/conta/biblioteca">Os meus favoritos</a>
 </div>
 </div>
 <div>
@@ -156,7 +191,8 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/sobre">Sobre Nós</a>
 <a href="/termos-e-condicoes">Termos e Condições</a>
 <a href="/politica-de-privacidade">Política de Privacidade</a>
-<a href="/politica-editorial">Política Editorial</a>
+<a href="{{ url_for('editorial_policy') }}">Políticas Editoriais</a>
+<a href="/diretrizes-para-autores">Diretrizes para Autores</a>
 <a href="/politica-de-correcoes">Política de Correções</a>
 <a href="/acessibilidade">Acessibilidade</a>
 <button id="cookieSettingsLink" class="footer-cookie-link" type="button">Configurar cookies</button>
@@ -174,12 +210,13 @@ window.dataLayer.push({event:'default_consent'});
       <span class="cookie-icon" aria-hidden="true">◔</span>
       <div>
         <h2 id="cookieTitle">A sua privacidade importa</h2>
-        <p id="cookieDescription">Utilizamos armazenamento essencial para guardar preferências e proteger o funcionamento do site. Cookies opcionais só serão ativados com a sua autorização. <a href="{{ url_for('privacy') }}">Política de Privacidade</a>.</p>
+        <p id="cookieDescription">Utilizamos armazenamento essencial para guardar preferências e proteger o funcionamento do site. As opções de análise e publicidade podem ser geridas separadamente. <a href="{{ url_for('privacy') }}">Política de Privacidade</a>.</p>
       </div>
     </div>
     <div id="cookiePreferences" class="cookie-preferences" hidden>
       <label><span><strong>Essenciais</strong><small>Necessários para segurança, sessão e preferências.</small></span><input type="checkbox" checked disabled></label>
       <label><span><strong>Análise e desempenho</strong><small>Ajuda a compreender a utilização do site de forma agregada.</small></span><input id="analyticsConsent" type="checkbox"></label>
+      <label><span><strong>Publicidade</strong><small>Permite armazenamento e utilização de dados para anúncios. Pode recusar sem perder o acesso ao conteúdo.</small></span><input id="adsConsent" type="checkbox"></label>
     </div>
     <div class="cookie-actions">
       <button id="cookieReject" class="cookie-secondary" type="button">Recusar não essenciais</button>
@@ -190,10 +227,19 @@ window.dataLayer.push({event:'default_consent'});
   </div>
 </section>
 <button id="backToTop" class="back-to-top" type="button" aria-label="Voltar ao topo" title="Voltar ao topo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 13 6-6 6 6"/><path d="M12 7v11"/></svg></button>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20260929-back-to-top') }}" defer></script>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260918-3') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261005-audit-v23') }}" defer></script>
+{% if request.path == '/contacto' %}<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260930-contact') }}" defer></script>{% endif %}
 <script nonce="{{ csp_nonce }}">
-(()=>{let done=false;const load=()=>{if(done)return;done=true;['assistant.js','animations.js'].forEach(name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20260929-back-to-top';script.defer=true;document.body.appendChild(script)})};if('requestIdleCallback'in window)requestIdleCallback(load,{timeout:2500});else setTimeout(load,1500)})();
+(()=>{let assistantLoaded=false,animationsLoaded=false;
+const loadScript=name=>{const script=document.createElement('script');script.src='/static/js/'+name+'?v=20261002-reveal-fix';script.defer=true;document.body.appendChild(script)};
+const loadAssistant=()=>{if(assistantLoaded)return;assistantLoaded=true;loadScript('assistant.js')};
+const loadAnimations=()=>{if(animationsLoaded)return;animationsLoaded=true;loadScript('animations.js')};
+document.addEventListener('pointerdown',event=>{if(event.target.closest('[aria-label="Abrir assistente"]'))loadAssistant()},{passive:true,capture:true});
+window.addEventListener('load',()=>{if('requestIdleCallback'in window)requestIdleCallback(loadAnimations,{timeout:4000});else setTimeout(loadAnimations,2500)},{once:true});
+if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:6500});else window.addEventListener('load',()=>setTimeout(loadAssistant,3500),{once:true});
+})();
 </script>
+{% include 'reader_dialog.html' %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-favorite-cards-v7') }}" defer></script>
 </body>
 </html>

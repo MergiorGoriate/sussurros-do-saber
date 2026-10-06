@@ -1,4 +1,9 @@
 from flask import Flask, Response, g, jsonify, redirect, render_template, request, session, url_for
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from xml.sax.saxutils import escape
 import requests
 import gzip
@@ -6,6 +11,7 @@ import hashlib
 import os
 import re
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from html import escape as html_escape, unescape as html_unescape
@@ -17,12 +23,27 @@ from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
-from admin import admin_bp, slugify
+from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
+from journal_metadata import journal_authors
+from editorial_content import prepare_guidelines
+from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
-from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, db, utcnow
+from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+def trusted_proxy_hops(name, default):
+    value = int(os.getenv(name, str(default)))
+    if not 0 <= value <= 5:
+        raise RuntimeError(f"{name} deve estar entre 0 e 5.")
+    return value
+
+
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=trusted_proxy_hops("PROXY_FIX_X_FOR", 1),
+    x_proto=trusted_proxy_hops("PROXY_FIX_X_PROTO", 1),
+    x_host=trusted_proxy_hops("PROXY_FIX_X_HOST", 0),
+)
 with open(os.path.join(app.static_folder, 'css', 'tailwind.css'), 'rb') as built_css:
     TAILWIND_VERSION = hashlib.sha256(built_css.read()).hexdigest()[:12]
 
@@ -49,7 +70,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=IS_PRODUCTION or os.getenv("SESSION_COOKIE_SECURE", "").lower() == "true",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
     SESSION_REFRESH_EACH_REQUEST=False,
-    MAX_CONTENT_LENGTH=9 * 1024 * 1024,
+    MAX_CONTENT_LENGTH=60 * 1024 * 1024,
 )
 CANONICAL_ORIGIN = "https://www.sussurrosdosaber.com"
 _configured_site_url = os.getenv("SITE_URL", CANONICAL_ORIGIN).rstrip("/")
@@ -60,7 +81,42 @@ SITE_URL = CANONICAL_ORIGIN if _configured_host == "sussurrosdosaber.com" else _
 
 db.init_app(app)
 limiter.init_app(app)
+from submissions import submissions_bp, install_submission_cli
 app.register_blueprint(admin_bp)
+app.register_blueprint(submissions_bp)
+from reader_accounts import reader_bp
+app.register_blueprint(reader_bp)
+install_submission_cli(app)
+from google_auth import google_bp, install_google_cli
+app.register_blueprint(google_bp)
+install_google_cli(app)
+
+
+@app.get("/diretrizes-para-autores")
+def author_guidelines():
+    policy = EditorialPolicy.query.first()
+    custom_content = (policy.author_guidelines or "").strip() if policy else ""
+    content = render_markdown(custom_content) if custom_content else render_template("partials/author_guidelines_default.html")
+    guidelines_content, manuscript_types_id = prepare_guidelines(content)
+    return render_template("author_guidelines.html", policy=policy, guidelines_content=guidelines_content,
+                           manuscript_types_id=manuscript_types_id)
+
+
+@app.get("/ads.txt")
+def ads_txt():
+    """Publica a declaração Authorized Digital Sellers do Google AdSense."""
+    return Response(
+        "google.com, pub-7920973591685812, DIRECT, f08c47fec0942fa0\n",
+        status=200,
+        mimetype="text/plain",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+@app.before_request
+def publish_due_scheduled_articles():
+    """Sincroniza o estado de publicações cujo horário programado já chegou."""
+    if request.endpoint != "static" and request.path not in {"/healthz", "/ads.txt", "/robots.txt"}:
+        Article.publish_due_scheduled()
 
 
 @app.before_request
@@ -119,6 +175,17 @@ def safe_video_embed(url, title):
             f'<figcaption>{safe_label}</figcaption></figure>'
         )
     return None
+
+
+@app.template_filter("article_cover_video")
+def article_cover_video(url, title):
+    try:
+        parsed = urlparse(url or "")
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.password:
+            return Markup("")
+        return Markup(safe_video_embed(url, title) or "")
+    except ValueError:
+        return Markup("")
 
 
 def safe_chart_embed(chart_type, title, raw_data):
@@ -242,11 +309,62 @@ def render_markdown(value):
         embed = safe_chart_embed(match.group(1), match.group(2), match.group(3))
         return store_embed("CHART", embed) if embed else match.group(0)
 
-    prepared = IMAGE_DIRECTIVE.sub(image_placeholder, value or "")
+    def pullquote_placeholder(match):
+        text, _, author = match.group(1).partition("|")
+        return store_embed("PULLQUOTE", '<figure class="article-pullquote">'
+                           f'<blockquote><p>{html_escape(text.strip())}</p></blockquote>'
+                           f'<figcaption>{html_escape(author.strip())}</figcaption></figure>')
+
+    def portrait_placeholder(match):
+        parts = match.group(1).split("|", 2)
+        parts += [""] * (3 - len(parts))
+        alt, caption, credit = [html_escape(part.strip(), quote=True) for part in parts]
+        url = match.group(2)
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return match.group(0)
+        safe_url = html_escape(responsive_image_url(url, 768), quote=True)
+        return store_embed("PORTRAIT", '<figure class="article-portrait">'
+                           f'<img src="{safe_url}" alt="{alt}" loading="lazy" decoding="async">'
+                           f'<figcaption>{caption}<small>{credit}</small></figcaption></figure>')
+
+    prepared = re.sub(r"\[portrait:\s*([^\]\n]+)\]\((https?://[^\s)]+)\)",
+                      portrait_placeholder, value or "", flags=re.I)
+    prepared = re.sub(r"^\[destaque:\s*([^\]\n]+)\]\s*$",
+                      pullquote_placeholder, prepared, flags=re.M)
+    prepared = IMAGE_DIRECTIVE.sub(image_placeholder, prepared)
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
     rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
-    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h2", "h3", "h4", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
+    # Torna URLs HTTP(S) escritas como texto em links clicáveis, sem alterar
+    # URLs que já estejam dentro de atributos HTML ou links Markdown.
+    url_pattern = re.compile(r'''(?<!["'=])(https?://[^\s<]+)''', re.I)
+    parts = re.split(r'(<[^>]+>)', rendered)
+    inside_anchor = False
+    code_depth = 0
+    for index, part in enumerate(parts):
+        if part.startswith("<"):
+            if re.match(r'<(?:pre|code)\b', part, re.I):
+                code_depth += 1
+            elif re.match(r'</(?:pre|code)\s*>', part, re.I):
+                code_depth = max(0, code_depth - 1)
+            if re.match(r'<a\b', part, re.I):
+                inside_anchor = True
+            elif re.match(r'</a\s*>', part, re.I):
+                inside_anchor = False
+            continue
+        if inside_anchor or code_depth:
+            continue
+        def linkify(match):
+            raw = match.group(1)
+            url = raw.rstrip('.,;:!?)]}')
+            suffix = raw[len(url):]
+            safe_url = html_escape(html_unescape(url), quote=True)
+            safe_label = html_escape(html_unescape(url))
+            return f'<a href="{safe_url}" rel="noopener noreferrer">{safe_label}</a>{html_escape(suffix)}'
+        parts[index] = url_pattern.sub(linkify, part)
+    rendered = "".join(parts)
+    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
     cleaned = bleach.clean(
         rendered,
         tags=allowed,
@@ -254,6 +372,7 @@ def render_markdown(value):
         protocols=["http", "https", "mailto"],
         strip=True,
     )
+    cleaned = re.sub(r"<p>\[capitular\]\s*", '<p class="article-dropcap">', cleaned)
     for token, embed in embeds.items():
         cleaned = cleaned.replace(f"<p>{token}</p>", embed).replace(token, embed)
     return Markup(cleaned)
@@ -271,10 +390,10 @@ def security_headers(response):
         "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; "
         "object-src 'none'; img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://accounts.google.com/gsi/style; "
         f"script-src 'nonce-{getattr(g, 'csp_nonce', '')}' 'strict-dynamic' 'self' https:; "
         "script-src-attr 'none'; "
-        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; upgrade-insecure-requests",
+        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com; upgrade-insecure-requests",
     )
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -285,7 +404,7 @@ def security_headers(response):
         # comentários e nunca podem ser guardadas por caches partilhadas.
         private_response = (
             request.method != "GET"
-            or request.path.startswith(("/admin", "/api/", "/artigo/"))
+            or request.path.startswith(("/admin", "/api/", "/artigo/", "/submissoes"))
             or response.status_code >= 400
         )
         if private_response:
@@ -299,12 +418,24 @@ def security_headers(response):
 
     compressible = {
         "text/html", "text/css", "text/plain", "text/xml",
-        "application/json", "application/javascript", "application/xml",
+        "application/json", "application/javascript", "text/javascript", "application/xml",
     }
-    accepts_gzip = "gzip" in request.headers.get("Accept-Encoding", "").lower()
+    accepts_gzip = request.accept_encodings["gzip"] > 0
+    eligible_for_compression = (
+        request.method == "GET" and response.status_code == 200
+        and not request.headers.get("Range")
+        and response.mimetype in compressible
+        and not response.headers.get("Content-Encoding")
+    )
+    if eligible_for_compression:
+        response.vary.add("Accept-Encoding")
+        # send_file uses direct passthrough; only materialize small text assets.
+        if (accepts_gzip and response.direct_passthrough and request.endpoint == "static"
+                and response.content_length is not None and response.content_length <= 1024 * 1024):
+            response.direct_passthrough = False
     if (
         accepts_gzip
-        and response.status_code == 200
+        and eligible_for_compression
         and not response.direct_passthrough
         and not response.headers.get("Content-Encoding")
         and response.mimetype in compressible
@@ -314,6 +445,9 @@ def security_headers(response):
             response.set_data(gzip.compress(payload, compresslevel=5))
             response.headers["Content-Encoding"] = "gzip"
             response.headers["Content-Length"] = len(response.get_data())
+            etag, _ = response.get_etag()
+            if etag:
+                response.set_etag(etag + "-gzip", weak=True)
             response.vary.add("Accept-Encoding")
     return response
 
@@ -336,6 +470,7 @@ def google_site_verification_token():
 def site_context():
     return {
         "site_url": SITE_URL,
+        "google_login_client_id": __import__("google_auth").client_id(),
         "tailwind_version": TAILWIND_VERSION,
         "csp_nonce": getattr(g, "csp_nonce", ""),
         "google_site_verification": google_site_verification_token(),
@@ -444,14 +579,29 @@ def social_image_url(url):
 @app.errorhandler(500)
 def internal_server_error(error):
     db.session.rollback()
+    if request.is_json or request.path.startswith(("/api/", "/admin/api/", "/conta/")):
+        message = "O serviço está temporariamente indisponível. Tente novamente."
+        return jsonify(ok=False, message=message, error=message, answer=message), 500
     return render_template("500.html"), 500
 
 
 @app.errorhandler(429)
 def rate_limited(error):
-    if request.path.startswith("/api/"):
-        return jsonify({"ok": False, "answer": "Limite temporário atingido. Aguarde antes de tentar novamente."}), 429
+    if request.path.startswith(("/api/", "/admin/api/", "/conta/")):
+        message = "Limite temporário atingido. Aguarde antes de tentar novamente."
+        response = jsonify(ok=False, message=message, error=message, answer=message)
+        response.status_code = 429
+        response.headers["Retry-After"] = str(max(1, int(getattr(error, "retry_after", None) or 60)))
+        return response
     return render_template("429.html"), 429
+
+
+@app.errorhandler(413)
+def upload_too_large(error):
+    message = "O carregamento excede o limite do pedido. Cada vídeo pode ter até 50 MB e cada imagem até 8 MB. Carregue os ficheiros separadamente."
+    if request.path.startswith(("/api/", "/admin/api/", "/conta/")):
+        return jsonify(ok=False, message=message, error=message, answer=message), 413
+    return render_template("413.html", message=message), 413
 
 SEED_ARTICLES = [
     {"id": 1, "category": "Biologia", "title": "Bactérias endofíticas: os microrganismos invisíveis que protegem as plantas", "summary": "Dentro das plantas vivem comunidades capazes de produzir compostos com potencial antibacteriano.", "author": "Mergior Goriate", "date": "10 Setembro 2026", "read_time": "7 min", "image": "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1400&q=85", "featured": True},
@@ -628,8 +778,28 @@ def privacy():
     return render_template("privacy.html")
 
 @app.get("/politica-editorial")
+@app.get("/politicas-editoriais")
 def editorial_policy():
-    return render_template("editorial_policy.html")
+    policy = EditorialPolicy.query.first()
+    fields = (
+        ("author_guidelines", "Diretrizes para Autores"),
+        ("reviewer_guidelines", "Diretrizes para Revisores"),
+        ("ethics_policy", "Ética e Integridade Científica"),
+        ("ai_policy", "Política de Inteligência Artificial"),
+        ("data_policy", "Política de Dados de Investigação"),
+        ("fees_policy", "Taxas / APC"),
+        ("open_access_policy", "Acesso Aberto e Licenciamento"),
+    )
+    sections = []
+    if policy:
+        for field, title in fields:
+            content = (getattr(policy, field, "") or "").strip()
+            if content:
+                sections.append({"id": field.replace("_", "-"), "title": title, "content": render_markdown(content)})
+    return render_template("editorial_policy.html", policy_sections=sections,
+                           page_title=(getattr(policy, "page_title", "") or "").strip() or "Políticas Editoriais",
+                           page_description=(getattr(policy, "page_description", "") or "").strip(),
+                           page_content=render_markdown(getattr(policy, "page_content", "") or ""))
 
 @app.get("/politica-de-correcoes")
 def corrections_policy():
@@ -660,7 +830,126 @@ def journal_detail(slug):
     journal = Journal.query.filter_by(slug=slug, published=True).first()
     if not journal:
         return render_template("404.html"), 404
-    return render_template("journal.html", journal=journal)
+    return render_journal(journal)
+
+
+@app.post("/admin/revistas/previsualizar-markdown")
+@login_required
+@limiter.limit("120 per minute")
+def journal_markdown_preview():
+    validate_csrf()
+    content = request.form.get("content", "")
+    references = request.form.get("references", "")
+    from types import SimpleNamespace
+    extra = {name: request.form.get(name, "") for name in ARTICLE_FIELD_LIMITS}
+    if any(len(value) > ARTICLE_FIELD_LIMITS[name] for name, value in extra.items()):
+        return jsonify({"error": "Um dos campos do artigo excede o limite permitido."}), 400
+    if len(content) + len(references) + sum(map(len, extra.values())) > 750000:
+        return jsonify({"error": "Conteúdo demasiado extenso para pré-visualização."}), 400
+    source = SimpleNamespace(**extra)
+    references_html = str(render_markdown(references))
+    if source.notes.strip():
+        references_html += "<h2>Notas</h2>" + str(render_markdown(source.notes))
+    return jsonify({"html": structured_article_content(source, str(render_markdown(content)), render_markdown), "references": references_html})
+
+
+@app.get("/admin/revistas/<int:journal_id>/previsualizar")
+@login_required
+def journal_preview(journal_id):
+    return render_journal(db.get_or_404(Journal, journal_id))
+
+
+def journal_article_content(journal):
+    content = str(render_markdown(journal.content_markdown or journal.guidelines or ""))
+    title_heading = re.match(r"\s*<h1>(.*?)</h1>\s*", content, re.S)
+    article_title = journal.title
+    if title_heading:
+        article_title = html_unescape(bleach.clean(title_heading.group(1), tags=[], strip=True))
+        content = content[title_heading.end():]
+    article_title = (getattr(journal, "article_title", "") or "").strip() or article_title
+    return article_title, structured_article_content(journal, content, render_markdown)
+
+
+def render_journal(journal):
+    article_title, content = journal_article_content(journal)
+    return render_template("journal.html", journal=journal,
+                           article_title=article_title, journal_content=Markup(content), journal_authors=journal_authors(journal),
+                           public_url=SITE_URL + url_for("journal_detail", slug=journal.slug))
+
+@app.get("/revistas/<slug>/baixar.pdf")
+@limiter.limit("10 per minute; 60 per hour")
+def journal_download_pdf(slug):
+    journal = Journal.query.filter_by(slug=slug, published=True).first()
+    if not journal:
+        return render_template("404.html"), 404
+    return render_journal_pdf(journal)
+
+
+@app.get("/admin/revistas/<int:journal_id>/baixar.pdf")
+@login_required
+@limiter.limit("10 per minute; 60 per hour")
+def journal_preview_pdf(journal_id):
+    return render_journal_pdf(db.get_or_404(Journal, journal_id))
+
+
+def render_journal_pdf(journal):
+    from pdf_cache import cached_pdf_response
+    return cached_pdf_response(journal, build_journal_pdf)
+
+
+def build_journal_pdf(journal):
+
+    from journal_pdf import article_flowables, pdf_styles, page_footer, editorial_header
+    image_deadline = time.monotonic() + 20
+    article_title, content = journal_article_content(journal)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm,
+                            topMargin=8*mm, bottomMargin=18*mm,
+                            title=article_title, author="Sussurros do Saber")
+    styles = pdf_styles()
+    story = [editorial_header(journal, doc.width), Spacer(1, 9),
+             Paragraph("Artigo científico", styles["PaperType"]),
+             Paragraph(html_escape(article_title), styles["Title"])]
+    english_title = (getattr(journal, "article_title_en", "") or "").strip()
+    if english_title:
+        story += [Paragraph(html_escape(english_title), styles["EnglishTitle"]), Spacer(1, 4)]
+    authors = journal_authors(journal)
+    if authors:
+        author_names = []
+        for author in authors:
+            name = html_escape(author["name"] or author["orcid"])
+            author_names.append("<b>" + name + "</b>")
+        story += [Paragraph(", ".join(author_names), styles["Metadata"])]
+        for author in authors:
+            if author["orcid"]:
+                url = html_escape(author["orcid"], quote=True)
+                story.append(Paragraph(html_escape(author["name"]) + f' - ORCID: <link href="{url}">{url}</link>', styles["Metadata"]))
+    history = getattr(journal, "submission_history", "") or ""
+    if history:
+        plain_history = html_unescape(bleach.clean(str(render_markdown(history)), tags=[], strip=True)).strip()
+        story.append(Paragraph(html_escape(plain_history).replace("\n", "<br/>"), styles["Metadata"]))
+    publication_date = getattr(journal, "publication_date", None)
+    if publication_date:
+        story.append(Paragraph("Publicado em: " + publication_date.strftime("%d/%m/%Y"), styles["Metadata"]))
+    correspondence = (getattr(journal, "corresponding_author", "") or "").strip()
+    if correspondence:
+        story.append(Paragraph("<b>Autor para correspondência:</b> " + html_escape(correspondence).replace("\n", "<br/>"), styles["Metadata"]))
+    story += [Spacer(1, 8)]
+    story += article_flowables(content,
+                               doc.width, doc.height, app.static_folder, CANONICAL_ORIGIN,
+                               title=article_title, start_body_new_page=True, image_deadline=image_deadline)
+    if journal.references:
+        story += [Spacer(1, 12), Paragraph("Referências bibliográficas", styles["Heading2"])]
+        story += article_flowables(render_markdown(journal.references), doc.width, doc.height,
+                                   app.static_folder, CANONICAL_ORIGIN, image_deadline=image_deadline)
+    if getattr(journal, "notes", ""):
+        story += [Spacer(1, 12), Paragraph("Notas", styles["Heading2"])]
+        story += article_flowables(render_markdown(journal.notes), doc.width, doc.height,
+                                   app.static_folder, CANONICAL_ORIGIN, image_deadline=image_deadline)
+    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
 
 @app.get("/recursos")
 def resources():
@@ -689,7 +978,7 @@ def api_resources():
 
 @app.get("/favoritos")
 def favorites():
-    return render_template("favorites.html")
+    return redirect(url_for("reader.library"), code=302)
 
 @app.get("/api/artigos")
 def api_articles():
@@ -697,12 +986,12 @@ def api_articles():
     raw_ids = request.args.get("ids", "")[:512]
     requested_ids = list(dict.fromkeys(
         int(value) for value in raw_ids.split(",")
-        if value.strip().isdigit()
+        if re.fullmatch(r"[0-9]{1,10}", value.strip()) and int(value) <= 2147483647
     ))[:50]
     limit = max(1, min(50, request.args.get("limit", 24, type=int)))
 
     items = Article.public_card_query()
-    if requested_ids:
+    if "ids" in request.args:
         items = items.filter(Article.id.in_(requested_ids))
         limit = min(50, len(requested_ids))
     if query:
@@ -749,7 +1038,7 @@ def sitemap():
         url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"),
         url_for("terms"), url_for("privacy"), url_for("editorial_policy"),
         url_for("corrections_policy"), url_for("accessibility"), url_for("services"),
-        url_for("scientific_editing"), url_for("journals"),
+        url_for("scientific_editing"), url_for("journals"), url_for("author_guidelines"),
     ]
     static_urls = "".join(
         f"<url><loc>{escape(SITE_URL + path)}</loc></url>"
@@ -809,10 +1098,21 @@ def healthcheck():
 def valid_email(value):
     return bool(re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value)) and len(value) <= 254
 
+
+def json_text_fields(*names):
+    """Reject non-object payloads and non-text fields before accessing them."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or any(not isinstance(data.get(name, ""), str) for name in names):
+        return None
+    return {name: data.get(name, "").strip() for name in names}
+
 @app.post("/api/newsletter")
 @limiter.limit("5 per hour")
 def newsletter():
-    email = (request.get_json(silent=True) or {}).get("email", "").strip().lower()
+    data = json_text_fields("email")
+    if data is None:
+        return jsonify(ok=False, message="Introduza um endereço de e-mail válido."), 400
+    email = data["email"].lower()
     if not valid_email(email):
         return jsonify({"ok": False, "message": "Introduza um endereço de e-mail válido."}), 400
     subscriber = Subscriber.query.filter_by(email=email).first()
@@ -826,7 +1126,10 @@ def newsletter():
 @app.post("/api/assistente")
 @limiter.limit("5 per minute; 20 per hour")
 def assistant():
-    message = (request.get_json(silent=True) or {}).get("message", "").strip()
+    data = json_text_fields("message")
+    if data is None:
+        return jsonify(ok=False, answer="Escreva uma pergunta em texto."), 400
+    message = data["message"]
     if not message:
         return jsonify({"ok": False, "answer": "Escreva uma pergunta para eu poder ajudar."}), 400
     if len(message) > 800:
@@ -844,6 +1147,8 @@ def assistant():
         )
         worker_response.raise_for_status()
         result = worker_response.json()
+        if not isinstance(result, dict) or not isinstance(result.get("answer"), str):
+            raise ValueError("Invalid assistant response")
         return jsonify(result), 200 if result.get("ok") else 502
     except (requests.RequestException, ValueError):
         return jsonify({
@@ -855,7 +1160,9 @@ def assistant():
 @app.post("/api/contacto")
 @limiter.limit("10 per hour")
 def submit_contact():
-    data = request.get_json(silent=True) or {}
+    data = json_text_fields("name", "email", "subject", "message", "website")
+    if data is None:
+        return jsonify(ok=False, message="Preencha correctamente todos os campos."), 400
     name = data.get("name", "").strip()
     email = data.get("email", "").strip()
     subject = data.get("subject", "").strip()
@@ -880,6 +1187,7 @@ def ensure_admin_columns():
         "two_factor_enabled": "BOOLEAN DEFAULT FALSE NOT NULL",
         "totp_secret": "VARCHAR(64)",
         "recovery_code_hashes": "TEXT DEFAULT '' NOT NULL",
+        "security_version": "INTEGER DEFAULT 1 NOT NULL",
     }
     changed = False
     for name, definition in additions.items():
@@ -984,10 +1292,7 @@ def ensure_author_columns():
 
 
 def ensure_journal_columns():
-    inspector = inspect(db.engine)
-    if "journal" not in inspector.get_table_names():
-        return
-    existing = {column["name"] for column in inspector.get_columns("journal")}
+    """Mantém o schema Journal compatível antes de qualquer consulta ORM."""
     additions = {
         "abbreviation": "VARCHAR(30) DEFAULT ''",
         "field": "VARCHAR(140) DEFAULT '' NOT NULL",
@@ -995,27 +1300,80 @@ def ensure_journal_columns():
         "issn": "VARCHAR(9) DEFAULT ''",
         "frequency": "VARCHAR(80) DEFAULT ''",
         "current_issue": "VARCHAR(120) DEFAULT ''",
+        "doi": "VARCHAR(180) DEFAULT ''",
+        "publication_date": "DATE",
+        "authors_orcid": "TEXT DEFAULT ''",
+        "authors_data": "TEXT DEFAULT ''",
+        "submission_history": "TEXT DEFAULT ''",
+        "acknowledgements": "TEXT DEFAULT ''",
+        "funding": "TEXT DEFAULT ''",
+        "license_info": "TEXT DEFAULT ''",
+        "summary": "TEXT DEFAULT ''",
+        "keywords": "TEXT DEFAULT ''",
+        "abstract": "TEXT DEFAULT ''",
+        "abstract_keywords": "TEXT DEFAULT ''",
+        "author_contributions": "TEXT DEFAULT ''",
+        "conflicts_of_interest": "TEXT DEFAULT ''",
+        "ethics_approval": "TEXT DEFAULT ''",
+        "informed_consent": "TEXT DEFAULT ''",
+        "data_availability": "TEXT DEFAULT ''",
+        "notes": "TEXT DEFAULT ''",
+        "article_title": "VARCHAR(300) DEFAULT ''",
+        "article_title_en": "VARCHAR(300) DEFAULT ''",
+        "corresponding_author": "TEXT DEFAULT ''",
+        "content_markdown": "TEXT DEFAULT ''",
+        "references": "TEXT DEFAULT ''",
         "guidelines": "TEXT DEFAULT ''",
+        "aims_scope": "TEXT DEFAULT ''",
+        "editorial_policy": "TEXT DEFAULT ''",
+        "peer_review": "TEXT DEFAULT ''",
+        "publication_ethics": "TEXT DEFAULT ''",
+        "submission_guidelines": "TEXT DEFAULT ''",
+        "article_types": "TEXT DEFAULT ''",
+        "open_access_policy": "TEXT DEFAULT ''",
+        "copyright_policy": "TEXT DEFAULT ''",
+        "fees_policy": "TEXT DEFAULT ''",
+        "editorial_board": "TEXT DEFAULT ''",
+        "contact_info": "TEXT DEFAULT ''",
         "cover_image": "VARCHAR(600) DEFAULT ''",
         "cover_alt": "VARCHAR(300) DEFAULT ''",
         "published": "BOOLEAN DEFAULT TRUE NOT NULL",
         "created_at": "TIMESTAMP",
         "updated_at": "TIMESTAMP",
     }
-    changed = False
-    for name, definition in additions.items():
-        if name not in existing:
-            db.session.execute(text(
-                f'ALTER TABLE journal ADD COLUMN "{name}" {definition}'
-            ))
-            changed = True
-    if changed:
-        db.session.commit()
+    inspector = inspect(db.engine)
+    if "journal" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("journal")}
+    # Compatível com PostgreSQL em produção e SQLite nos testes. A verificação
+    # prévia pelo Inspector torna o DDL idempotente sem depender de
+    # "ADD COLUMN IF NOT EXISTS", que não é suportado por todas as versões SQLite.
+    with db.engine.begin() as connection:
+        for name, definition in additions.items():
+            if name not in existing:
+                connection.execute(text(
+                    f'ALTER TABLE journal ADD COLUMN "{name}" {definition}'
+                ))
+                existing.add(name)
+    db.session.remove()
+
+
+def ensure_editorial_policy_columns():
+    """Adiciona os campos da página sem alterar políticas existentes."""
+    inspector = inspect(db.engine)
+    if "editorial_policy" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("editorial_policy")}
+    with db.engine.begin() as connection:
+        for name in ("page_title", "page_description", "page_content"):
+            if name not in existing:
+                connection.execute(text(f"ALTER TABLE editorial_policy ADD COLUMN \"{name}\" TEXT DEFAULT '' NOT NULL"))
+    db.session.remove()
 
 
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
-    additions = {"references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
+    additions = {"cover_video": "VARCHAR(1000) DEFAULT ''", "references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
     for name, definition in additions.items():
         if name not in existing:
             db.session.execute(text(f'ALTER TABLE article ADD COLUMN "{name}" {definition}'))
@@ -1045,10 +1403,14 @@ def ensure_article_slugs():
 
 def seed_database():
     if os.getenv("AUTO_SCHEMA_UPGRADE", "true").lower() == "true":
+        # IMPORTANTE: db.create_all() só cria tabelas; não adiciona colunas a tabelas
+        # existentes. As migrações leves precisam ocorrer antes de qualquer SELECT
+        # ORM de Journal/Article que já inclua colunas recém-adicionadas.
         db.create_all()
         ensure_admin_columns()
         ensure_author_columns()
         ensure_journal_columns()
+        ensure_editorial_policy_columns()
         ensure_article_columns()
     if not Journal.query.first():
         default_guidelines = (

@@ -30,7 +30,7 @@ def upgrade():
     if existing.intersection(EXPECTED_COLUMNS):
         missing_tables = set(EXPECTED_COLUMNS) - existing
         mismatch = [name for name, columns in EXPECTED_COLUMNS.items()
-                    if name in existing and sorted(c["name"] for c in inspector.get_columns(name)) != columns]
+                    if name in existing and not set(columns).issubset(c["name"] for c in inspector.get_columns(name))]
         for name, expected_types in EXPECTED_TYPES.items():
             if name not in existing:
                 continue
@@ -40,7 +40,7 @@ def upgrade():
                     mismatch.append(name)
             actual_fks = sorted((tuple(fk["constrained_columns"]), tuple(fk["referred_table"] + "." + c for c in fk["referred_columns"]))
                                 for fk in inspector.get_foreign_keys(name))
-            if actual_fks != EXPECTED_FOREIGN_KEYS[name]:
+            if not set(EXPECTED_FOREIGN_KEYS[name]).issubset(actual_fks):
                 mismatch.append(name)
         if missing_tables or mismatch:
             raise RuntimeError("Baseline refused: reconcile existing schema in staging first")

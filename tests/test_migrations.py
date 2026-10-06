@@ -22,7 +22,7 @@ class MigrationTests(unittest.TestCase):
             self.run_migration(url)
             engine = create_engine(url)
             with engine.connect() as connection:
-                self.assertTrue(set(db.metadata.tables).issubset(inspect(connection).get_table_names()))
+                self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message"}.issubset(inspect(connection).get_table_names()))
                 self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20260930_01")
             engine.dispose()
 

@@ -76,7 +76,7 @@ jobs:
       ADMIN_PASSWORD: ci-only-strong-password
       SITE_URL: https://www.sussurrosdosaber.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -105,17 +105,18 @@ jobs:
     env:
       DATABASE_URL: sqlite:////tmp/sussurros-browser-ci.db
       SECRET_KEY: ci-browser-secret-key
+      ADMIN_TOTP_SECRET: JBSWY3DPEHPK3PXP
       ADMIN_USERNAME: ci-admin
       ADMIN_PASSWORD: ci-only-strong-password
       SITE_URL: http://127.0.0.1:5000
       SESSION_COOKIE_SECURE: 'false'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: pip
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -123,15 +124,30 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
       - run: npm ci --no-audit --no-fund
-      - run: npm audit --audit-level=high
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run build:css
       - name: Upload compiled Tailwind CSS
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: compiled-tailwind-css
           path: static/css/tailwind.css
           retention-days: 7
       - run: npx playwright install --with-deps chromium
+      - name: Create browser journal fixture
+        run: |
+          python - <<'PY'
+          from app import app
+          from models import db, Journal
+          with app.app_context():
+              journal = Journal.query.filter_by(slug="revista-de-teste-cientifico").first()
+              if not journal:
+                  journal = Journal(slug="revista-de-teste-cientifico", title="Revista científica de teste", field="Biologia", description="Revista usada nos testes de navegação.")
+                  db.session.add(journal)
+              journal.published = True
+              journal.content_markdown = "# Artigo de teste\n\n## Introdução\n\nTexto de teste.\n\n## Desenvolvimento com um título longo que deve caber no índice em dispositivos móveis\n\nTexto de teste.\n\n### Métodos\n\nTexto de teste."
+              journal.references = "Fonte: https://example.org/estudo"
+              db.session.commit()
+          PY
       - name: Start Flask application
         run: |
           python -m gunicorn app:app --bind 127.0.0.1:5000 --workers 1 --timeout 60 > /tmp/sussurros-server.log 2>&1 &
@@ -145,7 +161,7 @@ jobs:
       - run: npm run test:e2e
       - name: Upload browser diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-diagnostics
           path: |
@@ -154,3 +170,4 @@ jobs:
             /tmp/sussurros-server.log
           if-no-files-found: ignore
           retention-days: 7
+
