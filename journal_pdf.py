@@ -165,14 +165,14 @@ def load_image(source, static_folder, origin, deadline):
     raise ValueError('Demasiados redirecionamentos')
 
 
-def article_flowables(html, width, height, static_folder, origin, image_height_ratio=.70, title=None, start_body_new_page=False):
+def article_flowables(html, width, height, static_folder, origin, image_height_ratio=.70, title=None, start_body_new_page=False, image_deadline=None):
     styles = pdf_styles()
     soup = BeautifulSoup(str(html), 'html.parser')
     first_heading = soup.find('h1')
     if title and first_heading and first_heading.get_text(' ', strip=True).casefold() == title.strip().casefold():
         first_heading.decompose()
     story, cache = [], {}
-    deadline = time.monotonic() + 20
+    deadline = image_deadline if image_deadline is not None else time.monotonic() + 20
 
     def paragraph(node, style='BodyText'):
         safe = BeautifulSoup(str(node), 'html.parser')

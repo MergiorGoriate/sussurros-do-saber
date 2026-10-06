@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy import event, inspect as sqlalchemy_inspect
 
 db = SQLAlchemy()
 
@@ -23,6 +24,18 @@ class AdminUser(db.Model):
     two_factor_enabled = db.Column(db.Boolean, default=False, nullable=False)
     totp_secret = db.Column(db.String(64))
     recovery_code_hashes = db.Column(db.Text, default="", nullable=False)
+    security_version = db.Column(db.Integer, default=1, nullable=False)
+
+
+@event.listens_for(AdminUser, "before_update")
+def invalidate_changed_admin_credentials(mapper, connection, administrator):
+    """Revoke existing sessions and challenges on security-sensitive changes."""
+    state = sqlalchemy_inspect(administrator)
+    if any(state.attrs[name].history.has_changes() for name in (
+        "password_hash", "username", "active", "is_superadmin",
+        "two_factor_enabled", "totp_secret",
+    )):
+        administrator.security_version = (administrator.security_version or 1) + 1
 
 
 class Author(db.Model):

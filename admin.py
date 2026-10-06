@@ -14,7 +14,7 @@ from datetime import datetime
 from functools import wraps
 from urllib.parse import quote
 import requests
-from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import limiter
 from journal_article import ARTICLE_FIELD_LIMITS
@@ -40,6 +40,23 @@ def slugify(value):
     return value.strip("-")[:260]
 
 
+def admin_security_stamp(administrator=None):
+    """Bind cookies to current credentials without exposing credential hashes."""
+    if administrator is not None:
+        values = [administrator.id, administrator.security_version,
+                  administrator.username, administrator.password_hash,
+                  administrator.active, administrator.is_superadmin,
+                  administrator.two_factor_enabled, administrator.totp_secret]
+    else:
+        values = [os.getenv(name, "") for name in (
+            "ADMIN_USERNAME", "ADMIN_PASSWORD_HASH", "ADMIN_TOTP_SECRET",
+            "ADMIN_SECURITY_VERSION",
+        )]
+        values.append(None if production_mode() else os.getenv("ADMIN_PASSWORD", ""))
+    return hmac.new(current_app.secret_key.encode(),
+                    json.dumps(values).encode(), hashlib.sha256).hexdigest()
+
+
 def admin_session_valid():
     if not session.get("admin_authenticated"):
         return False
@@ -57,10 +74,17 @@ def admin_session_valid():
         administrator = db.session.get(AdminUser, administrator_id)
         if not administrator or not administrator.active:
             return False
+        if session.get("admin_security_stamp") != admin_security_stamp(administrator):
+            return False
+        session["admin_superuser"] = bool(administrator.is_superadmin)
         if administrator.two_factor_enabled and not session.get("admin_2fa_verified"):
             return False
     else:
         configured_totp = os.getenv("ADMIN_TOTP_SECRET", "").strip()
+        if (not os.getenv("ADMIN_USERNAME", "").strip() or not configured_totp
+                or session.get("admin_security_stamp") != admin_security_stamp()):
+            return False
+        session["admin_superuser"] = True
         if configured_totp and not session.get("admin_2fa_verified"):
             return False
 
@@ -71,22 +95,25 @@ def admin_session_valid():
 PUBLIC_ADMIN_ENDPOINTS = {"admin.login", "admin.verify_two_factor"}
 
 
+def require_admin_enrollment():
+    administrator_id = session.get("admin_id")
+    administrator = db.session.get(AdminUser, administrator_id) if administrator_id else None
+    if (administrator is not None and not administrator.two_factor_enabled
+            and request.endpoint not in {"admin.two_factor_settings", "admin.logout"}):
+        if request.path.startswith("/admin/api/") or request.endpoint == "journal_markdown_preview":
+            return jsonify(ok=False, error="Conclua a configuração de dois fatores."), 403
+        flash("A autenticação de dois fatores é obrigatória. Conclua a configuração para continuar.", "warning")
+        return redirect(url_for("admin.two_factor_settings"))
+    return None
+
+
 @admin_bp.before_request
 def enforce_admin_authentication():
     """Protege centralmente todas as rotas administrativas presentes e futuras."""
     if request.endpoint in PUBLIC_ADMIN_ENDPOINTS:
         return None
     if admin_session_valid():
-        administrator_id = session.get("admin_id")
-        administrator = db.session.get(AdminUser, administrator_id) if administrator_id else None
-        if (
-            administrator is not None
-            and not administrator.two_factor_enabled
-            and request.endpoint not in {"admin.two_factor_settings", "admin.logout"}
-        ):
-            flash("A autenticação de dois fatores é obrigatória. Conclua a configuração para continuar.", "warning")
-            return redirect(url_for("admin.two_factor_settings"))
-        return None
+        return require_admin_enrollment()
     session.clear()
     if request.path.startswith("/admin/api/"):
         return jsonify(
@@ -107,6 +134,9 @@ def login_required(view):
                     error="Autenticação administrativa necessária.",
                 ), 401
             return redirect(url_for("admin.login", next=request.path))
+        enrollment = require_admin_enrollment()
+        if enrollment is not None:
+            return enrollment
         return view(*args, **kwargs)
     return wrapped
 
@@ -119,6 +149,9 @@ def superadmin_required(view):
             return redirect(url_for("admin.login", next=request.path))
         if not session.get("admin_superuser"):
             abort(403)
+        enrollment = require_admin_enrollment()
+        if enrollment is not None:
+            return enrollment
         return view(*args, **kwargs)
     return wrapped
 
@@ -246,6 +279,7 @@ def complete_admin_login(administrator=None, *, username=None, superuser=False):
     session["admin_id"] = administrator.id if administrator is not None else None
     session["admin_username"] = username
     session["admin_superuser"] = superuser
+    session["admin_security_stamp"] = admin_security_stamp(administrator)
     session["admin_2fa_verified"] = bool(
         administrator.two_factor_enabled if administrator is not None
         else os.getenv("ADMIN_TOTP_SECRET", "").strip()
@@ -261,6 +295,8 @@ def begin_two_factor_challenge(*, administrator=None, username=None, superuser=F
     session["pending_2fa_admin_id"] = administrator.id if administrator is not None else None
     session["pending_2fa_username"] = username
     session["pending_2fa_superuser"] = superuser
+    session["pending_2fa_expires_at"] = time.time() + 300
+    session["pending_2fa_security_stamp"] = admin_security_stamp(administrator)
     session["csrf_token"] = secrets.token_urlsafe(32)
     return redirect(url_for("admin.verify_two_factor"))
 
@@ -317,6 +353,15 @@ def verify_two_factor():
     pending_id = session.get("pending_2fa_admin_id")
     pending_username = session.get("pending_2fa_username")
     if pending_id is None and not pending_username:
+        return redirect(url_for("admin.login"))
+    administrator = db.session.get(AdminUser, pending_id) if pending_id is not None else None
+    expires_at = session.get("pending_2fa_expires_at")
+    if (not isinstance(expires_at, (int, float)) or time.time() >= expires_at
+            or (pending_id is not None and (administrator is None or not administrator.active
+                                          or not administrator.two_factor_enabled))
+            or session.get("pending_2fa_security_stamp") != admin_security_stamp(administrator)):
+        session.clear()
+        flash("O pedido de autenticação expirou ou as credenciais mudaram. Entre novamente.", "warning")
         return redirect(url_for("admin.login"))
     if request.method == "POST":
         validate_csrf()
@@ -382,6 +427,7 @@ def two_factor_settings():
                 db.session.commit()
                 session.pop("totp_setup_secret", None)
                 session["admin_2fa_verified"] = True
+                session["admin_security_stamp"] = admin_security_stamp(administrator)
                 setup_secret = None
                 flash("Autenticação de dois fatores ativada.", "success")
         elif action == "regenerate":

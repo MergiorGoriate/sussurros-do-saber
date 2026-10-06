@@ -12,6 +12,8 @@ from storage import upload_article_video, VideoUploadError
 from extensions import limiter
 
 
+from security_test_support import authenticate_test_session
+
 class SiteRegressionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -38,6 +40,7 @@ class SiteRegressionTests(unittest.TestCase):
             session['admin_last_activity_at'] = time.time()
             session['csrf_token'] = 'regression-csrf'
 
+            authenticate_test_session(session)
     def fields(self):
         return dict(csrf_token='regression-csrf', title='Título de regressão '+secrets.token_hex(4),
             summary='Resumo introduzido pelo editor.',body='Texto científico que deve permanecer no formulário. '*3,
@@ -127,3 +130,4 @@ class SiteRegressionTests(unittest.TestCase):
             with self.assertRaises(VideoUploadError):
                 upload_article_video(FileStorage(stream=io.BytesIO(b'OggS12345'),filename='sample.ogg'))
             upload.assert_not_called()
+
