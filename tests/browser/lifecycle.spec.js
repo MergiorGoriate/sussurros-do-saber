@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test');
 const {execFileSync}=require('node:child_process');
-function fixture(){return JSON.parse(execFileSync('python',['tests/browser/lifecycle_fixture.py'],{encoding:'utf8'}));}
+function fixture(mode){return JSON.parse(execFileSync('python',['tests/browser/lifecycle_fixture.py',...(mode?[mode]:[])],{encoding:'utf8'}));}
 async function signin(context,cookie){await context.addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);}
 for(const width of [1440,390]) {
  test(`inbox reads/deletes persist and bar/page agree at ${width}px`,async({page})=>{
@@ -50,3 +50,23 @@ test('notice loading/error state recovers and actions remain usable',async({page
  await page.unroute('**/admin/api/notificacoes');await bar.locator('summary').click();await bar.locator('summary').click();
  await expect(bar.locator('[data-notice-status]')).toHaveText('Notificações actualizadas.');
 });
+
+for(const width of [320,1440]) {
+ test(`public bell shares inbox and deletion preserves future following at ${width}px`,async({page})=>{
+  const d=fixture('public');await signin(page.context(),d.owner_cookie);await page.setViewportSize({width,height:1000});
+  await page.goto('/conta/notificacoes');
+  const bar=page.locator('[data-notice-bar]');await bar.locator('summary').click();
+  await expect(bar.locator('[data-notice-status]')).toHaveText('Notificações actualizadas.');
+  await expect(bar.locator('[data-notice-count]')).toHaveText('1');
+  await bar.locator('[data-notice-items]').getByRole('button',{name:'Eliminar aviso'}).click();
+  await expect(page).toHaveURL(/\/conta\/notificacoes$/);
+  await expect(page.locator('h3').filter({hasText:'Artigo actualizado:'})).toHaveCount(0);
+  await expect(page.locator('[data-reader-unfollow]')).toHaveCount(1);
+  await expect(page.locator('[data-reader-notification-count]')).toBeHidden();
+  await page.reload();await expect(page.locator('[data-notice-bar] [data-notice-count]')).toHaveText('0');
+  execFileSync('python',['tests/browser/reader_fixture.py',d.journal_slug]);
+  await page.reload();await expect(page.locator('[data-reader-notification-count]')).toHaveText('1');
+  await expect(page.locator('[data-reader-unfollow]')).toHaveCount(1);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+ });
+}

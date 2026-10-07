@@ -1,8 +1,10 @@
 """Generate isolated identities and disposable lifecycle resources for Playwright."""
-import json, sys, time, secrets
-from datetime import date
+import json, sys, time, secrets, os
+from datetime import date, datetime
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
+if not os.environ.get('DATABASE_URL','').startswith('sqlite:'):
+    raise RuntimeError('Browser lifecycle fixtures require isolated SQLite')
 from app import app
 from admin import admin_security_stamp
 from models import db, AdminUser, Journal, utcnow
@@ -26,9 +28,14 @@ with app.app_context():
     manuscript=Manuscript(owner_id=owner.id,journal_id=journal.id,title='Submissão '+suffix,code='LIFECYCLE-'+suffix,status='review',submitted_at=utcnow())
     task=StaffTask(title='Responsabilidade '+suffix,assignee=member,status='pending',due_on=date.today())
     db.session.add_all([doc,report,manuscript,task]);db.session.flush()
+    if len(sys.argv)>1 and sys.argv[1]=='public':
+        from reader_accounts import ReaderJournal
+        journal.published=True
+        db.session.add(ReaderJournal(owner_id=owner.id,journal_id=journal.id,following=True,followed_at=datetime(2020,1,1)))
     emit(account.id,'Primeiro aviso '+suffix,key='browser-first-'+suffix,resource=('task',task.id))
     emit(account.id,'Segundo aviso '+suffix,key='browser-second-'+suffix,resource=('document',doc.id))
     db.session.commit()
     def cookie(a):
         return app.session_interface.get_signing_serializer(app).dumps(dict(admin_authenticated=True,admin_id=a.id,admin_username=a.username,admin_superuser=a.is_superadmin,admin_last_activity_at=time.time(),admin_2fa_verified=True,admin_security_stamp=admin_security_stamp(a),csrf_token='lifecycle'))
-    print(json.dumps(dict(cookie=cookie(account),founder_cookie=cookie(founder),member_id=member.id,target_id=target.id,document_id=doc.id,report_id=report.id,manuscript_id=manuscript.id,task_id=task.id,suffix=suffix)))
+    public_cookie=app.session_interface.get_signing_serializer(app).dumps(dict(researcher_id=owner.id,researcher_nonce=owner.token_nonce,csrf_token='lifecycle'))
+    print(json.dumps(dict(owner_cookie=public_cookie,journal_slug=journal.slug,cookie=cookie(account),founder_cookie=cookie(founder),member_id=member.id,target_id=target.id,document_id=doc.id,report_id=report.id,manuscript_id=manuscript.id,task_id=task.id,suffix=suffix)))
