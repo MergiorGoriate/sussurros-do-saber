@@ -1,7 +1,7 @@
 """Staff governance. Permissions are evaluated from live, accepted mandates."""
 import io
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from urllib.parse import urlparse
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for, send_file
 from sqlalchemy import or_
@@ -733,7 +733,12 @@ def article_workflow(ident):
         elif action in {'publish','schedule'} and item.stage in {'approved','scheduled','published'} and item.approved_at:
             require('article.publish')
             from admin import parse_datetime
-            scheduled=parse_datetime(request.form.get('scheduled_at')) if action=='schedule' else None
+            try:
+                scheduled=parse_datetime(request.form.get('scheduled_at')) if action=='schedule' else None
+            except (ValueError,TypeError):
+                abort(400,description='Data de publicação inválida.')
+            if scheduled and scheduled.tzinfo:
+                scheduled=scheduled.astimezone(timezone.utc).replace(tzinfo=None)
             if action=='schedule' and (not scheduled or scheduled<=utcnow()):
                 abort(400,description='Informe uma data futura de publicação.')
             item.stage=article.status='scheduled' if scheduled else 'published'

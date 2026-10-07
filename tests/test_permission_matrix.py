@@ -260,3 +260,15 @@ class PermissionMatrixTests(unittest.TestCase):
             session['admin_id']=member.admin_id
             self.assertFalse(has_permission('legacy_unknown'))
             self.assertFalse(has_any_permission('legacy_unknown'))
+
+    def test_scheduling_rejects_invalid_date_and_requires_approval_and_publication_grant(self):
+        publisher=self.grant('article.publish');owner=self.member();article=self.article(owner)
+        workflow=db.session.get(ArticleWorkflow,article.id)
+        self.signin(publisher.admin);path=f'/admin/fluxo-artigos/{article.id}'
+        self.assertEqual(self.post(path,action='schedule',scheduled_at='2099-01-01T12:00').status_code,409)
+        workflow.stage=article.status='approved';workflow.approved_at=utcnow();db.session.commit()
+        self.assertEqual(self.post(path,action='schedule',scheduled_at='invalid').status_code,400)
+        self.assertEqual(self.post(path,action='schedule',scheduled_at='2099-01-01T12:00+02:00').status_code,302)
+        self.assertEqual(article.status,'scheduled');self.assertEqual(article.scheduled_at.hour,10)
+        publisher.appointments[0].role.permissions=[];db.session.commit()
+        self.assertEqual(self.post(path,action='publish').status_code,404)
