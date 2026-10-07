@@ -2,6 +2,7 @@
 from models import db, utcnow
 
 class TeamMember(db.Model):
+    removed_at = db.Column(db.DateTime, index=True)
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), unique=True)
     author_id = db.Column(db.Integer, db.ForeignKey('author.id'), unique=True)
@@ -64,6 +65,7 @@ class StaffTask(db.Model):
     assignee = db.relationship('TeamMember')
 
 class StaffDocument(db.Model):
+    removed_at = db.Column(db.DateTime, index=True)
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('team_member.id'), nullable=False, index=True)
     title = db.Column(db.String(200), nullable=False)
@@ -86,8 +88,12 @@ class TaskComment(db.Model):
     actor = db.relationship('AdminUser')
 
 class StaffNotice(db.Model):
+    researcher_id = db.Column(db.Integer, db.ForeignKey("researcher.id"), index=True)
+    removed_at = db.Column(db.DateTime, index=True)
+    resource_type = db.Column(db.String(40))
+    resource_id = db.Column(db.Integer)
     id = db.Column(db.Integer, primary_key=True)
-    admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=False, index=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), index=True)
     source_key = db.Column(db.String(180), unique=True)
     subject = db.Column(db.String(240), nullable=False)
     body = db.Column(db.Text, default='', nullable=False)
@@ -153,3 +159,12 @@ class StaffContactLog(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     member = db.relationship('TeamMember', backref=db.backref('contacts', order_by='StaffContactLog.id'))
     actor = db.relationship('AdminUser')
+
+
+class AuditReport(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    snapshot = db.Column(db.JSON, default=list, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('admin_user.id'))
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    removed_at = db.Column(db.DateTime, index=True)

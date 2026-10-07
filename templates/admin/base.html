@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261003-policy-editor-v2') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css') }}">
   {% block extra_head %}{% endblock %}
-</head>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css') }}"></head>
 <body>
   <aside class="admin-sidebar">
     <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
@@ -34,10 +34,10 @@
       <a href="{{ url_for('staff.workspace') }}">Área de trabalho</a>
       {% if staff_can('tasks.manage') %}<a href="{{ url_for('staff.workspace') }}#distribuir-tarefa">Distribuir tarefas</a>{% endif %}
       {% if staff_can('team.manage') %}<a href="{{ url_for('staff.team') }}">Equipa e convites</a>{% endif %}
-      {% if current_admin_is_primary %}<a href="{{ url_for('staff.roles') }}">Funções e permissões</a>{% endif %}
+      {% if current_admin_is_primary %}<a href="{{ url_for('staff.roles') }}">Funções e permissões</a><a href="{{ url_for('staff.removed_history') }}">Histórico de remoções</a>{% endif %}
       {% if staff_has_any('manuscript.review') %}<a href="{{ url_for('staff.reviews') }}">Meus pareceres</a>{% endif %}
       <a href="{{ url_for('staff.documents') }}">Documentos da equipa</a>
-      <a href="{{ url_for('staff.notifications') }}">Notificações</a>
+      <a href="{{ url_for('staff.notifications') }}">Notificações <span data-notice-count>{{ notice_unread }}</span></a>
       {% if staff_can('reports.read') %}<a href="{{ url_for('staff.reports') }}">Relatórios e auditoria</a>{% endif %}
       <a href="{{ url_for('admin.docs') }}">Docs</a>
       <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a>
@@ -49,12 +49,14 @@
     </form>
   </aside>
   <main class="admin-main">
+    {% include "admin/notice_bar.html" %}
     {% with messages=get_flashed_messages(with_categories=true) %}
       {% for category,message in messages %}<div class="alert {{ category }}" role="status">{{ message }}</div>{% endfor %}
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js') }}" defer></script>
 </body>
 </html>
 

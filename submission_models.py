@@ -20,6 +20,7 @@ class SubmissionSetting(db.Model):
     journal = db.relationship('Journal')
 
 class Manuscript(db.Model):
+    removed_at = db.Column(db.DateTime, index=True)
     id = db.Column(db.Integer, primary_key=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), nullable=False, index=True)
     journal_id = db.Column(db.Integer, db.ForeignKey('journal.id'), nullable=False, index=True)
@@ -130,3 +131,4 @@ class PublicationAsset(db.Model):
     journal_id = db.Column(db.Integer, db.ForeignKey('journal.id'), nullable=False, index=True)
     name = db.Column(db.String(180), nullable=False)
     payload = db.Column(db.LargeBinary, nullable=False)
+
