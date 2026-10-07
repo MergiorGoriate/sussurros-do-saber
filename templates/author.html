@@ -34,7 +34,7 @@
         {% if author.institution %}<p class="author-institution">{{ author.institution }}</p>{% endif %}
         {% if author.orcid or author.email %}
         <div class="author-actions">
-          {% if author.orcid %}<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="me noopener">ORCID {{ author.orcid }} ↗</a>{% endif %}
+          {% if author.orcid %}<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="me noopener" class="author-orcid-link"><i class="fa-brands fa-orcid" aria-hidden="true"></i><span>ORCID {{ author.orcid }} ↗</span></a>{% endif %}
           {% if author.google_scholar %}<a href="{{ author.google_scholar }}" target="_blank" rel="me noopener">Google Scholar ↗</a>{% endif %}
           {% if author.researchgate %}<a href="{{ author.researchgate }}" target="_blank" rel="me noopener">ResearchGate ↗</a>{% endif %}
           {% if author.email %}<a href="mailto:{{ author.email }}">Contacto profissional</a>{% endif %}
