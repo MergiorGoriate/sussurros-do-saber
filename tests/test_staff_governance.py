@@ -238,9 +238,9 @@ class StaffGovernanceTests(unittest.TestCase):
         data=dict(title=article.title,summary=article.summary,body=article.body,author_id=owner.author_id,category_id=self.category.id)
         self.assertEqual(self.post(f'/admin/artigos/{article.id}/editar',**data,status='draft').status_code,403)
         data['body']='Conteúdo alterado sem revisão. '*10
-        self.assertEqual(self.post(f'/admin/artigos/{article.id}/editar',**data,status='published').status_code,409)
+        self.assertEqual(self.post(f'/admin/artigos/{article.id}/editar',**data,status='published').status_code,403)
         data['body']=article.body
-        self.assertEqual(self.post(f'/admin/artigos/{article.id}/editar',**data,status='published').status_code,302)
+        self.assertEqual(self.post(f'/admin/fluxo-artigos/{article.id}',action='publish').status_code,302)
         self.assertEqual(article.status,'published')
 
     def test_director_cannot_rebind_editor_account_to_gain_scientific_role(self):

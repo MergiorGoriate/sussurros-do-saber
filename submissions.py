@@ -574,7 +574,9 @@ def revised(ident):
 @admin_bp.get('/submissoes')
 @login_required
 def submissions_list():
-    from governance import scope_manuscripts
+    from governance import scope_manuscripts, has_any_permission, MANUSCRIPT_ACCESS_PERMISSIONS
+    if not any(has_any_permission(p) for p in MANUSCRIPT_ACCESS_PERMISSIONS+('submissions.configure',)):
+        abort(403)
     query = scope_manuscripts(Manuscript.query.filter(Manuscript.status != 'draft'))
     search = request.args.get('q', '').strip()[:300]
     if search:
@@ -600,7 +602,7 @@ def submissions_list():
     rows = query.order_by(ordering, Manuscript.id.desc()).paginate(page=request.args.get('page', 1, type=int), per_page=25, error_out=False)
     from governance import has_permission
     pending = EditorialNotification.query.filter_by(sent_at=None).count() if has_permission('submissions.configure') else 0
-    return render_template('admin/submissions.html', manuscripts=rows, states=STATES, journals=Journal.query.order_by(Journal.title).all(), pending_notifications=pending)
+    return render_template('admin/submissions.html', manuscripts=rows, states=STATES, journals=[j for j in Journal.query.order_by(Journal.title).all() if any(has_permission(p,j.id) for p in MANUSCRIPT_ACCESS_PERMISSIONS+('submissions.configure',))], pending_notifications=pending)
 
 
 @admin_bp.route('/submissoes/configuracao', methods=['GET', 'POST'])
@@ -650,7 +652,7 @@ def submission_detail(ident):
         if len(note) > 20000:
             abort(400)
         permission = 'manuscript.assign' if action == 'assign' else 'manuscript.decide' if action in {'accepted','rejected'} else 'manuscript.edit'
-        if not manuscript_access(manuscript,permission) or (permission=='manuscript.edit' and not has_permission('manuscript.decide',manuscript.journal_id) and manuscript.editor_id!=session.get('admin_id')):
+        if not manuscript_access(manuscript,permission):
             abort(403)
         if action == 'note' and note:
             event(manuscript, 'internal_note', note=note)
@@ -675,8 +677,8 @@ def submission_detail(ident):
         db.session.commit()
         return redirect(url_for('admin.submission_detail', ident=ident))
     can_decide=manuscript_access(manuscript,'manuscript.decide')
-    can_edit=manuscript_access(manuscript,'manuscript.edit') and (can_decide or manuscript.editor_id==session.get('admin_id'))
-    transitions=[s for s in TRANSITIONS.get(manuscript.status,()) if can_edit and (s not in {'accepted','rejected'} or can_decide)]
+    can_edit=manuscript_access(manuscript,'manuscript.edit')
+    transitions=[s for s in TRANSITIONS.get(manuscript.status,()) if (can_decide if s in {'accepted','rejected'} else can_edit)]
     return render_template('admin/submission_detail.html', manuscript=manuscript, files=files_for(manuscript), states=STATES,
                            transitions=transitions, admins=[m.admin for m in eligible('manuscript.edit',manuscript.journal_id) if m.admin and not conflicts(m,manuscript)],
                            can_assign=manuscript_access(manuscript,'manuscript.assign'),can_edit=can_edit,can_produce=manuscript_access(manuscript,'manuscript.production'),
@@ -745,7 +747,7 @@ def publication_saved(journal):
         return
     lock_record(manuscript)
     from governance import manuscript_access, audit
-    if not manuscript_access(manuscript,'manuscript.production'):
+    if not manuscript_access(manuscript,'manuscript.production') and not manuscript_access(manuscript,'journal.publish'):
         abort(403)
     audit('publication.saved','manuscript',manuscript.id)
     if journal.published and manuscript.status == 'production':

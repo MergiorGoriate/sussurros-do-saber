@@ -861,7 +861,7 @@ def journal_markdown_preview():
 @login_required
 def journal_preview(journal_id):
     from governance import journal_access
-    journal_access(journal_id)
+    journal_access(journal_id,viewing=True)
     return render_journal(db.get_or_404(Journal, journal_id))
 
 
@@ -896,7 +896,7 @@ def journal_download_pdf(slug):
 @limiter.limit("10 per minute; 60 per hour")
 def journal_preview_pdf(journal_id):
     from governance import journal_access
-    journal_access(journal_id)
+    journal_access(journal_id,viewing=True)
     return render_journal_pdf(db.get_or_404(Journal, journal_id))
 
 
