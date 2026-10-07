@@ -4,6 +4,8 @@ import os
 from alembic import context
 from sqlalchemy import create_engine, pool, text
 from models import db
+import submission_models
+import governance_models
 
 url = os.environ.get("DATABASE_URL", "")
 if not url:
@@ -21,3 +23,4 @@ with engine.connect() as connection:
         if connection.dialect.name == "postgresql":
             connection.execute(text("SELECT pg_advisory_xact_lock(1936028275)"))
         context.run_migrations()
+

@@ -24,6 +24,7 @@ class AdminUser(db.Model):
     two_factor_enabled = db.Column(db.Boolean, default=False, nullable=False)
     totp_secret = db.Column(db.String(64))
     recovery_code_hashes = db.Column(db.Text, default="", nullable=False)
+    governance_managed = db.Column(db.Boolean, default=False, nullable=False)
     security_version = db.Column(db.Integer, default=1, nullable=False)
 
 
@@ -203,6 +204,7 @@ class Article(db.Model):
             cls.scheduled_at.isnot(None),
             cls.scheduled_at <= now,
         )
+        due_ids=[row.id for row in due.all()]
         changed = due.update(
             {
                 cls.status: "published",
@@ -212,6 +214,8 @@ class Article(db.Model):
             synchronize_session=False,
         )
         if changed:
+            from governance_models import ArticleWorkflow
+            ArticleWorkflow.query.filter(ArticleWorkflow.article_id.in_(due_ids)).update({'stage':'published'},synchronize_session=False)
             db.session.commit()
         return changed
 
@@ -261,6 +265,7 @@ class Subscriber(db.Model):
     email = db.Column(db.String(180), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
 
 
 

@@ -82,6 +82,10 @@ SITE_URL = CANONICAL_ORIGIN if _configured_host == "sussurrosdosaber.com" else _
 db.init_app(app)
 limiter.init_app(app)
 from submissions import submissions_bp, install_submission_cli
+from governance import staff_bp, public_team_bp, install_staff_cli
+app.register_blueprint(staff_bp)
+app.register_blueprint(public_team_bp)
+install_staff_cli(app)
 app.register_blueprint(admin_bp)
 app.register_blueprint(submissions_bp)
 from reader_accounts import reader_bp
@@ -856,6 +860,8 @@ def journal_markdown_preview():
 @app.get("/admin/revistas/<int:journal_id>/previsualizar")
 @login_required
 def journal_preview(journal_id):
+    from governance import journal_access
+    journal_access(journal_id)
     return render_journal(db.get_or_404(Journal, journal_id))
 
 
@@ -889,6 +895,8 @@ def journal_download_pdf(slug):
 @login_required
 @limiter.limit("10 per minute; 60 per hour")
 def journal_preview_pdf(journal_id):
+    from governance import journal_access
+    journal_access(journal_id)
     return render_journal_pdf(db.get_or_404(Journal, journal_id))
 
 
@@ -1188,6 +1196,7 @@ def ensure_admin_columns():
         "totp_secret": "VARCHAR(64)",
         "recovery_code_hashes": "TEXT DEFAULT '' NOT NULL",
         "security_version": "INTEGER DEFAULT 1 NOT NULL",
+        "governance_managed": "BOOLEAN DEFAULT FALSE NOT NULL",
     }
     changed = False
     for name, definition in additions.items():
@@ -1412,6 +1421,8 @@ def seed_database():
         ensure_journal_columns()
         ensure_editorial_policy_columns()
         ensure_article_columns()
+    from governance import seed_roles
+    seed_roles()
     if not Journal.query.first():
         default_guidelines = (
             "Aceitamos manuscritos originais, revisões e relatos fundamentados. "
@@ -1480,3 +1491,4 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+

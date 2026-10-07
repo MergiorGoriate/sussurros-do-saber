@@ -8,6 +8,7 @@
   <title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title>
   <link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261003-policy-editor-v2') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css') }}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -18,18 +19,25 @@
     </a>
     <nav aria-label="Administração">
       <a href="{{ url_for('admin.dashboard') }}">Visão geral</a>
-      <a href="{{ url_for('admin.articles') }}">Artigos</a>
-      <a href="{{ url_for('admin.authors') }}">Autores</a>
-      <a href="{{ url_for('admin.categories') }}">Categorias</a>
-      <a href="{{ url_for('admin.journals') }}">Revistas</a>
-      <a href="{{ url_for('admin.submissions_list') }}">Submissões</a>
-      <a href="{{ url_for('admin.editorial_policies') }}">Políticas Editoriais</a>
-      <a href="{{ url_for('admin.comments') }}">Comentários</a>
+      {% if staff_can('article.write') or staff_can('article.edit') or staff_can('article.review') or staff_can('article.approve') or staff_can('article.publish') %}<a href="{{ url_for('admin.articles') }}">Artigos</a>{% endif %}
+      {% if staff_can('authors.manage') %}<a href="{{ url_for('admin.authors') }}">Autores</a>{% endif %}
+      {% if staff_can('categories.manage') %}<a href="{{ url_for('admin.categories') }}">Categorias</a>{% endif %}
+      {% if staff_has_any('journal.manage') or staff_has_any('manuscript.production') %}<a href="{{ url_for('admin.journals') }}">Revistas</a>{% endif %}
+      {% if staff_has_any('manuscript.read') or staff_has_any('manuscript.edit') or staff_has_any('manuscript.production') %}<a href="{{ url_for('admin.submissions_list') }}">Submissões</a>{% endif %}
+      {% if staff_can('policies.manage') %}<a href="{{ url_for('admin.editorial_policies') }}">Políticas Editoriais</a>{% endif %}
+      {% if staff_can('comments.manage') %}<a href="{{ url_for('admin.comments') }}">Comentários</a>{% endif %}
       {% if current_admin_is_primary %}
       <a href="{{ url_for('admin.administrators') }}">Administradores</a>
       {% endif %}
-      <a href="{{ url_for('admin.contacts') }}">Contactos</a>
-      <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>
+      {% if staff_can('contacts.manage') %}<a href="{{ url_for('admin.contacts') }}">Contactos</a>{% endif %}
+      {% if staff_can('subscribers.manage') %}<a href="{{ url_for('admin.subscribers') }}">Subscritores</a>{% endif %}
+      <a href="{{ url_for('staff.workspace') }}">Área de trabalho</a>
+      {% if staff_can('team.manage') %}<a href="{{ url_for('staff.team') }}">Equipa e convites</a>{% endif %}
+      {% if current_admin_is_primary %}<a href="{{ url_for('staff.roles') }}">Funções e permissões</a>{% endif %}
+      {% if staff_has_any('manuscript.review') %}<a href="{{ url_for('staff.reviews') }}">Meus pareceres</a>{% endif %}
+      <a href="{{ url_for('staff.documents') }}">Documentos da equipa</a>
+      <a href="{{ url_for('staff.notifications') }}">Notificações</a>
+      {% if staff_can('reports.read') %}<a href="{{ url_for('staff.reports') }}">Relatórios e auditoria</a>{% endif %}
       <a href="{{ url_for('admin.docs') }}">Docs</a>
       <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a>
       <a href="/" target="_blank" rel="noopener">Ver site ↗</a>
@@ -48,5 +56,6 @@
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js') }}" defer></script>
 </body>
 </html>
+
 
 
