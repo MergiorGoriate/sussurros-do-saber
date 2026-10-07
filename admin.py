@@ -952,7 +952,7 @@ def delete_category(category_id):
 @login_required
 def journals():
     from governance import has_any_permission, journal_scope
-    if not has_any_permission('journal.manage') and not has_any_permission('manuscript.production'):
+    if not any(has_any_permission(p) for p in ('journal.manage','journal.publish','manuscript.production')):
         abort(403)
     return render_template(
         "admin/journals.html",
@@ -1065,9 +1065,10 @@ def journal_form(journal_id=None):
             journal.copyright_policy = request.form.get("copyright_policy", "").strip()
             journal.cover_image = cover_url
             journal.cover_alt = request.form.get("cover_alt", "").strip()
-            if request.form.get('save_mode') != 'draft' and request.form.get('published') == 'on':
+            requested_published = request.form.get("save_mode") != "draft" and request.form.get("published") == "on"
+            if requested_published != bool(journal.published):
                 journal_access(journal.id,publishing=True)
-            journal.published = request.form.get("save_mode") != "draft" and request.form.get("published") == "on"
+            journal.published = requested_published
             if not journal.id:
                 db.session.add(journal)
             from submissions import publication_saved

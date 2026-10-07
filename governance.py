@@ -45,6 +45,12 @@ DEFAULT_ROLES = [
 MEMBER_STATES = {'invited':'Convidado','contacted':'Contactado','conversation':'Em conversa','offered':'Proposta enviada',
                  'active':'Activo','declined':'Recusou','deferred':'Adiado','suspended':'Suspenso','ended':'Terminado'}
 TASK_STATES = {'pending':'Pendente','in_progress':'Em curso','blocked':'Bloqueada','done':'Concluída','cancelled':'Cancelada'}
+# Only these grants operate on journal resources. Other grants need a general mandate.
+JOURNAL_PERMISSIONS = {'journal.manage','journal.publish','manuscript.read','manuscript.edit',
+    'manuscript.assign','manuscript.decide','manuscript.production','manuscript.review','submissions.configure'}
+MANUSCRIPT_ACCESS_PERMISSIONS = ('manuscript.read','manuscript.edit','manuscript.assign','manuscript.decide','manuscript.production')
+ARTICLE_ACCESS_PERMISSIONS = ('article.write','article.edit','article.review','article.approve','article.publish','article.delete')
+
 ARTICLE_STAGES = {'draft':'Rascunho','submitted':'Submetido','review':'Em revisão','changes':'Correcções solicitadas','approved':'Aprovado','scheduled':'Programado','published':'Publicado'}
 
 
@@ -73,6 +79,10 @@ def mandates(member):
 
 
 def has_permission(permission, journal_id=None, *, member=None):
+    if permission not in PERMISSIONS:
+        return False
+    if permission not in JOURNAL_PERMISSIONS:
+        journal_id=None
     if member is None:
         if session.get('admin_superuser'):
             return True
@@ -81,12 +91,14 @@ def has_permission(permission, journal_id=None, *, member=None):
         # New accounts always receive an invited member record, with no automatic grants.
         if member is None:
             account=db.session.get(AdminUser,session.get('admin_id')) if session.get('admin_id') else None
-            return bool(account and not account.governance_managed) and permission not in {'team.manage','manuscript.decide','manuscript.assign'}
+            return bool(account and account.active and not account.governance_managed) and permission not in {'team.manage','manuscript.decide','manuscript.assign'}
     return any(permission in (a.role.permissions or []) and (a.journal_id is None or a.journal_id == journal_id)
                for a in mandates(member))
 
 
 def has_any_permission(permission):
+    if permission not in JOURNAL_PERMISSIONS:
+        return has_permission(permission)
     if session.get('admin_superuser') or current_member() is None:
         return has_permission(permission)
     return any(permission in (a.role.permissions or []) for a in mandates(current_member()))
@@ -142,8 +154,15 @@ def manuscript_access(manuscript, permission=None):
     if member and conflicts(member, manuscript):
         return False
     if permission:
-        return has_permission(permission, manuscript.journal_id)
-    return (has_permission('manuscript.read', manuscript.journal_id)
+        granted = has_permission(permission, manuscript.journal_id)
+        if permission == 'manuscript.edit':
+            return granted and (session.get('admin_superuser') or manuscript.editor_id == session.get('admin_id'))
+        if permission == 'manuscript.production':
+            return granted and manuscript.status in {'accepted','production','published'}
+        return granted
+    return (has_permission('manuscript.assign', manuscript.journal_id)
+            or has_permission('manuscript.decide', manuscript.journal_id)
+            or has_permission('manuscript.read', manuscript.journal_id)
             or (has_permission('manuscript.edit', manuscript.journal_id) and manuscript.editor_id == session.get('admin_id'))
             or (has_permission('manuscript.production', manuscript.journal_id) and manuscript.status in {'accepted','production','published'}))
 
@@ -159,15 +178,18 @@ def scope_manuscripts(query):
     for appointment in mandates(member):
         perms = appointment.role.permissions or []
         scope = Manuscript.journal_id == appointment.journal_id if appointment.journal_id else db.true()
-        if 'manuscript.read' in perms:
+        if any(p in perms for p in ('manuscript.read','manuscript.assign','manuscript.decide')):
             clauses.append(scope)
         if 'manuscript.edit' in perms:
             clauses.append(db.and_(scope, Manuscript.editor_id == session.get('admin_id')))
         if 'manuscript.production' in perms:
             clauses.append(db.and_(scope, Manuscript.status.in_(['accepted','production','published'])))
     from submission_models import ManuscriptAuthor, Researcher
-    author_conflict = db.select(ManuscriptAuthor.manuscript_id).where(db.func.lower(ManuscriptAuthor.email) == member.email.lower())
-    owner_conflict = db.select(Researcher.id).where(db.func.lower(Researcher.email) == member.email.lower())
+    addresses = {member.email.lower()}
+    if member.admin and member.admin.email:
+        addresses.add(member.admin.email.lower())
+    author_conflict = db.select(ManuscriptAuthor.manuscript_id).where(db.func.lower(ManuscriptAuthor.email).in_(addresses))
+    owner_conflict = db.select(Researcher.id).where(db.func.lower(Researcher.email).in_(addresses))
     return query.filter(or_(*clauses) if clauses else db.false()).filter(~Manuscript.id.in_(author_conflict), ~Manuscript.owner_id.in_(owner_conflict))
 
 
@@ -179,10 +201,14 @@ def guard_existing_endpoint():
         'comments':'comments.manage','update_comment_status':'comments.manage','delete_comment':'comments.manage',
         'contacts':'contacts.manage','delete_contact':'contacts.manage','export_contacts':'contacts.manage',
         'subscribers':'subscribers.manage','toggle_subscriber':'subscribers.manage','export_subscribers':'subscribers.manage',
-        'delete_article':'article.delete','delete_journal':'journal.manage',
+        'delete_article':'article.delete',
     }
     if endpoint in mapping:
         require(mapping[endpoint])
+    if endpoint == 'delete_journal':
+        require('journal.manage', request.view_args.get('journal_id'))
+    if endpoint == 'articles' and not any(has_permission(p) for p in ARTICLE_ACCESS_PERMISSIONS):
+        abort(403)
     if endpoint in {'upload_inline_image','upload_inline_video','journal_markdown_preview'}:
         if not any(has_any_permission(p) for p in ('article.write','article.edit','manuscript.production','journal.manage')):
             abort(403)
@@ -191,7 +217,10 @@ def guard_existing_endpoint():
 @staff_bp.app_context_processor
 def staff_context():
     return dict(staff_can=has_permission, staff_has_any=has_any_permission, staff_member=current_member(), member_states=MEMBER_STATES,
-                task_states=TASK_STATES, article_stages=ARTICLE_STAGES)
+                task_states=TASK_STATES, article_stages=ARTICLE_STAGES,
+                staff_valid_mandates=mandates, staff_article_editable=article_editable, staff_journal_can=journal_can,
+                staff_article_statuses=article_statuses, staff_permissions=PERMISSIONS,
+                staff_journal_permissions=JOURNAL_PERMISSIONS, staff_manuscript_permissions=MANUSCRIPT_ACCESS_PERMISSIONS)
 
 
 @staff_bp.route('/equipa', methods=['GET','POST'])
@@ -319,7 +348,8 @@ def roles():
         role.name=field('name',160,True)
         for name in ['purpose','duties','limits']:
             setattr(role,name,field(name,10000))
-        role.permissions=sorted(set(permissions))
+        preserved_unknown=set(role.permissions or [])-set(PERMISSIONS)
+        role.permissions=sorted(set(permissions)|preserved_unknown)
         db.session.add(role)
         db.session.flush()
         audit('role.saved','role',role.id,', '.join(role.permissions))
@@ -497,6 +527,8 @@ def reviews():
     manager=bool(selected and manuscript_access(selected,'manuscript.assign'))
     if selected and not manager:
         abort(403)
+    if not manager and not has_any_permission('manuscript.review'):
+        abort(403)
     rows=StaffPeerReview.query
     if manager:
         rows=rows.filter_by(manuscript_id=ident)
@@ -506,7 +538,7 @@ def reviews():
     if not manager:
         records=[r for r in records if has_permission('manuscript.review',r.manuscript.journal_id)]
     return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,
-                           reviewers=eligible('manuscript.review',selected.journal_id) if selected else [])
+                           reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if not conflicts(m,selected)] if selected else [])
 
 
 def reviewer_record(ident):
@@ -571,7 +603,7 @@ def review_file(ident,file_id):
 
 
 def article_scope(query):
-    if has_permission('article.edit') or has_permission('article.publish') or has_permission('article.approve'):
+    if any(has_permission(p) for p in ('article.edit','article.publish','article.approve','article.delete')):
         return query
     member=current_member()
     if not member or not active_member(member) or not mandates(member):
@@ -587,8 +619,6 @@ def article_scope(query):
 def article_edit_access(article):
     if has_permission('article.edit'):
         return
-    if article.id and has_permission('article.publish') and article.status in {'approved','scheduled','published'}:
-        return
     member=current_member()
     if not has_permission('article.write') or not member or not member.author_id:
         abort(403)
@@ -598,9 +628,25 @@ def article_edit_access(article):
         abort(409,description='Peça ao editor para reabrir o artigo antes de o alterar.')
 
 
+def article_editable(article):
+    if has_permission('article.edit'):
+        return True
+    member=current_member()
+    return bool(has_permission('article.write') and member and member.author_id
+        and (not article.id or article.author_id==member.author_id)
+        and article.status not in {'approved','scheduled','published'})
+
+
+def article_statuses(article):
+    # Approval belongs to the workflow; publication has its own route.
+    if session.get('admin_superuser'):
+        return ['draft','review','approved','published','scheduled']
+    return ['draft','review'] if article_editable(article) else []
+
+
 def article_save_guard(article,status,author_id):
     article_edit_access(article)
-    if not has_permission('article.edit') and not has_permission('article.publish') and author_id!=current_member().author_id:
+    if not has_permission('article.edit') and author_id!=current_member().author_id:
         abort(403)
     workflow=db.session.get(ArticleWorkflow,article.id) if article.id else None
     if status in {'approved','published','scheduled'}:
@@ -627,7 +673,7 @@ def article_saved(article):
     if not workflow:
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
         if owner:
-            db.session.add(ArticleWorkflow(article_id=article.id,owner_id=owner.id,stage='submitted' if article.status=='review' else 'draft'))
+            db.session.add(ArticleWorkflow(article_id=article.id,owner_id=owner.id,stage='submitted' if article.status=='review' else article.status))
     audit('article.saved','article',article.id,article.status)
 
 
@@ -639,12 +685,15 @@ def article_workflow(ident):
         abort(404)
     item=ArticleWorkflow.query.filter_by(article_id=ident).with_for_update().first() if request.method=='POST' else db.session.get(ArticleWorkflow,ident)
     if not item:
-        require('article.edit')
+        if not has_permission('article.edit') and not (has_permission('article.write') and current_member() and current_member().author_id==article.author_id):
+            abort(409,description='O editor deve iniciar o fluxo deste artigo.')
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
         if not owner:
             abort(409,description='Associe primeiro o autor a um membro da equipa.')
-        item=ArticleWorkflow(article_id=ident,owner_id=owner.id,owner=owner)
-        db.session.add(item)
+        item=ArticleWorkflow(article_id=ident,owner_id=owner.id,owner=owner,
+                             stage=article.status if article.status in ARTICLE_STAGES else 'submitted')
+        if request.method=='POST':
+            db.session.add(item)
     if request.method=='POST':
         validate_csrf()
         action=request.form.get('action')
@@ -656,7 +705,7 @@ def article_workflow(ident):
         elif action=='assign' and item.stage in {'draft','submitted','changes','review'}:
             require('article.edit')
             reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
-            if reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
+            if not reviewer.available or reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
                 abort(400,description='Escolha um revisor independente com mandato válido.')
             item.reviewer_id,item.stage,article.status=reviewer.id,'review','review'
             item.approved_at=item.reviewed_at=None
@@ -681,6 +730,16 @@ def article_workflow(ident):
             item.editor_id=member.id if member else None
             item.stage,article.status,item.approved_at='approved','approved',utcnow()
             notice(item.owner,'Artigo aprovado: '+article.title)
+        elif action in {'publish','schedule'} and item.stage in {'approved','scheduled','published'} and item.approved_at:
+            require('article.publish')
+            from admin import parse_datetime
+            scheduled=parse_datetime(request.form.get('scheduled_at')) if action=='schedule' else None
+            if action=='schedule' and (not scheduled or scheduled<=utcnow()):
+                abort(400,description='Informe uma data futura de publicação.')
+            item.stage=article.status='scheduled' if scheduled else 'published'
+            article.scheduled_at=scheduled
+            if not scheduled and not article.published_at:
+                article.published_at=utcnow()
         elif action=='reopen':
             require('article.edit')
             item.stage,article.status='draft','draft'
@@ -729,23 +788,25 @@ def install_staff_cli(app):
         print(f'{count} notificações internas criadas.')
 
 
-def journal_access(journal_id=None, publishing=False):
+def journal_can(journal_id=None, publishing=False, viewing=False):
     from submission_models import Manuscript
     manuscript=Manuscript.query.filter_by(publication_id=journal_id).first() if journal_id else None
     if manuscript:
-        if not manuscript_access(manuscript,'manuscript.production'):
-            abort(404)
-        if publishing and (not manuscript_access(manuscript,'journal.publish') or manuscript.status not in {'production','published'}):
-            abort(403)
-    else:
-        require('journal.publish' if publishing else 'journal.manage',journal_id)
+        if publishing:
+            return (manuscript_access(manuscript,'journal.publish')
+                    and manuscript.status in {'production','published'})
+        return (manuscript_access(manuscript,'manuscript.production')
+                or (viewing and manuscript_access(manuscript,'journal.publish')
+                    and manuscript.status in {'production','published'}))
+    return (has_permission('journal.publish' if publishing else 'journal.manage',journal_id)
+            or (viewing and has_permission('journal.publish',journal_id)))
+
+
+def journal_access(journal_id=None, publishing=False, viewing=False):
+    if not journal_can(journal_id,publishing,viewing):
+        abort(403,description='A sua função ou o âmbito do mandato não permite esta acção.')
 
 
 def journal_scope(query):
-    if session.get('admin_superuser') or (current_member() is None and has_permission('journal.manage')):
-        return query
-    from submission_models import Manuscript
-    ids=[j.id for j in Journal.query.all() if has_permission('journal.manage',j.id)]
-    publications=[m.publication_id for m in scope_manuscripts(Manuscript.query).filter(Manuscript.publication_id.isnot(None)).all()
-                  if manuscript_access(m,'manuscript.production')]
-    return query.filter(Journal.id.in_(ids+publications))
+    ids=[j.id for j in Journal.query.all() if journal_can(j.id,viewing=True)]
+    return query.filter(Journal.id.in_(ids))
