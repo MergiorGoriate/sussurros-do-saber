@@ -13,3 +13,8 @@
 .admin-panel td {overflow-wrap:anywhere;}
 .admin-panel form+form,.admin-panel form+a {margin-top:18px;}
 @media(max-width:760px){.staff-grid{grid-template-columns:1fr;}.staff-form .actions{flex-wrap:wrap;}.admin-main{padding:20px;}}
+.staff-grid,.staff-form {min-width:0;width:100%;}
+.staff-grid > * {min-width:0;max-width:100%;}
+.staff-form label,.staff-form fieldset {min-width:0;}
+.staff-form input,.staff-form select,.staff-form textarea {max-width:100%;}
+.staff-grid .table-wrap {min-width:0;width:100%;overflow-x:auto;}
