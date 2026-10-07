@@ -113,7 +113,11 @@ def enforce_admin_authentication():
     if request.endpoint in PUBLIC_ADMIN_ENDPOINTS:
         return None
     if admin_session_valid():
-        return require_admin_enrollment()
+        enrollment = require_admin_enrollment()
+        if enrollment is not None:
+            return enrollment
+        from governance import guard_existing_endpoint
+        return guard_existing_endpoint()
     session.clear()
     if request.path.startswith("/admin/api/"):
         return jsonify(
@@ -137,6 +141,8 @@ def login_required(view):
         enrollment = require_admin_enrollment()
         if enrollment is not None:
             return enrollment
+        from governance import guard_existing_endpoint
+        guard_existing_endpoint()
         return view(*args, **kwargs)
     return wrapped
 
@@ -515,6 +521,9 @@ def docs():
 @admin_bp.get("")
 @login_required
 def dashboard():
+    from governance import current_member
+    if current_member() and not session.get('admin_superuser'):
+        return redirect(url_for('staff.workspace'))
     return render_template("admin/dashboard.html", article_count=Article.query.count(), draft_count=Article.query.filter_by(status="draft").count(), scheduled_count=Article.query.filter_by(status="scheduled").count(), contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(), recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all())
 
 
@@ -543,13 +552,19 @@ def administrators():
         elif duplicate_username or duplicate_email:
             flash("Já existe um administrador com esse utilizador ou e-mail.", "error")
         else:
-            db.session.add(AdminUser(
+            administrator = AdminUser(
                 username=username,
                 display_name=display_name,
                 email=email,
                 password_hash=generate_password_hash(password),
-                is_superadmin=False,
-            ))
+                is_superadmin=False, governance_managed=True,
+            )
+            db.session.add(administrator)
+            db.session.flush()
+            from governance_models import TeamMember
+            from governance import audit
+            db.session.add(TeamMember(admin_id=administrator.id,name=display_name,email=email or '',status='invited'))
+            audit('account.created','admin',administrator.id)
             db.session.commit()
             flash("Novo administrador criado com sucesso.", "success")
             return redirect(url_for("admin.administrators"))
@@ -603,6 +618,8 @@ def edit_administrator(administrator_id):
         administrator.active = active
         if password:
             administrator.password_hash = generate_password_hash(password)
+        from governance import audit
+        audit('account.updated','admin',administrator.id,'Activo: '+str(active))
         db.session.commit()
         if session.get("admin_id") == administrator.id:
             session["admin_username"] = administrator.username
@@ -620,6 +637,24 @@ def delete_administrator(administrator_id):
     elif session.get("admin_id") == administrator.id:
         flash("Não pode eliminar a conta que está a utilizar.", "error")
     else:
+        from governance_models import TeamMember, TeamAppointment, GovernanceAudit, StaffNotice, StaffTask, StaffDocument, TaskComment, StaffPeerReview, StaffContactLog
+        from submission_models import Manuscript, ReviewAssignment
+        from governance import audit
+        member=TeamMember.query.filter_by(admin_id=administrator.id).first()
+        has_history = member and (member.accepted_at or member.appointments or StaffDocument.query.filter_by(member_id=member.id).first() or StaffTask.query.filter_by(assignee_id=member.id).first() or StaffPeerReview.query.filter_by(reviewer_id=member.id).first())
+        if has_history or Manuscript.query.filter_by(editor_id=administrator.id).first() or ReviewAssignment.query.filter_by(assigned_by=administrator.id).first():
+            abort(409,description='Esta conta tem histórico editorial. Desactive-a para preservar os registos.')
+        if member:
+            member.admin_id=None
+        audit('account.deleted','admin',administrator.id)
+        db.session.flush()
+        GovernanceAudit.query.filter_by(actor_id=administrator.id).update({'actor_id':None})
+        StaffNotice.query.filter_by(admin_id=administrator.id).delete()
+        StaffTask.query.filter_by(created_by=administrator.id).update({'created_by':None})
+        StaffDocument.query.filter_by(accepted_by=administrator.id).update({'accepted_by':None})
+        TaskComment.query.filter_by(actor_id=administrator.id).update({'actor_id':None})
+        StaffContactLog.query.filter_by(actor_id=administrator.id).update({'actor_id':None})
+        StaffPeerReview.query.filter_by(assigned_by=administrator.id).update({'assigned_by':None})
         db.session.delete(administrator)
         db.session.commit()
         flash("Administrador eliminado com sucesso.", "success")
@@ -629,7 +664,8 @@ def delete_administrator(administrator_id):
 @admin_bp.get("/artigos")
 @login_required
 def articles():
-    return render_template("admin/articles.html", articles=Article.query.order_by(Article.updated_at.desc()).all())
+    from governance import article_scope
+    return render_template('admin/articles.html',articles=article_scope(Article.query).order_by(Article.updated_at.desc()).all())
 
 
 def parse_datetime(value):
@@ -670,6 +706,8 @@ def article_form(article_id=None):
     article = db.session.get(Article, article_id) if article_id else Article()
     if article_id and not article:
         abort(404)
+    from governance import article_edit_access, article_save_guard, article_saved
+    article_edit_access(article)
     if request.method == "POST":
         validate_csrf()
         title = request.form.get("title", "").strip()
@@ -703,6 +741,7 @@ def article_form(article_id=None):
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            article_save_guard(article,status,author_id)
             from app import article_cover_video
             cover_video = request.form.get("cover_video", "").strip()
             video_file = request.files.get("cover_video_file")
@@ -746,6 +785,8 @@ def article_form(article_id=None):
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if not article.id:
                 db.session.add(article)
+            db.session.flush()
+            article_saved(article)
             db.session.commit()
             flash("Artigo guardado com sucesso.", "success")
             return redirect(url_for("admin.articles"))
@@ -757,6 +798,12 @@ def article_form(article_id=None):
 def delete_article(article_id):
     validate_csrf()
     article = db.get_or_404(Article, article_id)
+    from governance_models import ArticleWorkflow, PortalReview
+    if PortalReview.query.filter_by(article_id=article.id).first():
+        abort(409,description="Este artigo tem pareceres registados. Reabra-o como rascunho para o retirar da publicação.")
+    from governance import audit
+    ArticleWorkflow.query.filter_by(article_id=article.id).delete()
+    audit('article.deleted','article',article.id)
     db.session.delete(article)
     db.session.commit()
     flash("Artigo eliminado.", "success")
@@ -857,7 +904,8 @@ def authors():
 def delete_author(author_id):
     validate_csrf()
     author = db.get_or_404(Author, author_id)
-    if author.articles:
+    from governance_models import TeamMember
+    if author.articles or TeamMember.query.filter_by(author_id=author_id).first():
         flash("Não é possível eliminar um autor que possui artigos.", "error")
     else:
         db.session.delete(author); db.session.commit(); flash("Autor eliminado.", "success")
@@ -903,9 +951,12 @@ def delete_category(category_id):
 @admin_bp.get("/revistas")
 @login_required
 def journals():
+    from governance import has_any_permission, journal_scope
+    if not has_any_permission('journal.manage') and not has_any_permission('manuscript.production'):
+        abort(403)
     return render_template(
         "admin/journals.html",
-        journals=Journal.query.order_by(Journal.updated_at.desc()).all(),
+        journals=journal_scope(Journal.query).order_by(Journal.updated_at.desc()).all(),
     )
 
 
@@ -918,6 +969,8 @@ def render_journal_form(journal):
 @admin_bp.route("/revistas/<int:journal_id>/editar", methods=["GET", "POST"])
 @login_required
 def journal_form(journal_id=None):
+    from governance import journal_access
+    journal_access(journal_id)
     journal = db.session.get(Journal, journal_id) if journal_id else Journal()
     if journal_id and not journal:
         abort(404)
@@ -1012,6 +1065,8 @@ def journal_form(journal_id=None):
             journal.copyright_policy = request.form.get("copyright_policy", "").strip()
             journal.cover_image = cover_url
             journal.cover_alt = request.form.get("cover_alt", "").strip()
+            if request.form.get('save_mode') != 'draft' and request.form.get('published') == 'on':
+                journal_access(journal.id,publishing=True)
             journal.published = request.form.get("save_mode") != "draft" and request.form.get("published") == "on"
             if not journal.id:
                 db.session.add(journal)
@@ -1027,6 +1082,8 @@ def journal_form(journal_id=None):
 @admin_bp.post("/revistas/<int:journal_id>/publicacao")
 @login_required
 def toggle_journal(journal_id):
+    from governance import journal_access
+    journal_access(journal_id,publishing=True)
     validate_csrf()
     journal = db.get_or_404(Journal, journal_id)
     journal.published = not journal.published
@@ -1156,6 +1213,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 

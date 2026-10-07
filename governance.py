@@ -1,0 +1,751 @@
+"""Staff governance. Permissions are evaluated from live, accepted mandates."""
+import io
+import re
+from datetime import date, datetime
+from urllib.parse import urlparse
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for, send_file
+from sqlalchemy import or_
+from models import db, utcnow, AdminUser, Author, Article, Journal
+from governance_models import (TeamMember, TeamRole, TeamAppointment, StaffTask, StaffDocument,
+                               StaffNotice, GovernanceAudit, ArticleWorkflow, StaffPeerReview, PortalReview, StaffContactLog)
+from admin import (login_required, superadmin_required, validate_csrf, enforce_admin_authentication,
+                   protect_admin_responses)
+
+staff_bp = Blueprint('staff', __name__, url_prefix='/admin')
+public_team_bp = Blueprint('public_team', __name__)
+staff_bp.before_request(enforce_admin_authentication)
+staff_bp.after_request(protect_admin_responses)
+PERMISSIONS = {
+    'team.manage': 'Gerir equipa, convites e mandatos', 'tasks.manage': 'Distribuir tarefas',
+    'reports.read': 'Consultar relatórios e auditoria', 'article.write': 'Escrever artigos próprios',
+    'article.edit': 'Editar todos os artigos', 'article.review': 'Rever artigos atribuídos',
+    'article.approve': 'Aprovar artigos revistos', 'article.publish': 'Publicar artigos aprovados',
+    'article.delete': 'Eliminar artigos', 'authors.manage': 'Gerir autores', 'categories.manage': 'Gerir categorias',
+    'journal.manage': 'Gerir revistas', 'journal.publish': 'Publicar revistas',
+    'manuscript.read': 'Consultar submissões da revista', 'manuscript.edit': 'Tratar submissões atribuídas',
+    'manuscript.assign': 'Atribuir editores e revisores', 'manuscript.decide': 'Emitir decisões científicas',
+    'manuscript.production': 'Preparar artigos científicos', 'manuscript.review': 'Emitir pareceres atribuídos',
+    'submissions.configure': 'Configurar submissões', 'policies.manage': 'Gerir políticas editoriais',
+    'comments.manage': 'Moderar comentários', 'contacts.manage': 'Gerir contactos',
+    'subscribers.manage': 'Gerir subscritores',
+}
+DEFAULT_ROLES = [
+    ('direction', 'Direcção institucional', 'Parcerias, estratégia e equipa.', ['team.manage','tasks.manage','reports.read','contacts.manage','subscribers.manage']),
+    ('coordination', 'Coordenação do portal', 'Distribuição de trabalho e acompanhamento.', ['tasks.manage','reports.read','article.edit','authors.manage','categories.manage','comments.manage']),
+    ('chief_editor', 'Editor científico principal', 'Decisões científicas, conflitos e revisão por pares.', ['manuscript.read','manuscript.edit','manuscript.assign','manuscript.decide','manuscript.production','submissions.configure','journal.manage','journal.publish','policies.manage','reports.read']),
+    ('associate_editor', 'Editor associado', 'Triagem e acompanhamento das submissões atribuídas.', ['manuscript.edit']),
+    ('reviewer', 'Revisor científico', 'Pareceres fundamentados, disponibilidade e conflitos.', ['manuscript.review']),
+    ('author', 'Autor do portal', 'Produção de artigos de divulgação.', ['article.write']),
+    ('portal_reviewer', 'Revisor do portal', 'Verificação dos artigos atribuídos.', ['article.review']),
+    ('portal_editor', 'Editor do portal', 'Aprovação editorial após revisão independente.', ['article.edit','article.approve']),
+    ('publisher', 'Responsável de publicação', 'Publicação de conteúdos aprovados.', ['article.publish']),
+    ('secretariat', 'Secretariado editorial', 'Apoio documental e acompanhamento das submissões.', ['tasks.manage','manuscript.read']),
+    ('production', 'Produção científica', 'Preparação de publicações aceites.', ['manuscript.production']),
+]
+MEMBER_STATES = {'invited':'Convidado','contacted':'Contactado','conversation':'Em conversa','offered':'Proposta enviada',
+                 'active':'Activo','declined':'Recusou','deferred':'Adiado','suspended':'Suspenso','ended':'Terminado'}
+TASK_STATES = {'pending':'Pendente','in_progress':'Em curso','blocked':'Bloqueada','done':'Concluída','cancelled':'Cancelada'}
+ARTICLE_STAGES = {'draft':'Rascunho','submitted':'Submetido','review':'Em revisão','changes':'Correcções solicitadas','approved':'Aprovado','scheduled':'Programado','published':'Publicado'}
+
+
+def seed_roles():
+    for code, name, purpose, permissions in DEFAULT_ROLES:
+        if not TeamRole.query.filter_by(code=code).first():
+            db.session.add(TeamRole(code=code, name=name, purpose=purpose, duties=purpose,
+                                    limits='Acesso limitado às permissões e ao âmbito do mandato.', permissions=permissions))
+    db.session.commit()
+
+
+def current_member():
+    ident = session.get('admin_id')
+    return TeamMember.query.filter_by(admin_id=ident).first() if ident else None
+
+
+def active_member(member):
+    return bool(member and member.status == 'active' and member.accepted_at
+                and (not member.admin or member.admin.active))
+
+
+def mandates(member):
+    today = date.today()
+    return [a for a in member.appointments if a.active and a.starts_on <= today
+            and (not a.ends_on or a.ends_on >= today)] if active_member(member) else []
+
+
+def has_permission(permission, journal_id=None, *, member=None):
+    if member is None:
+        if session.get('admin_superuser'):
+            return True
+        member = current_member()
+        # Historical accounts keep existing content access until explicitly migrated.
+        # New accounts always receive an invited member record, with no automatic grants.
+        if member is None:
+            account=db.session.get(AdminUser,session.get('admin_id')) if session.get('admin_id') else None
+            return bool(account and not account.governance_managed) and permission not in {'team.manage','manuscript.decide','manuscript.assign'}
+    return any(permission in (a.role.permissions or []) and (a.journal_id is None or a.journal_id == journal_id)
+               for a in mandates(member))
+
+
+def has_any_permission(permission):
+    if session.get('admin_superuser') or current_member() is None:
+        return has_permission(permission)
+    return any(permission in (a.role.permissions or []) for a in mandates(current_member()))
+
+
+def require(permission, journal_id=None):
+    if not has_permission(permission, journal_id):
+        abort(403, description='A sua função ou o âmbito do mandato não permite esta acção.')
+
+
+def audit(action, entity, ident=None, detail=''):
+    db.session.add(GovernanceAudit(actor_id=session.get('admin_id'), actor_name=session.get('admin_username','Responsável principal'),
+                                  action=action, entity=entity, entity_id=ident, detail=detail[:1000]))
+
+
+def notice(member, subject, body=''):
+    if member and member.admin_id:
+        db.session.add(StaffNotice(admin_id=member.admin_id, subject=subject[:240], body=body[:10000]))
+
+
+def parse_date(value, required=False):
+    try:
+        result = date.fromisoformat(value) if value else None
+    except ValueError:
+        abort(400, description='Data inválida.')
+    if required and not result:
+        abort(400, description='Informe a data obrigatória.')
+    return result
+
+
+def field(name, maximum, required=False):
+    value = request.form.get(name, '').strip()
+    if len(value) > maximum or (required and not value):
+        abort(400, description='Campo inválido: ' + name)
+    return value
+
+
+def eligible(permission, journal_id=None):
+    return [m for m in TeamMember.query.order_by(TeamMember.name).all() if has_permission(permission,journal_id,member=m)]
+
+
+def conflicts(member, manuscript):
+    addresses = {a.email.strip().lower() for a in manuscript.authors}
+    from submission_models import Researcher
+    owner = db.session.get(Researcher, manuscript.owner_id)
+    if owner:
+        addresses.add(owner.email.strip().lower())
+    return member.email.lower() in addresses or bool(member.admin and member.admin.email and member.admin.email.lower() in addresses)
+
+
+def manuscript_access(manuscript, permission=None):
+    member = current_member()
+    if member and conflicts(member, manuscript):
+        return False
+    if permission:
+        return has_permission(permission, manuscript.journal_id)
+    return (has_permission('manuscript.read', manuscript.journal_id)
+            or (has_permission('manuscript.edit', manuscript.journal_id) and manuscript.editor_id == session.get('admin_id'))
+            or (has_permission('manuscript.production', manuscript.journal_id) and manuscript.status in {'accepted','production','published'}))
+
+
+def scope_manuscripts(query):
+    from submission_models import Manuscript
+    if session.get('admin_superuser'):
+        return query
+    if current_member() is None:
+        return query if has_permission('manuscript.read') else query.filter(db.false())
+    member = current_member()
+    clauses = []
+    for appointment in mandates(member):
+        perms = appointment.role.permissions or []
+        scope = Manuscript.journal_id == appointment.journal_id if appointment.journal_id else db.true()
+        if 'manuscript.read' in perms:
+            clauses.append(scope)
+        if 'manuscript.edit' in perms:
+            clauses.append(db.and_(scope, Manuscript.editor_id == session.get('admin_id')))
+        if 'manuscript.production' in perms:
+            clauses.append(db.and_(scope, Manuscript.status.in_(['accepted','production','published'])))
+    from submission_models import ManuscriptAuthor, Researcher
+    author_conflict = db.select(ManuscriptAuthor.manuscript_id).where(db.func.lower(ManuscriptAuthor.email) == member.email.lower())
+    owner_conflict = db.select(Researcher.id).where(db.func.lower(Researcher.email) == member.email.lower())
+    return query.filter(or_(*clauses) if clauses else db.false()).filter(~Manuscript.id.in_(author_conflict), ~Manuscript.owner_id.in_(owner_conflict))
+
+
+def guard_existing_endpoint():
+    endpoint = (request.endpoint or '').split('.')[-1]
+    mapping = {
+        'authors':'authors.manage','delete_author':'authors.manage', 'categories':'categories.manage','delete_category':'categories.manage',
+        'editorial_policies':'policies.manage','preview_author_guidelines':'policies.manage',
+        'comments':'comments.manage','update_comment_status':'comments.manage','delete_comment':'comments.manage',
+        'contacts':'contacts.manage','delete_contact':'contacts.manage','export_contacts':'contacts.manage',
+        'subscribers':'subscribers.manage','toggle_subscriber':'subscribers.manage','export_subscribers':'subscribers.manage',
+        'delete_article':'article.delete','delete_journal':'journal.manage',
+    }
+    if endpoint in mapping:
+        require(mapping[endpoint])
+    if endpoint in {'upload_inline_image','upload_inline_video','journal_markdown_preview'}:
+        if not any(has_any_permission(p) for p in ('article.write','article.edit','manuscript.production','journal.manage')):
+            abort(403)
+
+
+@staff_bp.app_context_processor
+def staff_context():
+    return dict(staff_can=has_permission, staff_has_any=has_any_permission, staff_member=current_member(), member_states=MEMBER_STATES,
+                task_states=TASK_STATES, article_stages=ARTICLE_STAGES)
+
+
+@staff_bp.route('/equipa', methods=['GET','POST'])
+@login_required
+def team():
+    require('team.manage')
+    if request.method == 'POST':
+        validate_csrf()
+        ident = request.form.get('id',type=int)
+        member = db.get_or_404(TeamMember,ident) if ident else TeamMember()
+        previous_contact=member.contact_note or ''
+        previous_status=member.status
+        name, email = field('name',180,True), field('email',254,True).lower()
+        if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email):
+            abort(400,description='E-mail inválido.')
+        admin_id = request.form.get('admin_id',type=int)
+        author_id = request.form.get('author_id',type=int)
+        for model, key, value in ((AdminUser,'admin_id',admin_id),(Author,'author_id',author_id)):
+            if value and (not db.session.get(model,value) or TeamMember.query.filter(getattr(TeamMember,key)==value,TeamMember.id!=member.id).first()):
+                abort(400,description='Conta já associada ou inexistente.')
+        if not session.get('admin_superuser') and (admin_id!=member.admin_id or author_id!=member.author_id):
+            abort(403,description='A associação de contas exige o responsável principal.')
+        status = field('status',30,True)
+        if status not in MEMBER_STATES:
+            abort(400)
+        if status == 'active' and not member.accepted_at and request.form.get('acceptance_recorded') != 'on':
+            abort(400,description='Registe a confirmação de aceite antes de activar o membro.')
+        photo = field('photo',600)
+        if photo and (urlparse(photo).scheme != 'https' or not urlparse(photo).netloc):
+            abort(400,description='Use uma fotografia com endereço HTTPS.')
+        orcid = field('orcid',19)
+        if orcid:
+            from journal_metadata import normalize_orcid
+            try:
+                orcid = normalize_orcid(orcid).rsplit('/',1)[-1]
+            except ValueError:
+                abort(400,description='ORCID inválido.')
+        if admin_id:
+            account=db.session.get(AdminUser,admin_id)
+            if account.is_superadmin:
+                abort(400,description='A conta principal não deve ser associada a um mandato de colaborador.')
+            account.governance_managed=True
+        member.name,member.email,member.admin_id,member.author_id,member.status = name,email,admin_id,author_id,status
+        for name,limit in [('affiliation',300),('specialty',300),('bio',10000),('contact_note',10000)]:
+            setattr(member,name,field(name,limit))
+        group = field('group',40)
+        if group not in {'portal','scientific','institutional','support'}:
+            abort(400)
+        member.group, member.photo, member.orcid = group,photo,orcid
+        member.next_contact_at = parse_date(request.form.get('next_contact_at'))
+        if request.form.get('acceptance_recorded') == 'on' and not member.accepted_at:
+            member.accepted_at = utcnow()
+        member.public_consent = request.form.get('public_consent') == 'on'
+        member.public_visible = request.form.get('public_visible') == 'on'
+        member.available = request.form.get('available') == 'on'
+        db.session.add(member)
+        db.session.flush()
+        if member.contact_note and (member.contact_note!=previous_contact or status!=previous_status):
+            db.session.add(StaffContactLog(member_id=member.id,actor_id=session.get('admin_id'),status=status,note=member.contact_note))
+        audit('member.saved','member',member.id,'Estado: '+status)
+        db.session.commit()
+        flash('Membro guardado. Nenhuma mensagem externa foi enviada.','success')
+        return redirect(url_for('staff.team',edit=member.id))
+    return render_template('admin/team.html',members=TeamMember.query.order_by(TeamMember.name).all(),
+                           selected=db.session.get(TeamMember,request.args.get('edit',type=int)) if request.args.get('edit',type=int) else None,
+                           admins=AdminUser.query.order_by(AdminUser.display_name).all(),authors=Author.query.order_by(Author.name).all(),
+                           roles=TeamRole.query.order_by(TeamRole.name).all(),journals=Journal.query.order_by(Journal.title).all())
+
+
+@staff_bp.post('/equipa/<int:ident>/mandatos')
+@superadmin_required
+def appointment(ident):
+    validate_csrf()
+    member = db.get_or_404(TeamMember,ident)
+    role = db.get_or_404(TeamRole,request.form.get('role_id',type=int))
+    start,end = parse_date(request.form.get('starts_on'),True),parse_date(request.form.get('ends_on'))
+    if end and end < start:
+        abort(400,description='O fim deve ser posterior ao início.')
+    try:
+        hours=float(request.form.get('weekly_hours') or 0)
+        if not 0 <= hours <= 168:
+            raise ValueError()
+    except ValueError:
+        abort(400)
+    journal_id=request.form.get('journal_id',type=int)
+    substitute_id=request.form.get('substitute_id',type=int)
+    if journal_id and not db.session.get(Journal,journal_id):
+        abort(400)
+    if substitute_id and (substitute_id==ident or not db.session.get(TeamMember,substitute_id)):
+        abort(400)
+    item=TeamAppointment(member=member,role=role,journal_id=journal_id,starts_on=start,ends_on=end,
+                         weekly_hours=hours,area=field('area',180),conditions=field('conditions',10000),substitute_id=substitute_id)
+    db.session.add(item)
+    audit('mandate.created','member',ident,role.name)
+    notice(member,'Novo mandato: '+role.name,'Consulte as condições e os limites na sua área de trabalho.')
+    db.session.commit()
+    return redirect(url_for('staff.team',edit=ident))
+
+
+@staff_bp.post('/mandatos/<int:ident>/terminar')
+@superadmin_required
+def end_appointment(ident):
+    validate_csrf()
+    item=db.get_or_404(TeamAppointment,ident)
+    item.active=False
+    audit('mandate.ended','member',item.member_id,item.role.name)
+    db.session.commit()
+    return redirect(url_for('staff.team',edit=item.member_id))
+
+
+@staff_bp.route('/funcoes',methods=['GET','POST'])
+@superadmin_required
+def roles():
+    if request.method=='POST':
+        validate_csrf()
+        ident=request.form.get('id',type=int)
+        role=db.get_or_404(TeamRole,ident) if ident else TeamRole(code=field('code',60,True))
+        if not re.fullmatch(r'[a-z][a-z0-9_]{1,59}',role.code):
+            abort(400)
+        if not ident and TeamRole.query.filter_by(code=role.code).first():
+            abort(409,description='Código já utilizado.')
+        permissions=request.form.getlist('permissions')
+        if not set(permissions)<=set(PERMISSIONS):
+            abort(400)
+        role.name=field('name',160,True)
+        for name in ['purpose','duties','limits']:
+            setattr(role,name,field(name,10000))
+        role.permissions=sorted(set(permissions))
+        db.session.add(role)
+        db.session.flush()
+        audit('role.saved','role',role.id,', '.join(role.permissions))
+        db.session.commit()
+        return redirect(url_for('staff.roles',edit=role.id))
+    return render_template('admin/roles.html',roles=TeamRole.query.order_by(TeamRole.name).all(),permissions=PERMISSIONS,
+                           selected=db.session.get(TeamRole,request.args.get('edit',type=int)) if request.args.get('edit',type=int) else None)
+
+
+@staff_bp.route('/trabalho',methods=['GET','POST'])
+@login_required
+def workspace():
+    member=current_member()
+    manager=has_permission('tasks.manage')
+    if request.method=='POST':
+        validate_csrf()
+        ident=request.form.get('id',type=int)
+        if ident:
+            task=db.get_or_404(StaffTask,ident)
+            if not manager and (not active_member(member) or task.assignee_id!=member.id or not mandates(member)):
+                abort(403)
+            status=field('status',30,True)
+            if status not in TASK_STATES:
+                abort(400)
+            task.status=status
+            comment=field('comment',10000)
+            if comment:
+                db.session.add(TaskComment(task_id=task.id,actor_id=session.get('admin_id'),body=comment))
+            audit('task.updated','task',task.id,status)
+        else:
+            require('tasks.manage')
+            assignee=db.get_or_404(TeamMember,request.form.get('assignee_id',type=int))
+            if not active_member(assignee) or not mandates(assignee):
+                abort(400,description='Escolha um membro activo com mandato válido.')
+            task=StaffTask(title=field('title',240,True),description=field('description',20000),assignee=assignee,
+                           due_on=parse_date(request.form.get('due_on'),True),created_by=session.get('admin_id'))
+            db.session.add(task)
+            db.session.flush()
+            notice(assignee,'Nova tarefa: '+task.title,'Prazo: '+str(task.due_on))
+            audit('task.created','task',task.id)
+        db.session.commit()
+        return redirect(url_for('staff.workspace'))
+    tasks=StaffTask.query
+    if not manager:
+        tasks=tasks.filter_by(assignee_id=member.id) if active_member(member) and mandates(member) else tasks.filter(db.false())
+    return render_template('admin/workspace.html',tasks=tasks.order_by(StaffTask.due_on.asc()).all(),manager=manager,
+                           members=[m for m in TeamMember.query.order_by(TeamMember.name) if active_member(m) and mandates(m)],
+                           member=member,mandates=mandates(member))
+
+
+@staff_bp.route('/documentos-equipa',methods=['GET','POST'])
+@login_required
+def documents():
+    manager=has_permission('team.manage')
+    member=current_member()
+    if request.method=='POST':
+        validate_csrf()
+        require('team.manage')
+        target=db.get_or_404(TeamMember,request.form.get('member_id',type=int))
+        item=StaffDocument(member=target,title=field('title',200,True),kind=field('kind',30,True),body=field('body',100000))
+        if item.kind not in {'agreement','consent','conflict','minutes','other'}:
+            abort(400)
+        upload=request.files.get('file')
+        if upload and upload.filename:
+            from submission_uploads import validate_upload
+            try:
+                data=validate_upload(upload,'main','pdf,docx,txt')
+            except ValueError as error:
+                abort(400,description=str(error))
+            item.filename,item.payload=data['original_name'],data['payload']
+        if not item.body and not item.payload:
+            abort(400)
+        db.session.add(item)
+        db.session.flush()
+        audit('document.created','document',item.id)
+        notice(target,'Documento disponível: '+item.title)
+        db.session.commit()
+        return redirect(url_for('staff.documents'))
+    query=StaffDocument.query
+    if not manager:
+        query=query.filter_by(member_id=member.id) if member and member.status not in {'suspended','ended','declined'} else query.filter(db.false())
+    return render_template('admin/staff_documents.html',documents=query.order_by(StaffDocument.created_at.desc()).all(),manager=manager,
+                           members=TeamMember.query.order_by(TeamMember.name).all() if manager else [],member=member)
+
+
+def own_document(ident):
+    item=db.get_or_404(StaffDocument,ident)
+    member=current_member()
+    if not has_permission('team.manage') and not (member and member.status not in {'suspended','ended','declined'} and member.id==item.member_id):
+        abort(404)
+    return item
+
+
+@staff_bp.get('/documentos-equipa/<int:ident>/ficheiro')
+@login_required
+def document_file(ident):
+    item=own_document(ident)
+    if not item.payload:
+        abort(404)
+    return send_file(io.BytesIO(item.payload),as_attachment=True,download_name=item.filename,mimetype='application/octet-stream',max_age=0)
+
+
+@staff_bp.post('/documentos-equipa/<int:ident>/aceitar')
+@login_required
+def accept_document(ident):
+    validate_csrf()
+    item=own_document(ident)
+    member=current_member()
+    if not member or member.id!=item.member_id or member.status in {'suspended','ended','declined'}:
+        abort(403)
+    if request.form.get('confirm')!='on':
+        abort(400)
+    if not item.accepted_at:
+        item.accepted_at,item.accepted_by=utcnow(),session.get('admin_id')
+        if item.kind=='agreement' and not member.accepted_at:
+            member.accepted_at=item.accepted_at
+        audit('document.accepted','document',ident)
+        db.session.commit()
+    return redirect(url_for('staff.documents'))
+
+
+@staff_bp.route('/notificacoes',methods=['GET','POST'])
+@login_required
+def notifications():
+    ident=session.get('admin_id')
+    if request.method=='POST':
+        validate_csrf()
+        notice_item=StaffNotice.query.filter_by(id=request.form.get('id',type=int),admin_id=ident).first_or_404()
+        notice_item.read_at=utcnow()
+        db.session.commit()
+        return redirect(url_for('staff.notifications'))
+    return render_template('admin/staff_notices.html',notices=StaffNotice.query.filter_by(admin_id=ident).order_by(StaffNotice.created_at.desc()).limit(200).all() if ident else [])
+
+
+@staff_bp.get('/relatorios-equipa')
+@login_required
+def reports():
+    require('reports.read')
+    # A report grant is institutional: do not expose confidential manuscript contents.
+    return render_template('admin/staff_reports.html',members=TeamMember.query.all(),tasks=StaffTask.query.all(),
+                           reviews=StaffPeerReview.query.all(),audits=GovernanceAudit.query.order_by(GovernanceAudit.created_at.desc()).limit(200).all(),
+                           today=date.today(),active_member=active_member)
+
+
+@staff_bp.route('/pareceres',methods=['GET','POST'])
+@login_required
+def reviews():
+    from submission_models import Manuscript
+    member=current_member()
+    if request.method=='POST':
+        validate_csrf()
+        manuscript=db.get_or_404(Manuscript,request.form.get('manuscript_id',type=int))
+        if not manuscript_access(manuscript,'manuscript.assign'):
+            abort(403)
+        if manuscript.status not in {'screening','review','revised','reevaluation'}:
+            abort(409,description='A submissão não está em fase de avaliação.')
+        reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
+        if not reviewer.available or not has_permission('manuscript.review',manuscript.journal_id,member=reviewer) or conflicts(reviewer,manuscript):
+            abort(400,description='Revisor indisponível, sem mandato ou com autoria nesta submissão.')
+        if StaffPeerReview.query.filter_by(manuscript_id=manuscript.id,reviewer_id=reviewer.id,version_number=manuscript.current_version).first():
+            abort(409,description='Revisor já convidado para esta versão.')
+        due=parse_date(request.form.get('due_on'),True)
+        if due<date.today():
+            abort(400,description='O prazo deve ser actual ou futuro.')
+        item=StaffPeerReview(manuscript_id=manuscript.id,reviewer=reviewer,version_number=manuscript.current_version,
+                             assigned_by=session.get('admin_id'),due_on=due)
+        db.session.add(item)
+        db.session.flush()
+        audit('review.assigned','review',item.id)
+        notice(reviewer,'Convite para parecer: '+manuscript.code,'Declare conflitos antes de aceder aos ficheiros.')
+        db.session.commit()
+        return redirect(url_for('staff.reviews',manuscript_id=manuscript.id))
+    ident=request.args.get('manuscript_id',type=int)
+    selected=db.get_or_404(Manuscript,ident) if ident else None
+    manager=bool(selected and manuscript_access(selected,'manuscript.assign'))
+    if selected and not manager:
+        abort(403)
+    rows=StaffPeerReview.query
+    if manager:
+        rows=rows.filter_by(manuscript_id=ident)
+    else:
+        rows=rows.filter_by(reviewer_id=member.id) if active_member(member) and any('manuscript.review' in a.role.permissions for a in mandates(member)) else rows.filter(db.false())
+    records=rows.order_by(StaffPeerReview.due_on).all()
+    if not manager:
+        records=[r for r in records if has_permission('manuscript.review',r.manuscript.journal_id)]
+    return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,
+                           reviewers=eligible('manuscript.review',selected.journal_id) if selected else [])
+
+
+def reviewer_record(ident):
+    item=StaffPeerReview.query.filter_by(id=ident).with_for_update().first_or_404() if request.method=='POST' else db.get_or_404(StaffPeerReview,ident)
+    member=current_member()
+    if not member or member.id!=item.reviewer_id or not has_permission('manuscript.review',item.manuscript.journal_id):
+        abort(404)
+    return item
+
+
+@staff_bp.route('/pareceres/<int:ident>',methods=['GET','POST'])
+@login_required
+def review_detail(ident):
+    item=reviewer_record(ident)
+    stale=item.version_number!=item.manuscript.current_version
+    if request.method=='POST':
+        validate_csrf()
+        if stale or item.manuscript.status not in {'screening','review','revised','reevaluation'}:
+            abort(409,description='Esta versão já não está em avaliação.')
+        action=request.form.get('action')
+        if action in {'accept','decline','conflict'} and (item.status=='invited' or (action=='conflict' and item.status=='accepted')):
+            if action=='accept':
+                if conflicts(item.reviewer,item.manuscript) or request.form.get('no_conflict')!='on':
+                    abort(400,description='Declare a ausência de conflitos para aceitar.')
+                item.status='accepted'
+            else:
+                item.status='conflict' if action=='conflict' else 'declined'
+                item.conflict_declared=action=='conflict'
+                item.conflict_note=field('conflict_note',10000)
+        elif action=='submit' and item.status=='accepted' and not conflicts(item.reviewer,item.manuscript):
+            item.report=field('report',50000,True)
+            item.recommendation=field('recommendation',30,True)
+            if item.recommendation not in {'accept','minor_revision','major_revision','reject'} or len(item.report)<50:
+                abort(400,description='Informe uma recomendação e um parecer com pelo menos 50 caracteres.')
+            item.status,item.submitted_at='submitted',utcnow()
+            editor=TeamMember.query.filter_by(admin_id=item.manuscript.editor_id).first() if item.manuscript.editor_id else None
+            notice(editor,'Parecer recebido: '+item.manuscript.code)
+        else:
+            abort(409)
+        audit('review.'+action,'review',ident)
+        db.session.commit()
+        return redirect(url_for('staff.review_detail',ident=ident))
+    from submission_models import ManuscriptFile, ManuscriptVersion
+    files=[]
+    if item.status=='accepted' and not stale and not conflicts(item.reviewer,item.manuscript):
+        files=ManuscriptFile.query.join(ManuscriptVersion).filter(ManuscriptVersion.manuscript_id==item.manuscript_id,
+             ManuscriptVersion.number==item.version_number,ManuscriptFile.kind.in_(['main','figure','table'])).all()
+    return render_template('admin/staff_review_detail.html',review=item,files=files,stale=stale)
+
+
+@staff_bp.get('/pareceres/<int:ident>/ficheiros/<int:file_id>')
+@login_required
+def review_file(ident,file_id):
+    item=reviewer_record(ident)
+    from submission_models import ManuscriptFile
+    file=db.get_or_404(ManuscriptFile,file_id)
+    if (item.status!='accepted' or item.version_number!=item.manuscript.current_version or conflicts(item.reviewer,item.manuscript)
+        or item.manuscript.status not in {'screening','review','revised','reevaluation'}
+        or file.version.manuscript_id!=item.manuscript_id or file.version.number!=item.version_number or file.kind not in {'main','figure','table'}):
+        abort(404)
+    return send_file(io.BytesIO(file.payload),as_attachment=True,download_name=file.original_name,mimetype='application/octet-stream',max_age=0)
+
+
+def article_scope(query):
+    if has_permission('article.edit') or has_permission('article.publish') or has_permission('article.approve'):
+        return query
+    member=current_member()
+    if not member or not active_member(member) or not mandates(member):
+        return query.filter(db.false())
+    clauses=[]
+    if has_permission('article.write') and member.author_id:
+        clauses.append(Article.author_id==member.author_id)
+    if has_permission('article.review'):
+        clauses.append(Article.id.in_(db.select(ArticleWorkflow.article_id).where(ArticleWorkflow.reviewer_id==member.id)))
+    return query.filter(or_(*clauses) if clauses else db.false())
+
+
+def article_edit_access(article):
+    if has_permission('article.edit'):
+        return
+    if article.id and has_permission('article.publish') and article.status in {'approved','scheduled','published'}:
+        return
+    member=current_member()
+    if not has_permission('article.write') or not member or not member.author_id:
+        abort(403)
+    if article.id and article.author_id!=member.author_id:
+        abort(404)
+    if article.id and article.status in {'approved','scheduled','published'}:
+        abort(409,description='Peça ao editor para reabrir o artigo antes de o alterar.')
+
+
+def article_save_guard(article,status,author_id):
+    article_edit_access(article)
+    if not has_permission('article.edit') and not has_permission('article.publish') and author_id!=current_member().author_id:
+        abort(403)
+    workflow=db.session.get(ArticleWorkflow,article.id) if article.id else None
+    if status in {'approved','published','scheduled'}:
+        # Legacy content retains the original workflow until attached to a managed workflow.
+        if workflow or current_member():
+            if not workflow or not workflow.approved_at or workflow.stage not in {'approved','scheduled','published'}:
+                abort(409,description='Conclua a revisão e a aprovação no fluxo editorial.')
+        require('article.publish' if status in {'published','scheduled'} else 'article.approve')
+    elif workflow:
+        if not has_permission('article.write') and not has_permission('article.edit'):
+            abort(403)
+        workflow.stage='draft' if status=='draft' else 'submitted'
+        workflow.reviewed_at=workflow.approved_at=None
+    if workflow and status in {'approved','published','scheduled'}:
+        changes=any(request.form.get(key,'').strip()!=str(getattr(article,key) or '').strip() for key in ('title','body','summary','references','keywords','doi','image','cover_video'))
+        if changes or author_id!=article.author_id or request.form.get('category_id',type=int)!=article.category_id or request.files.get('image_file') or request.files.get('cover_video_file'):
+            abort(409,description='Alterações ao conteúdo aprovado exigem nova revisão. Guarde como rascunho.')
+        workflow.stage=status
+
+
+def article_saved(article):
+    member=current_member()
+    workflow=db.session.get(ArticleWorkflow,article.id)
+    if not workflow:
+        owner=TeamMember.query.filter_by(author_id=article.author_id).first()
+        if owner:
+            db.session.add(ArticleWorkflow(article_id=article.id,owner_id=owner.id,stage='submitted' if article.status=='review' else 'draft'))
+    audit('article.saved','article',article.id,article.status)
+
+
+@staff_bp.route('/fluxo-artigos/<int:ident>',methods=['GET','POST'])
+@login_required
+def article_workflow(ident):
+    article=db.get_or_404(Article,ident)
+    if not article_scope(Article.query).filter_by(id=ident).first():
+        abort(404)
+    item=ArticleWorkflow.query.filter_by(article_id=ident).with_for_update().first() if request.method=='POST' else db.session.get(ArticleWorkflow,ident)
+    if not item:
+        require('article.edit')
+        owner=TeamMember.query.filter_by(author_id=article.author_id).first()
+        if not owner:
+            abort(409,description='Associe primeiro o autor a um membro da equipa.')
+        item=ArticleWorkflow(article_id=ident,owner_id=owner.id,owner=owner)
+        db.session.add(item)
+    if request.method=='POST':
+        validate_csrf()
+        action=request.form.get('action')
+        member=current_member()
+        if action=='submit' and item.stage in {'draft','changes'}:
+            if not has_permission('article.edit') and (not member or member.id!=item.owner_id or not has_permission('article.write')):
+                abort(403)
+            item.stage,article.status='submitted','review'
+        elif action=='assign' and item.stage in {'draft','submitted','changes','review'}:
+            require('article.edit')
+            reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
+            if reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
+                abort(400,description='Escolha um revisor independente com mandato válido.')
+            item.reviewer_id,item.stage,article.status=reviewer.id,'review','review'
+            item.approved_at=item.reviewed_at=None
+            notice(reviewer,'Artigo para revisão: '+article.title)
+        elif action in {'reviewed','changes'} and item.stage=='review':
+            if not member or member.id!=item.reviewer_id or not has_permission('article.review'):
+                abort(403)
+            note=field('note',20000,True)
+            db.session.add(PortalReview(article_id=ident,reviewer_id=member.id,action=action,report=note))
+            if action=='reviewed':
+                item.reviewed_at=utcnow()
+            else:
+                item.stage,article.status='changes','draft'
+                item.reviewed_at=item.approved_at=None
+                notice(item.owner,'Correcções solicitadas: '+article.title,note)
+        elif action=='approve' and item.stage=='review' and item.reviewed_at:
+            require('article.approve')
+            if member and (member.id in {item.owner_id,item.reviewer_id} or member.author_id==article.author_id):
+                abort(403,description='A aprovação exige um responsável diferente do autor e do revisor.')
+            if len(article.body or '')<50:
+                abort(400)
+            item.editor_id=member.id if member else None
+            item.stage,article.status,item.approved_at='approved','approved',utcnow()
+            notice(item.owner,'Artigo aprovado: '+article.title)
+        elif action=='reopen':
+            require('article.edit')
+            item.stage,article.status='draft','draft'
+            item.approved_at=item.reviewed_at=None
+            article.scheduled_at=None
+        else:
+            abort(409,description='Transição editorial indisponível.')
+        audit('article.'+action,'article',ident,field('note',20000)[:1000])
+        db.session.commit()
+        return redirect(url_for('staff.article_workflow',ident=ident))
+    # GET does not persist a newly initialised workflow.
+    return render_template('admin/article_workflow.html',article=article,workflow=item,reviewers=eligible('article.review'),member=current_member(),reviews=PortalReview.query.filter_by(article_id=ident).order_by(PortalReview.id).all())
+
+
+@public_team_bp.get('/equipa')
+def public_team():
+    members=[m for m in TeamMember.query.filter_by(status='active',public_consent=True,public_visible=True).order_by(TeamMember.name)
+             if active_member(m) and mandates(m)]
+    return render_template('team.html',members=members,mandates=mandates)
+
+
+from governance_models import TaskComment
+
+def install_staff_cli(app):
+    @app.cli.command('notificar-prazos-equipa')
+    def reminders():
+        """Create internal reminders once per due date; does not send external messages."""
+        today=date.today()
+        count=0
+        for task in StaffTask.query.filter(StaffTask.due_on<=today,~StaffTask.status.in_(['done','cancelled'])):
+            key=f'task:{task.id}:{task.due_on}'
+            if task.assignee.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
+                db.session.add(StaffNotice(admin_id=task.assignee.admin_id,source_key=key,subject='Prazo da tarefa: '+task.title,body=str(task.due_on)))
+                count+=1
+        for item in TeamAppointment.query.filter(TeamAppointment.active.is_(True),TeamAppointment.ends_on<=today):
+            key=f'mandate:{item.id}:{item.ends_on}'
+            if item.member.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
+                db.session.add(StaffNotice(admin_id=item.member.admin_id,source_key=key,subject='Fim do mandato: '+item.role.name,body=str(item.ends_on)))
+                count+=1
+        for review in StaffPeerReview.query.filter(StaffPeerReview.due_on<=today,StaffPeerReview.status.in_(['invited','accepted'])):
+            key=f'review:{review.id}:{review.due_on}'
+            if review.reviewer.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
+                db.session.add(StaffNotice(admin_id=review.reviewer.admin_id,source_key=key,subject='Prazo do parecer: '+review.manuscript.code,body=str(review.due_on)))
+                count+=1
+        db.session.commit()
+        print(f'{count} notificações internas criadas.')
+
+
+def journal_access(journal_id=None, publishing=False):
+    from submission_models import Manuscript
+    manuscript=Manuscript.query.filter_by(publication_id=journal_id).first() if journal_id else None
+    if manuscript:
+        if not manuscript_access(manuscript,'manuscript.production'):
+            abort(404)
+        if publishing and (not manuscript_access(manuscript,'journal.publish') or manuscript.status not in {'production','published'}):
+            abort(403)
+    else:
+        require('journal.publish' if publishing else 'journal.manage',journal_id)
+
+
+def journal_scope(query):
+    if session.get('admin_superuser') or (current_member() is None and has_permission('journal.manage')):
+        return query
+    from submission_models import Manuscript
+    ids=[j.id for j in Journal.query.all() if has_permission('journal.manage',j.id)]
+    publications=[m.publication_id for m in scope_manuscripts(Manuscript.query).filter(Manuscript.publication_id.isnot(None)).all()
+                  if manuscript_access(m,'manuscript.production')]
+    return query.filter(Journal.id.in_(ids+publications))

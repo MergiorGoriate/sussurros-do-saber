@@ -23,7 +23,7 @@ class MigrationTests(unittest.TestCase):
             engine = create_engine(url)
             with engine.connect() as connection:
                 self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message"}.issubset(inspect(connection).get_table_names()))
-                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20260930_01")
+                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261007_02")
             engine.dispose()
 
     def test_existing_schema_and_content_are_preserved(self):
@@ -50,3 +50,4 @@ class MigrationTests(unittest.TestCase):
             with engine.connect() as connection:
                 self.assertEqual(connection.execute(text("SELECT name FROM category WHERE id=9")).scalar(), "Preservar")
             engine.dispose()
+

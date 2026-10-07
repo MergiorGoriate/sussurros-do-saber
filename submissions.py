@@ -63,11 +63,14 @@ def researcher():
     return account if account and account.active and session.get('researcher_nonce') == account.token_nonce else None
 
 
-def editorial_access():
+def editorial_access(manuscript=None):
     if not admin_session_valid():
         return False
     account = db.session.get(AdminUser, session.get('admin_id')) if session.get('admin_id') else None
-    return account is None or (account.two_factor_enabled and session.get('admin_2fa_verified') is True)
+    if account is not None and not (account.two_factor_enabled and session.get('admin_2fa_verified') is True):
+        return False
+    from governance import manuscript_access, has_permission
+    return manuscript_access(manuscript) if manuscript else has_permission('manuscript.read')
 
 
 def author_required(view):
@@ -490,7 +493,7 @@ def remove_file(file_id):
 def download(file_id):
     file = ManuscriptFile.query.options(defer(ManuscriptFile.payload)).filter_by(id=file_id).first_or_404()
     manuscript = db.session.get(Manuscript, file.version.manuscript_id)
-    if not editorial_access():
+    if not editorial_access(manuscript):
         account = researcher()
         if not account or not account.verified or account.id != manuscript.owner_id:
             abort(404)
@@ -571,7 +574,8 @@ def revised(ident):
 @admin_bp.get('/submissoes')
 @login_required
 def submissions_list():
-    query = Manuscript.query.filter(Manuscript.status != 'draft')
+    from governance import scope_manuscripts
+    query = scope_manuscripts(Manuscript.query.filter(Manuscript.status != 'draft'))
     search = request.args.get('q', '').strip()[:300]
     if search:
         query = query.filter(db.or_(Manuscript.title.ilike('%' + search + '%'), Manuscript.code.ilike('%' + search + '%')))
@@ -594,16 +598,21 @@ def submissions_list():
     order = request.args.get('order', 'newest')
     ordering = Manuscript.title.asc() if order == 'title' else Manuscript.submitted_at.asc() if order == 'oldest' else Manuscript.submitted_at.desc()
     rows = query.order_by(ordering, Manuscript.id.desc()).paginate(page=request.args.get('page', 1, type=int), per_page=25, error_out=False)
-    pending = EditorialNotification.query.filter_by(sent_at=None).count()
+    from governance import has_permission
+    pending = EditorialNotification.query.filter_by(sent_at=None).count() if has_permission('submissions.configure') else 0
     return render_template('admin/submissions.html', manuscripts=rows, states=STATES, journals=Journal.query.order_by(Journal.title).all(), pending_notifications=pending)
 
 
 @admin_bp.route('/submissoes/configuracao', methods=['GET', 'POST'])
 @login_required
 def submission_settings():
+    from governance import require, has_any_permission, has_permission
+    if not has_any_permission('submissions.configure'):
+        abort(403)
     if request.method == 'POST':
         validate_csrf()
         journal = db.get_or_404(Journal, request.form.get('journal_id', type=int))
+        require('submissions.configure',journal.id)
         setting = db.session.get(SubmissionSetting, journal.id) or SubmissionSetting(journal_id=journal.id)
         types = [line.strip() for line in request.form.get('article_types', '').splitlines() if line.strip()]
         formats = request.form.getlist('main_formats')
@@ -620,7 +629,9 @@ def submission_settings():
             flash('Configuração de submissões guardada.', 'success')
             return redirect(url_for('admin.submission_settings', journal_id=journal.id))
     journal_id = request.args.get('journal_id', type=int) or request.form.get('journal_id', type=int)
-    return render_template('admin/submission_settings.html', journals=Journal.query.order_by(Journal.title).all(),
+    if journal_id:
+        require('submissions.configure',journal_id)
+    return render_template('admin/submission_settings.html', journals=[j for j in Journal.query.order_by(Journal.title).all() if has_permission('submissions.configure',j.id)],
                            selected=db.session.get(SubmissionSetting, journal_id) if journal_id else None, selected_id=journal_id)
 
 
@@ -628,7 +639,8 @@ def submission_settings():
 @login_required
 def submission_detail(ident):
     manuscript = db.get_or_404(Manuscript, ident)
-    if manuscript.status == 'draft':
+    from governance import manuscript_access, audit, eligible, conflicts, has_permission
+    if manuscript.status == 'draft' or not manuscript_access(manuscript):
         abort(404)
     if request.method == 'POST':
         validate_csrf()
@@ -637,11 +649,16 @@ def submission_detail(ident):
         note = request.form.get('note', '').strip()
         if len(note) > 20000:
             abort(400)
+        permission = 'manuscript.assign' if action == 'assign' else 'manuscript.decide' if action in {'accepted','rejected'} else 'manuscript.edit'
+        if not manuscript_access(manuscript,permission) or (permission=='manuscript.edit' and not has_permission('manuscript.decide',manuscript.journal_id) and manuscript.editor_id!=session.get('admin_id')):
+            abort(403)
         if action == 'note' and note:
             event(manuscript, 'internal_note', note=note)
         elif action == 'assign':
             editor = db.session.get(AdminUser, request.form.get('editor_id', type=int))
-            if not editor or not editor.active:
+            allowed = eligible('manuscript.edit',manuscript.journal_id)
+            member = next((m for m in allowed if m.admin_id == (editor.id if editor else None)),None)
+            if not editor or not editor.active or (not editor.is_superadmin and (not member or conflicts(member,manuscript))):
                 abort(400)
             manuscript.editor_id = editor.id
             event(manuscript, 'editor_assigned', note='Editor: ' + editor.display_name)
@@ -654,10 +671,15 @@ def submission_detail(ident):
             flash('Ação indisponível. As decisões e notas devem ter uma observação.', 'error')
             db.session.rollback()
             return redirect(url_for('admin.submission_detail', ident=ident))
+        audit('manuscript.'+action,'manuscript',ident,manuscript.status)
         db.session.commit()
         return redirect(url_for('admin.submission_detail', ident=ident))
+    can_decide=manuscript_access(manuscript,'manuscript.decide')
+    can_edit=manuscript_access(manuscript,'manuscript.edit') and (can_decide or manuscript.editor_id==session.get('admin_id'))
+    transitions=[s for s in TRANSITIONS.get(manuscript.status,()) if can_edit and (s not in {'accepted','rejected'} or can_decide)]
     return render_template('admin/submission_detail.html', manuscript=manuscript, files=files_for(manuscript), states=STATES,
-                           transitions=TRANSITIONS.get(manuscript.status, ()), admins=AdminUser.query.filter_by(active=True).all(),
+                           transitions=transitions, admins=[m.admin for m in eligible('manuscript.edit',manuscript.journal_id) if m.admin and not conflicts(m,manuscript)],
+                           can_assign=manuscript_access(manuscript,'manuscript.assign'),can_edit=can_edit,can_produce=manuscript_access(manuscript,'manuscript.production'),
                            info_fields=INFO_FIELDS, file_kinds=KINDS)
 
 
@@ -666,6 +688,9 @@ def submission_detail(ident):
 def prepare_publication(ident):
     validate_csrf()
     manuscript = lock_record(db.get_or_404(Manuscript, ident))
+    from governance import manuscript_access, audit
+    if not manuscript_access(manuscript,'manuscript.production'):
+        abort(403)
     if manuscript.publication_id:
         return redirect(url_for('admin.journal_form', journal_id=manuscript.publication_id))
     if manuscript.status != 'accepted':
@@ -708,6 +733,7 @@ def prepare_publication(ident):
     manuscript.publication_id = publication.id
     import_publication_figures(publication, official_files, main)
     event(manuscript, 'prepared_for_publication', 'production', visible=True)
+    audit('publication.prepared','manuscript',manuscript.id)
     db.session.commit()
     flash('Rascunho editorial criado. Confira o conteúdo, figuras e metadados antes de publicar. O original continua privado.', 'success')
     return redirect(url_for('admin.journal_form', journal_id=publication.id))
@@ -718,6 +744,10 @@ def publication_saved(journal):
     if not manuscript:
         return
     lock_record(manuscript)
+    from governance import manuscript_access, audit
+    if not manuscript_access(manuscript,'manuscript.production'):
+        abort(403)
+    audit('publication.saved','manuscript',manuscript.id)
     if journal.published and manuscript.status == 'production':
         if not journal.content_markdown.strip():
             abort(400, description='Insira e confira o conteúdo do artigo antes de publicar.')
@@ -795,7 +825,8 @@ def import_publication_figures(publication, files, main):
 def publication_figure(asset_id):
     asset = PublicationAsset.query.options(defer(PublicationAsset.payload)).filter_by(id=asset_id).first_or_404()
     journal = db.session.get(Journal, asset.journal_id)
-    if not journal or (not journal.published and not editorial_access()):
+    if not journal or (not journal.published and not editorial_access(Manuscript.query.filter_by(publication_id=journal.id).first())):
         abort(404)
     return send_file(io.BytesIO(asset.payload), mimetype='image/png', download_name='figura.png', max_age=0)
+
 
