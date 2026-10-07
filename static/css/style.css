@@ -171,6 +171,8 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .author-headline { font-size: clamp(1.1rem, 2.2vw, 1.45rem); line-height: 1.55; max-width: 720px; color: var(--muted); }
 .author-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
 .author-actions a { border: 1px solid var(--line); border-radius: 999px; padding: .7rem 1rem; font-weight: 700; }
+.author-actions .author-orcid-link { display: inline-flex; align-items: center; gap: .5rem; }
+.author-orcid-link .fa-orcid { color: #a6ce39; font-size: 1.25rem; flex-shrink: 0; }
 .author-content { display: grid; gap: 2.5rem; }
 .author-section { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: clamp(1.4rem, 3vw, 2.25rem); }
 .author-section h2, .author-articles h2 { font-family: var(--serif); font-size: clamp(2rem, 4vw, 3.2rem); margin: .45rem 0 1rem; }
