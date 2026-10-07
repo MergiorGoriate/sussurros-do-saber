@@ -89,6 +89,8 @@ A Área de trabalho, notificações próprias e documentos próprios continuam a
 
 `tests/test_permission_matrix.py` percorre as 24 permissões isoladas: interface, operação com resultado persistido, revogação, expiração, início futuro, suspensão, falta de aceite e conta inactiva. Percorre os nove poderes de revista fora do âmbito e os 15 gerais limitados indevidamente a uma revista. Testa união de mandatos sem cruzar privilégios, atribuição real de revisor, aprovação/publicação separadas, configuração personalizada e diagnóstico sem escritas. As suites existentes mantêm testes de autoria, terceiros, conflitos, documentos, tarefas, 2FA e CSRF.
 
+**Resultado inicial do CI:** 37 testes de navegador aprovados, incluindo o teste novo de colaborador, além de testes Python, migração/restauro PostgreSQL 18, auditoria de dependências e Docker build.
+
 Teste novo de navegador: `tests/browser/permissions.spec.js` usa conta colaboradora sintética, verifica menus/formulário em desktop e mobile, cria tarefa e artigo próprios, abre atribuições numa submissão e revoga sem novo login. Fixture apenas nos testes; não adiciona bypass à aplicação.
 
 ## Base de dados e diagnóstico da configuração actual
@@ -123,4 +125,4 @@ Sem esse resultado, permanece pendente confirmar exactamente o estado, aceite, a
 
 ## Limitações
 
-Não foram executadas verificações novas no site de produção nem acções no Coolify. O histórico de capturas apenas confirma a migração anterior e o aparecimento do fluxo; não comprova as correcções propostas. A instalação local de Chromium falhou por download incompleto; execução efectiva do novo teste de navegador depende do CI. PostgreSQL local indisponível; a execução inicial do CI passou a migração/restauro em PostgreSQL 18, testes Python, auditoria de dependências e Docker build. A verificação do último commit é acompanhada no PR. Esses resultados são reportados separadamente dos testes locais.
+Não foram executadas verificações novas no site de produção nem acções no Coolify. O histórico de capturas apenas confirma a migração anterior e o aparecimento do fluxo; não comprova as correcções propostas. A instalação local de Chromium falhou por download incompleto; o CI executou efectivamente o novo teste e a suite completa: **37 testes de navegador aprovados**, incluindo o colaborador sintético. O resultado do último commit está nos checks do PR. PostgreSQL local indisponível; a execução inicial do CI passou a migração/restauro em PostgreSQL 18, testes Python, auditoria de dependências e Docker build. A verificação do último commit é acompanhada no PR. Esses resultados são reportados separadamente dos testes locais.
