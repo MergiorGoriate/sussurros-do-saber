@@ -36,7 +36,7 @@
     <strong>Revista Científica Sussurros do Saber</strong>
     <span>•</span><span>{{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'Data a definir' }}</span>
     <span>•</span><span>{{ journal.current_issue or 'Edição em preparação' }}</span>
-    {% if journal.doi %}<span>•</span><span>DOI: {{ journal.doi }}</span>{% endif %}
+    {% if journal.doi %}<span>•</span><a class="journal-doi-link" href="{{ url_for('journal_detail', slug=journal.slug) }}" aria-label="Abrir página do artigo — DOI {{ journal.doi }}">DOI: {{ journal.doi }}</a>{% endif %}
   </div>
   <div class="journal-article-actions" aria-label="Ações do artigo">
     <button type="button" class="journal-alert-btn" aria-label="Receber notificações de artigos na minha conta" title="Receber notificações de artigos na minha conta" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
