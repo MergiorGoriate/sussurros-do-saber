@@ -81,7 +81,7 @@ Resultado esperado: `20261008_03 (head)`. Aplicar a migração antes de iniciar 
 - Novos testes: quatro eliminações autorizadas/negadas em várias funções, confirmação/CSRF/cancelamento, repetição, versão documental com e sem anexo, preservação de eventos, sessões já abertas, reatribuição e âmbito, destinatários, múltiplos mandatos, conta inactiva/mandato expirado, leitura/eliminação/contadores/persistência, isolamento entre contas administrativas e investigadores, rollback e deduplicação, revogação e recurso eliminado, revisão/aprovação/publicação.
 - Mantidos os testes de matriz das 24 permissões, tarefas, aceite documental, 2FA e segurança do PR #153.
 - Migração testada em SQLite vazia, existente e repetida, e com estrutura anterior real das colunas modificadas e dados sintéticos para verificar preservação.
-- Playwright acrescenta computador/telemóvel, leitura/eliminação pela barra/página, recuperação de erro, cancelamento, execução das quatro remoções, reatribuição e bloqueio de sessão aberta. Execução em CI e PostgreSQL 18 registadas no PR.
+- Playwright acrescenta computador/telemóvel, leitura/eliminação pela barra/página, recuperação de erro, cancelamento, execução das quatro remoções, reatribuição e bloqueio de sessão aberta. Execução em CI e PostgreSQL 18 registadas no PR. O servidor E2E é um módulo exclusivamente de teste com SQLite, que desactiva apenas quotas de tráfego público: toda a suite partilha localhost. Autenticação, 2FA, sessões e CSRF continuam activos, e as quotas de produção não foram alteradas.
 
 ### Checklist com contas de teste
 

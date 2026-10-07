@@ -258,7 +258,7 @@ def notifications():
     page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
     unread_journals={n.resource_id for n in query.filter(StaffNotice.resource_type=='reader_journal',StaffNotice.read_at.is_(None))}
     return render_template('reader_library.html',reader_rows=rows,reader_account=account,reader_notification_authors=authors,
-        notifications=True,internal_notices=page.items,notice_pagination=page,notice_public=True,notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),
+        notifications=True,internal_notices=page.items,notice_journal_slugs={r.journal_id:r.journal.slug for r in rows},notice_pagination=page,notice_public=True,notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),
         notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all(),unread_journals=unread_journals)
 
 

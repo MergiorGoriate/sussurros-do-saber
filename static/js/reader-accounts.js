@@ -236,7 +236,10 @@
       if (empty) empty.hidden = !!document.querySelector('[data-reader-library] li');
       report(article || button.hasAttribute('data-reader-remove-journal') ? 'Artigo removido dos favoritos.' : 'Notificações desactivadas.');
       await sessionState();
-      if (button.hasAttribute('data-reader-unfollow')) location.reload();
+      if (button.hasAttribute('data-reader-unfollow')) {
+        document.querySelectorAll('[data-reader-notice-slug]').forEach(el => {if (el.dataset.readerNoticeSlug === journal) el.remove();});
+        document.dispatchEvent(new Event('notice-inbox-change'));
+      }
     }));
   });
   // A page restored by browser history may contain account state from before logout.
