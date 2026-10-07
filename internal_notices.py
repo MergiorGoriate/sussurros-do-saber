@@ -72,7 +72,7 @@ def dispatch(action, entity, ident, detail='', key=None):
         report=db.session.get(AuditReport,ident)
         targets.update(recipients('reports.read'));subject='Relatório: '+report.title;body=EVENT_LABELS.get(action,action)
     elif entity in {'manuscript','review'}:
-        if action=='publication.saved':return
+        if action.startswith('publication.'):return
         review=db.session.get(StaffPeerReview,ident) if entity=='review' else None
         manuscript=review.manuscript if review else db.session.get(Manuscript,ident)
         if not manuscript:return
@@ -89,6 +89,8 @@ def dispatch(action, entity, ident, detail='', key=None):
                 if peer.status in {'accepted','submitted'} and peer.reviewer.admin_id and has_permission('manuscript.review',manuscript.journal_id,member=peer.reviewer):targets.add(peer.reviewer.admin_id)
         if manuscript.status in {'accepted','production','published'}:
             targets.update(recipients('manuscript.production',manuscript.journal_id))
+        if manuscript.status in {'production','published'}:
+            targets.update(recipients('journal.publish',manuscript.journal_id))
         if review and active_member(review.reviewer) and has_permission('manuscript.review',manuscript.journal_id,member=review.reviewer):
             targets.add(review.reviewer.admin_id)
         if action in {'manuscript.submitted','manuscript.revised','manuscript.decision','manuscript.published','manuscript.prepared_for_publication','manuscript.publication_hidden','manuscript.removed'}:
@@ -117,7 +119,13 @@ def inbox(*, public=False):
 
 
 def active_inbox(*, public=False):
-    return inbox(public=public).filter(StaffNotice.removed_at.is_(None))
+    query=inbox(public=public).filter(StaffNotice.removed_at.is_(None))
+    if public:
+        from reader_accounts import ReaderJournal
+        from models import Journal
+        visible=db.select(ReaderJournal.journal_id).join(Journal).where(ReaderJournal.owner_id==session.get('researcher_id'),ReaderJournal.following.is_(True),Journal.published.is_(True))
+        query=query.filter(db.or_(StaffNotice.resource_type.is_(None),StaffNotice.resource_type!='reader_journal',StaffNotice.resource_id.in_(visible)))
+    return query
 
 
 def resource_url(item, *, public=False):
@@ -130,10 +138,18 @@ def resource_url(item, *, public=False):
         if not m or m.removed_at:return None
         if public:return url_for('submissions.detail',ident=m.id) if m.owner_id==session.get('researcher_id') else None
         if manuscript_access(m):return url_for('admin.submission_detail',ident=m.id)
+        from governance import journal_can
+        if m.publication_id and journal_can(m.publication_id,viewing=True):return url_for('journal_preview',journal_id=m.publication_id)
         member=current_member()
         if member and has_permission('manuscript.review',m.journal_id):
             review=StaffPeerReview.query.filter_by(manuscript_id=m.id,reviewer_id=member.id).order_by(StaffPeerReview.id.desc()).first()
             if review:return url_for('staff.review_detail',ident=review.id)
+    if kind=='reader_journal' and public:
+        from models import Journal
+        from reader_accounts import ReaderJournal
+        journal=db.session.get(Journal,ident)
+        watching=ReaderJournal.query.filter_by(owner_id=session.get('researcher_id'),journal_id=ident,following=True).first()
+        if journal and journal.published and watching:return url_for('journal_detail',slug=journal.slug)
     if public:return None
     if kind=='member':
         if ident and has_permission('team.manage'):return url_for('staff.team',edit=ident)
@@ -169,6 +185,10 @@ def mutate(action, ident=None, *, public=False):
 
 
 def summary(*,public=False):
+    if public:
+        from reader_accounts import sync_internal_updates
+        from submissions import researcher
+        sync_internal_updates(researcher())
     query=active_inbox(public=public)
     endpoint='submissions.open_internal_notice' if public else 'staff.open_notice'
     return dict(unread=query.filter(StaffNotice.read_at.is_(None)).count(),items=[dict(id=n.id,title=n.subject,description=n.body,date=n.created_at.strftime('%d/%m/%Y %H:%M')+' UTC',unread=not bool(n.read_at),url=url_for(endpoint,ident=n.id) if n.resource_type else None) for n in query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5)])

@@ -668,7 +668,12 @@ def submission_detail(ident):
             if not editor or not editor.active or (not editor.is_superadmin and (not member or conflicts(member,manuscript))):
                 abort(400)
             if manuscript.editor_id==editor.id:return redirect(url_for('admin.submission_detail',ident=ident))
+            previous_editor_id=manuscript.editor_id
             manuscript.editor_id = editor.id
+            previous_editor=next((m for m in allowed if m.admin_id==previous_editor_id),None)
+            if previous_editor and previous_editor.admin_id and not conflicts(previous_editor,manuscript):
+                from internal_notices import emit
+                emit(previous_editor.admin_id,'Responsabilidade editorial reatribuída','A submissão '+manuscript.code+' foi atribuída a outro editor.',resource=('manuscript',manuscript.id))
             event(manuscript, 'editor_assigned', note='Editor: ' + editor.display_name)
         elif action in TRANSITIONS.get(manuscript.status, ()) and note:
             event(manuscript, 'decision', action, note=note, visible=True)
@@ -851,6 +856,8 @@ def internal_notifications():
     if request.method=='POST':
         validate_csrf();mutate(request.form.get('action','read'),request.form.get('id',type=int),public=True)
         return redirect(url_for('submissions.internal_notifications'),code=303)
+    from reader_accounts import sync_internal_updates
+    sync_internal_updates(researcher())
     query=active_inbox(public=True)
     page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
     return render_template('submissions/notices.html',notices=page.items,pagination=page,unread=query.filter(StaffNotice.read_at.is_(None)).count())

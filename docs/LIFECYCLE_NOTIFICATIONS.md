@@ -37,14 +37,15 @@ Os avisos são criados dentro da transação da operação. Falha/rollback não 
 |---|---|
 | Convite de colaboração, dados/estado do membro, mandato criado/terminado, remoção | Próprio membro quando associado, fundador e gestores institucionais da equipa |
 | Alteração de função | Membros associados a mandatos activos dessa função; não concede a eles novas permissões além da configuração guardada |
-| Nova tarefa, estado, comentário, reatribuição | Responsável actual com mandato válido e gestores institucionais de tarefas; criador apenas enquanto conserva `tasks.manage` |
+| Nova tarefa, estado, comentário, reatribuição | Responsável actual com mandato válido e gestores institucionais de tarefas; criador apenas enquanto conserva `tasks.manage`; responsável anterior recebe aviso de transferência se ainda tem mandato válido |
 | Documento disponibilizado | Membro destinatário |
 | Aceite e remoção de documento | Membro destinatário, fundador e gestores da equipa |
-| Submissão nova/revista, atribuição de editor, nota interna, decisão, preparação, publicação/ocultação, remoção | Fundador e responsáveis com mandato na revista; editor atribuído, gestores de atribuições/decisões; leitores científicos em eventos relevantes; produção em estados aceites/produção/publicação |
+| Submissão nova/revista, atribuição de editor, nota interna, decisão, preparação, publicação/ocultação, remoção | Fundador e responsáveis com mandato na revista; editor atribuído, gestores de atribuições/decisões; leitores científicos em eventos relevantes; produção em estados aceites/produção/publicação e publicadores científicos quando há produção/publicação |
 | Convite para parecer, aceite/recusa/conflito, entrega | Revisor atribuído com mandato válido, editor atribuído e responsáveis científicos da revista; decisões/publicação/remoção chegam também aos revisores aceites/que entregaram parecer na versão actual |
 | Eventos visíveis da submissão | Investigador proprietário em caixa interna própria, separada da administrativa; notas internas, atribuições e conteúdo de pareceres não vão para o autor |
 | Artigo guardado, submetido, revisor atribuído, revisão, correcções, aprovação, programação/publicação | Autor/responsáveis do fluxo com mandato; após revisão, aprovadores; após aprovação, publicadores |
 | Relatório guardado/removido | Fundador e utilizadores com `reports.read` institucional |
+| Actualização de artigo público acompanhado | Leitor verificado que acompanha o artigo; chave por acompanhamento/revisão, sem acesso a artigos privados ou de outras contas |
 | Lembretes de prazo já existentes | Mantidos, com verificação de conta/mandato/recurso e ligação ao destino |
 
 Destinatários científicos são deduplicados mesmo com múltiplos mandatos. Estado activo, aceite, datas do mandato, revista e conflitos são verificados. Avisos editoriais incluem apenas código/estado e tipo de evento: não copiam notas internas nem pareceres para a caixa de outros intervenientes. Nenhuma permissão geral transforma um mandato de outra revista em acesso ao recurso.
@@ -54,6 +55,7 @@ Destinatários científicos são deduplicados mesmo com múltiplos mandatos. Est
 - `/admin/notificacoes` e `/admin/api/notificacoes` usam a mesma consulta por conta. Caixa do investigador: `/submissoes/notificacoes` e `/submissoes/api/notificacoes`.
 - Barra com cinco avisos recentes; página com paginação de 30, em ordem de data e ID decrescentes. Contador inclui todos os não lidos activos, não só a página.
 - Ler individualmente, ler todos e eliminar usam POST com CSRF e filtro de propriedade. Eliminar é lógico, apenas para o destinatário, e mantém o recurso/evento. Repetir a eliminação é idempotente.
+- O sino público de `/conta/notificacoes` usa também esta caixa: actualizações de artigos acompanhados são materializadas uma vez por leitor/revisão, depois de a revisão estar guardada. Eliminar um aviso não desactiva o acompanhamento; novas revisões produzem novos avisos. Artigos ocultados e acompanhamentos desactivados ficam fora da lista/contador público. Os cartões de artigos acompanhados permanecem uma secção separada dos avisos.
 - Actualização ao abrir a barra e a cada 60 segundos apenas numa aba visível; pedidos não se sobrepõem. Índices por destinatário/eliminação/data/ID. Sem JavaScript as listas e formulários continuam funcionais.
 - Estado vazio, carregamento e erro, região de estado acessível, controlo nativo details/summary, foco visível e botões adaptados a ecrãs pequenos.
 - Abrir um recurso verifica novamente a autorização; eliminação ou revogação apresenta mensagem e devolve à caixa. O link não transporta direitos. GET não marca avisos como lidos: alterações de leitura são POST.
@@ -75,7 +77,7 @@ Resultado esperado: `20261008_03 (head)`. Aplicar a migração antes de iniciar 
 
 ## Validação
 
-- Suite Python local: 196 testes passaram na primeira validação integral após correcção da associação de revistas. A validação final inclui também o caso de rascunho sem código; resultados finais serão registados no PR.
+- Suite Python local final: 199 testes, incluindo 21 novos testes de ciclo de vida/notificações e o caso de rascunho sem código; resultados de CI registados no PR.
 - Novos testes: quatro eliminações autorizadas/negadas em várias funções, confirmação/CSRF/cancelamento, repetição, versão documental com e sem anexo, preservação de eventos, sessões já abertas, reatribuição e âmbito, destinatários, múltiplos mandatos, conta inactiva/mandato expirado, leitura/eliminação/contadores/persistência, isolamento entre contas administrativas e investigadores, rollback e deduplicação, revogação e recurso eliminado, revisão/aprovação/publicação.
 - Mantidos os testes de matriz das 24 permissões, tarefas, aceite documental, 2FA e segurança do PR #153.
 - Migração testada em SQLite vazia, existente e repetida, e com estrutura anterior real das colunas modificadas e dados sintéticos para verificar preservação.

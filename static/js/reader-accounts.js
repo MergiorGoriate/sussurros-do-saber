@@ -75,6 +75,7 @@
         const badge = link.querySelector('[data-reader-notification-count]');
         badge.hidden = !count; badge.textContent = count > 99 ? '99+' : String(count);
       });
+      document.querySelectorAll('[data-notice-count]').forEach(el => {el.textContent = String(Math.max(0, Number(state.notification_count) || 0));});
       articleIds = new Set((state.saved_articles || []).map(String)); render(); return state;
     }).finally(() => {stateRequest = null;});
     return stateRequest;
@@ -235,6 +236,7 @@
       if (empty) empty.hidden = !!document.querySelector('[data-reader-library] li');
       report(article || button.hasAttribute('data-reader-remove-journal') ? 'Artigo removido dos favoritos.' : 'Notificações desactivadas.');
       await sessionState();
+      if (button.hasAttribute('data-reader-unfollow')) location.reload();
     }));
   });
   // A page restored by browser history may contain account state from before logout.
@@ -245,6 +247,7 @@
       button.closest('li').querySelector('[data-reader-notification-status]').textContent = 'Sem novas actualizações. Está a acompanhar este artigo.';
       button.remove();
       await sessionState(); report('Actualização marcada como vista.');
+      document.dispatchEvent(new Event('notice-inbox-change'));
     }));
   });
   const syncNotifications = async () => {
@@ -289,3 +292,4 @@
     }, 2500);
   }).catch(() => { /* Account service outages never hide public content. */ });
 })();
+

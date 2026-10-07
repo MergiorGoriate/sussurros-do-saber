@@ -160,7 +160,7 @@ class LifecycleNotificationTests(unittest.TestCase):
         self.assertEqual(len(self.notices(assignee,'task',task.id)),1);self.assertEqual(len(self.notices(third,'task',task.id)),0)
         self.signin(assignee.admin);self.post('/admin/trabalho',id=task.id,status='in_progress',comment='Em curso')
         before=len(self.notices(assignee,'task',task.id));self.assertEqual(before,2)
-        self.post('/admin/trabalho',id=task.id,status='in_progress');self.assertEqual(len(self.notices(assignee,'task',task.id)),before)
+        self.post('/admin/trabalho',id=task.id,status='in_progress',comment='Em curso');self.assertEqual(len(self.notices(assignee,'task',task.id)),before)
         self.signin(manager.admin);self.post('/admin/trabalho',id=task.id,status='in_progress',assignee_id=replacement.id)
         self.assertEqual(task.assignee_id,replacement.id);self.assertEqual(len(self.notices(replacement,'task',task.id)),1)
 
@@ -226,6 +226,7 @@ class LifecycleNotificationTests(unittest.TestCase):
         a=self.article(owner);flow=db.session.get(ArticleWorkflow,a.id);flow.stage='submitted';db.session.commit();path=f'/admin/fluxo-artigos/{a.id}'
         self.signin(editor.admin);self.assertEqual(self.post(path,action='assign',reviewer_id=reviewer.id).status_code,302)
         self.assertEqual(len(self.notices(reviewer,'article',a.id)),1)
+        self.post(path,action='assign',reviewer_id=reviewer.id);self.assertEqual(len(self.notices(reviewer,'article',a.id)),1)
         self.signin(reviewer.admin);self.assertEqual(self.post(path,action='publish').status_code,403)
         self.assertEqual(self.post(path,action='reviewed',note='Parecer fundamentado. '*5).status_code,302)
         self.assertTrue(flow.reviewed_at)
@@ -234,6 +235,7 @@ class LifecycleNotificationTests(unittest.TestCase):
         self.assertEqual(self.post(path,action='publish').status_code,403)
         self.signin(publisher.admin);self.assertEqual(self.post(path,action='publish').status_code,302);self.assertEqual(a.status,'published')
         self.assertTrue(any('publicado' in n.body for n in self.notices(owner,'article',a.id)))
+        count=len(self.notices(owner,'article',a.id));self.post(path,action='publish');self.assertEqual(len(self.notices(owner,'article',a.id)),count)
 
     def test_reviewer_assignment_accept_delivery_notifications_and_no_duplication(self):
         editor=self.member('chief_editor',self.journal.id);reviewer=self.member('reviewer',self.journal.id);wrong=self.member('reviewer',self.other_journal.id)
@@ -269,3 +271,40 @@ class LifecycleNotificationTests(unittest.TestCase):
         with self.client.session_transaction() as s:s.clear();s.update(researcher_id=m.owner_id,researcher_nonce=m.owner.token_nonce,csrf_token='test')
         self.assertEqual(self.post(f'/submissoes/{m.id}/confirmar',confirm='on').status_code,410)
         self.assertEqual(self.client.get(f'/submissoes/ficheiros/{f.id}').status_code,410)
+
+    def test_scientific_preparation_publication_notices_and_publisher_destination(self):
+        production=self.member('production',self.journal.id);publisher=self.member('publisher',self.journal.id);outsider=self.member('chief_editor',self.other_journal.id)
+        role=TeamRole(code='scientific_publisher_'+self.token,name='Publicador científico de teste',permissions=['journal.publish'])
+        db.session.add(role);publisher.appointments[0].role=role
+        m,f=self.manuscript();m.status='accepted';db.session.commit();self.signin(production.admin)
+        self.assertEqual(self.post(f'/admin/submissoes/{m.id}/preparar').status_code,302)
+        self.assertEqual(len(self.notices(publisher,'manuscript',m.id)),1)
+        self.assertEqual(StaffNotice.query.filter_by(researcher_id=m.owner_id,resource_id=m.id).count(),1)
+        self.assertEqual(len(self.notices(outsider,'manuscript',m.id)),0)
+        self.signin(publisher.admin)
+        n=self.notices(publisher,'manuscript',m.id)[0]
+        opened=self.client.get(f'/admin/notificacoes/{n.id}/abrir');self.assertIn(str(m.publication_id),opened.location)
+        path=f'/admin/revistas/{m.publication_id}/publicacao';self.assertEqual(self.post(path).status_code,302);self.assertEqual(m.status,'published')
+        self.assertEqual(len(self.notices(publisher,'manuscript',m.id)),2)
+        self.assertEqual(StaffNotice.query.filter_by(researcher_id=m.owner_id,resource_id=m.id).count(),2)
+
+    def test_existing_reader_bell_combines_internal_events_and_delete_keeps_following(self):
+        from reader_accounts import ReaderJournal
+        from datetime import datetime
+        m,f=self.manuscript();account=m.owner
+        self.journal.published=True
+        row=ReaderJournal(owner_id=account.id,journal_id=self.journal.id,following=True,followed_at=datetime(2020,1,1))
+        db.session.add(row);emit(None,'Decisão do próprio autor',researcher_id=account.id,resource=('manuscript',m.id));db.session.commit()
+        with self.client.session_transaction() as s:s.clear();s.update(researcher_id=account.id,researcher_nonce=account.token_nonce,csrf_token='test')
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],2)
+        item=StaffNotice.query.filter_by(researcher_id=account.id,resource_type='reader_journal',resource_id=self.journal.id).one()
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],2) # Same revision never duplicates.
+        self.assertIn(b'Decis',self.client.get('/conta/notificacoes').data)
+        self.assertEqual(self.post('/conta/notificacoes',action='delete',id=item.id).status_code,303)
+        self.assertTrue(row.following);self.assertFalse(row.saved);self.assertIsNotNone(item.removed_at)
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],1)
+        self.assertEqual(self.client.get('/submissoes/api/notificacoes').json['unread'],1)
+        self.journal.updated_at=utcnow()+timedelta(seconds=1);db.session.commit()
+        self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],2)
+        self.assertEqual(StaffNotice.query.filter_by(researcher_id=account.id,resource_type='reader_journal',resource_id=self.journal.id).count(),2)
+        self.assertTrue(row.following)

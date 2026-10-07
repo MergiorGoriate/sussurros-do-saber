@@ -383,6 +383,7 @@ def workspace():
             status=field('status',30,True)
             if status not in TASK_STATES:
                 abort(400)
+            previous_assignee=task.assignee
             changed=task.status!=status
             if manager and request.form.get('assignee_id',type=int):
                 assignee=db.get_or_404(TeamMember,request.form.get('assignee_id',type=int))
@@ -391,9 +392,14 @@ def workspace():
                 task.assignee=assignee
             task.status=status
             comment=field('comment',10000)
+            if comment and not changed and task.comments and task.comments[-1].actor_id==session.get('admin_id') and task.comments[-1].body==comment:
+                comment=''
             if comment:
                 db.session.add(TaskComment(task_id=task.id,actor_id=session.get('admin_id'),body=comment))
             if changed or comment:audit('task.updated','task',task.id,status+(' · Comentário adicionado' if comment else ''))
+            if previous_assignee.id!=task.assignee_id and active_member(previous_assignee) and mandates(previous_assignee) and previous_assignee.admin_id:
+                from internal_notices import emit
+                emit(previous_assignee.admin_id,'Tarefa reatribuída: '+task.title,'Esta tarefa deixou de estar sob a sua responsabilidade.',resource=('task',task.id))
         else:
             require('tasks.manage')
             assignee=db.get_or_404(TeamMember,request.form.get('assignee_id',type=int))
@@ -748,6 +754,7 @@ def article_workflow(ident):
             reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
             if not reviewer.available or reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
                 abort(400,description='Escolha um revisor independente com mandato válido.')
+            if item.reviewer_id==reviewer.id and item.stage=='review' and not item.reviewed_at:return redirect(url_for('staff.article_workflow',ident=ident))
             item.reviewer_id,item.stage,article.status=reviewer.id,'review','review'
             item.approved_at=item.reviewed_at=None
         elif action in {'reviewed','changes'} and item.stage=='review':
@@ -779,6 +786,8 @@ def article_workflow(ident):
                 scheduled=scheduled.astimezone(timezone.utc).replace(tzinfo=None)
             if action=='schedule' and (not scheduled or scheduled<=utcnow()):
                 abort(400,description='Informe uma data futura de publicação.')
+            if (not scheduled and item.stage=='published' and article.status=='published') or (scheduled and item.stage=='scheduled' and article.scheduled_at==scheduled):
+                return redirect(url_for('staff.article_workflow',ident=ident))
             item.stage=article.status='scheduled' if scheduled else 'published'
             article.scheduled_at=scheduled
             if not scheduled and not article.published_at:

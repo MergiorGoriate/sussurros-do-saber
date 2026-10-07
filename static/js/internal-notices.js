@@ -20,8 +20,8 @@
       for (const item of data.items) {
         const section = node('section');
         section.append(node('strong', item.title), node('p', item.description), node('time', item.date), node('p', item.unread ? 'Por ler' : 'Lida'));
-        if (item.url) { const link = node('a', 'Abrir recurso'); link.href = item.url; section.append(link); }
-        const form = node('form'); form.method = 'post'; form.action = template.action;
+        if (item.url) { const link = node('a', 'Abrir recurso'); link.setAttribute('href', item.url); section.append(link); }
+        const form = node('form'); form.method = 'post'; form.setAttribute('action', template.getAttribute('action'));
         form.append(hidden('csrf_token', template.querySelector('[name="csrf_token"]').value), hidden('id', item.id));
         for (const [action, label] of [['read', 'Marcar como lida'], ['delete', 'Eliminar aviso']]) {
           if (action === 'read' && !item.unread) continue;
@@ -36,5 +36,6 @@
   };
   bar.addEventListener('toggle', () => { if (bar.open) refresh(); });
   document.addEventListener('visibilitychange', refresh);
+  document.addEventListener('notice-inbox-change', refresh);
   setInterval(refresh, 60000);
 })();
