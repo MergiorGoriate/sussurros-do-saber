@@ -87,3 +87,38 @@ for (const width of [1440,390]) {
   await page.screenshot({path:`test-results/sidebar-expanded-${width}.png`,fullPage:true});
  });
 }
+
+for(const width of [320,390,768]){
+ test(`mobile sidebar fills viewport and scrolls without clipping at ${width}px`,async({page})=>{
+  await adminLogin(page);await page.setViewportSize({width,height:900});
+  await page.goto('/admin/trabalho');
+  const sidebar=page.locator('#admin-sidebar');
+  for(const collapsed of [false,true]){
+   if(collapsed)await page.getByRole('button',{name:'Recolher barra lateral',exact:true}).click();
+   const box=await sidebar.boundingBox();
+   expect(box.x).toBe(0);expect(Math.round(box.width)).toBe(width);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+   expect(await sidebar.evaluate(el=>{
+    const nav=el.querySelector('nav'),brand=el.querySelector('.admin-brand img');
+    const toggle=el.querySelector('[data-sidebar-toggle]').getBoundingClientRect();
+    const logout=el.querySelector('form button').getBoundingClientRect();
+    const bounds=el.getBoundingClientRect(),nb=nav.getBoundingClientRect(),logo=brand.getBoundingClientRect();
+    return logo.right<=toggle.left && toggle.right<=logout.left && logout.right<=bounds.right
+      && nb.left>=bounds.left && nb.right<=bounds.right && nb.top>=toggle.bottom;
+   })).toBeTruthy();
+   const nav=sidebar.locator('nav');
+   await sidebar.locator('nav a').last().scrollIntoViewIfNeeded();
+   expect(await nav.evaluate(el=>{
+    const box=el.getBoundingClientRect(),icon=el.querySelector('a:last-child svg').getBoundingClientRect();
+    return el.scrollLeft>0 && icon.left>=box.left && icon.right<=box.right;
+   })).toBeTruthy();
+   await sidebar.locator('nav a').first().scrollIntoViewIfNeeded();
+   await page.screenshot({path:`test-results/mobile-sidebar-${width}-${collapsed?'collapsed':'expanded'}.png`,fullPage:true});
+  }
+  await page.setViewportSize({width:900,height:600});
+  expect((await sidebar.boundingBox()).width).toBe(80);
+  await page.setViewportSize({width,height:900});
+  expect(Math.round((await sidebar.boundingBox()).width)).toBe(width);
+  await expect(page.getByRole('button',{name:'Expandir barra lateral',exact:true})).toBeVisible();
+ });
+}

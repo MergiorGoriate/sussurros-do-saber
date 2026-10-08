@@ -170,3 +170,19 @@
 
 /* Marca branca sobre o fundo azul, preservando a transparência e a forma do símbolo. */
 .admin-sidebar .admin-brand img{filter:brightness(0) invert(1);}
+
+/* Cabeçalho móvel de largura completa; o menu desloca-se sem alargar a página. */
+@media(max-width:850px){
+ .admin-sidebar{width:100%;max-width:100%;min-width:0;box-sizing:border-box;inset:auto;padding:12px;overflow:hidden;}
+ .admin-sidebar .admin-brand{min-height:44px;min-width:0;padding-right:108px;gap:10px;}
+ .admin-sidebar .admin-brand img{width:40px;height:40px;flex:0 0 40px;}
+ .admin-sidebar .admin-brand>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+ .admin-sidebar .admin-sidebar-toggle{top:12px;right:64px;width:44px;height:44px;min-width:44px;flex-shrink:0;}
+ .admin-sidebar form{top:12px;right:12px;}
+ .admin-sidebar nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;margin-top:12px;padding:3px 0 8px;gap:6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#8fb3dc #102c50;scroll-padding-inline:4px;}
+ .admin-sidebar nav a{flex:0 0 auto;min-height:48px;white-space:nowrap;}
+ .admin-sidebar-collapsed .admin-sidebar nav a{width:48px;min-width:48px;padding:10px;flex:0 0 48px;}
+ .admin-sidebar nav::-webkit-scrollbar{height:6px;}
+ .admin-sidebar nav::-webkit-scrollbar-thumb{background:#8fb3dc;border-radius:6px;}
+ .admin-sidebar nav::-webkit-scrollbar-track{background:#102c50;}
+}
