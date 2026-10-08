@@ -7,7 +7,14 @@ for(const width of [1440,390]) {
   const d=fixture();await signin(page.context(),d.cookie);await page.setViewportSize({width,height:1000});
   await page.goto('/admin/trabalho');const bar=page.locator('[data-notice-bar]');
   await expect(bar.locator('[data-notice-count]')).toHaveText('2');
-  await bar.locator('summary').click();await expect(bar.locator('[data-notice-status]')).toHaveText('Notificações actualizadas.');
+  const trigger=bar.locator('summary');
+  expect((await trigger.boundingBox()).height).toBeLessThanOrEqual(48);
+  await expect(bar.locator('.notice-badge')).toBeVisible();
+  await trigger.click();await expect(bar.locator('[data-notice-status]')).toHaveText('Notificações actualizadas.');
+  const popup=await bar.locator('.notice-popover').boundingBox();
+  expect(popup.x).toBeGreaterThanOrEqual(0);expect(popup.x+popup.width).toBeLessThanOrEqual(width);
+  await trigger.press('Escape');await expect(bar).not.toHaveAttribute('open','');
+  await expect(trigger).toBeFocused();await trigger.click();
   const item=bar.locator('[data-notice-items] section').filter({hasText:'Segundo aviso '+d.suffix});
   await item.getByRole('button',{name:'Eliminar aviso'}).click();
   await expect(page).toHaveURL(/\/admin\/notificacoes$/);
@@ -16,6 +23,7 @@ for(const width of [1440,390]) {
   await page.locator('main > form').getByRole('button',{name:'Marcar todas como lidas'}).click();
   await expect(page.locator('[data-notice-bar] [data-notice-count]')).toHaveText('0');
   await page.reload();await expect(page.locator('[data-notice-bar] [data-notice-count]')).toHaveText('0');
+  await expect(page.locator('.notice-badge')).toBeHidden();
   await expect(page.locator('main > section').filter({hasText:'Segundo aviso '+d.suffix})).toHaveCount(0);
   expect((await page.goto(`/admin/remover/document/${d.document_id}`)).status()).toBe(403);
  });
