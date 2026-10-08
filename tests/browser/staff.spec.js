@@ -1,6 +1,9 @@
 const { test, expect } = require('@playwright/test');
 const { execFileSync } = require('node:child_process');
 
+// Exercise real scrollbar gutters rather than Chromium headless's hidden-scrollbar default.
+test.use({ launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] } });
+
 async function adminLogin(page) {
   const cookie = execFileSync('python', ['tests/browser/staff_fixture.py'], { encoding: 'utf8' }).trim();
   await page.context().addCookies([{ name: 'session', value: cookie,
