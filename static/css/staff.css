@@ -167,3 +167,6 @@
   .admin-sidebar-collapsed .admin-sidebar nav{scrollbar-width:auto;scrollbar-color:auto;}
  }
 }
+
+/* Marca branca sobre o fundo azul, preservando a transparência e a forma do símbolo. */
+.admin-sidebar .admin-brand img{filter:brightness(0) invert(1);}
