@@ -1,4 +1,74 @@
-{% extends 'admin/base.html' %}{% block title %}Área de trabalho{% endblock %}{% block content %}<header class="admin-header"><div><span>Equipa e governação</span><h1>Área de trabalho</h1></div></header>{% if member %}<section class="admin-panel"><h2>{{ member.name }}</h2><p>Estado: {{ member_states[member.status] }} · {{ member.specialty }}</p><h3>Mandatos válidos</h3>{% for a in mandates %}<p><strong>{{ a.role.name }}</strong> · {{ a.journal.title if a.journal else 'Geral' }} · {{ a.starts_on }} — {{ a.ends_on or 'Sem termo' }} · {{ a.weekly_hours }} h/semana</p><p class="staff-pre">{{ a.role.duties }}<br>{{ a.role.limits }}<br>{{ a.conditions }}</p>{% else %}<p>Não tem um mandato activo. Solicite a atribuição de função ao responsável principal.</p>{% endfor %}</section>{% endif %}
-{% if member %}<section class="admin-panel"><h2>Acessos efectivos</h2><p>As permissões são verificadas a cada pedido. Acções atribuídas aparecem no artigo ou na submissão correspondente.</p><ul>{% for code,label in staff_permissions.items() if staff_has_any(code) %}<li>{{ label }}{% if code in staff_journal_permissions %} — limitado às revistas dos mandatos{% endif %}</li>{% else %}<li>Sem permissões de gestão efectivas.</li>{% endfor %}</ul>{% if staff_can('article.write') and not member.author_id %}<p role="alert">Para escrever artigos próprios, o responsável principal deve associar um perfil de autor ao seu membro da equipa.</p>{% endif %}{% for a in mandates if a.journal_id %}{% for code in a.role.permissions if code not in staff_journal_permissions %}<p>{{ staff_permissions.get(code,code) }}: este acesso ao portal exige um mandato geral; o mandato «{{ a.role.name }}» está limitado a uma revista.</p>{% endfor %}{% endfor %}</section>{% endif %}
-{% if manager %}<section class="admin-panel" id="distribuir-tarefa"><h2>Distribuir tarefa</h2><form method="post" class="staff-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label>Título<input name="title" maxlength="240" required></label><label>Responsável<select name="assignee_id" required>{% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></label><label>Prazo<input name="due_on" type="date" required></label><label>Descrição e resultado esperado<textarea name="description" rows="4" maxlength="20000"></textarea></label><button class="admin-primary">Atribuir tarefa</button></form></section>{% endif %}
-<h2>Tarefas {{ 'da equipa' if manager else 'atribuídas' }}</h2>{% for t in tasks %}<section class="admin-panel"><h3 id="tarefa-{{ t.id }}">{{ t.title }}</h3><p>{{ t.assignee.name }} · Prazo {{ t.due_on or 'Sem prazo' }} · {{ task_states[t.status] }}</p><p class="staff-pre">{{ t.description }}</p><form method="post" class="staff-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ t.id }}">{% if manager %}<label>Reatribuir responsável<select name="assignee_id">{% if t.assignee_id not in members|map(attribute='id')|list %}<option value="" selected>Escolha novo responsável; anterior: {{ t.assignee.name }}</option>{% endif %}{% for m in members %}<option value="{{ m.id }}" {% if m.id==t.assignee_id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select></label>{% endif %}<label>Estado<select name="status">{% for code,label in task_states.items() %}<option value="{{ code }}" {% if t.status==code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label>Comentário<textarea name="comment" maxlength="10000" rows="2"></textarea></label><button>Actualizar</button></form>{% for c in t.comments %}<p class="staff-pre"><strong>{{ c.actor.display_name if c.actor else 'Conta arquivada' }}</strong> · {{ c.created_at.strftime('%d/%m/%Y %H:%M') }} UTC<br>{{ c.body }}</p>{% endfor %}</section>{% else %}<p>Sem tarefas disponíveis.</p>{% endfor %}{% endblock %}
+{% extends 'admin/base.html' %}
+{% block title %}Área de trabalho{% endblock %}
+{% block content %}
+<div class="staff-workspace">
+<header class="admin-header workspace-header">
+  <div><span>Equipa · Sussurros do Saber</span><h1>Área de trabalho</h1><p>{{ 'Acompanhe a equipa e distribua o trabalho editorial.' if manager else 'Organize as suas tarefas e acompanhe o trabalho editorial.' }}</p></div>
+  {% if manager %}<a class="admin-primary" href="#distribuir-tarefa">Distribuir tarefa</a>{% endif %}
+</header>
+<section class="workspace-overview" aria-label="Resumo do trabalho">
+  <a href="#tarefas"><span>Tarefas {{ 'da equipa' if manager else 'atribuídas' }}</span><strong>{{ tasks|length }}</strong><small>Consultar tarefas</small></a>
+  <a href="#tarefas"><span>Por concluir</span><strong>{{ tasks|rejectattr('status','in',['done','cancelled'])|list|length }}</strong><small>Pendentes, em curso ou bloqueadas</small></a>
+  <a href="{{ url_for('staff.documents') }}"><span>Documentos da equipa</span><strong class="workspace-metric-label">Consultar</strong><small>Ler documentos e registar o aceite</small></a>
+  <a href="{{ url_for('staff.notifications') }}"><span>Notificações por ler</span><strong data-notice-count>{{ notice_unread }}</strong><small>Acompanhar actualizações</small></a>
+</section>
+<section class="workspace-shortcuts" aria-label="Acessos de trabalho">
+  {% if staff_can('article.write') or staff_can('article.edit') or staff_can('article.review') or staff_can('article.approve') or staff_can('article.publish') or staff_can('article.delete') %}<a href="{{ url_for('admin.articles') }}">Artigos <span aria-hidden="true">↗</span></a>{% endif %}
+  {% if staff_has_any('manuscript.read') or staff_has_any('manuscript.edit') or staff_has_any('manuscript.production') or staff_has_any('manuscript.assign') or staff_has_any('manuscript.decide') or staff_has_any('submissions.configure') %}<a href="{{ url_for('admin.submissions_list') }}">Submissões <span aria-hidden="true">↗</span></a>{% endif %}
+  {% if staff_has_any('manuscript.review') %}<a href="{{ url_for('staff.reviews') }}">Meus pareceres <span aria-hidden="true">↗</span></a>{% endif %}
+  {% if staff_can('contacts.manage') %}<a href="{{ url_for('admin.contacts') }}">Contactos <span aria-hidden="true">↗</span></a>{% endif %}
+  {% if staff_can('reports.read') %}<a href="{{ url_for('staff.reports') }}">Relatórios e auditoria <span aria-hidden="true">↗</span></a>{% endif %}
+  {% if staff_can('team.manage') %}<a href="{{ url_for('staff.team') }}">Equipa e convites <span aria-hidden="true">↗</span></a>{% endif %}
+</section>
+{% if member %}
+<section class="admin-panel workspace-profile" aria-label="Perfil e acessos">
+  <div class="workspace-profile-heading"><div><span class="workspace-eyebrow">O seu perfil na equipa</span><h2>{{ member.name }}</h2><p>{{ member.specialty or 'Colaborador do portal' }}</p></div><span class="workspace-badge">{{ member_states[member.status] }}</span></div>
+  {% if staff_can('article.write') and not member.author_id %}<p class="workspace-warning" role="alert">Para escrever artigos próprios, o responsável principal deve associar um perfil de autor ao seu membro da equipa.</p>{% endif %}
+  <details class="workspace-details"><summary>Mandatos válidos <span>{{ mandates|length }}</span></summary><div class="workspace-mandates">
+  {% for a in mandates %}
+    <article><h3>{{ a.role.name }}</h3><p><span class="workspace-badge">{{ a.journal.title if a.journal else 'Âmbito geral' }}</span></p>
+      <dl><div><dt>Vigência</dt><dd>{{ a.starts_on.strftime('%d/%m/%Y') }} — {{ a.ends_on.strftime('%d/%m/%Y') if a.ends_on else 'Sem termo' }}</dd></div><div><dt>Dedicação</dt><dd>{{ a.weekly_hours }} h/semana</dd></div></dl>
+      {% if a.role.duties %}<h4>Responsabilidades</h4><p class="staff-pre">{{ a.role.duties }}</p>{% endif %}
+      {% if a.role.limits %}<h4>Limites da função</h4><p class="staff-pre">{{ a.role.limits }}</p>{% endif %}
+      {% if a.conditions %}<h4>Condições do mandato</h4><p class="staff-pre">{{ a.conditions }}</p>{% endif %}
+    </article>
+  {% else %}<p>Não tem um mandato activo. Solicite a atribuição de função ao responsável principal.</p>{% endfor %}
+  </div></details>
+  <details class="workspace-details"><summary>Acessos efectivos</summary><p>As permissões são verificadas a cada pedido. As acções atribuídas aparecem no artigo ou na submissão correspondente.</p>
+    <ul class="workspace-permissions">{% for code,label in staff_permissions.items() if staff_has_any(code) %}<li>{{ label }}{% if code in staff_journal_permissions %}<small>Limitado às revistas dos mandatos</small>{% endif %}</li>{% else %}<li>Sem permissões de gestão efectivas.</li>{% endfor %}</ul>
+    {% for a in mandates if a.journal_id %}{% for code in a.role.permissions if code not in staff_journal_permissions %}<p class="workspace-warning">{{ staff_permissions.get(code,code) }}: este acesso ao portal exige um mandato geral; o mandato «{{ a.role.name }}» está limitado a uma revista.</p>{% endfor %}{% endfor %}
+  </details>
+</section>
+{% endif %}
+{% if manager %}
+<section class="admin-panel workspace-assignment" id="distribuir-tarefa">
+  <div class="workspace-section-heading"><div><h2>Distribuir tarefa</h2><p>Defina o resultado esperado, o responsável e o prazo.</p></div></div>
+  {% if members %}<form method="post" class="staff-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Título<input name="title" maxlength="240" required></label>
+    <div class="workspace-form-row"><label>Responsável<select name="assignee_id" required>{% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></label><label>Prazo<input name="due_on" type="date" required></label></div>
+    <label>Descrição e resultado esperado<textarea name="description" rows="4" maxlength="20000"></textarea></label>
+    <div class="workspace-form-footer"><small>Disponíveis apenas membros activos com mandato válido.</small><button class="admin-primary">Atribuir tarefa</button></div>
+  </form>{% else %}<p class="workspace-empty">Não há membros activos com mandato válido para receber tarefas.{% if staff_can('team.manage') %} <a href="{{ url_for('staff.team') }}">Consultar equipa e mandatos</a>.{% endif %}</p>{% endif %}
+</section>
+{% endif %}
+<section id="tarefas" aria-labelledby="workspace-tasks-title">
+  <div class="workspace-section-heading"><div><h2 id="workspace-tasks-title">Tarefas {{ 'da equipa' if manager else 'atribuídas' }}</h2><p>Actualize o estado e deixe comentários para acompanhar cada tarefa.</p></div><span class="workspace-badge">{{ tasks|length }}</span></div>
+  <div class="workspace-tasks">
+  {% for t in tasks %}
+  <article class="admin-panel workspace-task">
+    <header><h3 id="tarefa-{{ t.id }}">{{ t.title }}</h3><span class="workspace-badge workspace-status-{{ t.status }}">{{ task_states[t.status] }}</span></header>
+    <dl class="workspace-task-meta"><div><dt>Responsável</dt><dd>{{ t.assignee.name }}</dd></div><div><dt>Prazo</dt><dd>{{ t.due_on.strftime('%d/%m/%Y') if t.due_on else 'Sem prazo' }}</dd></div></dl>
+    {% if t.description %}<p class="staff-pre workspace-task-description">{{ t.description }}</p>{% endif %}
+    <form method="post" class="staff-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ t.id }}">
+      <div class="workspace-form-row">{% if manager %}<label>Reatribuir responsável<select name="assignee_id">{% if t.assignee_id not in members|map(attribute='id')|list %}<option value="" selected>Escolha novo responsável; anterior: {{ t.assignee.name }}</option>{% endif %}{% for m in members %}<option value="{{ m.id }}" {% if m.id==t.assignee_id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select></label>{% endif %}
+      <label>Estado<select name="status">{% for code,label in task_states.items() %}<option value="{{ code }}" {% if t.status==code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label></div>
+      <label>Comentário<textarea name="comment" maxlength="10000" rows="2"></textarea></label>
+      <div class="workspace-form-footer"><small>As alterações ficam registadas no histórico.</small><button class="admin-primary">Actualizar</button></div>
+    </form>
+    {% if t.comments %}<details class="workspace-details"><summary>Histórico de comentários <span>{{ t.comments|length }}</span></summary><ol class="workspace-comments">{% for c in t.comments %}<li><div><strong>{{ c.actor.display_name if c.actor else 'Conta arquivada' }}</strong><time datetime="{{ c.created_at.isoformat() }}Z">{{ c.created_at.strftime('%d/%m/%Y %H:%M') }} UTC</time></div><p class="staff-pre">{{ c.body }}</p></li>{% endfor %}</ol></details>{% endif %}
+  </article>
+  {% else %}<div class="admin-panel workspace-empty"><h3>Sem tarefas disponíveis</h3><p>{{ 'Distribua uma tarefa para iniciar o acompanhamento da equipa.' if manager else 'As tarefas atribuídas a si aparecerão aqui.' }}</p></div>{% endfor %}
+  </div>
+</section>
+</div>
+{% endblock %}
