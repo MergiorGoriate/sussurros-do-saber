@@ -96,7 +96,7 @@ for(const width of [320,390,768]){
   for(const collapsed of [false,true]){
    if(collapsed)await page.getByRole('button',{name:'Recolher barra lateral',exact:true}).click();
    const box=await sidebar.boundingBox();
-   expect(box.x).toBe(0);expect(Math.round(box.width)).toBe(width);
+   expect(box.x).toBe(0);expect(Math.round(box.width)).toBe(await page.evaluate(()=>document.documentElement.clientWidth));
    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
    expect(await sidebar.evaluate(el=>{
     const nav=el.querySelector('nav'),brand=el.querySelector('.admin-brand img');
@@ -118,7 +118,7 @@ for(const width of [320,390,768]){
   await page.setViewportSize({width:900,height:600});
   expect((await sidebar.boundingBox()).width).toBe(80);
   await page.setViewportSize({width,height:900});
-  expect(Math.round((await sidebar.boundingBox()).width)).toBe(width);
+  expect(Math.round((await sidebar.boundingBox()).width)).toBe(await page.evaluate(()=>document.documentElement.clientWidth));
   await expect(page.getByRole('button',{name:'Expandir barra lateral',exact:true})).toBeVisible();
  });
 }
