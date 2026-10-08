@@ -60,6 +60,17 @@ for (const width of [1440,390]) {
   expect(await sidebar.locator('.admin-menu-label').first().evaluate(e=>e.getBoundingClientRect().width)).toBe(1);
   if(width===1440) {
    expect((await sidebar.boundingBox()).width).toBe(80);
+   // A scrollbar must reserve space without clipping any icon, including offscreen items.
+   expect(await sidebar.locator('nav').evaluate(nav => {
+    const left=nav.getBoundingClientRect().left;
+    return [...nav.querySelectorAll('svg')].every(icon => {
+     const box=icon.getBoundingClientRect();
+     return box.left>=left && box.right<=left+nav.clientWidth+1;
+    });
+   })).toBeTruthy();
+   await sidebar.locator('nav a').last().scrollIntoViewIfNeeded();
+   await expect(sidebar.locator('nav a').last()).toBeInViewport();
+   await sidebar.locator('nav a').first().scrollIntoViewIfNeeded();
    expect((await page.locator('main').boundingBox()).x).toBeLessThan(before.x);
   }
   await page.screenshot({path:`test-results/sidebar-collapsed-${width}.png`,fullPage:true});
