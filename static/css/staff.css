@@ -143,3 +143,9 @@
  /* Evita zoom automático nos campos em navegadores móveis. */
  .admin-main :is(input,select,textarea){font-size:16px;}
 }
+
+/* O menu tem o seu próprio deslocamento; não criar uma segunda barra no aside. */
+@media(min-width:851px){
+ .admin-sidebar{overflow:hidden;}
+ .admin-sidebar .admin-sidebar-toggle{flex:0 0 auto;}
+}
