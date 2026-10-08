@@ -725,7 +725,7 @@ def article_saved(article):
 @staff_bp.route('/fluxo-artigos/<int:ident>',methods=['GET','POST'])
 @login_required
 def article_workflow(ident):
-    article=db.get_or_404(Article,ident)
+    article=Article.query.filter_by(id=ident).with_for_update().populate_existing().first_or_404() if request.method=='POST' else db.get_or_404(Article,ident)
     if not article_scope(Article.query).filter_by(id=ident).first():
         abort(404)
     item=ArticleWorkflow.query.filter_by(article_id=ident).with_for_update().first() if request.method=='POST' else db.session.get(ArticleWorkflow,ident)
@@ -761,6 +761,11 @@ def article_workflow(ident):
             if not member or member.id!=item.reviewer_id or not has_permission('article.review'):
                 abort(403)
             note=field('note',20000,True)
+            if action=='reviewed' and item.reviewed_at:
+                previous=PortalReview.query.filter_by(article_id=ident,reviewer_id=member.id,action='reviewed').order_by(PortalReview.id.desc()).first()
+                if previous and previous.report==note:
+                    return redirect(url_for('staff.article_workflow',ident=ident))
+                abort(409,description='A revisão já foi concluída. Reabra o fluxo para alterar o parecer.')
             db.session.add(PortalReview(article_id=ident,reviewer_id=member.id,action=action,report=note))
             if action=='reviewed':
                 item.reviewed_at=utcnow()
@@ -960,11 +965,20 @@ def responsibilities(ident):
             new=StaffPeerReview(manuscript_id=item.manuscript_id,reviewer_id=target.id,version_number=item.version_number,assigned_by=session.get('admin_id'),due_on=max(item.due_on,date.today()))
             db.session.add(new);db.session.flush();audit('review.assigned','review',new.id)
         elif kind in {'portal_reviewer','portal_editor'}:
+            # Serialize with timed publication and refresh the state after locking.
+            article=Article.query.filter_by(id=item.article_id).with_for_update().populate_existing().first_or_404()
+            item=ArticleWorkflow.query.filter_by(article_id=item.article_id).with_for_update().populate_existing().first_or_404()
+            if article.status=='published' or item.stage=='published':abort(409)
             permission='article.review' if kind=='portal_reviewer' else 'article.approve'
             if not has_permission(permission,member=target) or target.id==item.owner_id:abort(400)
             if kind=='portal_reviewer':
                 if item.editor_id==target.id:abort(400)
-                item.reviewer_id=target.id
+                if item.reviewer_id!=target.id:
+                    item.reviewer_id=target.id
+                    item.reviewed_at=item.approved_at=None
+                    item.editor_id=None
+                    item.stage=item.article.status='review'
+                    item.article.scheduled_at=None
             else:
                 if item.reviewer_id==target.id:abort(400)
                 item.editor_id=target.id

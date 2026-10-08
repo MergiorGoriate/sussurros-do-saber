@@ -17,6 +17,7 @@
       const data = await response.json();
       document.querySelectorAll('[data-notice-count]').forEach(el => { el.textContent = String(data.unread); if (el.classList.contains('notice-badge')) el.hidden = !data.unread; });
       bar.querySelector('[data-notice-label]').textContent = `Notificações · ${data.unread} por ler`;
+      bar.querySelector('summary').setAttribute('aria-label', `Notificações internas · ${data.unread} por ler`);
       list.replaceChildren();
       for (const item of data.items) {
         const section = node('section');

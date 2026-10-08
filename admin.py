@@ -526,7 +526,8 @@ def docs():
 @login_required
 def dashboard():
     from governance import current_member
-    if current_member() and not session.get('admin_superuser'):
+    account=db.session.get(AdminUser,session.get('admin_id')) if session.get('admin_id') else None
+    if not session.get('admin_superuser') and (current_member() or (account and account.governance_managed)):
         return redirect(url_for('staff.workspace'))
     return render_template("admin/dashboard.html", article_count=Article.query.count(), draft_count=Article.query.filter_by(status="draft").count(), scheduled_count=Article.query.filter_by(status="scheduled").count(), contact_count=ContactMessage.query.filter_by(read=False).count(), subscriber_count=Subscriber.query.filter_by(active=True).count(), recent_articles=Article.query.order_by(Article.updated_at.desc()).limit(6).all())
 
@@ -709,7 +710,7 @@ def upload_inline_image():
 @admin_bp.route("/artigos/<int:article_id>/editar", methods=["GET", "POST"])
 @login_required
 def article_form(article_id=None):
-    article = db.session.get(Article, article_id) if article_id else Article()
+    article = (Article.query.filter_by(id=article_id).with_for_update().populate_existing().first() if request.method=='POST' else db.session.get(Article,article_id)) if article_id else Article()
     if article_id and not article:
         abort(404)
     from governance import article_edit_access, article_save_guard, article_saved
@@ -808,6 +809,8 @@ def delete_article(article_id):
     if PortalReview.query.filter_by(article_id=article.id).first():
         abort(409,description="Este artigo tem pareceres registados. Reabra-o como rascunho para o retirar da publicação.")
     from governance import audit
+    from reader_accounts import ReaderArticle
+    ReaderArticle.query.filter_by(article_id=article.id).delete(synchronize_session=False)
     ArticleWorkflow.query.filter_by(article_id=article.id).delete()
     audit('article.deleted','article',article.id)
     db.session.delete(article)
@@ -1106,9 +1109,16 @@ def toggle_journal(journal_id):
 def delete_journal(journal_id):
     validate_csrf()
     journal = db.get_or_404(Journal, journal_id)
-    from submission_models import Manuscript, SubmissionSetting
+    from submission_models import Manuscript, SubmissionSetting, PublicationAsset
+    from governance_models import TeamAppointment
+    if TeamAppointment.query.filter_by(journal_id=journal_id).first() or PublicationAsset.query.filter_by(journal_id=journal_id).first():
+        abort(409,description='Esta revista tem mandatos ou ficheiros editoriais associados. Oculte-a para preservar o histórico.')
     if Manuscript.query.filter(db.or_(Manuscript.journal_id == journal_id, Manuscript.publication_id == journal_id)).first() or db.session.get(SubmissionSetting, journal_id):
         abort(409, description="Esta revista está ligada ao fluxo editorial. Oculte-a em vez de eliminar os registos.")
+    from reader_accounts import ReaderJournal
+    from governance import audit
+    ReaderJournal.query.filter_by(journal_id=journal_id).delete(synchronize_session=False)
+    audit('journal.deleted','journal',journal_id)
     db.session.delete(journal)
     db.session.commit()
     flash("Revista eliminada.", "success")
