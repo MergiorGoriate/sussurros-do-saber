@@ -95,6 +95,20 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
           aria-label="Compartilhar no Telegram"
           ><i class="fa-brands fa-telegram"></i><span>Telegram</span></a
         ><a
+          data-network="bluesky"
+          class="bluesky"
+          href="https://bsky.app/intent/compose?text={{ (article.title ~ ' ' ~ share_url)|urlencode }}"
+          target="_blank" rel="noopener noreferrer"
+          aria-label="Compartilhar no Bluesky"
+          ><i class="fa-brands fa-bluesky" aria-hidden="true"></i><span>Bluesky</span></a
+        ><a
+          data-network="reddit"
+          class="reddit"
+          href="https://www.reddit.com/submit?url={{ share_url|urlencode }}&title={{ article.title|urlencode }}"
+          target="_blank" rel="noopener noreferrer"
+          aria-label="Compartilhar no Reddit"
+          ><i class="fa-brands fa-reddit-alien" aria-hidden="true"></i><span>Reddit</span></a
+        ><a
           data-network="email"
           class="email"
           href="mailto:?subject={{ article.title|urlencode }}&body={{ (share_url)|urlencode }}"

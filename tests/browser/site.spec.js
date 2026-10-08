@@ -463,3 +463,36 @@ test('blocked browser storage does not break bookmark controls', async ({ page }
   await expect(bookmark).toHaveAttribute('aria-pressed','false');
   expect(errors).toEqual([]);
 });
+
+for(const width of [1440,390]){
+ test(`article shares to Bluesky and Reddit at ${width}px`,async({page})=>{
+  await page.setViewportSize({width,height:1000});
+  await page.goto('/artigos');
+  await page.locator('a[href^="/artigo/"]').first().click();
+  const title=await page.locator('.share-panel').getAttribute('data-title');
+  for(const [network,host,path] of [['bluesky','bsky.app','/intent/compose'],['reddit','www.reddit.com','/submit']]){
+   const link=page.locator('.social-share [data-network="'+network+'"]');
+   await link.scrollIntoViewIfNeeded();await expect(link).toBeVisible();
+   await expect(link).toHaveAttribute('target','_blank');
+   await expect(link).toHaveAttribute('rel','noopener noreferrer');
+   const url=new URL(await link.getAttribute('href'));
+   expect(url.hostname).toBe(host);expect(url.pathname).toBe(path);
+   if(network==='bluesky')expect(url.searchParams.get('text')).toBe(title+' '+page.url());
+   else{expect(url.searchParams.get('url')).toBe(page.url());expect(url.searchParams.get('title')).toBe(title);}
+  }
+  await page.locator('.share-panel').screenshot({path:`test-results/share-bluesky-reddit-${width}.png`});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+ });
+}
+test('Bluesky and Reddit links work without JavaScript',async({browser})=>{
+ const context=await browser.newContext({javaScriptEnabled:false});
+ const page=await context.newPage();await page.goto('http://127.0.0.1:5000/artigos');
+ await page.locator('a[href^="/artigo/"]').first().click();
+ for(const network of ['bluesky','reddit']){
+  const link=page.locator('.social-share [data-network="'+network+'"]');
+  const url=new URL(await link.getAttribute('href'));
+  expect(url.protocol).toBe('https:');
+  expect(url.searchParams.get(network==='bluesky'?'text':'url')).toContain('/artigo/');
+ }
+ await context.close();
+});
