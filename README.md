@@ -2,7 +2,7 @@
 
 Plataforma de divulgação científica e publicação editorial em português, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.
 
-Este README descreve a implementação revista em **7 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
+Este README descreve a implementação revista em **8 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
 
 ## Índice
 
@@ -12,6 +12,9 @@ Este README descreve a implementação revista em **7 de outubro de 2026**, com 
 - [Contas, favoritos e notificações](#contas-favoritos-e-notificações)
 - [Revistas e artigos científicos](#revistas-e-artigos-científicos)
 - [Painel administrativo](#painel-administrativo)
+- [Equipa, funções e trabalho editorial](#equipa-funções-e-trabalho-editorial)
+- [Remoções e histórico do fundador](#remoções-e-histórico-do-fundador)
+- [Notificações internas unificadas](#notificações-internas-unificadas)
 - [Submissões e produção editorial](#submissões-e-produção-editorial)
 - [Conteúdo, imagens e vídeos](#conteúdo-imagens-e-vídeos)
 - [Integrações](#integrações)
@@ -28,6 +31,13 @@ Este README descreve a implementação revista em **7 de outubro de 2026**, com 
 
 As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em produção depende de um deploy bem-sucedido e da configuração dos serviços externos.
 
+- **Equipa e governação:** colaboradores, contactos, convites registados, mandatos gerais ou de revista, 11 funções padrão e 24 permissões independentes; configurações personalizadas preservadas.
+- **Trabalho editorial:** tarefas e comentários, documentos privados com aceite, revisão independente de artigos, atribuição de revisores científicos por versão e relatórios de actividade.
+- **Remoções do fundador:** arquivo lógico de submissões, colaboradores, documentos e relatórios, confirmação, auditoria, histórico privado e reatribuição de responsabilidades.
+- **Notificações unificadas:** sino e página com a mesma caixa por destinatário, contador, leitura individual/global, eliminação própria, persistência e deduplicação.
+- **Interface administrativa:** Área de trabalho adaptada aos acessos; Equipa e convites, Funções e permissões, Histórico de remoções e Notificações internas em cartões responsivos; tipografia compacta, sino no topo e barra lateral recolhível com ícones, preferência persistente e deslocamento interno.
+- **Correcções editoriais:** reatribuição de revisor exige nova revisão e cancela aprovação/agendamento; publicação programada gera auditoria e avisos; repetição do mesmo parecer não duplica a entrega.
+- **Login administrativo:** recuperação de token CSRF expirado no login e no desafio de 2FA, preservando a verificação de credenciais e o segundo factor.
 - **Segurança administrativa:** sessões associadas às credenciais e permissões atuais; alterações invalidam sessões anteriores. Desafios de 2FA expiram em cinco minutos, incluindo acesso às pré-visualizações.
 - **PDF científico:** cabeçalho «Revista Científica Sussurros do Saber», nomes e ORCID sem descrições de autores no PDF, cache privado limitado, limites de pedidos e controlo de geração concorrente.
 - **Operação e recuperação:** healthcheck com resposta 503 em falhas da base de dados, verificação de saúde no Docker, baseline Alembic histórica e ensaio de restauração PostgreSQL numa base isolada.
@@ -44,6 +54,8 @@ A aplicação renderiza páginas no servidor e acrescenta interacções no naveg
 | Componente | Responsabilidade |
 | --- | --- |
 | `app.py` | Configuração Flask, páginas públicas, Markdown, SEO, APIs, PDF, cabeçalhos, inicialização e alterações leves do esquema |
+| `governance.py` / `governance_models.py` | Equipa, funções, mandatos, tarefas, documentos, pareceres, fluxo de artigos, auditoria e remoções |
+| `internal_notices.py` | Destinatários, eventos, deduplicação e revalidação de acesso aos avisos internos |
 | `admin.py` | Autenticação administrativa, 2FA, gestão editorial, utilizadores, comentários e exportações |
 | `models.py` | Artigos, autores, categorias, revistas, políticas, administradores, comentários, contactos e subscritores |
 | `reader_accounts.py` | Sessão do leitor, favoritos por conta, biblioteca, acompanhamento e notificações |
@@ -118,12 +130,12 @@ As contas públicas reutilizam `Researcher`, também usado nas submissões; são
 | Guardar revista/publicação | Preferência `saved` em `ReaderJournal` |
 | Biblioteca | `/conta/biblioteca` mostra favoritos ainda públicos |
 | Acompanhar | Preferência `following`; requer e-mail confirmado para activar |
-| Notificações | Actualizações de publicações acompanhadas; contador compara `updated_at` com a revisão reconhecida pelo leitor |
+| Notificações | Caixa persistente por destinatário, actualizações de artigos acompanhados, contador de avisos activos não lidos e cartões de acompanhamento |
 | Marcar actualização lida | Reconhece a revisão efectivamente apresentada, sem reconhecer uma edição posterior |
 | Importar favoritos antigos | Até 100 IDs/slugs por lote; navegador remove a cópia antiga só após confirmação de todos os lotes |
 | Sair | POST de logout das submissões, com protecção CSRF |
 
-A página de notificações lista publicações acompanhadas e distingue actualizações; estas notificações são internas ao site. Não há push nem e-mails de acompanhamento implementados. Os favoritos editoriais actuais não dependem apenas do armazenamento local.
+A página de notificações reúne avisos internos e cartões de publicações acompanhadas. As actualizações de artigos acompanhados são materializadas por conta e revisão, sem duplicação; o utilizador pode ler ou eliminar o aviso sem apagar a publicação ou desactivar o acompanhamento. Estas notificações são internas ao site. Não há push nem e-mails de acompanhamento implementados. Os favoritos editoriais actuais não dependem apenas do armazenamento local.
 
 ### Login Google opcional
 
@@ -197,6 +209,119 @@ O administrador principal pode ser definido por variáveis de ambiente; contas a
 
 Contas administrativas na base de dados precisam concluir a configuração de 2FA antes de usar as áreas protegidas. A interface produz oito códigos de recuperação, guardados como hashes. A conta gerida por ambiente usa `ADMIN_TOTP_SECRET`; a configuração não é feita nesse formulário. A inactividade administrativa expira por padrão após 15 minutos, ajustável entre 1 e 120. Sessões e desafios são associados às credenciais/permissões atuais; alterações invalidam o acesso anterior. O desafio de 2FA expira em cinco minutos. Pré-visualizações HTML, Markdown e PDF exigem as mesmas protecções do painel. Ver [docs/security-hardening-20261006.md](docs/security-hardening-20261006.md).
 
+## Equipa, funções e trabalho editorial
+
+### Colaboradores e mandatos
+
+**Equipa e convites** regista perfil, áreas, instituição, disponibilidade, estado, contactos e histórico de abordagem. O convite é um estado do membro; não há envio automático de convite externo. O fundador associa a conta administrativa e o perfil de autor, regista o aceite e cria/termina mandatos com função, datas e âmbito geral ou revista. O substituto indicado não herda acesso automaticamente.
+
+As permissões efectivas são consultadas na próxima requisição: conta e membro activos, aceite, mandato vigente, revista, autoria/atribuição, conflitos e fase editorial. Múltiplos mandatos somam poderes **por permissão e dentro do seu âmbito**; atribuir na revista A e decidir na B não permite decidir na A. Recursos institucionais sem revista exigem mandato geral. Menus, formulários, rotas e APIs aplicam essas verificações. Conta inactiva ou remoção bloqueia sessões abertas. As funções personalizadas e os identificadores guardados são preservados; um identificador sem implementação não cria um poder novo.
+
+### Catálogo de funções padrão
+
+Os padrões abaixo vêm de `DEFAULT_ROLES`; as escolhas guardadas pelo fundador prevalecem. A base de produção pode conter outras funções personalizadas.
+
+| Código | Nome | Permissões padrão |
+| --- | --- | --- |
+| `direction` | Direcção institucional | `team.manage`, `tasks.manage`, `reports.read`, `contacts.manage`, `subscribers.manage` |
+| `coordination` | Coordenação do portal | `tasks.manage`, `reports.read`, `article.edit`, `authors.manage`, `categories.manage`, `comments.manage` |
+| `chief_editor` | Editor científico principal | `manuscript.read`, `manuscript.edit`, `manuscript.assign`, `manuscript.decide`, `manuscript.production`, `submissions.configure`, `journal.manage`, `journal.publish`, `policies.manage`, `reports.read` |
+| `associate_editor` | Editor associado | `manuscript.edit` |
+| `reviewer` | Revisor científico | `manuscript.review` |
+| `author` | Autor do portal | `article.write` |
+| `portal_reviewer` | Revisor do portal | `article.review` |
+| `portal_editor` | Editor do portal | `article.edit`, `article.approve` |
+| `publisher` | Responsável de publicação | `article.publish` |
+| `secretariat` | Secretariado editorial | `tasks.manage`, `manuscript.read` |
+| `production` | Produção científica | `manuscript.production` |
+
+### Catálogo das 24 permissões
+
+| Identificador | Rótulo | Âmbito |
+| --- | --- | --- |
+| `team.manage` | Gerir equipa, convites e mandatos | Geral |
+| `tasks.manage` | Distribuir tarefas | Geral |
+| `reports.read` | Consultar relatórios e auditoria | Geral |
+| `article.write` | Escrever artigos próprios | Geral |
+| `article.edit` | Editar todos os artigos | Geral |
+| `article.review` | Rever artigos atribuídos | Geral |
+| `article.approve` | Aprovar artigos revistos | Geral |
+| `article.publish` | Publicar artigos aprovados | Geral |
+| `article.delete` | Eliminar artigos | Geral |
+| `authors.manage` | Gerir autores | Geral |
+| `categories.manage` | Gerir categorias | Geral |
+| `journal.manage` | Gerir revistas | Revista ou geral |
+| `journal.publish` | Publicar revistas | Revista ou geral |
+| `manuscript.read` | Consultar submissões da revista | Revista ou geral |
+| `manuscript.edit` | Tratar submissões atribuídas | Revista ou geral |
+| `manuscript.assign` | Atribuir editores e revisores | Revista ou geral |
+| `manuscript.decide` | Emitir decisões científicas | Revista ou geral |
+| `manuscript.production` | Preparar artigos científicos | Revista ou geral |
+| `manuscript.review` | Emitir pareceres atribuídos | Revista ou geral |
+| `submissions.configure` | Configurar submissões | Revista ou geral |
+| `policies.manage` | Gerir políticas editoriais | Geral |
+| `comments.manage` | Moderar comentários | Geral |
+| `contacts.manage` | Gerir contactos | Geral |
+| `subscribers.manage` | Gerir subscritores | Geral |
+
+Consultar [a matriz completa de interfaces, rotas e acções](docs/PERMISSIONS_AUDIT.md). Consultar, editar, rever, aprovar, publicar e eliminar continuam poderes separados. «Gerir subscritores» não significa gerir submissões; não existe `submissions.manage`. Alterar funções, ligar contas, atribuir/terminar mandatos e as remoções especiais continuam reservados ao fundador.
+
+### Área de trabalho, tarefas e documentos
+
+- **Área de trabalho:** mostra responsabilidades, tarefas, prazos, documentos e acessos efectivos. «Distribuir tarefas» leva ao formulário de atribuição para quem tem `tasks.manage`.
+- **Tarefas:** responsável, título, descrição e prazo; estados Pendente, Em curso, Bloqueada, Concluída e Cancelada; comentários e reatribuição. O colaborador conserva a actualização das próprias tarefas com mandato válido; o gestor acompanha as tarefas autorizadas.
+- **Documentos da equipa:** texto e anexos PDF/DOCX/TXT validados, até 8 MB; acesso privado ao destinatário/gestor autorizado. O aceite guarda utilizador e data da versão documental; não é assinatura digital certificada.
+- **Relatórios e auditoria:** actividade, tarefas concluídas/atrasadas e pareceres por membro; últimos 200 eventos apresentados. Relatórios guardados preservam uma fotografia de até 1.000 eventos, separada dos eventos originais.
+- **Lembretes:** agendar `flask --app app notificar-prazos-equipa` diariamente num único worker para tarefas, pareceres e fim de mandato. É idempotente e interno; não funciona como cron autónomo nem envia e-mails.
+
+### Revisão independente e avaliação científica
+
+O **Fluxo editorial** do artigo de divulgação distingue rascunho, submissão, revisão, correcções, aprovação, programação e publicação. Exige perfil de autor associado, revisor diferente do autor e aprovador diferente do autor/revisor. A aprovação não publica. Publicar ou programar exige aprovação registada; o responsável de publicação não ganha edição do texto. Alterar conteúdo aprovado exige reabertura e nova revisão. Reatribuir o revisor cancela aprovação/programação e preserva o parecer anterior. Artigos legados sem fluxo mantêm compatibilidade; artigos com pareceres não podem ser simplesmente eliminados.
+
+Na submissão científica, o detalhe contém atribuição de editor e acesso à atribuição de revisores. **Meus pareceres** apresenta os convites próprios por versão: aceitar, recusar, declarar conflito e entregar recomendação fundamentada. Ficheiros só ficam acessíveis após aceite, com mandato válido, versão corrente e fase autorizada. O parecer não decide automaticamente o manuscrito. Decidir, preparar o rascunho científico e publicar continuam operações distintas, limitadas à revista de origem. Esta revisão permite autoria identificável; não promete avaliação cega.
+
+### Interface administrativa
+
+Cartões e indicadores em Equipa e convites, Funções e permissões, Histórico de remoções e Notificações internas; formulários agrupados, foco visível e disposição adaptada a computador/telemóvel. A barra lateral recolhe e expande pelo botão, mantém apenas os ícones quando recolhida e guarda a preferência no navegador. A navegação usa deslocamento interno, com espaço para os ícones e sem barra exterior duplicada. A tipografia foi reduzida e o sino reposicionado no topo. A aparência da barra de deslocamento depende também do sistema/navegador. O logótipo administrativo aparece em branco sobre o fundo azul, preservando o símbolo e a transparência, também com a barra recolhida e no telemóvel.
+
+## Remoções e histórico do fundador
+
+As quatro operações abaixo exigem o mecanismo existente de identificação do fundador, sessão válida, 2FA e POST com CSRF. Permissões gerais de gestão não as concedem. A confirmação identifica o item e consequências; Cancelar/GET não altera dados. A operação lógica e a auditoria são persistidas juntas; repetir a mesma remoção não duplica o evento.
+
+| Operação | Acesso | Preservação |
+| --- | --- | --- |
+| Eliminar submissão | Lista e detalhe | Retira dos fluxos activos e bloqueia novas acções; conserva versões, anexos, pareceres, decisões, publicação e DOI |
+| Remover colaborador | Equipa e convites | Termina acesso e mandatos, encerra convite associado e invalida sessão na próxima requisição; conserva conta pública independente, autoria, artigos e pareceres; bloqueia remoção do fundador |
+| Eliminar documento | Documentos da equipa, com ou sem anexo | Impede novos aceites e retira das listas activas; conserva texto, versão, anexo, datas e aceites anteriores |
+| Eliminar relatório | Relatórios guardados | Arquiva só a fotografia individual; conserva todos os eventos de auditoria de origem |
+
+**Histórico de remoções** é exclusivo do fundador, com consulta e downloads preservados quando aplicável. **Responsabilidades** identifica tarefas, submissões, pareceres em curso e artigos pendentes do colaborador. A reatribuição valida mandato, revista e conflitos, preserva autoria e histórico; parecer em curso é cancelado e substituído por nova atribuição. Parecer já entregue e artigo publicado não são reatribuídos por esse fluxo. Não há eliminação automática de ficheiros partilhados ou artigos publicados. Ver [o guia de remoções](docs/LIFECYCLE_NOTIFICATIONS.md).
+
+## Notificações internas unificadas
+
+`StaffNotice` é a caixa persistente por destinatário; não é a fila SMTP `EditorialNotification`. O sino e a página administrativa consultam os mesmos dados. Investigadores têm caixa própria; leitores recebem também actualizações dos artigos acompanhados. Não há novos canais de e-mail, WhatsApp ou push.
+
+| Eventos | Destinatários, conforme acesso vigente |
+| --- | --- |
+| Convites, estado, funções e mandatos | Membro associado e responsáveis institucionais relevantes |
+| Atribuição/reatribuição, comentário e estado de tarefa | Responsável e gestores autorizados; anterior responsável quando elegível |
+| Documento disponibilizado, aceite e remoção | Destinatário e responsáveis autorizados conforme evento |
+| Submissão/versão, editor, parecer, decisão e produção | Intervenientes científicos no âmbito da revista, sem expor notas/pareceres ao autor |
+| Submissão, revisão, aprovação, programação/publicação de artigo | Responsáveis do fluxo com mandato e destinatários da fase |
+| Relatório e remoções | Fundador e intervenientes autorizados conforme recurso |
+| Actualização de artigo acompanhado | Leitor verificado que acompanha publicação pública |
+
+Avisos são criados na transacção da operação e só persistem após sucesso, com chave única por evento/destinatário. Não há recriação retroactiva de avisos antigos nem ressurreição de avisos eliminados. Múltiplos mandatos não duplicam o destinatário. Descrição e ligação respeitam o acesso; abrir revalida autorização e apresenta indisponibilidade quando o recurso foi removido ou o acesso revogado.
+
+- Ordem recente primeiro; título, descrição, data e ligação quando disponível.
+- Sino com cinco avisos recentes; página paginada com 30; contador de todos os avisos activos não lidos.
+- Ler individualmente, ler todos e eliminar aviso próprio pela barra/página, por POST com CSRF. Eliminação lógica afecta só o destinatário, persiste após voltar a entrar e não apaga o recurso ou avisos alheios; repetição é idempotente.
+- Actualização ao abrir e a cada 60 segundos numa aba visível, sem pedidos sobrepostos; barra/página sincronizam o resumo.
+- Estados vazio/carregamento/erro, indicação acessível do contador, foco e adaptação móvel; formulários funcionam sem JavaScript.
+- Avisos de artigos ocultados/acompanhamentos desactivados ficam fora da caixa pública. Apagar aviso não desactiva acompanhamento; nova revisão pode gerar outro aviso.
+
+Regras completas de destinatários e limites: [docs/LIFECYCLE_NOTIFICATIONS.md](docs/LIFECYCLE_NOTIFICATIONS.md).
+
 ## Submissões e produção editorial
 
 ### Acesso e configuração
@@ -235,7 +360,7 @@ Pode guardar rascunhos, retomar o processo e consultar o histórico. Há no máx
 
 Decisões exigem observação e respeitam a tabela de transições no servidor. Existem atribuição de editor e notas internas. Eventos guardam actor, acção, estado anterior/novo, nota, data e visibilidade para o autor. Notas internas não são expostas ao autor. Confirmações e decisões são notificações transaccionais, distintas das notificações de acompanhamento do leitor.
 
-`ReviewAssignment` é uma base para futura atribuição de revisores. Não existe portal completo de revisores nem garantia de anonimização/blind review implementada.
+A avaliação científica usa `StaffPeerReview`, com convite por versão, aceite, conflitos e parecer fundamentado. `ReviewAssignment` permanece como estrutura legada; não é o mecanismo activo de pareceres. Os originais podem identificar os autores: não existe garantia de anonimização nem revisão duplamente cega.
 
 ### Anexos privados
 
@@ -334,7 +459,14 @@ As ligações de Facebook, Instagram, YouTube, LinkedIn, X e WhatsApp podem ser 
 | `Manuscript`, `ManuscriptAuthor` | Processo editorial, metadados/declaracões e autores ordenados |
 | `ManuscriptVersion`, `ManuscriptFile` | Snapshots, versões e anexos privados com payload/hash |
 | `EditorialEvent` | Histórico de acções, decisões e notas com visibilidade |
-| `ReviewAssignment` | Fundação para funcionalidade futura de revisores |
+| `ReviewAssignment` | Estrutura legada, distinta dos pareceres activos em `StaffPeerReview` |
+| `TeamRole`, `TeamMember`, `TeamAppointment`, `StaffContactLog` | Funções/permissões, colaboradores, mandatos e histórico de contactos |
+| `StaffTask`, `TaskComment` | Responsável, prazo, estado e comentários de tarefas |
+| `StaffDocument` | Documento privado, anexo, versão, aceite e arquivo lógico |
+| `StaffPeerReview` | Atribuição científica por versão, conflito, aceite e parecer entregue |
+| `ArticleWorkflow`, `PortalReview` | Revisão, aprovação e publicação de artigos com histórico |
+| `StaffNotice` | Aviso por destinatário, leitura, eliminação lógica e chave de deduplicação |
+| `GovernanceAudit`, `AuditReport` | Eventos preservados e fotografias individuais de relatórios |
 | `EditorialNotification` | Fila transaccional de e-mail e estado de entrega |
 | `PublicationAsset` | Cópias sanitizadas de figuras ligadas à publicação |
 
@@ -342,7 +474,17 @@ SQLite é o padrão local (`sqlite:///sussurros.db`, normalmente na pasta `insta
 
 Ao importar a aplicação, `AUTO_SCHEMA_UPGRADE=true` (padrão quando ausente) permite `db.create_all()` e alterações leves de colunas antes das consultas ORM. O seed pode criar exemplos quando as tabelas de conteúdo estão vazias. `create_all()` não migra sozinho colunas de tabelas antigas.
 
-Há uma baseline Alembic histórica de 30/09/2026: `alembic upgrade head` cria esse esquema numa base vazia ou valida as tabelas, colunas, tipos e relações históricos numa base existente, aceitando acréscimos posteriores. Um esquema histórico incompleto é recusado; o downgrade destrutivo está bloqueado. **Esta baseline não cobre todas as funcionalidades adicionadas posteriormente. Mantenha `AUTO_SCHEMA_UPGRADE=true` até existirem migrações explícitas para o esquema atual completo.** Fazer backup e testar numa cópia isolada antes de aplicar migrações.
+As revisões Alembic incluem a baseline histórica, `20261007_02` (governação) e `20261008_03` (remoções/notificações), actualmente o head. Acrescentam estruturas sem substituir funções personalizadas, permissões ou conteúdo. A baseline valida o esquema histórico existente; um esquema incompatível deve ser investigado antes de prosseguir. O downgrade destrutivo é recusado.
+
+No **terminal do serviço da aplicação no Coolify**, com a versão nova disponível, o ambiente apontado à base correcta e backup previamente verificado, aplicar antes de iniciar os novos processos:
+
+```bash
+python -m alembic current
+python -m alembic upgrade head
+python -m alembic current
+```
+
+Resultado esperado nesta versão: `20261008_03 (head)`. Ensaiar primeiro numa cópia isolada. `AUTO_SCHEMA_UPGRADE` é compatibilidade de arranque, não substitui a migração explícita; não alterar a configuração de produção apenas para resolver um problema visual. Guias: [governação](docs/STAFF_GOVERNANCE.md) e [remoções/notificações](docs/LIFECYCLE_NOTIFICATIONS.md).
 
 Comando específico para as tabelas Google/favoritos:
 
@@ -533,7 +675,7 @@ Testes Python:
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-Incluem plataforma, regressões do site, submissões, contas, login Google, conteúdo editorial, metadados e PDF. Usar uma base de teste isolada: importar `app` inicializa o esquema e pode criar dados iniciais.
+Incluem plataforma, regressões do site, submissões, contas, login Google, conteúdo editorial, metadados, PDF, matriz das 24 permissões, contas inactivas, mandatos expirados/múltiplos, âmbito de revista, concessão/revogação, recursos próprios/atribuídos, tarefas, aceites, transições editoriais, remoções e notificações (propriedade, deduplicação, rollback, leitura e persistência). Usar uma base de teste isolada: importar `app` inicializa o esquema e pode criar dados iniciais.
 
 Testes de navegador:
 
@@ -548,20 +690,20 @@ O Playwright espera aplicação em `http://127.0.0.1:5000`, com fixtures/configu
 
 A CI de `main`/pull requests executa testes Python, auditoria pip, build CSS, auditoria npm de dependências de produção, navegador Chromium e upload de diagnóstico. O workflow separado constrói Docker. A CI inclui ensaios de baseline e restauração PostgreSQL 18 com dados sintéticos, verificando preservação do conteúdo e isolamento da base restaurada. Dependabot está configurado para dependências do projecto. Ver o resultado do commit específico no GitHub Actions; a presença de testes não significa que passaram num deployment diferente.
 
-[docs/site-audit-20261005.md](docs/site-audit-20261005.md) guarda uma auditoria histórica com escopo/commit e limitações próprias. Não usar as contagens ou observações daquele documento como prova automática do estado actual. Nesta revisão do README, a verificação é documental contra o código, não um novo ensaio completo de produção.
+[docs/site-audit-20261005.md](docs/site-audit-20261005.md) guarda uma auditoria histórica com escopo/commit e limitações próprias. Não usar as contagens ou observações daquele documento como prova automática do estado actual. Consultar também [a auditoria funcional de 08/10](docs/PORTAL_AUDIT_20261008.md), [a matriz de permissões](docs/PERMISSIONS_AUDIT.md) e [a recuperação do login](docs/ADMIN_LOGIN_RECOVERY_20261008.md). Testes de navegador usam contas/dados sintéticos, incluindo computador e telemóvel, tarefas, aceites, remoções, notificações e barra lateral. Nesta revisão do README, a verificação é documental contra o código, não um novo ensaio completo de produção. Google real, uploads Cloudinary reais, contas de homologação, SMTP, backups e configuração efectiva do Coolify continuam a exigir validação no ambiente correspondente.
 
 ## Limites da implementação
 
 - Publicação científica usa `Journal` como registo combinado; template ou campo legado sem rota activa não comprova um módulo completo de edições.
 - DOI/ISSN, licenças e histórico são metadados editoriais. Não há emissão Crossref, depósito DOI, registo ISSN, indexação automática ou verificação externa implementados.
-- Há estados de revisão e decisões, mas não um portal funcional de revisores/blind review.
+- Há portal de pareceres atribuídos, com controlo de versão e conflito; não há anonimização garantida nem revisão duplamente cega.
 - Newsletter guarda inscrições; contacto guarda mensagens. Não existe motor de campanhas ou encaminhamento automático desses contactos.
 - Notificações de acompanhamento são internas; e-mails editoriais dependem de SMTP e do comando agendado.
 - PDF é uma composição própria e a conversão DOCX é limitada. Publicar exige revisão humana do conteúdo e das figuras.
 - O catálogo educativo é definido no código; as preferências educativas locais não sincronizam entre dispositivos.
 - O assistente chama um modelo com uma pergunta, sem pesquisa de fontes ou contexto completo da base editorial.
 - Programação de artigos é verificada em pedidos, não por cron autónomo. Revistas não têm agendamento de publicação equivalente.
-- A baseline Alembic histórica não substitui migrações completas do esquema atual. Não há downgrade automático destrutivo, antivírus de anexos ou prova de configuração/backup real de infraestrutura apenas pela leitura deste repositório.
+- A baseline histórica e as revisões posteriores devem ser aplicadas e verificadas para o esquema desta versão. Não há downgrade automático destrutivo, antivírus de anexos ou prova de configuração/backup real de infraestrutura apenas pela leitura deste repositório.
 
 ## Inventário completo de rotas
 
@@ -651,6 +793,33 @@ Inventário dos decoradores de rotas do código revisto. `GET` inclui o tratamen
 | GET | `/admin/contactos/exportar.csv` | `export_contacts` |
 | GET | `/admin/subscritores/exportar.csv` | `export_subscribers` |
 
+### Equipa, governação e notificações administrativas
+
+| Método | Rota | Handler em `governance.py` |
+| --- | --- | --- |
+| GET, POST | `/admin/equipa` | `team` |
+| POST | `/admin/equipa/<int:ident>/mandatos` | `appointment` |
+| POST | `/admin/mandatos/<int:ident>/terminar` | `end_appointment` |
+| GET, POST | `/admin/funcoes` | `roles` |
+| GET, POST | `/admin/trabalho` | `workspace` |
+| GET, POST | `/admin/documentos-equipa` | `documents` |
+| GET | `/admin/documentos-equipa/<int:ident>/ficheiro` | `document_file` |
+| POST | `/admin/documentos-equipa/<int:ident>/aceitar` | `accept_document` |
+| GET, POST | `/admin/notificacoes` | `notifications` |
+| GET | `/admin/notificacoes/<int:ident>/abrir` | `open_notice` |
+| GET | `/admin/api/notificacoes` | `notice_summary` |
+| GET | `/admin/relatorios-equipa` | `reports` |
+| GET, POST | `/admin/pareceres` | `reviews` |
+| GET, POST | `/admin/pareceres/<int:ident>` | `review_detail` |
+| GET | `/admin/pareceres/<int:ident>/ficheiros/<int:file_id>` | `review_file` |
+| GET, POST | `/admin/fluxo-artigos/<int:ident>` | `article_workflow` |
+| GET, POST | `/admin/remover/<kind>/<int:ident>` | `remove_record` |
+| GET | `/admin/historico-remocoes` | `removed_history` |
+| GET | `/admin/historico-submissoes/<int:ident>` | `archived_manuscript` |
+| POST | `/admin/relatorios-equipa/guardar` | `save_report` |
+| GET | `/admin/relatorios-equipa/<int:ident>` | `report_detail` |
+| GET, POST | `/admin/equipa/<int:ident>/responsabilidades` | `responsibilities` |
+
 ### Contas e biblioteca
 
 | Método | Rota | Handler em `reader_accounts.py` |
@@ -662,7 +831,7 @@ Inventário dos decoradores de rotas do código revisto. `GET` inclui o tratamen
 | POST | `/conta/importar-favoritos` | `import_favorites` |
 | GET, POST | `/conta/revistas/<slug>` | `preference` |
 | GET | `/conta/biblioteca` | `library` |
-| GET | `/conta/notificacoes` | `notifications` |
+| GET, POST | `/conta/notificacoes` | `notifications` |
 
 ### Login Google
 
@@ -697,6 +866,9 @@ Inventário dos decoradores de rotas do código revisto. `GET` inclui o tratamen
 | GET, POST | `/admin/submissoes/<int:ident>` | `submission_detail` |
 | POST | `/admin/submissoes/<int:ident>/preparar` | `prepare_publication` |
 | GET | `/submissoes/figuras/<int:asset_id>` | `publication_figure` |
+| GET, POST | `/submissoes/notificacoes` | `internal_notifications` |
+| GET | `/submissoes/notificacoes/<int:ident>/abrir` | `open_internal_notice` |
+| GET | `/submissoes/api/notificacoes` | `internal_notice_summary` |
 
 ### Protocolo das APIs principais
 
@@ -720,4 +892,5 @@ Os formulários e JavaScript do repositório definem os nomes exactos dos campos
 ## Como manter esta documentação
 
 Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates ou tarefas de operação, actualizar esta documentação e os guias relacionados no mesmo trabalho. Separar claramente o que está implementado, o que é configuração do deployment e o que ainda é futuro. Não marcar uma integração como validada só porque há um botão ou uma variável.
+
 
