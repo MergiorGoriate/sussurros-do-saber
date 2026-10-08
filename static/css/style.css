@@ -1742,3 +1742,8 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 .journal-article-meta .journal-doi-link{color:inherit;text-decoration:underline;text-underline-offset:.2em;overflow-wrap:anywhere}
 .journal-article-meta .journal-doi-link:hover{color:var(--primary,#1e4e8c)}
 .journal-article-meta .journal-doi-link:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:2px}
+
+/* Partilha científica: novas redes sem ultrapassar ecrãs pequenos. */
+.journal-article-topline{flex-wrap:wrap;}
+.journal-article-share{flex-wrap:wrap;max-width:100%;}
+@media(max-width:600px){.journal-article-share{gap:4px;}.journal-article-share a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;}}
