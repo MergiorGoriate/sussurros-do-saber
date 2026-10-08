@@ -12,7 +12,7 @@ with app.app_context():
     if not category:
         category=Category(name='Teste editorial',slug='workflow-'+token)
         db.session.add(category)
-    member=TeamMember(author=author,name=author.name,status='active',accepted_at=utcnow())
+    member=TeamMember(author=author,name=author.name,email='workflow-'+token+'@example.org',status='active',accepted_at=utcnow())
     db.session.add_all([author,member]);db.session.flush()
     article=Article(title='Artigo isolado para validar o fluxo editorial',slug='workflow-'+token,author_id=author.id,category_id=category.id,summary='Resumo científico de teste para a interface editorial.',body='Conteúdo científico de teste. '*30,status='draft')
     db.session.add(article);db.session.flush()
