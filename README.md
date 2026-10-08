@@ -35,17 +35,32 @@ As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em 
 - **Trabalho editorial:** tarefas e comentários, documentos privados com aceite, revisão independente de artigos, atribuição de revisores científicos por versão e relatórios de actividade.
 - **Remoções do fundador:** arquivo lógico de submissões, colaboradores, documentos e relatórios, confirmação, auditoria, histórico privado e reatribuição de responsabilidades.
 - **Notificações unificadas:** sino e página com a mesma caixa por destinatário, contador, leitura individual/global, eliminação própria, persistência e deduplicação.
-- **Interface administrativa:** Área de trabalho adaptada aos acessos; Equipa e convites, Funções e permissões, Histórico de remoções e Notificações internas em cartões responsivos; tipografia compacta, sino no topo e barra lateral recolhível com ícones, preferência persistente e deslocamento interno.
+- **Interface administrativa:** Área de trabalho adaptada aos acessos; Equipa e convites, Funções e permissões, Histórico de remoções e Notificações internas em cartões responsivos; tipografia compacta, sino no topo, logótipo branco e barra lateral recolhível com ícones, preferência persistente e deslocamento interno. No telemóvel, cabeçalho de largura completa e menu horizontal com os últimos itens alcançáveis.
 - **Correcções editoriais:** reatribuição de revisor exige nova revisão e cancela aprovação/agendamento; publicação programada gera auditoria e avisos; repetição do mesmo parecer não duplica a entrega.
 - **Login administrativo:** recuperação de token CSRF expirado no login e no desafio de 2FA, preservando a verificação de credenciais e o segundo factor.
 - **Segurança administrativa:** sessões associadas às credenciais e permissões atuais; alterações invalidam sessões anteriores. Desafios de 2FA expiram em cinco minutos, incluindo acesso às pré-visualizações.
 - **PDF científico:** cabeçalho «Revista Científica Sussurros do Saber», nomes e ORCID sem descrições de autores no PDF, cache privado limitado, limites de pedidos e controlo de geração concorrente.
 - **Operação e recuperação:** healthcheck com resposta 503 em falhas da base de dados, verificação de saúde no Docker, baseline Alembic histórica e ensaio de restauração PostgreSQL numa base isolada.
-- **Fluxo de artigos:** estados «Em revisão» e «Aprovado para publicação», que permanecem privados até publicação.
+- **Fluxo de artigos:** estados «Em revisão» e «Aprovado para publicação», que permanecem privados até publicação; interface com cinco etapas, responsáveis, conteúdo recolhível, acções autorizadas e histórico de pareceres.
+- **Formulários móveis:** criação/edição de artigos e revistas e políticas editoriais com grelhas que respeitam a largura disponível; ferramentas e tabelas deslocam-se nos seus próprios contentores, sem alargar a página.
 - **GitHub Packages:** publicação de imagens Docker no GHCR a partir de Releases ou execução manual para uma tag existente.
 - **Leitura e dispositivos móveis:** favoritos/notificações por conta em cartões responsivos, índice recolhível no telemóvel e aberto no computador, carregamento diferido de publicidade e fontes sem bloquear a apresentação.
-- **Presença digital:** ligações Bluesky e Reddit no rodapé e meta tags de verificação Bing/Yandex.
+- **Presença digital:** perfis Bluesky e Reddit no rodapé, botões de partilha nas páginas de artigos de divulgação e no cabeçalho dos artigos científicos, e meta tags de verificação Bing/Yandex.
 - **Manutenção:** remoção de quatro ficheiros legados sem referências de runtime. A compilação mantém Tailwind 3.4.19; migrar para Tailwind 4 requer adaptar CLI, configuração e CSS, não apenas mudar a dependência.
+
+### Últimas alterações integradas
+
+A revisão anterior do README já documentava equipa, funções, remoções e notificações até ao [PR #168](https://github.com/MergiorGoriate/sussurros-do-saber/pull/168). As alterações seguintes também estão integradas na `main`, conforme o estado dos PRs consultado em 8 de outubro de 2026:
+
+| PR | Alteração |
+| --- | --- |
+| [#169](https://github.com/MergiorGoriate/sussurros-do-saber/pull/169) | Barra lateral móvel de largura completa, controlos separados e navegação horizontal nos estados expandido/recolhido |
+| [#170](https://github.com/MergiorGoriate/sussurros-do-saber/pull/170) | Interface do Fluxo editorial com etapas, responsáveis, cartões, conteúdo recolhível e histórico |
+| [#171](https://github.com/MergiorGoriate/sussurros-do-saber/pull/171) | Partilha de artigos de divulgação no Bluesky e Reddit, incluindo alternativa sem JavaScript |
+| [#172](https://github.com/MergiorGoriate/sussurros-do-saber/pull/172) | Partilha no Bluesky e Reddit no cabeçalho dos artigos científicos, com grupo adaptado ao telemóvel |
+| [#173](https://github.com/MergiorGoriate/sussurros-do-saber/pull/173) | Correcção da largura dos formulários de criação/edição de artigos, revistas e políticas editoriais |
+
+Estes cinco PRs não exigem migrações adicionais. A integração no GitHub não confirma automaticamente que a mesma versão esteja em execução no Coolify.
 
 ## Visão geral e arquitectura
 
@@ -91,7 +106,7 @@ A execução de referência usa Python 3.11 e Node 22. As dependências efectiva
 - Os três artigos sugeridos são publicações recentes diferentes do artigo aberto; não existe motor de recomendação semântica.
 - Ligações antigas por ID, incluindo `artigo-N`, redireccionam para o slug quando a publicação existe. Rascunhos e artigos programados ainda não publicados ficam fora das consultas públicas.
 - Perfis de autores incluem os campos preenchidos: função, apresentação, formação, instituição, biografia, interesses, projectos, publicações, experiência editorial, fotografia e ligações académicas. A lista respeita activação/ordenação; o perfil reúne artigos publicados do autor.
-- Ferramentas de leitura e partilha incluem guardar por conta, partilhar por WhatsApp, Facebook, X, LinkedIn, Telegram ou e-mail e copiar a ligação. Alguns recursos usam APIs do navegador, como a área de transferência, com alternativa manual em caso de falha.
+- Ferramentas de leitura e partilha incluem guardar por conta, partilhar por WhatsApp, Facebook, X, LinkedIn, Telegram, Bluesky, Reddit ou e-mail e copiar a ligação. Alguns recursos usam APIs do navegador, como a área de transferência, com alternativa manual em caso de falha.
 
 ### Comentários, contacto e newsletter
 
@@ -161,6 +176,8 @@ O índice é construído a partir das secções do conteúdo. No computador, o p
 
 O botão de citação abre uma referência construída com autores, ano, título, revista, edição e DOI ou URL, com opção de copiar. É uma referência de apoio; conferir a norma bibliográfica exigida antes de a usar. A acção de proposta no cabeçalho encaminha ao contacto com assunto; o portal privado de submissões constitui um fluxo separado.
 
+O cabeçalho científico inclui botões de partilha no Bluesky e Reddit. As ligações usam o título científico e a URL pública, codificados para o destino, com rótulos acessíveis e abertura em nova aba protegida por `noopener noreferrer`. No telemóvel, o grupo permite quebra de linha e alvos de toque de pelo menos 44 px. Os links funcionam sem JavaScript e abrem a composição no serviço externo; a publicação depende da confirmação do utilizador nesse serviço.
+
 ### PDF
 
 O cabeçalho usa **Revista Científica Sussurros do Saber**. No bloco de autores, o PDF apresenta nomes e ligações ORCID; as descrições individuais continuam disponíveis na página do site.
@@ -202,6 +219,12 @@ O editor fornece ferramentas Markdown, imagem/vídeo, gráficos, citações e pr
 Limites relevantes: corpo de artigo/revista até 400000 caracteres, referências até 100000; campos científicos opcionais normalmente até 20000, palavras-chave científicas até 2000; políticas até 100000 por campo. O formulário de artigo valida título 5–240, resumo 10–2000, tempo de leitura 1–120 e exige autor/categoria e corpo suficiente para publicar/programar.
 
 A eliminação de uma revista ligada a submissões ou configuração editorial é bloqueada; ocultar é a alternativa para retirar acesso público sem destruir o histórico. DOI e ISSN são metadados preenchidos pela equipa, não identificadores emitidos pelo site.
+
+### Responsividade dos formulários
+
+As páginas de criar/editar artigos, criar/editar revistas e editar políticas editoriais partilham o dimensionamento responsivo dos formulários. Os elementos das grelhas, campos nativos, cartões de autores e pré-visualizações podem encolher até à largura disponível. Em ecrãs até 850 px, o formulário e o espaço de edição de artigos usam uma coluna com `minmax(0,1fr)`.
+
+A correcção evita que o tamanho mínimo intrínseco do conteúdo alargue o documento: o teste anterior reproduziu 605 px de página numa área útil de 375 px. A navegação, ferramentas, tabelas e blocos de código mantêm o deslocamento local quando necessário; o documento não deve ganhar deslocamento horizontal por causa do editor. CSS versionado no template permite carregar a versão alterada após deploy.
 
 ### Administradores e 2FA
 
@@ -283,6 +306,21 @@ Na submissão científica, o detalhe contém atribuição de editor e acesso à 
 ### Interface administrativa
 
 Cartões e indicadores em Equipa e convites, Funções e permissões, Histórico de remoções e Notificações internas; formulários agrupados, foco visível e disposição adaptada a computador/telemóvel. A barra lateral recolhe e expande pelo botão, mantém apenas os ícones quando recolhida e guarda a preferência no navegador. A navegação usa deslocamento interno, com espaço para os ícones e sem barra exterior duplicada. A tipografia foi reduzida e o sino reposicionado no topo. A aparência da barra de deslocamento depende também do sistema/navegador. O logótipo administrativo aparece em branco sobre o fundo azul, preservando o símbolo e a transparência, também com a barra recolhida e no telemóvel.
+
+No telemóvel (até 850 px), o cabeçalho administrativo ocupa a largura útil disponível. A marca reserva espaço para Recolher/Expandir e Sair; a linha do menu desloca-se horizontalmente. No estado recolhido, os links ficam representados por ícones em alvos de 48 px, com nomes acessíveis. A mudança de largura entre computador e telemóvel preserva a escolha guardada. A scrollbar fina não deve cortar os ícones nem impedir o acesso ao último item.
+
+### Fluxo editorial do portal
+
+A página `/admin/fluxo-artigos/<ident>` apresenta o processo dos artigos de divulgação em cinco etapas visuais: **Preparação, Submissão, Revisão, Aprovação e Publicação**. A etapa actual usa `aria-current="step"`; os estados internos continuam a distinguir rascunho, submissão, correcções, revisão, aprovação, programação e publicação.
+
+- Cartão inicial com título, estado, autor, revisor independente e responsável pela aprovação; atribuições em falta aparecem como «Por atribuir».
+- Mensagens específicas para correcções solicitadas, revisão concluída à espera de aprovação e publicação programada com data UTC.
+- Resumo visível e corpo do artigo recolhível em «Ler conteúdo».
+- Área «Acções disponíveis» com formulários segundo a etapa, atribuição e permissões: submeter, atribuir revisor, emitir parecer, solicitar correcções, aprovar e publicar/programar quando autorizados.
+- Histórico de pareceres com identificação do responsável, data e rótulos de estado.
+- Conteúdo/acções em duas colunas no computador e uma em ecrãs até 1000 px; etapas e responsáveis reorganizam-se em ecrãs menores, com foco visível e alvos de toque.
+
+A alteração da interface preserva as rotas, condições de autorização e tokens CSRF. Revisão, aprovação e publicação continuam operações independentes. O indicador de etapas não concede acesso nem substitui a autorização no servidor. Este processo é distinto das sete etapas de preparação das submissões científicas descritas adiante.
 
 ## Remoções e histórico do fundador
 
@@ -441,6 +479,8 @@ Agendar, por exemplo, a cada minuto, no ambiente com a mesma base e segredos. O 
 A interface gere escolhas de cookies necessários, analytics e publicidade, persiste consentimento `cookie_consent_v3` durante 180 dias e actualiza consentimento Google. Scripts opcionais seguem as escolhas previstas no código. GTM e verificação Search Console são configuráveis; atribuir os IDs da instalação efectiva. O tema claro/escuro usa `sessionStorage`, enquanto a colecção educativa usa `localStorage`.
 
 As ligações de Facebook, Instagram, YouTube, LinkedIn, X e WhatsApp podem ser definidas por ambiente. O rodapé inclui também [Bluesky](https://bsky.app/profile/sussurrosdosaber.com) e [Reddit](https://www.reddit.com/user/sussurrosdosaber/), definidos no template partilhado. A configuração de consentimento não substitui a revisão das políticas publicadas e dos scripts configurados no GTM.
+
+Os botões de partilha do Bluesky e Reddit são independentes dos links de perfil do rodapé: os primeiros preparam uma publicação com título/URL; os segundos abrem os perfis do portal. O script de partilha dos artigos mantém esses destinos e o template oferece links nativos como alternativa sem JavaScript. Não há publicação automática, integração com credenciais destas redes ou envio de conteúdo sem confirmação no destino.
 
 ## Dados e persistência
 
@@ -691,6 +731,21 @@ O Playwright espera aplicação em `http://127.0.0.1:5000`, com fixtures/configu
 A CI de `main`/pull requests executa testes Python, auditoria pip, build CSS, auditoria npm de dependências de produção, navegador Chromium e upload de diagnóstico. O workflow separado constrói Docker. A CI inclui ensaios de baseline e restauração PostgreSQL 18 com dados sintéticos, verificando preservação do conteúdo e isolamento da base restaurada. Dependabot está configurado para dependências do projecto. Ver o resultado do commit específico no GitHub Actions; a presença de testes não significa que passaram num deployment diferente.
 
 [docs/site-audit-20261005.md](docs/site-audit-20261005.md) guarda uma auditoria histórica com escopo/commit e limitações próprias. Não usar as contagens ou observações daquele documento como prova automática do estado actual. Consultar também [a auditoria funcional de 08/10](docs/PORTAL_AUDIT_20261008.md), [a matriz de permissões](docs/PERMISSIONS_AUDIT.md) e [a recuperação do login](docs/ADMIN_LOGIN_RECOVERY_20261008.md). Testes de navegador usam contas/dados sintéticos, incluindo computador e telemóvel, tarefas, aceites, remoções, notificações e barra lateral. Nesta revisão do README, a verificação é documental contra o código, não um novo ensaio completo de produção. Google real, uploads Cloudinary reais, contas de homologação, SMTP, backups e configuração efectiva do Coolify continuam a exigir validação no ambiente correspondente.
+
+### Evidência recente e verificações pendentes
+
+A [CI do PR #173](https://github.com/MergiorGoriate/sussurros-do-saber/actions/runs/37837579711), no commit `36571261504019bc41259c0b2f06fb33e4d68700`, concluiu **212 testes Python e 61 testes de navegador** com sucesso. Também passaram os ensaios PostgreSQL, a auditoria de dependências e o build Docker. Estas contagens referem-se àquela execução; a actualização documental deste README não constitui nova validação funcional.
+
+| Alteração | Cobertura automática recente |
+| --- | --- |
+| Barra lateral móvel | [staff.spec.js](tests/browser/staff.spec.js): 320, 390 e 768 px, expandir/recolher, limites úteis, último ícone alcançável e mudança para computador |
+| Fluxo editorial | [workflow.spec.js](tests/browser/workflow.spec.js): 1440, 390 e 320 px, etapas, leitura, submissão real/persistência e ausência de aprovação/publicação prematura |
+| Partilha Bluesky/Reddit | [site.spec.js](tests/browser/site.spec.js): título/URL, destinos, atributos, visibilidade e dimensões móveis/computador; alternativa sem JavaScript nos artigos de divulgação |
+| Formulários administrativos | [editors.spec.js](tests/browser/editors.spec.js): cinco páginas a 320, 390, 768 e 1440 px, ambos estados da barra, edição de campos e ferramentas de imagem/gráfico |
+
+A regressão dos formulários foi executada antes da correcção: falhou a 320 e 390 px. Depois da correcção, passou nas quatro larguras. As capturas de editar artigo e editar revista foram inspeccionadas visualmente. Os testes usam bases isoladas e fixtures de artigos/revistas não publicados, como [editor_fixture.py](tests/browser/editor_fixture.py) e [workflow_fixture.py](tests/browser/workflow_fixture.py); não usar esses scripts contra a base de produção.
+
+Continuam pendentes a confirmação no aparelho físico e no deployment efectivo do Coolify, outras famílias de navegador (por exemplo Safari/WebKit), a aparência da scrollbar nativa em Windows/Edge e login/publicação em contas reais das redes sociais. Na captura de 320 px da validação do PR #172, o botão flutuante do índice sobrepunha parte da linha de partilha na posição de deslocamento usada; os testes não comprovam ausência de todas as sobreposições com elementos flutuantes. Isso deve ser revisto no teste prático de leitura.
 
 ## Limites da implementação
 
