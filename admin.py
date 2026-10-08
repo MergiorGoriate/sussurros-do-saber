@@ -16,6 +16,7 @@ from urllib.parse import quote
 import requests
 from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.exceptions import BadRequest
 from extensions import limiter
 from journal_article import ARTICLE_FIELD_LIMITS
 from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
@@ -179,6 +180,21 @@ def validate_csrf():
         abort(400)
 
 
+def recover_authentication_csrf(template):
+    """Reject a stale login form while allowing a fresh, protected attempt."""
+    try:
+        validate_csrf()
+    except BadRequest:
+        session.pop("csrf_token", None)
+        flash(
+            "O formulário de entrada expirou ou a sessão mudou. "
+            "Preencha novamente este formulário para continuar com segurança.",
+            "warning",
+        )
+        return render_template(template), 400
+    return None
+
+
 @admin_bp.app_context_processor
 def admin_context():
     return {
@@ -317,7 +333,9 @@ def login():
     if session.get("admin_authenticated"):
         return redirect(url_for("admin.dashboard"))
     if request.method == "POST":
-        validate_csrf()
+        csrf_error = recover_authentication_csrf("admin/login.html")
+        if csrf_error is not None:
+            return csrf_error
         username = request.form.get("username", "").strip().lower()
         password = request.form.get("password", "")
         database_admin = AdminUser.query.filter(
@@ -374,7 +392,9 @@ def verify_two_factor():
         flash("O pedido de autenticação expirou ou as credenciais mudaram. Entre novamente.", "warning")
         return redirect(url_for("admin.login"))
     if request.method == "POST":
-        validate_csrf()
+        csrf_error = recover_authentication_csrf("admin/verify_2fa.html")
+        if csrf_error is not None:
+            return csrf_error
         code = request.form.get("code", "").strip()
         if pending_id is not None:
             administrator = db.session.get(AdminUser, pending_id)

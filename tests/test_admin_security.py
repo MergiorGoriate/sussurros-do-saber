@@ -12,6 +12,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///' + database_file.name
 os.environ['SECRET_KEY'] = 'admin-security-test-secret'
 atexit.register(lambda: Path(database_file.name).unlink(missing_ok=True))
 from werkzeug.security import generate_password_hash
+from werkzeug.exceptions import BadRequest
 from app import app, seed_database
 from admin import complete_admin_login, begin_two_factor_challenge, totp_code
 from models import AdminUser, Journal, db
@@ -70,6 +71,90 @@ class AdminSecurityTests(unittest.TestCase):
         self.assertGreater(self.account.security_version, old)
         response = self.client.get('/admin')
         self.assertIn('/admin/login', response.location)
+
+    def test_stale_login_csrf_rejected_and_fresh_form_can_complete_2fa(self):
+        self.client.get('/admin/login?next=/admin')
+        with self.client.session_transaction() as session:
+            old_token = session['csrf_token']
+            session.clear()  # A discarded cookie/changed deployment signing key.
+        with patch('admin.turnstile_valid') as turnstile:
+            response = self.client.post('/admin/login?next=/admin', data={
+                'csrf_token': old_token, 'username': self.account.username,
+                'password': 'test-password-long'})
+            turnstile.assert_not_called()
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('O formulário de entrada expirou', response.text)
+        self.assertIn('name="csrf_token"', response.text)
+        self.assertNotIn('test-password-long', response.text)
+        self.assertIn('no-store', response.headers['Cache-Control'])
+        with self.client.session_transaction() as session:
+            self.assertFalse(session.get('admin_authenticated'))
+            self.assertNotIn('pending_2fa_admin_id', session)
+            fresh_token = session['csrf_token']
+            self.assertNotEqual(fresh_token, old_token)
+        with patch('admin.turnstile_valid', return_value=True):
+            response = self.client.post('/admin/login', data={
+                'csrf_token': fresh_token, 'username': self.account.username,
+                'password': 'test-password-long'})
+        self.assertEqual(response.location, '/admin/verificar-2fa')
+        with self.client.session_transaction() as session:
+            self.assertFalse(session.get('admin_authenticated'))
+            challenge_token = session['csrf_token']
+        response = self.client.post('/admin/verificar-2fa', data={
+            'csrf_token': challenge_token, 'code': totp_code(self.account.totp_secret)})
+        self.assertEqual(response.location, '/admin')
+
+    def test_missing_and_mismatched_login_csrf_never_check_credentials(self):
+        for submitted in ('', 'incorrect-token'):
+            with self.subTest(token=submitted):
+                self.client.get('/admin/login')
+                with patch('admin.check_password_hash') as check:
+                    response = self.client.post('/admin/login', data={
+                        'csrf_token': submitted, 'username': self.account.username,
+                        'password': 'test-password-long'})
+                    check.assert_not_called()
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('Área administrativa', response.text)
+
+    def test_stale_two_factor_csrf_does_not_consume_code_or_extend_challenge(self):
+        old_token = self.challenge()
+        with self.client.session_transaction() as session:
+            expiry = session['pending_2fa_expires_at']
+            session['csrf_token'] = 'new-session-token'
+        with patch('admin.verify_totp') as verify, patch('admin.consume_recovery_code') as consume:
+            response = self.client.post('/admin/verificar-2fa', data={
+                'csrf_token': old_token, 'code': totp_code(self.account.totp_secret)})
+            verify.assert_not_called()
+            consume.assert_not_called()
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('O formulário de entrada expirou', response.text)
+        with self.client.session_transaction() as session:
+            self.assertFalse(session.get('admin_authenticated'))
+            self.assertEqual(session['pending_2fa_expires_at'], expiry)
+            fresh_token = session['csrf_token']
+        response = self.client.post('/admin/verificar-2fa', data={
+            'csrf_token': fresh_token, 'code': totp_code(self.account.totp_secret)})
+        self.assertEqual(response.location, '/admin')
+
+    def test_csrf_recovery_does_not_handle_other_bad_requests(self):
+        # The helper must not mask form parsing/proxy errors from elsewhere.
+        with patch('admin.turnstile_valid', side_effect=BadRequest()):
+            self.client.get('/admin/login')
+            with self.client.session_transaction() as session:
+                token = session['csrf_token']
+            response = self.client.post('/admin/login', data={
+                'csrf_token': token, 'username': self.account.username,
+                'password': 'test-password-long'})
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn('O formulário de entrada expirou', response.text)
+
+    def test_management_actions_still_reject_invalid_csrf_without_mutation(self):
+        self.login()
+        response = self.client.post('/admin/seguranca/2fa', data={
+            'csrf_token': 'incorrect-token', 'action': 'disable',
+            'password': 'test-password-long', 'code': totp_code(self.account.totp_secret)})
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(db.session.get(AdminUser, self.account.id).two_factor_enabled)
 
     def test_demoted_superadmin_cannot_reuse_session_privileges(self):
         self.account.is_superadmin = True
@@ -177,3 +262,4 @@ class AdminSecurityTests(unittest.TestCase):
     def test_forwarded_host_is_not_trusted_by_default(self):
         response = self.client.get('/healthz', headers={'X-Forwarded-Host':'sussurrosdosaber.com'})
         self.assertEqual(response.status_code, 200)
+
