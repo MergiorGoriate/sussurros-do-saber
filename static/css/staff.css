@@ -18,3 +18,65 @@
 .staff-form label,.staff-form fieldset {min-width:0;}
 .staff-form input,.staff-form select,.staff-form textarea {max-width:100%;}
 .staff-grid .table-wrap {min-width:0;width:100%;overflow-x:auto;}
+
+/* Área de trabalho dos colaboradores. */
+.staff-workspace{max-width:1320px;margin-inline:auto;min-width:0;}
+.workspace-header p{margin:8px 0 0;color:#536579;max-width:65ch;}
+.workspace-header> .admin-primary{flex-shrink:0;}
+.workspace-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:24px 0 18px;}
+.workspace-overview>a{display:flex;flex-direction:column;gap:8px;padding:20px;background:#fff;border:1px solid #dce4e5;border-radius:14px;color:#102c50;text-decoration:none;min-width:0;}
+.workspace-overview>a:hover{border-color:#1e4e8c;background:#f7faff;}
+.workspace-overview span{font-size:13px;font-weight:600;}
+.workspace-overview strong{font-size:32px;line-height:1.2;}
+.workspace-overview .workspace-metric-label{font-size:22px;margin-block:auto;}
+.workspace-overview small{color:#536579;font-size:12px;line-height:1.5;}
+.workspace-shortcuts{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;}
+.workspace-shortcuts a{display:flex;gap:18px;align-items:center;min-height:44px;padding:10px 14px;background:#edf3fb;border:1px solid #cfdded;border-radius:9px;color:#1e4e8c;text-decoration:none;font-weight:600;}
+.workspace-shortcuts a:hover{background:#dfeafb;}
+.workspace-profile-heading,.workspace-section-heading,.workspace-task>header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+.workspace-profile h2,.workspace-section-heading h2,.workspace-task h3{margin:0;}
+.workspace-profile-heading p,.workspace-section-heading p{margin:6px 0 0;color:#536579;}
+.workspace-eyebrow{display:block;font-size:12px;font-weight:600;color:#536579;margin-bottom:6px;}
+.workspace-badge{display:inline-block;max-width:100%;padding:5px 10px;border-radius:7px;background:#edf3fb;color:#1e4e8c;font-size:12px;font-weight:600;overflow-wrap:anywhere;}
+.workspace-profile-heading>.workspace-badge,.workspace-task>header>.workspace-badge{flex-shrink:0;}
+.workspace-details{border-top:1px solid #e1e7ef;margin-top:20px;padding-top:12px;}
+.workspace-details summary{cursor:pointer;min-height:44px;padding:10px 0;font-weight:600;color:#102c50;}
+.workspace-details summary span{margin-left:8px;color:#536579;font-size:13px;}
+.workspace-mandates{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin-top:10px;}
+.workspace-mandates article{border:1px solid #dce4e5;padding:18px;border-radius:10px;background:#fafcff;min-width:0;}
+.workspace-mandates h3{margin:0;font-size:17px;}
+.workspace-mandates h4{margin-bottom:6px;}
+.workspace-mandates dl,.workspace-task-meta{margin:16px 0;display:flex;gap:24px;flex-wrap:wrap;}
+.workspace-mandates dt,.workspace-task-meta dt{font-size:12px;color:#536579;margin-bottom:3px;}
+.workspace-mandates dd,.workspace-task-meta dd{margin:0;font-weight:600;}
+.workspace-permissions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;padding-left:20px;}
+.workspace-permissions li{padding-right:14px;}
+.workspace-permissions small{color:#536579;margin-top:3px;font-size:12px;}
+.workspace-warning{padding:14px;border-left:3px solid #a16a08;background:#fff7e7;color:#684609;line-height:1.6;}
+.workspace-section-heading{margin:0 0 20px;}
+.workspace-form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+.staff-workspace .staff-form{gap:14px;}
+.staff-workspace .staff-form label{margin:0;}
+.staff-workspace .staff-form input,.staff-workspace .staff-form select,.staff-workspace .staff-form textarea{min-height:44px;border-radius:8px;color:#101820;background:#fff;}
+.workspace-form-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.workspace-form-footer small{color:#536579;max-width:46ch;}
+.workspace-tasks{display:grid;gap:20px;}
+.workspace-task{margin:0;min-width:0;}
+.workspace-task h3{font-size:20px;overflow-wrap:anywhere;}
+.workspace-task-description{padding:14px;background:#f5f8fb;border-radius:8px;line-height:1.7;}
+.workspace-status-in_progress{background:#e7f0ff;color:#1e4e8c;}
+.workspace-status-blocked{background:#fff0d6;color:#795000;}
+.workspace-status-done{background:#e5f4ed;color:#176340;}
+.workspace-status-cancelled{background:#eef0f3;color:#536579;}
+.workspace-comments{list-style:none;padding:0;display:grid;gap:14px;}
+.workspace-comments li{padding-left:14px;border-left:2px solid #cfdded;}
+.workspace-comments li>div{display:flex;flex-wrap:wrap;gap:6px 14px;}
+.workspace-comments time{font-size:12px;color:#536579;}
+.workspace-comments p{margin-bottom:0;}
+.workspace-empty{text-align:center;padding:24px;color:#536579;}
+.workspace-empty h3{color:#102c50;}
+.staff-workspace a:focus-visible,.staff-workspace button:focus-visible,.staff-workspace summary:focus-visible,.staff-workspace input:focus-visible,.staff-workspace select:focus-visible,.staff-workspace textarea:focus-visible{outline:3px solid #1e4e8c;outline-offset:3px;}
+.staff-workspace #tarefas,.staff-workspace #distribuir-tarefa,.workspace-task h3{scroll-margin-top:160px;}
+@media(max-width:1100px){.workspace-overview{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:600px){.workspace-overview{gap:10px;}.workspace-overview>a{padding:14px;}.workspace-overview strong{font-size:27px;}.workspace-overview .workspace-metric-label{font-size:18px;}.workspace-form-row{grid-template-columns:1fr;gap:14px;}.workspace-profile-heading,.workspace-task>header{flex-direction:column;gap:10px;}.workspace-form-footer{align-items:stretch;flex-direction:column;}.workspace-form-footer button{width:100%;}.workspace-shortcuts a{flex:1 1 auto;justify-content:space-between;}.workspace-header>.admin-primary{width:100%;text-align:center;}}
+@media(max-width:350px){.workspace-overview{grid-template-columns:1fr;}}

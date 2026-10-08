@@ -12,6 +12,12 @@ test('collaborator grants expose and execute actions, revocation works in the sa
     for(const label of ['Artigos','Contactos','Submissões','Relatórios e auditoria','Distribuir tarefas'])
       await expect(page.getByRole('navigation').getByRole('link',{name:label,exact:true})).toBeVisible();
     await expect(page.locator('#distribuir-tarefa')).toBeVisible();
+    await expect(page.getByRole('region',{name:'Resumo do trabalho'})).toBeVisible();
+    const mandates=page.locator('summary').filter({hasText:'Mandatos válidos'});
+    await mandates.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading',{name:'Secretariado — teste isolado',exact:true})).toBeVisible();
+    await page.screenshot({path:`test-results/workspace-${width}.png`,fullPage:true});
   }
   const form=page.locator('#distribuir-tarefa form');
   const title='Tarefa isolada '+Date.now();
@@ -20,6 +26,14 @@ test('collaborator grants expose and execute actions, revocation works in the sa
   await form.locator('[name="due_on"]').fill('2099-01-01');
   await form.getByRole('button',{name:'Atribuir tarefa'}).click();
   await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
+  const task=page.locator('.workspace-task').filter({has:page.getByRole('heading',{name:title,exact:true})});
+  await task.locator('[name="status"]').selectOption('in_progress');
+  await task.locator('[name="comment"]').fill('Comentário de acompanhamento isolado.');
+  await task.getByRole('button',{name:'Actualizar',exact:true}).click();
+  await expect(task.locator('header')).toContainText('Em curso');
+  await task.locator('summary').click();
+  await expect(task.getByText('Comentário de acompanhamento isolado.',{exact:true})).toBeVisible();
+  await page.screenshot({path:'test-results/workspace-task-mobile.png',fullPage:true});
   await page.goto('/admin/artigos/novo');
   await page.locator('[name="title"]').fill('Artigo próprio de teste '+Date.now());
   await page.locator('[name="summary"]').fill('Resumo científico para teste isolado.');
@@ -36,5 +50,6 @@ test('collaborator grants expose and execute actions, revocation works in the sa
   await page.goto('/admin/trabalho');
   await expect(page.locator('#distribuir-tarefa')).toHaveCount(0);
   await expect(page.getByRole('navigation').getByRole('link',{name:'Contactos',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('region',{name:'Acessos de trabalho'}).getByRole('link',{name:/Contactos/})).toHaveCount(0);
   expect((await page.goto('/admin/contactos')).status()).toBe(403);
 });
