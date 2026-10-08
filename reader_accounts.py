@@ -51,11 +51,14 @@ def private_response(response):
 @reader_bp.get('/sessao')
 def state():
     account = researcher()
+    sync_internal_updates(account)
+    from internal_notices import active_inbox
+    from governance_models import StaffNotice
     from google_auth import profile_picture
     return jsonify(ok=True, authenticated=bool(account), verified=bool(account and account.verified),
                    csrf=csrf_token(), name=account.name if account else '',
                    picture=profile_picture(session.get('google_picture')) if account else '',
-                   notification_count=notification_query(account).count() if account and account.verified else 0,
+                   notification_count=active_inbox(public=True).filter(StaffNotice.read_at.is_(None)).count() if account and account.verified else 0,
                    google_prompt_suppressed=bool(session.get('google_prompt_suppressed')),
                    saved_articles=[row.article_id for row in ReaderArticle.query.join(Article).filter(
                        ReaderArticle.owner_id == account.id, Article.status == 'published').all()] if account else [])
@@ -188,6 +191,10 @@ def preference(slug):
                 ReaderJournal.id == row.id,
                 db.or_(ReaderJournal.followed_at.is_(None), ReaderJournal.followed_at < revision)
             ).update({'followed_at': revision}, synchronize_session='fetch')
+            from governance_models import StaffNotice
+            for notice in StaffNotice.query.filter_by(researcher_id=account.id,resource_type='reader_journal',resource_id=journal.id).filter(StaffNotice.removed_at.is_(None)):
+                source_revision=datetime.fromisoformat(notice.source_key.split(':',2)[2].rsplit(':researcher:',1)[0])
+                if source_revision<=revision and not notice.read_at:notice.read_at=utcnow()
             db.session.commit()
             return jsonify(ok=True, unread=journal.updated_at > row.followed_at)
         if not row:
@@ -197,6 +204,9 @@ def preference(slug):
         setattr(row, action, enabled == 'true')
         if action == 'following' and row.following != was_following:
             row.followed_at = utcnow() if row.following else None
+            if not row.following:
+                from governance_models import StaffNotice
+                StaffNotice.query.filter_by(researcher_id=account.id,resource_type='reader_journal',resource_id=journal.id).filter(StaffNotice.removed_at.is_(None)).update({'removed_at':utcnow()},synchronize_session='fetch')
         try:
             db.session.commit()
         except IntegrityError:
@@ -228,14 +238,43 @@ def notification_query(account):
     )
 
 
-@reader_bp.get('/notificacoes')
+@reader_bp.route('/notificacoes',methods=['GET','POST'])
 def notifications():
-    account = researcher()
-    rows = ReaderJournal.query.options(joinedload(ReaderJournal.journal)).join(Journal).filter(
-        ReaderJournal.owner_id == account.id, ReaderJournal.following.is_(True),
-        Journal.published.is_(True)
+    account=researcher()
+    from flask import redirect, abort
+    from internal_notices import active_inbox, mutate
+    from governance_models import StaffNotice
+    if request.method=='POST':
+        if not account or not account.verified:abort(403)
+        validate_csrf();mutate(request.form.get('action','read'),request.form.get('id',type=int),public=True)
+        return redirect(url_for('reader.notifications'),code=303)
+    sync_internal_updates(account)
+    rows=ReaderJournal.query.options(joinedload(ReaderJournal.journal)).join(Journal).filter(
+        ReaderJournal.owner_id==account.id,ReaderJournal.following.is_(True),Journal.published.is_(True)
     ).order_by(Journal.updated_at.desc()).all() if account and account.verified else []
     from journal_metadata import journal_authors
-    authors = {row.journal_id: [author['name'] for author in journal_authors(row.journal) if author.get('name')] for row in rows}
-    return render_template('reader_library.html', reader_rows=rows, reader_account=account,
-                           reader_notification_authors=authors, notifications=True)
+    authors={row.journal_id:[author['name'] for author in journal_authors(row.journal) if author.get('name')] for row in rows}
+    query=active_inbox(public=True) if account and account.verified else StaffNotice.query.filter(db.false())
+    page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
+    unread_journals={n.resource_id for n in query.filter(StaffNotice.resource_type=='reader_journal',StaffNotice.read_at.is_(None))}
+    return render_template('reader_library.html',reader_rows=rows,reader_account=account,reader_notification_authors=authors,
+        notifications=True,internal_notices=page.items,notice_journal_slugs={r.journal_id:r.journal.slug for r in rows},notice_pagination=page,notice_public=True,notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),
+        notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all(),unread_journals=unread_journals)
+
+
+def sync_internal_updates(account):
+    """Materialise committed public article revisions once per follower/revision."""
+    if not account or not account.verified:return
+    from internal_notices import emit
+    from governance_models import StaffNotice
+    rows=notification_query(account).options(joinedload(ReaderJournal.journal)).all()
+    existing={n.source_key for n in StaffNotice.query.filter_by(researcher_id=account.id,resource_type='reader_journal')}
+    added=False
+    for row in rows:
+        key=f'reader_update:{row.id}:{row.journal.updated_at.isoformat()}'
+        canonical=key+':researcher:'+str(account.id)
+        if canonical in existing:continue
+        title=row.journal.article_title or row.journal.title
+        emit(None,'Artigo actualizado: '+title,'Nova actualização em '+row.journal.updated_at.strftime('%d/%m/%Y %H:%M')+' UTC.',researcher_id=account.id,key=key,resource=('reader_journal',row.journal_id))
+        added=True
+    if added:db.session.commit()

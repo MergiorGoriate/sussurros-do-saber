@@ -21,7 +21,7 @@
   <p class="mt-6">Entre ou crie uma conta para consultar esta página.</p>
   <button type="button" data-reader-open class="primary-btn mt-4">Entrar / Criar conta</button>
   {% else %}
-  {% if notifications and not reader_account.verified %}<p><a href="{{ url_for('submissions.verify_notice') }}">Confirme o seu e-mail para activar notificações.</a></p>{% endif %}
+  {% if notifications and reader_account.verified %}{% include 'admin/notice_bar.html' %}<h2>Todos os avisos internos</h2><p>Eliminar um aviso preserva o artigo e mantém a opção de acompanhar futuras actualizações.</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button name="action" value="read_all">Marcar todas como lidas</button></form>{% for n in internal_notices %}<section class="notice-bar" {% if n.resource_type=='reader_journal' %}data-reader-notice-slug="{{ notice_journal_slugs.get(n.resource_id,'') }}"{% endif %}><h3>{{ n.subject }}</h3><p>{{ n.body }}</p><time>{{ n.created_at }} UTC</time>{% if n.resource_type %}<a href="{{ url_for('submissions.open_internal_notice',ident=n.id) }}">Abrir recurso</a>{% endif %}<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ n.id }}">{% if not n.read_at %}<button name="action" value="read">Marcar como lida</button>{% endif %}<button name="action" value="delete">Eliminar aviso</button></form></section>{% else %}<p>Sem notificações.</p>{% endfor %}<nav aria-label="Paginação de avisos">{% if notice_pagination.has_prev %}<a href="{{ url_for('reader.notifications',page=notice_pagination.prev_num) }}">Anterior</a>{% endif %}{% if notice_pagination.has_next %}<a href="{{ url_for('reader.notifications',page=notice_pagination.next_num) }}">Seguinte</a>{% endif %}</nav><h2>Artigos acompanhados</h2>{% endif %}{% if notifications and not reader_account.verified %}<p><a href="{{ url_for('submissions.verify_notice') }}">Confirme o seu e-mail para activar notificações.</a></p>{% endif %}
   <ul class="reader-favorites-grid" data-reader-library>
     {% if not notifications %}
       {% for row in reader_articles|default([]) %}
@@ -37,7 +37,7 @@
         <p class="reader-favorite-category">{{ row.journal.field }}</p>
         <h2><a href="{{ url_for('journal_detail', slug=row.journal.slug) }}">{{ row.journal|reader_article_title }}</a></h2>
         <p class="reader-favorite-date">{% if reader_notification_authors.get(row.journal_id) %}Por {{ reader_notification_authors[row.journal_id]|join(', ') }} · {% endif %}{{ row.journal.updated_at.strftime('%d/%m/%Y') }}</p>
-        <div class="reader-notification-actions">{% if row.followed_at and row.journal.updated_at > row.followed_at %}<p data-reader-notification-status>Nova actualização em {{ row.journal.updated_at.strftime('%d/%m/%Y') }}.</p><button type="button" class="primary-btn" data-reader-mark-read="{{ row.journal.slug }}" data-reader-revision="{{ row.journal.updated_at.isoformat() }}">Marcar como vista</button>{% else %}<p data-reader-notification-status>Sem novas actualizações. Está a acompanhar este artigo.</p>{% endif %}<button type="button" class="primary-btn" data-reader-unfollow="{{ row.journal.slug }}">Desactivar notificações</button></div></li>
+        <div class="reader-notification-actions">{% if row.journal_id in unread_journals %}<p data-reader-notification-status>Nova actualização em {{ row.journal.updated_at.strftime('%d/%m/%Y') }}.</p><button type="button" class="primary-btn" data-reader-mark-read="{{ row.journal.slug }}" data-reader-revision="{{ row.journal.updated_at.isoformat() }}">Marcar como vista</button>{% else %}<p data-reader-notification-status>Sem novas actualizações. Está a acompanhar este artigo.</p>{% endif %}<button type="button" class="primary-btn" data-reader-unfollow="{{ row.journal.slug }}">Desactivar notificações</button></div></li>
       {% endfor %}
     {% endif %}
     {% if not reader_rows and not reader_articles|default([]) %}<li data-reader-empty>{{ 'Ainda não acompanha artigos. Active o sino num artigo de revista para receber actualizações aqui.' if notifications else 'Ainda não guardou artigos na sua conta.' }}</li>{% endif %}
@@ -46,3 +46,4 @@
   {% endif %}
 </section>
 {% endblock %}
+

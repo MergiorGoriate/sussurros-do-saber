@@ -7,7 +7,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, s
 from sqlalchemy import or_
 from models import db, utcnow, AdminUser, Author, Article, Journal
 from governance_models import (TeamMember, TeamRole, TeamAppointment, StaffTask, StaffDocument,
-                               StaffNotice, GovernanceAudit, ArticleWorkflow, StaffPeerReview, PortalReview, StaffContactLog)
+                               StaffNotice, GovernanceAudit, ArticleWorkflow, StaffPeerReview, PortalReview, StaffContactLog, TaskComment, AuditReport)
 from admin import (login_required, superadmin_required, validate_csrf, enforce_admin_authentication,
                    protect_admin_responses)
 
@@ -68,7 +68,7 @@ def current_member():
 
 
 def active_member(member):
-    return bool(member and member.status == 'active' and member.accepted_at
+    return bool(member and not member.removed_at and member.status == 'active' and member.accepted_at
                 and (not member.admin or member.admin.active))
 
 
@@ -110,8 +110,10 @@ def require(permission, journal_id=None):
 
 
 def audit(action, entity, ident=None, detail=''):
+    from internal_notices import dispatch
     db.session.add(GovernanceAudit(actor_id=session.get('admin_id'), actor_name=session.get('admin_username','Responsável principal'),
                                   action=action, entity=entity, entity_id=ident, detail=detail[:1000]))
+    dispatch(action,entity,ident,detail)
 
 
 def notice(member, subject, body=''):
@@ -151,6 +153,7 @@ def conflicts(member, manuscript):
 
 def manuscript_access(manuscript, permission=None):
     member = current_member()
+    if not manuscript or manuscript.removed_at:return False
     if member and conflicts(member, manuscript):
         return False
     if permission:
@@ -169,6 +172,7 @@ def manuscript_access(manuscript, permission=None):
 
 def scope_manuscripts(query):
     from submission_models import Manuscript
+    query=query.filter(Manuscript.removed_at.is_(None))
     if session.get('admin_superuser'):
         return query
     if current_member() is None:
@@ -231,6 +235,8 @@ def team():
         validate_csrf()
         ident = request.form.get('id',type=int)
         member = db.get_or_404(TeamMember,ident) if ident else TeamMember()
+        if member.removed_at:
+            abort(409,description='Colaborador removido. O histórico não pode recuperar acesso.')
         previous_contact=member.contact_note or ''
         previous_status=member.status
         name, email = field('name',180,True), field('email',254,True).lower()
@@ -276,15 +282,16 @@ def team():
         member.public_consent = request.form.get('public_consent') == 'on'
         member.public_visible = request.form.get('public_visible') == 'on'
         member.available = request.form.get('available') == 'on'
+        changed=not ident or db.session.is_modified(member,include_collections=False)
         db.session.add(member)
         db.session.flush()
         if member.contact_note and (member.contact_note!=previous_contact or status!=previous_status):
             db.session.add(StaffContactLog(member_id=member.id,actor_id=session.get('admin_id'),status=status,note=member.contact_note))
-        audit('member.saved','member',member.id,'Estado: '+status)
+        if changed:audit('member.saved','member',member.id,'Estado: '+status)
         db.session.commit()
         flash('Membro guardado. Nenhuma mensagem externa foi enviada.','success')
         return redirect(url_for('staff.team',edit=member.id))
-    return render_template('admin/team.html',members=TeamMember.query.order_by(TeamMember.name).all(),
+    return render_template('admin/team.html',members=TeamMember.query.filter(TeamMember.removed_at.is_(None)).order_by(TeamMember.name).all(),
                            selected=db.session.get(TeamMember,request.args.get('edit',type=int)) if request.args.get('edit',type=int) else None,
                            admins=AdminUser.query.order_by(AdminUser.display_name).all(),authors=Author.query.order_by(Author.name).all(),
                            roles=TeamRole.query.order_by(TeamRole.name).all(),journals=Journal.query.order_by(Journal.title).all())
@@ -295,6 +302,7 @@ def team():
 def appointment(ident):
     validate_csrf()
     member = db.get_or_404(TeamMember,ident)
+    if member.removed_at:abort(409)
     role = db.get_or_404(TeamRole,request.form.get('role_id',type=int))
     start,end = parse_date(request.form.get('starts_on'),True),parse_date(request.form.get('ends_on'))
     if end and end < start:
@@ -315,7 +323,6 @@ def appointment(ident):
                          weekly_hours=hours,area=field('area',180),conditions=field('conditions',10000),substitute_id=substitute_id)
     db.session.add(item)
     audit('mandate.created','member',ident,role.name)
-    notice(member,'Novo mandato: '+role.name,'Consulte as condições e os limites na sua área de trabalho.')
     db.session.commit()
     return redirect(url_for('staff.team',edit=ident))
 
@@ -325,6 +332,7 @@ def appointment(ident):
 def end_appointment(ident):
     validate_csrf()
     item=db.get_or_404(TeamAppointment,ident)
+    if not item.active:return redirect(url_for('staff.team',edit=item.member_id))
     item.active=False
     audit('mandate.ended','member',item.member_id,item.role.name)
     db.session.commit()
@@ -350,9 +358,10 @@ def roles():
             setattr(role,name,field(name,10000))
         preserved_unknown=set(role.permissions or [])-set(PERMISSIONS)
         role.permissions=sorted(set(permissions)|preserved_unknown)
+        changed=not ident or db.session.is_modified(role,include_collections=False)
         db.session.add(role)
         db.session.flush()
-        audit('role.saved','role',role.id,', '.join(role.permissions))
+        if changed:audit('role.saved','role',role.id,', '.join(role.permissions))
         db.session.commit()
         return redirect(url_for('staff.roles',edit=role.id))
     return render_template('admin/roles.html',roles=TeamRole.query.order_by(TeamRole.name).all(),permissions=PERMISSIONS,
@@ -374,11 +383,23 @@ def workspace():
             status=field('status',30,True)
             if status not in TASK_STATES:
                 abort(400)
+            previous_assignee=task.assignee
+            changed=task.status!=status
+            if manager and request.form.get('assignee_id',type=int):
+                assignee=db.get_or_404(TeamMember,request.form.get('assignee_id',type=int))
+                if not active_member(assignee) or not mandates(assignee):abort(400)
+                changed=changed or task.assignee_id!=assignee.id
+                task.assignee=assignee
             task.status=status
             comment=field('comment',10000)
+            if comment and not changed and task.comments and task.comments[-1].actor_id==session.get('admin_id') and task.comments[-1].body==comment:
+                comment=''
             if comment:
                 db.session.add(TaskComment(task_id=task.id,actor_id=session.get('admin_id'),body=comment))
-            audit('task.updated','task',task.id,status)
+            if changed or comment:audit('task.updated','task',task.id,status+(' · Comentário adicionado' if comment else ''))
+            if previous_assignee.id!=task.assignee_id and active_member(previous_assignee) and mandates(previous_assignee) and previous_assignee.admin_id:
+                from internal_notices import emit
+                emit(previous_assignee.admin_id,'Tarefa reatribuída: '+task.title,'Esta tarefa deixou de estar sob a sua responsabilidade.',resource=('task',task.id))
         else:
             require('tasks.manage')
             assignee=db.get_or_404(TeamMember,request.form.get('assignee_id',type=int))
@@ -388,7 +409,6 @@ def workspace():
                            due_on=parse_date(request.form.get('due_on'),True),created_by=session.get('admin_id'))
             db.session.add(task)
             db.session.flush()
-            notice(assignee,'Nova tarefa: '+task.title,'Prazo: '+str(task.due_on))
             audit('task.created','task',task.id)
         db.session.commit()
         return redirect(url_for('staff.workspace'))
@@ -409,6 +429,7 @@ def documents():
         validate_csrf()
         require('team.manage')
         target=db.get_or_404(TeamMember,request.form.get('member_id',type=int))
+        if target.removed_at:abort(409)
         item=StaffDocument(member=target,title=field('title',200,True),kind=field('kind',30,True),body=field('body',100000))
         if item.kind not in {'agreement','consent','conflict','minutes','other'}:
             abort(400)
@@ -425,19 +446,20 @@ def documents():
         db.session.add(item)
         db.session.flush()
         audit('document.created','document',item.id)
-        notice(target,'Documento disponível: '+item.title)
         db.session.commit()
         return redirect(url_for('staff.documents'))
-    query=StaffDocument.query
+    history=session.get('admin_superuser') and request.args.get('history')=='1'
+    query=StaffDocument.query.filter(StaffDocument.removed_at.is_not(None) if history else StaffDocument.removed_at.is_(None))
     if not manager:
         query=query.filter_by(member_id=member.id) if member and member.status not in {'suspended','ended','declined'} else query.filter(db.false())
     return render_template('admin/staff_documents.html',documents=query.order_by(StaffDocument.created_at.desc()).all(),manager=manager,
-                           members=TeamMember.query.order_by(TeamMember.name).all() if manager else [],member=member)
+                           members=TeamMember.query.filter(TeamMember.removed_at.is_(None)).order_by(TeamMember.name).all() if manager else [],member=member)
 
 
 def own_document(ident):
-    item=db.get_or_404(StaffDocument,ident)
+    item=StaffDocument.query.filter_by(id=ident).with_for_update().populate_existing().first_or_404() if request.method=='POST' else db.get_or_404(StaffDocument,ident)
     member=current_member()
+    if item.removed_at and (request.method!='GET' or not session.get('admin_superuser')):abort(410,description='Documento eliminado; não permite novos aceites.')
     if not has_permission('team.manage') and not (member and member.status not in {'suspended','ended','declined'} and member.id==item.member_id):
         abort(404)
     return item
@@ -474,14 +496,33 @@ def accept_document(ident):
 @staff_bp.route('/notificacoes',methods=['GET','POST'])
 @login_required
 def notifications():
-    ident=session.get('admin_id')
+    from internal_notices import active_inbox, mutate
     if request.method=='POST':
         validate_csrf()
-        notice_item=StaffNotice.query.filter_by(id=request.form.get('id',type=int),admin_id=ident).first_or_404()
-        notice_item.read_at=utcnow()
-        db.session.commit()
+        mutate(request.form.get('action','read'),request.form.get('id',type=int))
+        return redirect(url_for('staff.notifications'),code=303)
+    page=active_inbox().order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
+    return render_template('admin/staff_notices.html',notices=page.items,pagination=page)
+
+
+@staff_bp.get('/notificacoes/<int:ident>/abrir')
+@login_required
+def open_notice(ident):
+    from internal_notices import active_inbox, resource_url
+    item=active_inbox().filter_by(id=ident).first_or_404()
+    target=resource_url(item)
+    if not target:
+        flash('O recurso foi eliminado ou já não tem acesso a ele.','warning')
         return redirect(url_for('staff.notifications'))
-    return render_template('admin/staff_notices.html',notices=StaffNotice.query.filter_by(admin_id=ident).order_by(StaffNotice.created_at.desc()).limit(200).all() if ident else [])
+    return redirect(target)
+
+
+@staff_bp.get('/api/notificacoes')
+@login_required
+def notice_summary():
+    from flask import jsonify
+    from internal_notices import summary
+    return jsonify(summary())
 
 
 @staff_bp.get('/relatorios-equipa')
@@ -489,7 +530,7 @@ def notifications():
 def reports():
     require('reports.read')
     # A report grant is institutional: do not expose confidential manuscript contents.
-    return render_template('admin/staff_reports.html',members=TeamMember.query.all(),tasks=StaffTask.query.all(),
+    return render_template('admin/staff_reports.html',saved_reports=AuditReport.query.filter(AuditReport.removed_at.is_(None)).order_by(AuditReport.id.desc()).all(),members=TeamMember.query.filter(TeamMember.removed_at.is_(None)).all(),tasks=StaffTask.query.all(),
                            reviews=StaffPeerReview.query.all(),audits=GovernanceAudit.query.order_by(GovernanceAudit.created_at.desc()).limit(200).all(),
                            today=date.today(),active_member=active_member)
 
@@ -502,6 +543,8 @@ def reviews():
     if request.method=='POST':
         validate_csrf()
         manuscript=db.get_or_404(Manuscript,request.form.get('manuscript_id',type=int))
+        from submissions import lock_record
+        lock_record(manuscript)
         if not manuscript_access(manuscript,'manuscript.assign'):
             abort(403)
         if manuscript.status not in {'screening','review','revised','reevaluation'}:
@@ -519,7 +562,6 @@ def reviews():
         db.session.add(item)
         db.session.flush()
         audit('review.assigned','review',item.id)
-        notice(reviewer,'Convite para parecer: '+manuscript.code,'Declare conflitos antes de aceder aos ficheiros.')
         db.session.commit()
         return redirect(url_for('staff.reviews',manuscript_id=manuscript.id))
     ident=request.args.get('manuscript_id',type=int)
@@ -536,13 +578,17 @@ def reviews():
         rows=rows.filter_by(reviewer_id=member.id) if active_member(member) and any('manuscript.review' in a.role.permissions for a in mandates(member)) else rows.filter(db.false())
     records=rows.order_by(StaffPeerReview.due_on).all()
     if not manager:
-        records=[r for r in records if has_permission('manuscript.review',r.manuscript.journal_id)]
+        records=[r for r in records if not r.manuscript.removed_at and has_permission('manuscript.review',r.manuscript.journal_id)]
     return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,
                            reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if not conflicts(m,selected)] if selected else [])
 
 
 def reviewer_record(ident):
     item=StaffPeerReview.query.filter_by(id=ident).with_for_update().first_or_404() if request.method=='POST' else db.get_or_404(StaffPeerReview,ident)
+    if request.method=='POST':
+        from submissions import lock_record
+        lock_record(item.manuscript)
+    if item.manuscript.removed_at:abort(410,description='Submissão eliminada. Não permite novas acções editoriais.')
     member=current_member()
     if not member or member.id!=item.reviewer_id or not has_permission('manuscript.review',item.manuscript.journal_id):
         abort(404)
@@ -575,7 +621,6 @@ def review_detail(ident):
                 abort(400,description='Informe uma recomendação e um parecer com pelo menos 50 caracteres.')
             item.status,item.submitted_at='submitted',utcnow()
             editor=TeamMember.query.filter_by(admin_id=item.manuscript.editor_id).first() if item.manuscript.editor_id else None
-            notice(editor,'Parecer recebido: '+item.manuscript.code)
         else:
             abort(409)
         audit('review.'+action,'review',ident)
@@ -697,6 +742,8 @@ def article_workflow(ident):
     if request.method=='POST':
         validate_csrf()
         action=request.form.get('action')
+        action_permission={'assign':'article.edit','reviewed':'article.review','changes':'article.review','approve':'article.approve','publish':'article.publish','schedule':'article.publish','reopen':'article.edit'}
+        if action in action_permission:require(action_permission[action])
         member=current_member()
         if action=='submit' and item.stage in {'draft','changes'}:
             if not has_permission('article.edit') and (not member or member.id!=item.owner_id or not has_permission('article.write')):
@@ -707,9 +754,9 @@ def article_workflow(ident):
             reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
             if not reviewer.available or reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
                 abort(400,description='Escolha um revisor independente com mandato válido.')
+            if item.reviewer_id==reviewer.id and item.stage=='review' and not item.reviewed_at:return redirect(url_for('staff.article_workflow',ident=ident))
             item.reviewer_id,item.stage,article.status=reviewer.id,'review','review'
             item.approved_at=item.reviewed_at=None
-            notice(reviewer,'Artigo para revisão: '+article.title)
         elif action in {'reviewed','changes'} and item.stage=='review':
             if not member or member.id!=item.reviewer_id or not has_permission('article.review'):
                 abort(403)
@@ -720,7 +767,6 @@ def article_workflow(ident):
             else:
                 item.stage,article.status='changes','draft'
                 item.reviewed_at=item.approved_at=None
-                notice(item.owner,'Correcções solicitadas: '+article.title,note)
         elif action=='approve' and item.stage=='review' and item.reviewed_at:
             require('article.approve')
             if member and (member.id in {item.owner_id,item.reviewer_id} or member.author_id==article.author_id):
@@ -729,7 +775,6 @@ def article_workflow(ident):
                 abort(400)
             item.editor_id=member.id if member else None
             item.stage,article.status,item.approved_at='approved','approved',utcnow()
-            notice(item.owner,'Artigo aprovado: '+article.title)
         elif action in {'publish','schedule'} and item.stage in {'approved','scheduled','published'} and item.approved_at:
             require('article.publish')
             from admin import parse_datetime
@@ -741,6 +786,8 @@ def article_workflow(ident):
                 scheduled=scheduled.astimezone(timezone.utc).replace(tzinfo=None)
             if action=='schedule' and (not scheduled or scheduled<=utcnow()):
                 abort(400,description='Informe uma data futura de publicação.')
+            if (not scheduled and item.stage=='published' and article.status=='published') or (scheduled and item.stage=='scheduled' and article.scheduled_at==scheduled):
+                return redirect(url_for('staff.article_workflow',ident=ident))
             item.stage=article.status='scheduled' if scheduled else 'published'
             article.scheduled_at=scheduled
             if not scheduled and not article.published_at:
@@ -776,18 +823,18 @@ def install_staff_cli(app):
         count=0
         for task in StaffTask.query.filter(StaffTask.due_on<=today,~StaffTask.status.in_(['done','cancelled'])):
             key=f'task:{task.id}:{task.due_on}'
-            if task.assignee.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
-                db.session.add(StaffNotice(admin_id=task.assignee.admin_id,source_key=key,subject='Prazo da tarefa: '+task.title,body=str(task.due_on)))
+            if active_member(task.assignee) and mandates(task.assignee) and task.assignee.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
+                db.session.add(StaffNotice(admin_id=task.assignee.admin_id,source_key=key,subject='Prazo da tarefa: '+task.title,body=str(task.due_on),resource_type='task',resource_id=task.id))
                 count+=1
         for item in TeamAppointment.query.filter(TeamAppointment.active.is_(True),TeamAppointment.ends_on<=today):
             key=f'mandate:{item.id}:{item.ends_on}'
-            if item.member.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
-                db.session.add(StaffNotice(admin_id=item.member.admin_id,source_key=key,subject='Fim do mandato: '+item.role.name,body=str(item.ends_on)))
+            if item.member.admin_id and item.member.admin.active and not item.member.removed_at and not StaffNotice.query.filter_by(source_key=key).first():
+                db.session.add(StaffNotice(admin_id=item.member.admin_id,source_key=key,subject='Fim do mandato: '+item.role.name,body=str(item.ends_on),resource_type='member',resource_id=item.member_id))
                 count+=1
         for review in StaffPeerReview.query.filter(StaffPeerReview.due_on<=today,StaffPeerReview.status.in_(['invited','accepted'])):
             key=f'review:{review.id}:{review.due_on}'
-            if review.reviewer.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
-                db.session.add(StaffNotice(admin_id=review.reviewer.admin_id,source_key=key,subject='Prazo do parecer: '+review.manuscript.code,body=str(review.due_on)))
+            if not review.manuscript.removed_at and has_permission('manuscript.review',review.manuscript.journal_id,member=review.reviewer) and review.reviewer.admin_id and not StaffNotice.query.filter_by(source_key=key).first():
+                db.session.add(StaffNotice(admin_id=review.reviewer.admin_id,source_key=key,subject='Prazo do parecer: '+review.manuscript.code,body=str(review.due_on),resource_type='manuscript',resource_id=review.manuscript_id))
                 count+=1
         db.session.commit()
         print(f'{count} notificações internas criadas.')
@@ -815,3 +862,124 @@ def journal_access(journal_id=None, publishing=False, viewing=False):
 def journal_scope(query):
     ids=[j.id for j in Journal.query.all() if journal_can(j.id,viewing=True)]
     return query.filter(Journal.id.in_(ids))
+
+
+@staff_bp.route('/remover/<kind>/<int:ident>',methods=['GET','POST'])
+@superadmin_required
+def remove_record(kind,ident):
+    from submission_models import Manuscript
+    models={'manuscript':Manuscript,'member':TeamMember,'document':StaffDocument,'report':AuditReport}
+    if kind not in models:abort(404)
+    query=models[kind].query.filter_by(id=ident)
+    item=query.with_for_update().first_or_404() if request.method=='POST' else query.first_or_404()
+    if kind=='member' and (item.admin_id==session.get('admin_id') or (item.admin and item.admin.is_superadmin)):
+        abort(403,description='Não pode remover a conta do fundador.')
+    name=item.name if kind=='member' else item.title
+    consequences={
+        'manuscript':'Retira a submissão dos fluxos activos e impede novas acções editoriais. Versões, pareceres, decisões, artigos publicados, DOI e ficheiros são preservados.',
+        'member':'Revoga todos os mandatos e o acesso administrativo, inclusive sessões abertas. Cancela o convite de colaboração. A conta pública, autoria e histórico são preservados. Responsabilidades pendentes podem ser reatribuídas.',
+        'document':'Retira o documento das listas activas e impede novos aceites. Texto, anexo, aceite anterior, datas e esta versão permanecem no histórico do fundador.',
+        'report':'Retira este relatório guardado da lista activa. Os eventos de auditoria de origem permanecem intactos.'}
+    if request.method=='POST':
+        validate_csrf()
+        if request.form.get('confirm')!='yes':abort(400)
+        if not item.removed_at:
+            item.removed_at=utcnow()
+            if kind=='member':
+                item.status='ended';item.available=False;item.public_visible=False
+                for mandate in item.appointments:mandate.active=False
+                if item.admin:
+                    item.admin.active=False;item.admin.governance_managed=True
+                    item.admin.security_version+=1
+            audit(kind+'.removed',kind,ident,name)
+            db.session.commit()
+        flash('Remoção registada. O histórico foi preservado.','success')
+        destination=url_for('staff.responsibilities',ident=ident) if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list')
+        return redirect(destination,code=303)
+    return render_template('admin/remove_confirmation.html',item_name=name,kind=kind,ident=ident,consequence=consequences[kind])
+
+
+@staff_bp.get('/historico-remocoes')
+@superadmin_required
+def removed_history():
+    from submission_models import Manuscript
+    return render_template('admin/removed_history.html',manuscripts=Manuscript.query.filter(Manuscript.removed_at.is_not(None)).all(),
+        members=TeamMember.query.filter(TeamMember.removed_at.is_not(None)).all(),
+        documents=StaffDocument.query.filter(StaffDocument.removed_at.is_not(None)).all(),
+        saved_reports=AuditReport.query.filter(AuditReport.removed_at.is_not(None)).all())
+
+
+@staff_bp.get('/historico-submissoes/<int:ident>')
+@superadmin_required
+def archived_manuscript(ident):
+    from submission_models import Manuscript
+    m=db.get_or_404(Manuscript,ident)
+    return render_template('admin/archived_manuscript.html',manuscript=m,reviews=StaffPeerReview.query.filter_by(manuscript_id=ident).all())
+
+
+@staff_bp.post('/relatorios-equipa/guardar')
+@login_required
+def save_report():
+    validate_csrf();require('reports.read')
+    item=AuditReport(title=field('title',200,True),created_by=session.get('admin_id'),snapshot=[dict(id=a.id,date=a.created_at.isoformat(),actor=a.actor_name,action=a.action,entity=a.entity,entity_id=a.entity_id,detail=a.detail) for a in GovernanceAudit.query.order_by(GovernanceAudit.id.desc()).limit(1000)])
+    db.session.add(item);db.session.flush();audit('report.created','report',item.id);db.session.commit()
+    return redirect(url_for('staff.report_detail',ident=item.id),code=303)
+
+
+@staff_bp.get('/relatorios-equipa/<int:ident>')
+@login_required
+def report_detail(ident):
+    require('reports.read');item=db.get_or_404(AuditReport,ident)
+    if item.removed_at and not session.get('admin_superuser'):abort(410)
+    return render_template('admin/report_detail.html',report=item)
+
+
+@staff_bp.route('/equipa/<int:ident>/responsabilidades',methods=['GET','POST'])
+@superadmin_required
+def responsibilities(ident):
+    from submission_models import Manuscript
+    member=db.get_or_404(TeamMember,ident)
+    tasks=StaffTask.query.filter(StaffTask.assignee_id==ident,StaffTask.status.notin_(['done','cancelled'])).all()
+    manuscripts=Manuscript.query.filter(Manuscript.editor_id==member.admin_id,Manuscript.removed_at.is_(None),Manuscript.status.notin_(['published','rejected'])).all() if member.admin_id else []
+    flows=ArticleWorkflow.query.filter(or_(ArticleWorkflow.owner_id==ident,ArticleWorkflow.reviewer_id==ident,ArticleWorkflow.editor_id==ident),ArticleWorkflow.stage!='published').all()
+    reviews=StaffPeerReview.query.join(StaffPeerReview.manuscript).filter(StaffPeerReview.reviewer_id==ident,StaffPeerReview.status.in_(['invited','accepted']),Manuscript.removed_at.is_(None)).all()
+    if request.method=='POST':
+        validate_csrf();target=db.get_or_404(TeamMember,request.form.get('target_id',type=int))
+        if not active_member(target) or not mandates(target) or not target.available:abort(400)
+        kind=request.form.get('kind');rid=request.form.get('resource_id',type=int)
+        item=next((t for t in (tasks if kind=='task' else manuscripts if kind=='editor' else reviews if kind=='review' else flows) if (t.article_id if kind in {'portal_reviewer','portal_editor'} else t.id)==rid),None)
+        if not item:abort(404)
+        if kind=='task':item.assignee_id=target.id
+        elif kind=='editor':
+            if not has_permission('manuscript.edit',item.journal_id,member=target) or conflicts(target,item):abort(400)
+            item.editor_id=target.admin_id
+        elif kind=='review':
+            if not has_permission('manuscript.review',item.manuscript.journal_id,member=target) or conflicts(target,item.manuscript):abort(400)
+            if StaffPeerReview.query.filter_by(manuscript_id=item.manuscript_id,reviewer_id=target.id,version_number=item.version_number).first():abort(409)
+            item.status='cancelled'
+            new=StaffPeerReview(manuscript_id=item.manuscript_id,reviewer_id=target.id,version_number=item.version_number,assigned_by=session.get('admin_id'),due_on=max(item.due_on,date.today()))
+            db.session.add(new);db.session.flush();audit('review.assigned','review',new.id)
+        elif kind in {'portal_reviewer','portal_editor'}:
+            permission='article.review' if kind=='portal_reviewer' else 'article.approve'
+            if not has_permission(permission,member=target) or target.id==item.owner_id:abort(400)
+            if kind=='portal_reviewer':
+                if item.editor_id==target.id:abort(400)
+                item.reviewer_id=target.id
+            else:
+                if item.reviewer_id==target.id:abort(400)
+                item.editor_id=target.id
+        else:abort(400)
+        entity='task' if kind=='task' else 'manuscript' if kind=='editor' else 'article' if kind in {'portal_reviewer','portal_editor'} else 'review'
+        audit('responsibility.reassigned',entity,rid,'Membro '+str(ident)+' → '+str(target.id));db.session.commit()
+        return redirect(url_for('staff.responsibilities',ident=ident),code=303)
+    return render_template('admin/responsibilities.html',member=member,tasks=tasks,manuscripts=manuscripts,flows=flows,reviews=reviews,
+        candidates=[m for m in TeamMember.query.order_by(TeamMember.name) if m.id!=ident and active_member(m) and mandates(m) and m.available])
+
+
+@staff_bp.app_context_processor
+def notification_context():
+    from internal_notices import active_inbox
+    if not session.get('admin_authenticated') or not request.path.startswith('/admin'):
+        return dict(notice_unread=0,notice_recent=[])
+    query=active_inbox()
+    return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())

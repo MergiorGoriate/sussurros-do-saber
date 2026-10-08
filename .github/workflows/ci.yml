@@ -150,7 +150,7 @@ jobs:
           PY
       - name: Start Flask application
         run: |
-          python -m gunicorn app:app --bind 127.0.0.1:5000 --workers 1 --timeout 60 > /tmp/sussurros-server.log 2>&1 &
+          python -m gunicorn --pythonpath tests/browser browser_test_server:app --bind 127.0.0.1:5000 --workers 1 --timeout 60 > /tmp/sussurros-server.log 2>&1 &
           echo $! > /tmp/sussurros-server.pid
           for attempt in {1..30}; do
             curl --fail --silent http://127.0.0.1:5000/healthz && exit 0
@@ -159,6 +159,9 @@ jobs:
           cat /tmp/sussurros-server.log
           exit 1
       - run: npm run test:e2e
+      - name: Show isolated server failures
+        if: failure()
+        run: tail -n 120 /tmp/sussurros-server.log
       - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -170,4 +173,5 @@ jobs:
             /tmp/sussurros-server.log
           if-no-files-found: ignore
           retention-days: 7
+
 

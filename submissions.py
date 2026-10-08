@@ -239,6 +239,7 @@ def reset_password(token):
 def owned(ident, lock=False):
     account = researcher()
     manuscript = db.get_or_404(Manuscript, ident)
+    if manuscript.removed_at:abort(410,description='A submissão foi eliminada e mantém apenas o histórico.')
     if not account or manuscript.owner_id != account.id:
         abort(404)
     if lock:
@@ -260,6 +261,9 @@ def event(manuscript, action, new_status=None, note='', visible=False):
     actor = ('admin:' + str(session.get('admin_id') or session.get('admin_username') or 'principal')) if request.path.startswith('/admin') else 'autor:' + str(manuscript.owner_id)
     db.session.add(EditorialEvent(manuscript_id=manuscript.id, previous_status=previous, new_status=manuscript.status,
                                  action=action, actor=actor, note=note, visible_to_author=visible))
+    if action in {'submitted','revision_submitted','editor_assigned','decision','published','prepared_for_publication','publication_hidden','internal_note'}:
+        from internal_notices import dispatch
+        dispatch('manuscript.'+('revised' if action=='revision_submitted' else action),'manuscript',manuscript.id)
 
 
 def types_for(setting):
@@ -310,7 +314,7 @@ def incomplete(manuscript):
 @author_required
 def mine():
     page = request.args.get('page', 1, type=int)
-    manuscripts = Manuscript.query.filter_by(owner_id=researcher().id).order_by(Manuscript.updated_at.desc()).paginate(page=page, per_page=20, error_out=False)
+    manuscripts = Manuscript.query.filter_by(owner_id=researcher().id).filter(Manuscript.removed_at.is_(None)).order_by(Manuscript.updated_at.desc()).paginate(page=page, per_page=20, error_out=False)
     return render_template('submissions/list.html', manuscripts=manuscripts)
 
 
@@ -493,7 +497,8 @@ def remove_file(file_id):
 def download(file_id):
     file = ManuscriptFile.query.options(defer(ManuscriptFile.payload)).filter_by(id=file_id).first_or_404()
     manuscript = db.session.get(Manuscript, file.version.manuscript_id)
-    if not editorial_access(manuscript):
+    if manuscript.removed_at and not (editorial_access() and session.get('admin_superuser')):abort(410)
+    if not (manuscript.removed_at and session.get('admin_superuser')) and not editorial_access(manuscript):
         account = researcher()
         if not account or not account.verified or account.id != manuscript.owner_id:
             abort(404)
@@ -662,7 +667,13 @@ def submission_detail(ident):
             member = next((m for m in allowed if m.admin_id == (editor.id if editor else None)),None)
             if not editor or not editor.active or (not editor.is_superadmin and (not member or conflicts(member,manuscript))):
                 abort(400)
+            if manuscript.editor_id==editor.id:return redirect(url_for('admin.submission_detail',ident=ident))
+            previous_editor_id=manuscript.editor_id
             manuscript.editor_id = editor.id
+            previous_editor=next((m for m in allowed if m.admin_id==previous_editor_id),None)
+            if previous_editor and previous_editor.admin_id and not conflicts(previous_editor,manuscript):
+                from internal_notices import emit
+                emit(previous_editor.admin_id,'Responsabilidade editorial reatribuída','A submissão '+manuscript.code+' foi atribuída a outro editor.',resource=('manuscript',manuscript.id))
             event(manuscript, 'editor_assigned', note='Editor: ' + editor.display_name)
         elif action in TRANSITIONS.get(manuscript.status, ()) and note:
             event(manuscript, 'decision', action, note=note, visible=True)
@@ -673,7 +684,7 @@ def submission_detail(ident):
             flash('Ação indisponível. As decisões e notas devem ter uma observação.', 'error')
             db.session.rollback()
             return redirect(url_for('admin.submission_detail', ident=ident))
-        audit('manuscript.'+action,'manuscript',ident,manuscript.status)
+        audit('editorial.logged','editorial',ident,manuscript.status)
         db.session.commit()
         return redirect(url_for('admin.submission_detail', ident=ident))
     can_decide=manuscript_access(manuscript,'manuscript.decide')
@@ -742,6 +753,9 @@ def prepare_publication(ident):
 
 
 def publication_saved(journal):
+    # A new standalone journal has no ID until flush; NULL must not match unlinked submissions.
+    if not journal.id:db.session.flush()
+    if not journal.id:return
     manuscript = Manuscript.query.filter_by(publication_id=journal.id).first()
     if not manuscript:
         return
@@ -832,3 +846,47 @@ def publication_figure(asset_id):
     return send_file(io.BytesIO(asset.payload), mimetype='image/png', download_name='figura.png', max_age=0)
 
 
+
+
+@submissions_bp.route('/notificacoes',methods=['GET','POST'])
+@author_required
+def internal_notifications():
+    from internal_notices import active_inbox, mutate
+    from governance_models import StaffNotice
+    if request.method=='POST':
+        validate_csrf();mutate(request.form.get('action','read'),request.form.get('id',type=int),public=True)
+        return redirect(url_for('submissions.internal_notifications'),code=303)
+    from reader_accounts import sync_internal_updates
+    sync_internal_updates(researcher())
+    query=active_inbox(public=True)
+    page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
+    return render_template('submissions/notices.html',notices=page.items,pagination=page,unread=query.filter(StaffNotice.read_at.is_(None)).count())
+
+
+@submissions_bp.get('/notificacoes/<int:ident>/abrir')
+@author_required
+def open_internal_notice(ident):
+    from internal_notices import active_inbox, resource_url
+    item=active_inbox(public=True).filter_by(id=ident).first_or_404()
+    target=resource_url(item,public=True)
+    if not target:
+        flash('O recurso foi eliminado ou já não está acessível.','warning')
+        return redirect(url_for('submissions.internal_notifications'))
+    return redirect(target)
+
+
+@submissions_bp.app_context_processor
+def researcher_notifications_context():
+    if not request.path.startswith('/submissoes'):return {}
+    from internal_notices import active_inbox
+    from governance_models import StaffNotice
+    account=researcher() if request.path.startswith('/submissoes') else None
+    return dict(researcher_notice_unread=active_inbox(public=True).filter(StaffNotice.read_at.is_(None)).count() if account else 0, notice_public=True, notice_unread=active_inbox(public=True).filter(StaffNotice.read_at.is_(None)).count() if account else 0, notice_recent=active_inbox(public=True).order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all() if account else [])
+
+
+@submissions_bp.get('/api/notificacoes')
+@author_required
+def internal_notice_summary():
+    from flask import jsonify
+    from internal_notices import summary
+    return jsonify(summary(public=True))

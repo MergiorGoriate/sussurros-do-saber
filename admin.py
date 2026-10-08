@@ -74,6 +74,10 @@ def admin_session_valid():
         administrator = db.session.get(AdminUser, administrator_id)
         if not administrator or not administrator.active:
             return False
+        from governance_models import TeamMember
+        member=TeamMember.query.filter_by(admin_id=administrator.id).first()
+        if member and member.removed_at:
+            return False
         if session.get("admin_security_stamp") != admin_security_stamp(administrator):
             return False
         session["admin_superuser"] = bool(administrator.is_superadmin)
@@ -563,7 +567,9 @@ def administrators():
             db.session.flush()
             from governance_models import TeamMember
             from governance import audit
-            db.session.add(TeamMember(admin_id=administrator.id,name=display_name,email=email or '',status='invited'))
+            invited_member=TeamMember(admin_id=administrator.id,name=display_name,email=email or '',status='invited')
+            db.session.add(invited_member);db.session.flush()
+            audit('member.invited','member',invited_member.id)
             audit('account.created','admin',administrator.id)
             db.session.commit()
             flash("Novo administrador criado com sucesso.", "success")
@@ -637,12 +643,12 @@ def delete_administrator(administrator_id):
     elif session.get("admin_id") == administrator.id:
         flash("Não pode eliminar a conta que está a utilizar.", "error")
     else:
-        from governance_models import TeamMember, TeamAppointment, GovernanceAudit, StaffNotice, StaffTask, StaffDocument, TaskComment, StaffPeerReview, StaffContactLog
+        from governance_models import TeamMember, TeamAppointment, GovernanceAudit, StaffNotice, StaffTask, StaffDocument, TaskComment, StaffPeerReview, StaffContactLog, AuditReport
         from submission_models import Manuscript, ReviewAssignment
         from governance import audit
         member=TeamMember.query.filter_by(admin_id=administrator.id).first()
         has_history = member and (member.accepted_at or member.appointments or StaffDocument.query.filter_by(member_id=member.id).first() or StaffTask.query.filter_by(assignee_id=member.id).first() or StaffPeerReview.query.filter_by(reviewer_id=member.id).first())
-        if has_history or Manuscript.query.filter_by(editor_id=administrator.id).first() or ReviewAssignment.query.filter_by(assigned_by=administrator.id).first():
+        if has_history or AuditReport.query.filter_by(created_by=administrator.id).first() or Manuscript.query.filter_by(editor_id=administrator.id).first() or ReviewAssignment.query.filter_by(assigned_by=administrator.id).first():
             abort(409,description='Esta conta tem histórico editorial. Desactive-a para preservar os registos.')
         if member:
             member.admin_id=None
