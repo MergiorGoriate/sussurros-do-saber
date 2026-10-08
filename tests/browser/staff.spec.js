@@ -16,12 +16,20 @@ test('staff management pages render at desktop and mobile widths', async ({ page
     for (const [path, title] of [
       ['/admin/equipa', 'Equipa e convites'], ['/admin/funcoes', 'Funções e permissões'],
       ['/admin/trabalho', 'Área de trabalho'], ['/admin/documentos-equipa', 'Documentos privados da equipa'],
-      ['/admin/notificacoes', 'Notificações internas'], ['/admin/relatorios-equipa', 'Relatórios e auditoria']
+      ['/admin/historico-remocoes', 'Histórico de remoções'], ['/admin/notificacoes', 'Notificações internas'], ['/admin/relatorios-equipa', 'Relatórios e auditoria']
     ]) {
       const response = await page.goto(path, { waitUntil: 'domcontentloaded' });
       expect(response.status(), path).toBe(200);
       expect(response.headers()['cache-control']).toContain('no-store');
       await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+      if (['/admin/equipa','/admin/funcoes','/admin/historico-remocoes','/admin/notificacoes'].includes(path)) {
+        await page.screenshot({path: `test-results/management-${path.split('/').pop()}-${width}.png`, fullPage:true});
+      }
+      if (path === '/admin/funcoes') {
+        expect(await page.locator('input[name="permissions"]').count()).toBe(24);
+        const codes = await page.locator('input[name="permissions"]').evaluateAll(items => items.map(item => item.value));
+        expect(new Set(codes).size).toBe(codes.length);
+      }
       const overflow = await page.evaluate(() => ({width: innerWidth, document: document.documentElement.scrollWidth,
         elements: [...document.querySelectorAll('body *')].filter(e => { const r=e.getBoundingClientRect(); return r.right>innerWidth+1 && !e.closest('.table-wrap, nav'); }).slice(0,8).map(e=>({tag:e.tagName,classes:e.className,width:e.getBoundingClientRect().width}))}));
       expect(overflow.document <= width, JSON.stringify({path,...overflow})).toBeTruthy();

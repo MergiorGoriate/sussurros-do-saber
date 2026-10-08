@@ -18,13 +18,13 @@ for(const width of [1440,390]) {
   const item=bar.locator('[data-notice-items] section').filter({hasText:'Segundo aviso '+d.suffix});
   await item.getByRole('button',{name:'Eliminar aviso'}).click();
   await expect(page).toHaveURL(/\/admin\/notificacoes$/);
-  await expect(page.locator('main > section').filter({hasText:'Segundo aviso '+d.suffix})).toHaveCount(0);
+  await expect(page.locator('.management-notice').filter({hasText:'Segundo aviso '+d.suffix})).toHaveCount(0);
   await expect(page.locator('[data-notice-bar] [data-notice-count]')).toHaveText('1');
-  await page.locator('main > form').getByRole('button',{name:'Marcar todas como lidas'}).click();
+  await page.locator('.management-toolbar').getByRole('button',{name:'Marcar todas como lidas'}).click();
   await expect(page.locator('[data-notice-bar] [data-notice-count]')).toHaveText('0');
   await page.reload();await expect(page.locator('[data-notice-bar] [data-notice-count]')).toHaveText('0');
   await expect(page.locator('.notice-badge')).toBeHidden();
-  await expect(page.locator('main > section').filter({hasText:'Segundo aviso '+d.suffix})).toHaveCount(0);
+  await expect(page.locator('.management-notice').filter({hasText:'Segundo aviso '+d.suffix})).toHaveCount(0);
   expect((await page.goto(`/admin/remover/document/${d.document_id}`)).status()).toBe(403);
  });
 }
