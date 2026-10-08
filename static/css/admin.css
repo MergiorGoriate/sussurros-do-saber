@@ -621,3 +621,39 @@ input,textarea,select,button{font-size:16px}
 .markdown-preview figure.article-pullquote blockquote p { font-family:Georgia,serif; font-size:1.4rem; line-height:1.5; margin:1rem 0; text-align:center; }
 .markdown-preview figure.article-pullquote figcaption { font-size:.85rem; line-height:1.5; margin-top:1rem; opacity:.8; }
 @media(max-width:640px) { .markdown-preview figure.article-pullquote { float:none; width:100%; margin:1.5rem 0; box-sizing:border-box; } }
+
+/* Grid items must shrink to the available space, including mobile toolbars,
+   native file/date controls and journal author fieldsets. */
+.editor-form,
+.editor-main,
+.editor-side,
+.editor-form label,
+.editor-field,
+.editor-workspace > *,
+.markdown-editor-grid > *,
+.journal-title-fields > *,
+.journal-author-card {
+  min-width: 0;
+}
+.editor-form input,
+.editor-form textarea,
+.editor-form select {
+  min-width: 0;
+  max-width: 100%;
+}
+.editor-toolbar,
+.markdown-toolbar,
+.markdown-preview {
+  min-width: 0;
+  max-width: 100%;
+}
+.markdown-preview pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+@media (max-width: 850px) {
+  .editor-form,
+  .editor-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
