@@ -100,3 +100,27 @@
 .management-permission-group{display:grid;gap:8px;border-top:1px solid #e0e7ef;padding-top:16px;}.management-permission-group h3{margin-bottom:6px;}
 .management-empty{padding:24px;text-align:center;color:#536579;background:#f6f9fc;border-radius:12px;line-height:1.6;}.management-callout{padding:16px 20px;background:#edf5fd;border-left:4px solid #3678b7;border-radius:8px;line-height:1.6;}.management-meta{font-size:.85rem;color:#536579;}.management-notice.is-unread{border-left:4px solid #2677bb;background:#fafdff;}.management-toolbar{margin:0 0 22px;}.management-pagination{display:flex;gap:12px;margin:22px 0;}
 @media(max-width:1000px){.management-columns{grid-template-columns:1fr;}}@media(max-width:520px){.staff-management .admin-panel{padding:18px;border-radius:12px;}.staff-management .staff-form fieldset{padding:14px;}.management-item-heading{flex-wrap:wrap;}.management-summary{grid-template-columns:repeat(2,minmax(0,1fr));}.management-summary>div{padding:15px;}.management-actions>*{flex:1 1 auto;text-align:center;}.management-item{padding:15px;}}
+
+/* Barra lateral recolhível, com ícones e nomes acessíveis. */
+.admin-sidebar .admin-sidebar-toggle{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;align-self:flex-end;padding:10px;border:1px solid #517399;color:#fff;background:#1b416b;cursor:pointer;margin-bottom:14px;}
+.admin-sidebar-toggle svg{width:22px;height:22px;}.admin-sidebar-collapsed .admin-sidebar-toggle svg{transform:rotate(180deg);}
+.admin-sidebar nav a,.admin-sidebar form button{display:flex;align-items:center;gap:12px;min-height:44px;}
+.admin-menu-icon{width:21px;height:21px;flex:0 0 21px;}.admin-menu-label{min-width:0;}
+.admin-sidebar :is(a,button):focus-visible{outline:3px solid #a7d2ff;outline-offset:2px;}
+.admin-sidebar-collapsed .admin-menu-label,.admin-sidebar-collapsed .admin-brand>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+@media(min-width:851px){
+ .admin-sidebar-collapsed .admin-sidebar{width:80px;padding:18px 12px;}
+ .admin-sidebar-collapsed .admin-main{margin-left:80px;}
+ .admin-sidebar-collapsed .admin-sidebar-toggle{align-self:center;}
+ .admin-sidebar-collapsed .admin-brand{justify-content:center;}.admin-sidebar-collapsed .admin-brand img{width:42px;height:42px;}
+ .admin-sidebar-collapsed .admin-sidebar nav a,.admin-sidebar-collapsed .admin-sidebar form button{justify-content:center;padding:10px;}
+ .admin-sidebar-collapsed .admin-sidebar form button{width:100%;}
+}
+@media(max-width:850px){
+ .admin-sidebar .admin-sidebar-toggle{position:absolute;right:68px;top:14px;margin:0;}
+ .admin-sidebar .admin-brand{padding-right:108px;}
+ .admin-sidebar form{right:12px;top:14px;}
+ .admin-sidebar form button{width:44px;padding:10px;justify-content:center;}
+ .admin-sidebar form .admin-menu-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+ .admin-sidebar-collapsed .admin-sidebar nav a{min-width:44px;justify-content:center;padding:10px;}
+}
