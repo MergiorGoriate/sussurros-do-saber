@@ -124,3 +124,22 @@
  .admin-sidebar form .admin-menu-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
  .admin-sidebar-collapsed .admin-sidebar nav a{min-width:44px;justify-content:center;padding:10px;}
 }
+
+/* Tipografia administrativa mais compacta, sem reduzir os alvos de toque. */
+.admin-sidebar,.admin-main{font-size:14px;line-height:1.5;}
+.admin-sidebar .admin-brand{font-size:16px;}
+.admin-sidebar nav a,.admin-sidebar form button{font-size:14px;}
+.admin-main .admin-header h1{font-size:30px;line-height:1.2;}
+.admin-main .admin-header>div>span{font-size:11px;}
+.admin-main .metric-grid strong{font-size:28px;}
+.admin-main .admin-panel>h2,.admin-main .panel-head h2{font-size:20px;}
+.admin-main .workspace-task h3{font-size:18px;}
+.admin-main .workspace-overview strong{font-size:28px;}
+.admin-main .workspace-overview .workspace-metric-label{font-size:19px;}
+.admin-main .management-summary strong{font-size:26px;}
+.admin-main :is(button,input,select,textarea){font-size:14px;}
+@media(max-width:850px){
+ .admin-main .admin-header h1{font-size:26px;}
+ /* Evita zoom automático nos campos em navegadores móveis. */
+ .admin-main :is(input,select,textarea){font-size:16px;}
+}

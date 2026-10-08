@@ -14,7 +14,7 @@ test('staff management pages render at desktop and mobile widths', async ({ page
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     for (const [path, title] of [
-      ['/admin/equipa', 'Equipa e convites'], ['/admin/funcoes', 'Funções e permissões'],
+      ['/admin', 'Visão geral'], ['/admin/equipa', 'Equipa e convites'], ['/admin/funcoes', 'Funções e permissões'],
       ['/admin/trabalho', 'Área de trabalho'], ['/admin/documentos-equipa', 'Documentos privados da equipa'],
       ['/admin/historico-remocoes', 'Histórico de remoções'], ['/admin/notificacoes', 'Notificações internas'], ['/admin/relatorios-equipa', 'Relatórios e auditoria']
     ]) {
@@ -22,7 +22,7 @@ test('staff management pages render at desktop and mobile widths', async ({ page
       expect(response.status(), path).toBe(200);
       expect(response.headers()['cache-control']).toContain('no-store');
       await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
-      if (['/admin/equipa','/admin/funcoes','/admin/historico-remocoes','/admin/notificacoes'].includes(path)) {
+      if (['/admin','/admin/equipa','/admin/funcoes','/admin/historico-remocoes','/admin/notificacoes'].includes(path)) {
         await page.screenshot({path: `test-results/management-${path.split('/').pop()}-${width}.png`, fullPage:true});
       }
       if (path === '/admin/funcoes') {
