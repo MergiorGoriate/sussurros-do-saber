@@ -160,3 +160,10 @@
  .admin-sidebar-collapsed .admin-sidebar nav::-webkit-scrollbar-track{background:#102c50;}
  .admin-sidebar-collapsed .admin-sidebar nav a{min-width:44px;min-height:48px;padding-inline:8px;}
 }
+
+/* Em Chromium/WebKit, usar o desenho explícito em vez da barra que desaparece automaticamente. */
+@media(min-width:851px){
+ @supports selector(::-webkit-scrollbar){
+  .admin-sidebar-collapsed .admin-sidebar nav{scrollbar-width:auto;scrollbar-color:auto;}
+ }
+}
