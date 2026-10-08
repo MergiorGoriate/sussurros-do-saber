@@ -15,7 +15,8 @@
       const response = await fetch(bar.dataset.summaryUrl, {credentials: 'same-origin', cache: 'no-store'});
       if (!response.ok) throw new Error('inbox');
       const data = await response.json();
-      document.querySelectorAll('[data-notice-count]').forEach(el => { el.textContent = String(data.unread); });
+      document.querySelectorAll('[data-notice-count]').forEach(el => { el.textContent = String(data.unread); if (el.classList.contains('notice-badge')) el.hidden = !data.unread; });
+      bar.querySelector('[data-notice-label]').textContent = `Notificações · ${data.unread} por ler`;
       list.replaceChildren();
       for (const item of data.items) {
         const section = node('section');
@@ -35,6 +36,8 @@
     finally { busy = false; }
   };
   bar.addEventListener('toggle', () => { if (bar.open) refresh(); });
+  document.addEventListener('click', event => { if (!bar.contains(event.target)) bar.open = false; });
+  bar.addEventListener('keydown', event => { if (event.key === 'Escape') { bar.open = false; bar.querySelector('summary').focus(); } });
   document.addEventListener('visibilitychange', refresh);
   document.addEventListener('notice-inbox-change', refresh);
   setInterval(refresh, 60000);
