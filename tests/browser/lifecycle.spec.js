@@ -8,7 +8,9 @@ for(const width of [1440,390]) {
   await page.goto('/admin/trabalho');const bar=page.locator('[data-notice-bar]');
   await expect(bar.locator('[data-notice-count]')).toHaveText('2');
   const trigger=bar.locator('summary');
-  expect((await trigger.boundingBox()).height).toBeLessThanOrEqual(48);
+  const bellBox=await trigger.boundingBox();
+  expect(bellBox.height).toBeLessThanOrEqual(48);
+  if(width===1440) expect(bellBox.y).toBe(8);
   await expect(bar.locator('.notice-badge')).toBeVisible();
   await trigger.click();await expect(bar.locator('[data-notice-status]')).toHaveText('Notificações actualizadas.');
   const popup=await bar.locator('.notice-popover').boundingBox();
