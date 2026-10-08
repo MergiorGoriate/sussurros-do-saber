@@ -282,7 +282,7 @@ Na submissão científica, o detalhe contém atribuição de editor e acesso à 
 
 ### Interface administrativa
 
-Cartões e indicadores em Equipa e convites, Funções e permissões, Histórico de remoções e Notificações internas; formulários agrupados, foco visível e disposição adaptada a computador/telemóvel. A barra lateral recolhe e expande pelo botão, mantém apenas os ícones quando recolhida e guarda a preferência no navegador. A navegação usa deslocamento interno, com espaço para os ícones e sem barra exterior duplicada. A tipografia foi reduzida e o sino reposicionado no topo. A aparência da barra de deslocamento depende também do sistema/navegador. O logótipo branco administrativo está proposto separadamente no [PR #167](https://github.com/MergiorGoriate/sussurros-do-saber/pull/167); não é tratado aqui como alteração já integrada.
+Cartões e indicadores em Equipa e convites, Funções e permissões, Histórico de remoções e Notificações internas; formulários agrupados, foco visível e disposição adaptada a computador/telemóvel. A barra lateral recolhe e expande pelo botão, mantém apenas os ícones quando recolhida e guarda a preferência no navegador. A navegação usa deslocamento interno, com espaço para os ícones e sem barra exterior duplicada. A tipografia foi reduzida e o sino reposicionado no topo. A aparência da barra de deslocamento depende também do sistema/navegador. O logótipo administrativo aparece em branco sobre o fundo azul, preservando o símbolo e a transparência, também com a barra recolhida e no telemóvel.
 
 ## Remoções e histórico do fundador
 
