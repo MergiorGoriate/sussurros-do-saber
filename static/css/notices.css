@@ -12,3 +12,8 @@
 .notice-bar button,.notice-bar a { display:inline-flex; align-items:center; min-height:44px; padding:.5rem; }
 .notice-bar :focus-visible { outline:3px solid #335eaa; outline-offset:3px; }
 .notice-bar time { display:block; }
+
+/* Place the admin bell 12 px from the top instead of inside the 36 px content inset. */
+@media (min-width:851px) {
+  .admin-main > .notice-toolbar { margin-block-start:-24px; }
+}
