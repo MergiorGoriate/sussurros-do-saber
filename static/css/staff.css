@@ -149,3 +149,12 @@
  .admin-sidebar{overflow:hidden;}
  .admin-sidebar .admin-sidebar-toggle{flex:0 0 auto;}
 }
+
+/* Ícones inteiros e contrastantes, sem perder o deslocamento do menu. */
+.admin-sidebar .admin-menu-icon{width:24px;height:24px;flex-basis:24px;stroke-width:2;color:#edf5ff;}
+.admin-sidebar nav a:hover,.admin-sidebar nav a:focus-visible{background:#214c7b;color:#fff;}
+@media(min-width:851px){
+ .admin-sidebar-collapsed .admin-sidebar nav{padding-right:0;scrollbar-width:none;}
+ .admin-sidebar-collapsed .admin-sidebar nav::-webkit-scrollbar{display:none;}
+ .admin-sidebar-collapsed .admin-sidebar nav a{min-width:44px;min-height:48px;}
+}
