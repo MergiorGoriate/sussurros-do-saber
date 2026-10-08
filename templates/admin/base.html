@@ -8,44 +8,45 @@
   <title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title>
   <link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261003-policy-editor-v2') }}">
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css',v='20261008-management') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css',v='20261008-sidebar') }}">
   {% block extra_head %}{% endblock %}
 <link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261008-bell-top') }}"></head>
 <body>
-  <aside class="admin-sidebar">
+  <aside class="admin-sidebar" id="admin-sidebar">
+    <button type="button" class="admin-sidebar-toggle" data-sidebar-toggle aria-controls="admin-sidebar" aria-expanded="true" aria-label="Recolher barra lateral" title="Recolher barra lateral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
     <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
       <img src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Logotipo do Sussurros do Saber">
       <span>Sussurros<br>do Saber</span>
     </a>
     <nav aria-label="Administração">
-      <a href="{{ url_for('admin.dashboard') }}">Visão geral</a>
-      {% if staff_can('article.write') or staff_can('article.edit') or staff_can('article.review') or staff_can('article.approve') or staff_can('article.publish') or staff_can('article.delete') %}<a href="{{ url_for('admin.articles') }}">Artigos</a>{% endif %}
-      {% if staff_can('authors.manage') %}<a href="{{ url_for('admin.authors') }}">Autores</a>{% endif %}
-      {% if staff_can('categories.manage') %}<a href="{{ url_for('admin.categories') }}">Categorias</a>{% endif %}
-      {% if staff_has_any('journal.manage') or staff_has_any('manuscript.production') or staff_has_any('journal.publish') %}<a href="{{ url_for('admin.journals') }}">Revistas</a>{% endif %}
-      {% if staff_has_any('manuscript.read') or staff_has_any('manuscript.edit') or staff_has_any('manuscript.production') or staff_has_any('manuscript.assign') or staff_has_any('manuscript.decide') or staff_has_any('submissions.configure') %}<a href="{{ url_for('admin.submissions_list') }}">Submissões</a>{% endif %}
-      {% if staff_can('policies.manage') %}<a href="{{ url_for('admin.editorial_policies') }}">Políticas Editoriais</a>{% endif %}
-      {% if staff_can('comments.manage') %}<a href="{{ url_for('admin.comments') }}">Comentários</a>{% endif %}
+      <a href="{{ url_for('admin.dashboard') }}" title="Visão geral"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10l9-7 9 7v10H3z M9 20v-7h6v7"/></svg><span class="admin-menu-label">Visão geral</span></a>
+      {% if staff_can('article.write') or staff_can('article.edit') or staff_can('article.review') or staff_can('article.approve') or staff_can('article.publish') or staff_can('article.delete') %}<a href="{{ url_for('admin.articles') }}" title="Artigos"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h10l4 4v14H5z M14 3v5h5 M8 12h8 M8 16h8"/></svg><span class="admin-menu-label">Artigos</span></a>{% endif %}
+      {% if staff_can('authors.manage') %}<a href="{{ url_for('admin.authors') }}" title="Autores"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M17 4a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-4"/></svg><span class="admin-menu-label">Autores</span></a>{% endif %}
+      {% if staff_can('categories.manage') %}<a href="{{ url_for('admin.categories') }}" title="Categorias"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/></svg><span class="admin-menu-label">Categorias</span></a>{% endif %}
+      {% if staff_has_any('journal.manage') or staff_has_any('manuscript.production') or staff_has_any('journal.publish') %}<a href="{{ url_for('admin.journals') }}" title="Revistas"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5c-3-3-7-3-10-1v15c3-2 7-2 10 1 3-3 7-3 10-1V4c-3-2-7-2-10 1z M12 5v15"/></svg><span class="admin-menu-label">Revistas</span></a>{% endif %}
+      {% if staff_has_any('manuscript.read') or staff_has_any('manuscript.edit') or staff_has_any('manuscript.production') or staff_has_any('manuscript.assign') or staff_has_any('manuscript.decide') or staff_has_any('submissions.configure') %}<a href="{{ url_for('admin.submissions_list') }}" title="Submissões"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12 M7 10l5 5 5-5 M4 15v6h16v-6"/></svg><span class="admin-menu-label">Submissões</span></a>{% endif %}
+      {% if staff_can('policies.manage') %}<a href="{{ url_for('admin.editorial_policies') }}" title="Políticas Editoriais"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2l8 4v6c0 5-8 10-8 10S4 17 4 12V6z M8 12l3 3 5-6"/></svg><span class="admin-menu-label">Políticas Editoriais</span></a>{% endif %}
+      {% if staff_can('comments.manage') %}<a href="{{ url_for('admin.comments') }}" title="Comentários"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 11a9 9 0 0 1-9 9H3l2-5a9 9 0 1 1 16-4z"/></svg><span class="admin-menu-label">Comentários</span></a>{% endif %}
       {% if current_admin_is_primary %}
-      <a href="{{ url_for('admin.administrators') }}">Administradores</a>
+      <a href="{{ url_for('admin.administrators') }}" title="Administradores"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8"/></svg><span class="admin-menu-label">Administradores</span></a>
       {% endif %}
-      {% if staff_can('contacts.manage') %}<a href="{{ url_for('admin.contacts') }}">Contactos</a>{% endif %}
-      {% if staff_can('subscribers.manage') %}<a href="{{ url_for('admin.subscribers') }}">Subscritores</a>{% endif %}
-      <a href="{{ url_for('staff.workspace') }}">Área de trabalho</a>
-      {% if staff_can('tasks.manage') %}<a href="{{ url_for('staff.workspace') }}#distribuir-tarefa">Distribuir tarefas</a>{% endif %}
-      {% if staff_can('team.manage') %}<a href="{{ url_for('staff.team') }}">Equipa e convites</a>{% endif %}
-      {% if current_admin_is_primary %}<a href="{{ url_for('staff.roles') }}">Funções e permissões</a><a href="{{ url_for('staff.removed_history') }}">Histórico de remoções</a>{% endif %}
-      {% if staff_has_any('manuscript.review') %}<a href="{{ url_for('staff.reviews') }}">Meus pareceres</a>{% endif %}
-      <a href="{{ url_for('staff.documents') }}">Documentos da equipa</a>
-      <a href="{{ url_for('staff.notifications') }}">Notificações <span data-notice-count>{{ notice_unread }}</span></a>
-      {% if staff_can('reports.read') %}<a href="{{ url_for('staff.reports') }}">Relatórios e auditoria</a>{% endif %}
-      <a href="{{ url_for('admin.docs') }}">Docs</a>
-      <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a>
-      <a href="/" target="_blank" rel="noopener">Ver site ↗</a>
+      {% if staff_can('contacts.manage') %}<a href="{{ url_for('admin.contacts') }}" title="Contactos"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 5h18v14H3z M3 5l9 7 9-7"/></svg><span class="admin-menu-label">Contactos</span></a>{% endif %}
+      {% if staff_can('subscribers.manage') %}<a href="{{ url_for('admin.subscribers') }}" title="Subscritores"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v18 M3 12h18 M5 5l14 14 M19 5L5 19"/></svg><span class="admin-menu-label">Subscritores</span></a>{% endif %}
+      <a href="{{ url_for('staff.workspace') }}" title="Área de trabalho"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 4h16v16H4z M8 8h8 M8 12h8 M8 16h4"/></svg><span class="admin-menu-label">Área de trabalho</span></a>
+      {% if staff_can('tasks.manage') %}<a href="{{ url_for('staff.workspace') }}#distribuir-tarefa" title="Distribuir tarefas"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v16 M4 12h16 M16 16l4-4-4-4"/></svg><span class="admin-menu-label">Distribuir tarefas</span></a>{% endif %}
+      {% if staff_can('team.manage') %}<a href="{{ url_for('staff.team') }}" title="Equipa e convites"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 21v-2a4 4 0 0 1 4-4h5a4 4 0 0 1 4 4v2 M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M19 7v6 M16 10h6"/></svg><span class="admin-menu-label">Equipa e convites</span></a>{% endif %}
+      {% if current_admin_is_primary %}<a href="{{ url_for('staff.roles') }}" title="Funções e permissões"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6"/></svg><span class="admin-menu-label">Funções e permissões</span></a><a href="{{ url_for('staff.removed_history') }}" title="Histórico de remoções"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 5h18v4H3z M5 9v12h14V9 M10 13h4"/></svg><span class="admin-menu-label">Histórico de remoções</span></a>{% endif %}
+      {% if staff_has_any('manuscript.review') %}<a href="{{ url_for('staff.reviews') }}" title="Meus pareceres"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 12l2 2 4-4 M5 3h14v18H5z M8 6h8"/></svg><span class="admin-menu-label">Meus pareceres</span></a>{% endif %}
+      <a href="{{ url_for('staff.documents') }}" title="Documentos da equipa"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h9l4 4v14H6z M15 3v5h4 M9 12h7 M9 16h7"/></svg><span class="admin-menu-label">Documentos da equipa</span></a>
+      <a href="{{ url_for('staff.notifications') }}" title="Notificações"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4"/></svg><span class="admin-menu-label">Notificações <span data-notice-count>{{ notice_unread }}</span></span></a>
+      {% if staff_can('reports.read') %}<a href="{{ url_for('staff.reports') }}" title="Relatórios e auditoria"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V10 M10 20V4 M16 20v-8 M22 20H2"/></svg><span class="admin-menu-label">Relatórios e auditoria</span></a>{% endif %}
+      <a href="{{ url_for('admin.docs') }}" title="Docs"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 3h16v18H4z M8 7h8 M8 11h8 M8 15h4"/></svg><span class="admin-menu-label">Docs</span></a>
+      <a href="{{ url_for('admin.two_factor_settings') }}" title="Segurança e 2FA"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 10V7a6 6 0 0 1 12 0v3 M4 10h16v11H4z M12 14v3"/></svg><span class="admin-menu-label">Segurança e 2FA</span></a>
+      <a href="/" target="_blank" rel="noopener" title="Ver site"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3h7v7 M21 3l-9 9 M10 3H3v18h18v-7"/></svg><span class="admin-menu-label">Ver site ↗</span></a>
     </nav>
     <form action="{{ url_for('admin.logout') }}" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button>Sair</button>
+      <button title="Sair"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 4H3v16h6 M8 12h13 M17 8l4 4-4 4"/></svg><span class="admin-menu-label">Sair</span></button>
     </form>
   </aside>
   <main class="admin-main">
@@ -55,7 +56,7 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js',v='20261008-sidebar') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js') }}" defer></script>
 </body>
 </html>

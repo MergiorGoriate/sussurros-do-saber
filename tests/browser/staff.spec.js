@@ -45,3 +45,31 @@ test('public team page offers a confirmed-team empty state without private data'
   await expect(page.getByRole('heading', { name: 'A nossa equipa' })).toBeVisible();
   expect(await page.locator('#conteudo input[name="email"], #conteudo textarea[name="contact_note"]').count()).toBe(0);
 });
+
+for (const width of [1440,390]) {
+ test(`sidebar toggles icons, keyboard and persistence at ${width}px`,async({page})=>{
+  await adminLogin(page);await page.setViewportSize({width,height:900});
+  await page.goto('/admin/trabalho');
+  const sidebar=page.locator('#admin-sidebar');
+  const toggle=page.getByRole('button',{name:'Recolher barra lateral',exact:true});
+  const before=await page.locator('main').boundingBox();
+  await toggle.focus();await toggle.press('Enter');
+  await expect(page.getByRole('button',{name:'Expandir barra lateral',exact:true})).toHaveAttribute('aria-expanded','false');
+  await expect(sidebar.getByRole('link',{name:'Equipa e convites',exact:true})).toHaveCount(1);
+  expect(await sidebar.locator('nav a').evaluateAll(items=>items.every(a=>!!a.querySelector('svg')&&!!a.title))).toBeTruthy();
+  expect(await sidebar.locator('.admin-menu-label').first().evaluate(e=>e.getBoundingClientRect().width)).toBe(1);
+  if(width===1440) {
+   expect((await sidebar.boundingBox()).width).toBe(80);
+   expect((await page.locator('main').boundingBox()).x).toBeLessThan(before.x);
+  }
+  await page.screenshot({path:`test-results/sidebar-collapsed-${width}.png`,fullPage:true});
+  await page.reload();await expect(page.getByRole('button',{name:'Expandir barra lateral',exact:true})).toBeVisible();
+  await sidebar.getByRole('link',{name:'Equipa e convites',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Equipa e convites',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Expandir barra lateral',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Recolher barra lateral',exact:true})).toHaveAttribute('aria-expanded','true');
+  await page.reload();await expect(page.getByRole('button',{name:'Recolher barra lateral',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  await page.screenshot({path:`test-results/sidebar-expanded-${width}.png`,fullPage:true});
+ });
+}
