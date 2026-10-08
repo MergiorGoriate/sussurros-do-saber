@@ -463,3 +463,26 @@ test('blocked browser storage does not break bookmark controls', async ({ page }
   await expect(bookmark).toHaveAttribute('aria-pressed','false');
   expect(errors).toEqual([]);
 });
+
+for(const width of [1440,390,320]){
+ test(`scientific article shares to Bluesky and Reddit at ${width}px`,async({page})=>{
+  await page.setViewportSize({width,height:1000});
+  await page.goto('/revistas/revista-de-teste-cientifico');
+  const title=await page.locator('#journal-article-title').innerText();
+  const links=page.locator('.journal-article-share');
+  for(const network of ['Bluesky','Reddit']){
+   const link=links.getByRole('link',{name:network,exact:true});
+   await link.scrollIntoViewIfNeeded();await expect(link).toBeVisible();
+   await expect(link).toHaveAttribute('target','_blank');await expect(link).toHaveAttribute('rel','noopener noreferrer');
+   const url=new URL(await link.getAttribute('href'));
+   expect(url.hostname).toBe(network==='Bluesky'?'bsky.app':'www.reddit.com');
+   expect(url.pathname).toBe(network==='Bluesky'?'/intent/compose':'/submit');
+   if(network==='Bluesky')expect(url.searchParams.get('text')).toContain(title+' ');
+   else expect(url.searchParams.get('title')).toBe(title);
+   expect(url.searchParams.get(network==='Bluesky'?'text':'url')).toContain('/revistas/revista-de-teste-cientifico');
+   if(width<600){const box=await link.boundingBox();expect(box.width).toBeGreaterThanOrEqual(44);expect(box.height).toBeGreaterThanOrEqual(44);}
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  await page.locator('.journal-article-topline').screenshot({path:`test-results/journal-share-${width}.png`});
+ });
+}
