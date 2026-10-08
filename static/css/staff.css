@@ -117,7 +117,10 @@
  .admin-sidebar-collapsed .admin-sidebar form button{width:100%;}
 }
 @media(max-width:850px){
- .admin-sidebar .admin-sidebar-toggle{position:absolute;right:16px;top:14px;margin:0;}
- .admin-sidebar .admin-brand{padding-right:58px;}
+ .admin-sidebar .admin-sidebar-toggle{position:absolute;right:68px;top:14px;margin:0;}
+ .admin-sidebar .admin-brand{padding-right:108px;}
+ .admin-sidebar form{right:12px;top:14px;}
+ .admin-sidebar form button{width:44px;padding:10px;justify-content:center;}
+ .admin-sidebar form .admin-menu-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
  .admin-sidebar-collapsed .admin-sidebar nav a{min-width:44px;justify-content:center;padding:10px;}
 }
