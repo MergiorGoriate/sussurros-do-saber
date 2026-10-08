@@ -204,18 +204,25 @@ class Article(db.Model):
             cls.scheduled_at.isnot(None),
             cls.scheduled_at <= now,
         )
-        due_ids=[row.id for row in due.all()]
-        changed = due.update(
-            {
-                cls.status: "published",
-                cls.published_at: db.func.coalesce(cls.published_at, cls.scheduled_at),
-                cls.updated_at: now,
-            },
-            synchronize_session=False,
-        )
+        # Lock due rows so concurrent workers cannot publish or notify twice.
+        from governance_models import ArticleWorkflow, GovernanceAudit
+        from internal_notices import dispatch
+        changed = 0
+        for article in due.with_for_update(skip_locked=True).all():
+            workflow = ArticleWorkflow.query.filter_by(article_id=article.id).with_for_update().first()
+            if workflow and (not workflow.approved_at or workflow.stage != 'scheduled'):
+                continue
+            article.status = 'published'
+            article.published_at = article.published_at or article.scheduled_at
+            article.updated_at = now
+            if workflow:
+                workflow.stage = 'published'
+            db.session.add(GovernanceAudit(actor_name='Publicação programada', action='article.publish',
+                entity='article', entity_id=article.id, detail='Publicação automática na data programada.'))
+            dispatch('article.publish', 'article', article.id, 'Publicação automática na data programada.',
+                key=f'scheduled-publication:{article.id}:{article.scheduled_at.isoformat()}')
+            changed += 1
         if changed:
-            from governance_models import ArticleWorkflow
-            ArticleWorkflow.query.filter(ArticleWorkflow.article_id.in_(due_ids)).update({'stage':'published'},synchronize_session=False)
             db.session.commit()
         return changed
 

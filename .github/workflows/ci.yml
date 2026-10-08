@@ -47,6 +47,15 @@ jobs:
           psql -v ON_ERROR_STOP=1 -d migrations_fixture -c "INSERT INTO category (id, name, slug) VALUES (7, 'Biologia', 'biologia')"
           /tmp/drill/bin/alembic upgrade head
           test "$(psql -At -d migrations_fixture -c 'SELECT name FROM category WHERE id=7')" = Biologia
+      - name: Validate lifecycle fixes with PostgreSQL foreign keys
+        env:
+          DATABASE_URL: postgresql://postgres:fixture-only-password@postgres/functionality_fixture
+          SECRET_KEY: isolated-audit-secret
+          ADMIN_TOTP_SECRET: JBSWY3DPEHPK3PXP
+        run: |
+          createdb functionality_fixture
+          /tmp/drill/bin/alembic upgrade head
+          /tmp/drill/bin/python -m unittest discover -s tests -p 'test_functionality_audit.py' -v
       - name: Restore synthetic archive and verify production fixture is unchanged
         run: |
           createdb sussurros_fixture
