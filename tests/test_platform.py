@@ -253,7 +253,12 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(f'<meta property="og:image:url" content="{escaped_image}">'.encode(), response.data)
         self.assertIn(f'<meta name="twitter:image" content="{escaped_image}">'.encode(), response.data)
         self.assertIn(b'<meta name="twitter:card" content="summary_large_image">', response.data)
-        self.assertIn(b'?share=', response.data)
+        self.assertIn(b'<meta property="og:title" content=', response.data)
+        self.assertIn(b'<meta property="og:description" content=', response.data)
+        self.assertIn(b'<meta name="twitter:title" content=', response.data)
+        self.assertIn(b'<meta name="twitter:description" content=', response.data)
+        self.assertIn(f'<link rel="canonical" href="https://www.sussurrosdosaber.com/artigo/{slug}">'.encode(), response.data)
+        self.assertNotIn(b'?share=', response.data)
 
     def test_article_comments_are_moderated_and_escaped(self):
         with app.app_context():
