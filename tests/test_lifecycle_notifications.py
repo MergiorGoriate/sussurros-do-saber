@@ -299,7 +299,13 @@ class LifecycleNotificationTests(unittest.TestCase):
         self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],2)
         item=StaffNotice.query.filter_by(researcher_id=account.id,resource_type='reader_journal',resource_id=self.journal.id).one()
         self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],2) # Same revision never duplicates.
-        self.assertIn(b'Decis',self.client.get('/conta/notificacoes').data)
+        notifications_page=self.client.get('/conta/notificacoes')
+        self.assertEqual(notifications_page.status_code,200)
+        # A página pública já não apresenta o bloco de avisos internos removido da interface.
+        self.assertNotIn(b'Decis',notifications_page.data)
+        # Os avisos continuam registados e a eliminação não desactiva o acompanhamento.
+        self.assertIsNone(item.removed_at)
+        self.assertTrue(row.following)
         self.assertEqual(self.post('/conta/notificacoes',action='delete',id=item.id).status_code,303)
         self.assertTrue(row.following);self.assertFalse(row.saved);self.assertIsNotNone(item.removed_at)
         self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],1)
