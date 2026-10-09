@@ -301,8 +301,8 @@ class LifecycleNotificationTests(unittest.TestCase):
         self.assertEqual(self.client.get('/conta/sessao').json['notification_count'],2) # Same revision never duplicates.
         notifications_page=self.client.get('/conta/notificacoes')
         self.assertEqual(notifications_page.status_code,200)
-        # A página pública já não apresenta o bloco de avisos internos removido da interface.
-        self.assertNotIn(b'Decis',notifications_page.data)
+        # O sino interactivo continua a apresentar avisos, sem a lista expandida na página.
+        self.assertIn(b'Decis',notifications_page.data)
         # Os avisos continuam registados e a eliminação não desactiva o acompanhamento.
         self.assertIsNone(item.removed_at)
         self.assertTrue(row.following)
