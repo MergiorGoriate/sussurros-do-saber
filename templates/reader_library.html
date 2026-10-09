@@ -21,7 +21,7 @@
   <p class="mt-6">Entre ou crie uma conta para consultar esta página.</p>
   <button type="button" data-reader-open class="primary-btn mt-4">Entrar / Criar conta</button>
   {% else %}
-  {% if notifications and reader_account.verified %}<h2 class="mt-8">Artigos acompanhados</h2>{% endif %}{% if notifications and not reader_account.verified %}<p><a href="{{ url_for('submissions.verify_notice') }}">Confirme o seu e-mail para activar notificações.</a></p>{% endif %}
+  {% if notifications and reader_account.verified %}{% include 'admin/notice_bar.html' %}<h2 class="mt-8">Artigos acompanhados</h2>{% endif %}{% if notifications and not reader_account.verified %}<p><a href="{{ url_for('submissions.verify_notice') }}">Confirme o seu e-mail para activar notificações.</a></p>{% endif %}
   <ul class="reader-favorites-grid" data-reader-library>
     {% if not notifications %}
       {% for row in reader_articles|default([]) %}
