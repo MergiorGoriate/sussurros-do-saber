@@ -56,7 +56,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       {% if article.doi %}<p><strong>DOI:</strong> <a href="https://doi.org/{{ article.doi }}" rel="external noopener">{{ article.doi }}</a></p>{% endif %}
     </div>{% endif %}
     {% if article.references %}<section class="article-references" aria-labelledby="references-title"><h2 id="references-title">Referências</h2><div class="article-markdown">{{ article.references|markdown }}</div></section>{% endif %}
-    {% set share_url = site_url ~ url_for('article', slug=article.slug) ~ '?share=' ~ article.updated_at.strftime('%Y%m%d%H%M%S') %}
+    {% set share_url = site_url ~ url_for('article', slug=article.slug) %}
     <aside class="share-panel" data-title="{{ article.title }}" data-url="{{ share_url }}">
       <div>
         <span class="eyebrow">Divulgue conhecimento</span>
@@ -228,6 +228,6 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
     >{% endfor %}
   </div>
 </section>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/social-share.js',v='20260919-2') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/social-share.js',v='20261009-1') }}" defer></script>
 {% endblock %}
 
