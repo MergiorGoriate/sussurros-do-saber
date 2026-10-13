@@ -203,8 +203,16 @@ class StaffGovernanceTests(unittest.TestCase):
         self.signin(editor.admin);self.assertEqual(self.post(path,action='assign',reviewer_id=owner.id).status_code,400)
         self.assertEqual(self.post(path,action='assign',reviewer_id=reviewer.id).status_code,302)
         self.assertEqual(self.post(path,action='approve').status_code,409)
-        self.signin(reviewer.admin);note='Fontes verificadas. Texto científico rigoroso.'
+        self.signin(reviewer.admin)
+        workspace=self.client.get('/admin/trabalho')
+        self.assertEqual(workspace.status_code,200)
+        self.assertIn(article.title.encode(),workspace.data)
+        self.assertIn(path.encode(),workspace.data)
+        note='Fontes verificadas. Texto científico rigoroso.'
         self.assertEqual(self.post(path,action='reviewed',note=note).status_code,302)
+        notice=StaffNotice.query.filter_by(admin_id=reviewer.admin_id,resource_type='article',resource_id=article.id).first()
+        self.assertIsNotNone(notice)
+        self.assertIn('Artigo:',notice.subject)
         self.signin(editor.admin);self.assertEqual(self.post(path,action='approve').status_code,302)
         self.assertEqual(article.status,'approved');self.assertEqual(PortalReview.query.filter_by(article_id=article.id).one().report,note)
         self.signin(owner.admin);self.assertEqual(self.client.get(f'/admin/artigos/{article.id}/editar').status_code,409)
