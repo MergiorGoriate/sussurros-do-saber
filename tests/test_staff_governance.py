@@ -208,6 +208,9 @@ class StaffGovernanceTests(unittest.TestCase):
         self.assertEqual(workspace.status_code,200)
         self.assertIn(article.title.encode(),workspace.data)
         self.assertIn(path.encode(),workspace.data)
+        self.assertEqual(self.client.get(path).status_code,200)
+        other_article=self.article(owner)
+        self.assertEqual(self.client.get(f'/admin/fluxo-artigos/{other_article.id}').status_code,404)
         note='Fontes verificadas. Texto científico rigoroso.'
         self.assertEqual(self.post(path,action='reviewed',note=note).status_code,302)
         notice=StaffNotice.query.filter_by(admin_id=reviewer.admin_id,resource_type='article',resource_id=article.id).first()
