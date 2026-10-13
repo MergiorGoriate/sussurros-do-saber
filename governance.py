@@ -415,7 +415,16 @@ def workspace():
     tasks=StaffTask.query
     if not manager:
         tasks=tasks.filter_by(assignee_id=member.id) if active_member(member) and mandates(member) else tasks.filter(db.false())
+    assigned_articles=[]
+    if active_member(member) and mandates(member) and has_permission('article.review',member=member):
+        assigned_articles=(ArticleWorkflow.query.join(Article,Article.id==ArticleWorkflow.article_id)
+            .filter(ArticleWorkflow.reviewer_id==member.id,ArticleWorkflow.stage=='review')
+            .order_by(ArticleWorkflow.updated_at.desc() if hasattr(ArticleWorkflow,'updated_at') else ArticleWorkflow.article_id.desc())
+            .all())
+        assigned_articles=[flow for flow in assigned_articles
+                           if article_scope(Article.query).filter_by(id=flow.article_id).first()]
     return render_template('admin/workspace.html',tasks=tasks.order_by(StaffTask.due_on.asc()).all(),manager=manager,
+                           assigned_articles=assigned_articles,
                            members=[m for m in TeamMember.query.order_by(TeamMember.name) if active_member(m) and mandates(m)],
                            member=member,mandates=mandates(member))
 
