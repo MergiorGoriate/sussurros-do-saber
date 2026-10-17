@@ -33,3 +33,32 @@ document.addEventListener('click', (event) => {
     if (event.key === key) apply(event.newValue === 'true');
   });
 })();
+
+// Theme is a local presentation preference; authorization remains server-side.
+(() => {
+  const button = document.querySelector('[data-admin-theme-toggle]');
+  if (!button) return;
+  const key = 'sussurros.admin.theme';
+  const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  let stored = null;
+  try { stored = localStorage.getItem(key); } catch (_) { /* Private browsing. */ }
+  let dark = stored === 'dark' || (stored !== 'light' && systemDark);
+  function apply() {
+    document.body.classList.toggle('admin-dark', dark);
+    button.setAttribute('aria-pressed', String(dark));
+    button.textContent = dark ? 'Tema claro' : 'Tema escuro';
+    button.title = dark ? 'Activar tema claro' : 'Activar tema escuro';
+  }
+  apply();
+  button.addEventListener('click', () => {
+    dark = !dark;
+    apply();
+    try { localStorage.setItem(key, dark ? 'dark' : 'light'); } catch (_) { /* Optional. */ }
+  });
+  window.addEventListener('storage', event => {
+    if (event.key === key) {
+      dark = event.newValue === 'dark' || (event.newValue !== 'light' && systemDark);
+      apply();
+    }
+  });
+})();
