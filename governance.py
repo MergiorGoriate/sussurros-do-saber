@@ -576,7 +576,9 @@ def reviews():
         return redirect(url_for('staff.reviews',manuscript_id=manuscript.id))
     ident=request.args.get('manuscript_id',type=int)
     selected=db.get_or_404(Manuscript,ident) if ident else None
-    manager=bool(selected and manuscript_access(selected,'manuscript.assign'))
+    can_assign=bool(selected and manuscript_access(selected,'manuscript.assign'))
+    manager=bool(selected and (can_assign or manuscript_access(selected,'manuscript.edit')
+                              or manuscript_access(selected,'manuscript.decide')))
     if selected and not manager:
         abort(403)
     if not manager and not has_any_permission('manuscript.review'):
@@ -589,8 +591,8 @@ def reviews():
     records=rows.order_by(StaffPeerReview.due_on).all()
     if not manager:
         records=[r for r in records if not r.manuscript.removed_at and has_permission('manuscript.review',r.manuscript.journal_id)]
-    return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,
-                           reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if not conflicts(m,selected)] if selected else [])
+    return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,can_assign=can_assign,
+                           reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if not conflicts(m,selected)] if can_assign else [])
 
 
 def reviewer_record(ident):

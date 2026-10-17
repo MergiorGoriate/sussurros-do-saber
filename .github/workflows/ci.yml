@@ -56,6 +56,7 @@ jobs:
           createdb functionality_fixture
           /tmp/drill/bin/alembic upgrade head
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_functionality_audit.py' -v
+          /tmp/drill/bin/python -m unittest discover -s tests -p 'test_editorial_audit.py' -v
       - name: Restore synthetic archive and verify production fixture is unchanged
         run: |
           createdb sussurros_fixture
