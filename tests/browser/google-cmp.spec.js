@@ -4,6 +4,7 @@ test('Google CMP message controls become available through API; ads remain pause
  await page.route(/googletagmanager\.com|doubleclick\.net/,route=>route.fulfill({contentType:'application/javascript',body:''}));
  await page.route('**/pagead/js/adsbygoogle.js?*',route=>route.fulfill({contentType:'application/javascript',body:`
   window.__pauseAtLoad=window.adsbygoogle.pauseAdRequests;
+  if(window.adsbygoogle.some(command=>command.enable_page_level_ads))throw new Error('Only one enable_page_level_ads allowed per page');
   window.googlefc.showRevocationMessage=()=>{window.__revocationCount=(window.__revocationCount||0)+1};
   const callbacks=window.googlefc.callbackQueue.splice(0);
   window.googlefc.callbackQueue.push=entry=>{entry.CONSENT_API_READY?.();return 0};
@@ -58,3 +59,4 @@ test('confirmed non-applicable region does not display a CMP failure',async({pag
  await expect(page.locator('#googleCmpSettings')).toBeHidden();
  expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
 });
+

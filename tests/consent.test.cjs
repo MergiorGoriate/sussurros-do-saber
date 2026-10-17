@@ -30,12 +30,11 @@ function cmpHarness(){
  vm.runInContext(fs.readFileSync('static/js/google-cmp.js','utf8'),context);
  return {context,button,status,external,timeout:()=>timer(),reloads:()=>reloads};
 }
-test('CMP queues documented initialisation while paused before loading Google',()=>{
+test('CMP loads the current tag once while paused without legacy Auto ads commands',()=>{
  const h=cmpHarness();
  assert.match(h.external.src,/client=ca-pub-7920973591685812$/);
  assert.equal(h.external.crossOrigin,'anonymous');
- assert.equal(h.context.window.adsbygoogle.length,1);
- assert.equal(h.context.window.adsbygoogle[0].google_ad_client,'ca-pub-7920973591685812');
+ assert.equal(h.context.window.adsbygoogle.length,0);
  const googlefc=h.context.window.googlefc;
  let revoked=0;googlefc.showRevocationMessage=()=>revoked++;
  googlefc.callbackQueue[0].CONSENT_API_READY();
@@ -77,3 +76,4 @@ test('non-European applicability must come from CMP, not a timeout',()=>{
  h.button.click();assert.equal(h.reloads(),0);
  assert.equal(h.context.window.adsbygoogle.pauseAdRequests,1);
 });
+

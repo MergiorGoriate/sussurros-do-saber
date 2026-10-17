@@ -18,7 +18,7 @@ gtag('consent','default',{
 <!-- Verification does not load advertising or set advertising cookies. -->
 <meta name="google-adsense-account" content="ca-pub-7920973591685812">
 {% if google_cmp_enabled %}
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/google-cmp.js', v='20261018-cmp-v2') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/google-cmp.js', v='20261018-cmp-v3') }}" defer></script>
 {% endif %}
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
@@ -240,6 +240,7 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-favorite-cards-v7') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js') }}" defer></script></body>
 </html>
+
 
 
 
