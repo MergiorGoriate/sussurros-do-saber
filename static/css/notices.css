@@ -70,3 +70,6 @@
 .admin-dark .notifications-page .notice-button-primary,.admin-dark .notice-filters a[aria-current]{background:#99c8fb;border-color:#99c8fb;color:#13273e}
 @media(min-width:851px){.admin-main>.notice-toolbar{margin-block-start:-28px}}
 @media(max-width:600px){.notice-card-heading{flex-direction:column;gap:8px}.notifications-page .notice-card{padding:18px}.notice-filters{width:100%}.notice-filters a{flex:1;justify-content:center;padding:8px}.notifications-page .management-header{align-items:flex-start;flex-direction:column}.notice-card-actions{align-items:flex-start;flex-direction:column}.notice-card-actions form{width:100%}.notice-popover{border-radius:12px}.notice-button{min-height:44px!important}.notice-item{padding:14px}.notice-popover-heading{padding:16px 14px 10px}.notice-popover-tools{padding-inline:14px}}
+
+.notice-popover.opens-above{top:auto;bottom:54px}
+@media(max-height:480px){.notice-popover-tools{display:none}.notice-popover-heading{padding-block:10px}.notice-popover-footer>a{min-height:44px}}

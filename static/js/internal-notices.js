@@ -7,6 +7,18 @@
   const template = bar.querySelector('form');
   const node = (tag, text, className) => { const el = document.createElement(tag); if (text) el.textContent = text; if (className) el.className = className; return el; };
   const hidden = (name, value) => { const el = node('input'); el.type = 'hidden'; el.name = name; el.value = value; return el; };
+  const fitPopover = () => {
+    if (!bar.open) return;
+    const rect = bar.querySelector('summary').getBoundingClientRect();
+    const below = window.innerHeight - rect.bottom - 26;
+    const above = rect.top - 26;
+    const flip = below < 240 && above > below;
+    const popover = bar.querySelector('.notice-popover');
+    popover.classList.toggle('opens-above', flip);
+    popover.style.maxHeight = `${Math.max(100, flip ? above : below)}px`;
+  };
+  window.addEventListener('resize', fitPopover);
+  window.addEventListener('scroll', fitPopover, {passive: true, capture: true});
   let busy = false;
   const refresh = async () => {
     if (busy || document.hidden) return;
@@ -47,7 +59,7 @@
     } catch (_) { if (bar.open) status.textContent = 'Não foi possível actualizar. Consulte todas as notificações ou volte a abrir este menu.'; }
     finally { clearTimeout(timeout); busy = false; bar.removeAttribute('aria-busy'); }
   };
-  bar.addEventListener('toggle', () => { if (bar.open) refresh(); });
+  bar.addEventListener('toggle', () => { if (bar.open) { fitPopover(); refresh(); } });
   document.addEventListener('click', event => { if (!bar.contains(event.target)) bar.open = false; });
   bar.addEventListener('keydown', event => { if (event.key === 'Escape') { bar.open = false; bar.querySelector('summary').focus(); } });
   document.addEventListener('visibilitychange', refresh);

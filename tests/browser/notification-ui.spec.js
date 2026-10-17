@@ -32,3 +32,18 @@ for(const width of [320,390,1440]) {
     await page.screenshot({path:`test-results/notification-dark-${width}.png`,fullPage:true});
   });
 }
+
+test('notification menu fits a short mobile viewport',async({page})=>{
+  const d=JSON.parse(execFileSync('python',['tests/browser/lifecycle_fixture.py'],{encoding:'utf8'}));
+  await page.context().addCookies([{name:'session',value:d.cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
+  await page.setViewportSize({width:320,height:560});
+  await page.goto('/admin/notificacoes');
+  const bar=page.locator('[data-notice-bar]');
+  await bar.locator('summary').click();
+  await expect(bar.locator('[data-notice-status]')).toHaveText('Notificações actualizadas.');
+  const popup=await bar.locator('.notice-popover').boundingBox();
+  expect(popup.y).toBeGreaterThanOrEqual(0);
+  expect(popup.y+popup.height).toBeLessThanOrEqual(560);
+  await expect(bar.getByRole('link',{name:'Todas as notificações'})).toBeInViewport();
+  await page.screenshot({path:'test-results/notification-menu-short-mobile.png',fullPage:true});
+});
