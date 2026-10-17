@@ -706,6 +706,15 @@ def article_save_guard(article,status,author_id):
     if not has_permission('article.edit') and author_id!=current_member().author_id:
         abort(403)
     workflow=db.session.get(ArticleWorkflow,article.id) if article.id else None
+    if workflow and author_id != article.author_id:
+        owner=TeamMember.query.filter_by(author_id=author_id).first()
+        if not owner or owner.removed_at:
+            abort(409,description='Associe o novo autor a um colaborador antes de alterar a autoria.')
+        if status in {'approved','published','scheduled'}:
+            abort(409,description='Alterar a autoria exige nova revisão. Guarde como rascunho.')
+        workflow.owner=owner
+        workflow.reviewer=workflow.editor=None
+        workflow.reviewed_at=workflow.approved_at=None
     if status in {'approved','published','scheduled'}:
         # Legacy content retains the original workflow until attached to a managed workflow.
         if workflow or current_member():
@@ -893,7 +902,7 @@ def remove_record(kind,ident):
     item=query.with_for_update().first_or_404() if request.method=='POST' else query.first_or_404()
     # Never remove a membership attached to the founder's identity.
     # Ordinary collaborators can be removed without touching the founder account.
-    if kind == 'member' and (item.admin_id == session.get('admin_id') or (item.admin and item.admin.is_superadmin)):
+    if kind == 'member' and ((item.admin_id is not None and item.admin_id == session.get('admin_id')) or (item.admin and item.admin.is_superadmin)):
         abort(403,description='Não pode remover a conta do fundador.')
     name=item.name if kind=='member' else item.title
     if kind == 'member' and item.removed_at and request.method == 'GET':
@@ -1016,3 +1025,4 @@ def notification_context():
         return dict(notice_unread=0,notice_recent=[])
     query=active_inbox()
     return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())
+
