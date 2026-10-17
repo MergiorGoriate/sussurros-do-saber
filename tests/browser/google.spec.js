@@ -9,6 +9,7 @@ window.google={accounts:{id:{
 }}};`;
 
 async function configuredPage(page, path='/revistas/revista-de-teste-cientifico', previouslySaved=false) {
+  await page.route('**/font-awesome/**',route=>route.abort());
   await page.route('https://lh3.googleusercontent.com/**', route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="blue"/></svg>'}));
   let signedIn=false, saved=false, following=false, actions=[];
   await page.route('https://pagead2.googlesyndication.com/**', route=>route.fulfill({contentType:'application/javascript',body:''}));

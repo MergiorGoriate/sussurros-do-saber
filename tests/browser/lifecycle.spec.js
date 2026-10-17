@@ -69,6 +69,8 @@ for(const width of [320,1440]) {
   await expect(page.getByRole('heading',{name:'Artigos acompanhados'})).toBeVisible();
   await expect(page.locator('[data-notice-bar]')).toHaveCount(0);
   await expect(page.locator('[data-reader-unfollow]')).toHaveCount(1);
+  await expect(page.locator('[data-reader-notification-count]')).toHaveText('1');
+  await page.locator('[data-reader-mark-read]').click();
   await expect(page.locator('[data-reader-notification-count]')).toBeHidden();
   await page.reload();
   await expect(page.locator('[data-notice-bar]')).toHaveCount(0);

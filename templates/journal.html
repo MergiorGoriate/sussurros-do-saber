@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from 'partials/social_icons.html' import bluesky_icon, reddit_icon %}
 {% block title %}{{ journal.title }} — Sussurros do Saber{% endblock %}
 {% block meta_description %}{{ journal.description }}{% endblock %}
 {% block canonical %}{{ site_url }}{{ url_for('journal_detail', slug=journal.slug) }}{% endblock %}
@@ -18,8 +19,8 @@
       <a href="https://twitter.com/intent/tweet?url={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
       <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
       <a href="https://api.whatsapp.com/send?text={{ public_url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-      <a href="https://bsky.app/intent/compose?text={{ (article_title ~ ' ' ~ public_url)|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Bluesky"><i class="fa-brands fa-bluesky" aria-hidden="true"></i></a>
-      <a href="https://www.reddit.com/submit?url={{ public_url|urlencode }}&title={{ article_title|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Reddit"><i class="fa-brands fa-reddit-alien" aria-hidden="true"></i></a>
+      <a href="https://bsky.app/intent/compose?text={{ (article_title ~ ' ' ~ public_url)|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Bluesky">{{ bluesky_icon() }}</a>
+      <a href="https://www.reddit.com/submit?url={{ public_url|urlencode }}&title={{ article_title|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Reddit">{{ reddit_icon() }}</a>
       <a href="mailto:?subject={{ journal.title|urlencode }}&body={{ public_url|urlencode }}" aria-label="E-mail"><i class="fa-solid fa-envelope"></i></a>
     </div>
   </div>
@@ -29,7 +30,7 @@
     {% for author in journal_authors %}
       <span class="journal-article-author">
         {% if author.name %}<button type="button" class="journal-author-trigger" data-journal-details="authors" data-author-index="{{ loop.index0 }}" aria-haspopup="dialog" aria-controls="journal-details-dialog">{{ author.name }}</button>{% endif %}
-        {% if author.orcid %}<a class="journal-orcid-link" href="{{ author.orcid }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID{% if author.name %} de {{ author.name }}{% endif %}" title="Abrir perfil ORCID"><i class="fa-brands fa-orcid" aria-hidden="true"></i></a>{% endif %}
+        {% if author.orcid %}<a class="journal-orcid-link" href="{{ author.orcid }}" target="_blank" rel="noopener noreferrer" aria-label="ORCID{% if author.name %} de {{ author.name }}{% endif %}" title="Abrir perfil ORCID"><span class="journal-orcid-icon" aria-hidden="true">iD</span></a>{% endif %}
       </span>{% if not loop.last %}<span class="journal-author-comma">,</span>{% endif %}
     {% endfor %}
   {% else %}<span>Autores a indicar</span>{% endif %}
