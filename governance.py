@@ -918,7 +918,7 @@ def remove_record(kind,ident):
             audit(kind+'.removed',kind,ident,name)
             db.session.commit()
         flash('Remoção registada. O histórico foi preservado.','success')
-        destination=url_for('staff.team') if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list')
+        destination=url_for('staff.responsibilities',ident=ident) if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list')
         return redirect(destination,code=303)
     return render_template('admin/remove_confirmation.html',item_name=name,kind=kind,ident=ident,consequence=consequences[kind])
 
