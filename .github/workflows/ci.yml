@@ -173,6 +173,7 @@ jobs:
           done
           cat /tmp/sussurros-server.log
           exit 1
+      - run: node --test tests/consent.test.cjs
       - run: npm run test:e2e
       - name: Show isolated server failures
         if: failure()
@@ -188,6 +189,7 @@ jobs:
             /tmp/sussurros-server.log
           if-no-files-found: ignore
           retention-days: 7
+
 
 
 

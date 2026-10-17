@@ -37,8 +37,19 @@ document.querySelectorAll('.article-markdown table').forEach(table=>{if(table.pa
 
 
 
+// Invalid, stale and malformed choices never grant optional processing.
+const readSiteConsent=()=>{
+  try{
+    const raw=document.cookie.split('; ').find(value=>value.startsWith('cookie_consent_v3='));
+    if(!raw)return null;
+    const c=JSON.parse(decodeURIComponent(raw.slice('cookie_consent_v3='.length)));
+    const age=Date.now()-Date.parse(c.updatedAt);
+    return c.essential===true&&typeof c.analytics==='boolean'&&typeof c.ads==='boolean'&&Number.isFinite(age)&&age>=0&&age<15552000000?c:null;
+  }catch{return null}
+};
 // Google Tag Manager, Consent Mode v2 e eventos essenciais
 const pushAnalyticsEvent=(event,parameters={})=>{
+  if(readSiteConsent()?.analytics!==true)return;
   window.dataLayer=window.dataLayer||[];
   window.dataLayer.push({event,...parameters});
 };
@@ -56,14 +67,11 @@ window.sdsTrack=pushAnalyticsEvent;
   const save=document.querySelector('#cookieSave');
   const settings=document.querySelector('#cookieSettingsLink');
   const cookieName='cookie_consent_v3';
-  const read=()=>{
-    const item=document.cookie.split('; ').find(value=>value.startsWith(cookieName+'='));
-    if(!item)return null;
-    try{return JSON.parse(decodeURIComponent(item.split('=').slice(1).join('=')))}catch{return null}
-  };
+  const read=readSiteConsent;
   const updateGoogleConsent=consent=>{
     const state=consent.analytics?'granted':'denied';
-    const advertising=consent.ads?'granted':'denied';
+    // Local preferences are not a certified CMP or a TCF signal.
+    const advertising='denied';
     if(typeof window.gtag==='function')window.gtag('consent','update',{
       analytics_storage:state,
       ad_storage:advertising,
@@ -77,7 +85,8 @@ window.sdsTrack=pushAnalyticsEvent;
   const activateOptionalScripts=consent=>{
     document.querySelectorAll('script[type="text/plain"][data-cookie-category]').forEach(source=>{
       const category=source.dataset.cookieCategory;
-      if(category==='analytics'&&!consent.analytics)return;
+      // Advertising remains suspended pending a verified certified CMP integration.
+      if(category!=='analytics'||consent.analytics!==true)return;
       const script=document.createElement('script');
       [...source.attributes].forEach(attribute=>{
         if(!['type','data-cookie-category'].includes(attribute.name))script.setAttribute(attribute.name,attribute.value);
@@ -87,9 +96,13 @@ window.sdsTrack=pushAnalyticsEvent;
     });
   };
   const persist=consent=>{
+    consent.ads=false; // Advertising is not active in this release.
+    const previous=read();
+    const withdrawing=previous?.analytics===true&&consent.analytics!==true;
     const secure=location.protocol==='https:'?'; Secure':'';
     document.cookie=cookieName+'='+encodeURIComponent(JSON.stringify(consent))+'; Max-Age=15552000; Path=/; SameSite=Lax'+secure;
     updateGoogleConsent(consent);
+    if(withdrawing){location.reload();return}
     banner.hidden=true;
     activateOptionalScripts(consent);
     dispatchEvent(new CustomEvent('cookieconsentchange',{detail:consent}));
@@ -97,7 +110,7 @@ window.sdsTrack=pushAnalyticsEvent;
   const open=()=>{
     const current=read();
     analytics.checked=Boolean(current?.analytics);
-    ads.checked=Boolean(current?.ads);
+    ads.checked=false;
     preferences.hidden=true;
     save.hidden=true;
     accept.hidden=false;
@@ -141,7 +154,7 @@ window.sdsTrack=pushAnalyticsEvent;
     if(!link)return;
     try{
       const target=new URL(link.href,location.href);
-      if(target.origin!==location.origin)pushAnalyticsEvent('outbound_click',{link_domain:target.hostname,link_url:target.href.slice(0,300)});
+      if(target.origin!==location.origin)pushAnalyticsEvent('outbound_click',{link_domain:target.hostname});
     }catch{}
   });
   const sent=new Set();
@@ -181,4 +194,5 @@ document.querySelectorAll('img').forEach((image) => {
 document.addEventListener('click', (event) => {
   if (event.target.closest('[data-reload-page]')) window.location.reload();
 });
+
 

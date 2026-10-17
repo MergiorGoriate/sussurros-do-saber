@@ -777,6 +777,10 @@ def contact():
 def terms():
     return render_template("terms.html")
 
+@app.get("/politica-de-publicidade")
+def advertising_policy():
+    return render_template("advertising_policy.html")
+
 @app.get("/politica-de-privacidade")
 def privacy():
     return render_template("privacy.html")
@@ -1491,4 +1495,5 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 

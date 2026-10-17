@@ -1,0 +1,20 @@
+const {test,expect}=require('@playwright/test');
+test('no advertising, rejected analytics or no-script tracker; consent can be withdrawn',async({page})=>{
+ const requests=[];
+ await page.route(/googletagmanager\.com|googlesyndication\.com|doubleclick\.net/,async route=>{requests.push(route.request().url());await route.fulfill({contentType:'application/javascript',body:''})});
+ await page.goto('/');
+ await page.locator('#cookieReject').click();
+ await page.waitForTimeout(300);
+ expect(requests).toEqual([]);
+ await expect(page.locator('noscript iframe[src*="googletagmanager"]')).toHaveCount(0);
+ await page.locator('#cookieSettingsLink').click();
+ await page.locator('#cookieAccept').click();
+ await expect.poll(()=>requests.filter(url=>url.includes('gtm.js')).length).toBe(1);
+ expect(requests.some(url=>url.includes('adsbygoogle'))).toBe(false);
+ await page.locator('#cookieSettingsLink').click();
+ await Promise.all([page.waitForEvent('load'),page.locator('#cookieReject').click()]);
+ await page.waitForTimeout(300);
+ expect(requests.filter(url=>url.includes('gtm.js')).length).toBe(1);
+ await page.goto('/politica-de-publicidade');
+ await expect(page.locator('h1')).toContainText('Política de Publicidade');
+});
