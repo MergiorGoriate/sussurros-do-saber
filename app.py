@@ -397,7 +397,7 @@ def security_headers(response):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://accounts.google.com/gsi/style; "
         f"script-src 'nonce-{getattr(g, 'csp_nonce', '')}' 'strict-dynamic' 'self' https:; "
         "script-src-attr 'none'; "
-        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com; upgrade-insecure-requests",
+        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com https://fundingchoicesmessages.google.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com https://fundingchoicesmessages.google.com; upgrade-insecure-requests",
     )
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -473,6 +473,12 @@ def google_site_verification_token():
 @app.context_processor
 def site_context():
     return {
+        "google_cmp_enabled": (
+            os.getenv("GOOGLE_CMP_ENABLED", "false").strip().lower() == "true"
+            and request.method == "GET"
+            and (request.endpoint in {"home", "privacy", "advertising_policy"}
+                 or getattr(g, "google_cmp_public_content", False))
+        ),
         "site_url": SITE_URL,
         "google_login_client_id": __import__("google_auth").client_id(),
         "tailwind_version": TAILWIND_VERSION,
@@ -672,6 +678,7 @@ def article(slug):
         if legacy:
             return redirect(url_for("article", slug=legacy.slug), code=301)
         return render_template("404.html"), 404
+    g.google_cmp_public_content = True
     related = Article.public_card_query().filter(Article.id != selected.id).order_by(Article.published_at.desc()).limit(3).all()
     comments = Comment.query.filter_by(article_id=selected.id, approved=True).order_by(Comment.created_at.desc()).limit(100).all()
     return render_template(
@@ -881,6 +888,7 @@ def journal_article_content(journal):
 
 
 def render_journal(journal):
+    g.google_cmp_public_content = request.endpoint == "journal_detail" and journal.published
     article_title, content = journal_article_content(journal)
     return render_template("journal.html", journal=journal,
                            article_title=article_title, journal_content=Markup(content), journal_authors=journal_authors(journal),
@@ -1495,5 +1503,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 

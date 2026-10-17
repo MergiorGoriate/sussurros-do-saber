@@ -24,6 +24,25 @@ from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E40
 from security_test_support import authenticate_test_session
 
 class PlatformTests(unittest.TestCase):
+    def test_google_cmp_is_explicitly_enabled_and_excludes_private_and_error_pages(self):
+        from unittest.mock import patch
+        with patch.dict(os.environ, {"GOOGLE_CMP_ENABLED": "true"}):
+            client = app.test_client()
+            for path in ["/", "/politica-de-privacidade", "/politica-de-publicidade"]:
+                response = client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("js/google-cmp.js", response.get_data(as_text=True))
+                self.assertIn('id="googleCmpSettings"', response.get_data(as_text=True))
+                self.assertIn("fundingchoicesmessages.google.com", response.headers["Content-Security-Policy"])
+            with app.app_context():
+                published = Article.public_query().first()
+                public_path = "/artigo/" + published.slug
+            self.assertIn("js/google-cmp.js", client.get(public_path).get_data(as_text=True))
+            for path in ["/artigo/nao-existe-cmp", "/admin/login", "/conta/biblioteca", "/contacto", "/artigos?q=privado"]:
+                self.assertNotIn("js/google-cmp.js", client.get(path).get_data(as_text=True))
+        with patch.dict(os.environ, {"GOOGLE_CMP_ENABLED": "false"}):
+            self.assertNotIn("js/google-cmp.js", app.test_client().get("/").get_data(as_text=True))
+
     def test_adsense_verification_without_automatic_advertising(self):
         client = app.test_client()
         for path in ["/", "/politica-de-privacidade", "/politica-de-publicidade", "/pagina-inexistente-adsense"]:
@@ -1330,6 +1349,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

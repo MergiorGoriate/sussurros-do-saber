@@ -4,7 +4,7 @@ Auditoria de código: 18 de Outubro de 2026. Não é certificação jurídica ne
 
 ## Corrigido neste conjunto de alterações
 
-- Retirado o carregamento global de AdSense, que ignorava a recusa de cookies e incluía páginas sem conteúdo editorial. Não existe carregador de anúncios activo nesta versão.
+- Retirado o carregamento global de AdSense, que ignorava a recusa de cookies e incluía páginas sem conteúdo editorial. O carregador permanece desactivado por omissão; a integração CMP opcional descrita no final mantém os pedidos de anúncios pausados.
 - Verificação continua disponível através da meta `google-adsense-account` e do `/ads.txt`, mantendo o ID existente `pub-7920973591685812`. Confirmar a titularidade na conta; o código não a prova.
 - Removido o iframe GTM sem consentimento para navegadores sem JavaScript.
 - Cookies malformados, futuros, expirados ou com valores não booleanos não concedem consentimento. Escolhas antigas válidas mantêm o prazo máximo de 180 dias.
@@ -39,3 +39,23 @@ Usar respostas simuladas de publicidade, sem gerar impressões ou cliques reais.
 - Dados de sites parceiros: https://policies.google.com/technologies/partner-sites
 
 A decisão de aprovação e eventuais pedidos de correcção pertencem ao Google.
+
+
+## Integração CMP preparada (continuação)
+
+A variável `GOOGLE_CMP_ENABLED=true` habilita o carregamento da mensagem do Google nas páginas inicial, privacidade, publicidade e leitura de artigos/revistas publicados. Por omissão permanece `false` até confirmar a publicação da mensagem na conta. Não foi possível confirmar a publicação através da conta; a captura recebida mostrava o editor com o botão Publicar.
+
+O script local `static/js/google-cmp.js` define `pauseAdRequests=1` ANTES de inserir a tag AdSense existente. Esta tag é o mecanismo documentado para obter mensagens Google publicadas. Nenhum caminho desta integração despausa publicidade, cria blocos ou converte um cookie local em sinal TCF. A pausa não impede pedidos técnicos do próprio carregador/CMP ao Google; não equivale a ausência de comunicações externas.
+
+O botão “Gerir consentimento de publicidade” só fica disponível após `CONSENT_API_READY` e a presença de `showRevocationMessage`. A chamada passa pela fila oficial. Trata-se de reabertura da mensagem europeia; não é uma implementação de opt-out dos EUA/GPP. Deixar a ligação automática Do Not Sell/Share do Google activa ao publicar mensagens de estados dos EUA, se aplicáveis, e validar essa experiência separadamente.
+
+### Activação e confirmação no alojamento
+
+1. Publicar no AdSense a mensagem europeia para o domínio correcto, em português, com consentir, não consentir e gerir opções; confirmar a URL da política de privacidade. Configurar os parceiros e o âmbito da mensagem de acordo com os serviços efectivamente utilizados.
+2. Integrar este PR e definir `GOOGLE_CMP_ENABLED=true` nas variáveis do serviço de alojamento, reiniciando a aplicação. A conta não pode ser configurada por essa variável: a mensagem tem de estar publicada no Google.
+3. Confirmar a mensagem na página inicial com `?fc=alwaysshow&fctype=gdpr` e num artigo público. Os parâmetros são de pré-visualização oficial; a mensagem precisa de estar publicada. Confirmar a opção de gerir e retirar consentimento, recusa e apresentação móvel. Limpar estado numa janela de teste para verificar novas visitas.
+4. Confirmar no navegador que os domínios efectivos da CMP não são bloqueados pela CSP. Esta alteração admite explicitamente fundingchoicesmessages.google.com nos frames e conexões, além dos domínios Google já autorizados. Não alargar para qualquer domínio em caso de falha; identificar primeiro o pedido legítimo.
+5. Se falhar a CMP ou não existir mensagem, o rodapé informa indisponibilidade e os pedidos de anúncios permanecem pausados. Para reverter todo o carregamento externo desta integração, definir `GOOGLE_CMP_ENABLED=false` e reiniciar.
+6. Continuar a revisão de conta, políticas e inventário antes de implementar a exibição de anúncios. Esta fase integra a mensagem e a reabertura, não conclui a monetização. A análise opcional continua gerida pelo banner local, sem usar TCF como autorização implícita.
+
+Os testes usam simulações: confirmam ordem da pausa, disponibilidade e reabertura da API, falha e exclusão de páginas privadas/erros. Não certificam o comportamento da mensagem real, a conta ou os fornecedores publicados pelo operador.
