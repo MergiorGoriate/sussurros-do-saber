@@ -1,4 +1,4 @@
-/* Google Privacy & messaging: initialise the documented paused Auto ads tag.
+/* Google Privacy & messaging: load the publisher tag with ad requests paused.
  * https://developers.google.com/funding-choices/fc-api-docs
  * https://support.google.com/adsense/answer/9042142
  */
@@ -64,9 +64,8 @@
       if(typeof window.googlefc.showRevocationMessage==='function')window.googlefc.showRevocationMessage();
     }});
   });
-  // Initialising the publisher tag is separate from resuming ad requests.
-  // The Google example queues this command while pauseAdRequests remains 1.
-  window.adsbygoogle.push({google_ad_client:'ca-pub-7920973591685812',enable_page_level_ads:true});
+  // Current AdSense tags initialise Auto ads themselves. Do not queue the legacy
+  // enable_page_level_ads command: it causes a duplicate-configuration TagError.
   const script=document.createElement('script');
   script.async=true;
   script.crossOrigin='anonymous';
@@ -74,3 +73,4 @@
   script.addEventListener('error',unavailable,{once:true});
   document.head.appendChild(script);
 })();
+

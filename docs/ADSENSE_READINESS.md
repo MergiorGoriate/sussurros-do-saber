@@ -70,3 +70,11 @@ A implementação anterior só anexava a tag com pedidos pausados. Acrescentada 
 Dez segundos sem API deixam agora o estado como não confirmado, com possibilidade de tentar recarregando a página; já não é apresentado como falha comprovada do Google. Erro do pedido tem mensagem própria. Respostas tardias em CONSENT_API_READY/CONSENT_DATA_READY restauram a gestão do consentimento. A indicação de não aplicação da mensagem europeia só é mostrada quando a CMP real confirma `gdprApplies=false` pela API TCF; o tempo decorrido não determina região ou aplicabilidade. Essa indicação não elimina requisitos de outras regiões.
 
 Os testes reproduzem erro de rede, resposta tardia e aplicabilidade confirmada; não substituem a validação da mensagem real depois de publicar a alteração. Foi alterada a versão do script para evitar servir a cópia anterior em cache. Se a mensagem continuar ausente, é necessário verificar o estado Publicada/domínio no AdSense e os pedidos reais do fornecedor; não se deve despausar anúncios ou inventar uma tag de recuperação de adblock como substituto da CMP.
+
+
+
+### Correcção após observação da tag real
+
+Depois da instalação da versão v2, a consola do site mostrou `TagError: adsbygoogle.push() error: Only one 'enable_page_level_ads' allowed per page`. O comando acrescentado com base no exemplo oficial antigo é redundante com a tag actual que inicializa Auto ads automaticamente. Foi removido na versão v3; a pausa continua definida antes da tag. Os exemplos oficiais não garantem compatibilidade com todas as versões/configurações actuais. Os testes anteriores simulavam a API mas não esta rejeição: foi acrescentada uma simulação que rejeita o comando legado.
+
+Esta observação invalida a hipótese de que o comando legado em falta resolveria o carregamento. A ausência da CMP ainda exige confirmar a mensagem Publicada e o domínio na conta AdSense. Não há confirmação de que as escolhas de consentimento reais estejam operacionais. Não activar anúncios para tentar contornar esse bloqueio.
