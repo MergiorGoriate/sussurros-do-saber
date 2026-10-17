@@ -764,8 +764,8 @@ def article_workflow(ident):
         elif action=='assign' and item.stage in {'draft','submitted','changes','review'}:
             require('article.edit')
             reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
-            if not reviewer.available or reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
-                abort(400,description='Escolha um revisor independente com mandato válido.')
+            if not reviewer.admin_id or not reviewer.admin or not reviewer.admin.active or not reviewer.available or reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
+                abort(400,description='Escolha um revisor independente com conta administrativa activa e mandato válido.')
             if item.reviewer_id==reviewer.id and item.stage=='review' and not item.reviewed_at:return redirect(url_for('staff.article_workflow',ident=ident))
             item.reviewer_id,item.stage,article.status=reviewer.id,'review','review'
             item.approved_at=item.reviewed_at=None
@@ -820,7 +820,9 @@ def article_workflow(ident):
         db.session.commit()
         return redirect(url_for('staff.article_workflow',ident=ident))
     # GET does not persist a newly initialised workflow.
-    return render_template('admin/article_workflow.html',article=article,workflow=item,reviewers=eligible('article.review'),member=current_member(),reviews=PortalReview.query.filter_by(article_id=ident).order_by(PortalReview.id).all())
+    return render_template('admin/article_workflow.html',article=article,workflow=item,
+                           reviewers=[m for m in eligible('article.review') if m.admin_id and m.admin and m.admin.active and m.available and m.id!=item.owner_id],
+                           member=current_member(),reviews=PortalReview.query.filter_by(article_id=ident).order_by(PortalReview.id).all())
 
 
 @public_team_bp.get('/equipa')
@@ -982,7 +984,7 @@ def responsibilities(ident):
             item=ArticleWorkflow.query.filter_by(article_id=item.article_id).with_for_update().populate_existing().first_or_404()
             if article.status=='published' or item.stage=='published':abort(409)
             permission='article.review' if kind=='portal_reviewer' else 'article.approve'
-            if not has_permission(permission,member=target) or target.id==item.owner_id:abort(400)
+            if not target.admin_id or not target.admin or not target.admin.active or not has_permission(permission,member=target) or target.id==item.owner_id:abort(400)
             if kind=='portal_reviewer':
                 if item.editor_id==target.id:abort(400)
                 if item.reviewer_id!=target.id:
