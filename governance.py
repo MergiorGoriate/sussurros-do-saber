@@ -560,7 +560,7 @@ def reviews():
         if manuscript.status not in {'screening','review','revised','reevaluation'}:
             abort(409,description='A submissão não está em fase de avaliação.')
         reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
-        if not reviewer.available or not has_permission('manuscript.review',manuscript.journal_id,member=reviewer) or conflicts(reviewer,manuscript):
+        if not reviewer.admin_id or not reviewer.available or not has_permission('manuscript.review',manuscript.journal_id,member=reviewer) or conflicts(reviewer,manuscript):
             abort(400,description='Revisor indisponível, sem mandato ou com autoria nesta submissão.')
         if StaffPeerReview.query.filter_by(manuscript_id=manuscript.id,reviewer_id=reviewer.id,version_number=manuscript.current_version).first():
             abort(409,description='Revisor já convidado para esta versão.')
@@ -576,7 +576,9 @@ def reviews():
         return redirect(url_for('staff.reviews',manuscript_id=manuscript.id))
     ident=request.args.get('manuscript_id',type=int)
     selected=db.get_or_404(Manuscript,ident) if ident else None
-    manager=bool(selected and manuscript_access(selected,'manuscript.assign'))
+    can_assign=bool(selected and manuscript_access(selected,'manuscript.assign'))
+    manager=bool(selected and (can_assign or manuscript_access(selected,'manuscript.edit')
+                              or manuscript_access(selected,'manuscript.decide')))
     if selected and not manager:
         abort(403)
     if not manager and not has_any_permission('manuscript.review'):
@@ -589,8 +591,8 @@ def reviews():
     records=rows.order_by(StaffPeerReview.due_on).all()
     if not manager:
         records=[r for r in records if not r.manuscript.removed_at and has_permission('manuscript.review',r.manuscript.journal_id)]
-    return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,
-                           reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if not conflicts(m,selected)] if selected else [])
+    return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,can_assign=can_assign,
+                           reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if m.admin_id and not conflicts(m,selected)] if can_assign else [])
 
 
 def reviewer_record(ident):
@@ -966,10 +968,10 @@ def responsibilities(ident):
         if not item:abort(404)
         if kind=='task':item.assignee_id=target.id
         elif kind=='editor':
-            if not has_permission('manuscript.edit',item.journal_id,member=target) or conflicts(target,item):abort(400)
+            if not target.admin_id or not has_permission('manuscript.edit',item.journal_id,member=target) or conflicts(target,item):abort(400)
             item.editor_id=target.admin_id
         elif kind=='review':
-            if not has_permission('manuscript.review',item.manuscript.journal_id,member=target) or conflicts(target,item.manuscript):abort(400)
+            if not target.admin_id or not has_permission('manuscript.review',item.manuscript.journal_id,member=target) or conflicts(target,item.manuscript):abort(400)
             if StaffPeerReview.query.filter_by(manuscript_id=item.manuscript_id,reviewer_id=target.id,version_number=item.version_number).first():abort(409)
             item.status='cancelled'
             new=StaffPeerReview(manuscript_id=item.manuscript_id,reviewer_id=target.id,version_number=item.version_number,assigned_by=session.get('admin_id'),due_on=max(item.due_on,date.today()))

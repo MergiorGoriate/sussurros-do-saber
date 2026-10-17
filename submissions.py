@@ -692,7 +692,7 @@ def submission_detail(ident):
     transitions=[s for s in TRANSITIONS.get(manuscript.status,()) if (can_decide if s in {'accepted','rejected'} else can_edit)]
     return render_template('admin/submission_detail.html', manuscript=manuscript, files=files_for(manuscript), states=STATES,
                            transitions=transitions, admins=[m.admin for m in eligible('manuscript.edit',manuscript.journal_id) if m.admin and not conflicts(m,manuscript)],
-                           can_assign=manuscript_access(manuscript,'manuscript.assign'),can_edit=can_edit,can_produce=manuscript_access(manuscript,'manuscript.production'),
+                           can_assign=manuscript_access(manuscript,'manuscript.assign'),can_edit=can_edit,can_decide=can_decide,can_produce=manuscript_access(manuscript,'manuscript.production'),
                            info_fields=INFO_FIELDS, file_kinds=KINDS)
 
 

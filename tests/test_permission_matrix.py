@@ -230,7 +230,7 @@ class PermissionMatrixTests(unittest.TestCase):
         from scripts.audit_permissions import inspect_database
         member=self.grant('contacts.manage',self.journal.id)
         before=db.session.query(TeamRole).count()
-        result=inspect_database(str(db.engine.url))
+        result=inspect_database(db.engine.url.render_as_string(hide_password=False))
         self.assertEqual(db.session.query(TeamRole).count(),before)
         self.assertIn(member.appointments[0].role.code,[r['code'] for r in result['roles']])
         record=next(r for r in result['members'] if r['member_id']==member.id)
