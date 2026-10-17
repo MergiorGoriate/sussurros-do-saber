@@ -891,9 +891,15 @@ def remove_record(kind,ident):
     if kind not in models:abort(404)
     query=models[kind].query.filter_by(id=ident)
     item=query.with_for_update().first_or_404() if request.method=='POST' else query.first_or_404()
-    if kind=='member' and (item.admin_id==session.get('admin_id') or (item.admin and item.admin.is_superadmin)):
-        abort(403,description='Não pode remover a conta do fundador.')
+    # A team membership may reference the founder's account. Removing the membership
+    # must not delete or disable the founder's administrative identity.
+    founder_linked = kind == 'member' and bool(item.admin and item.admin.is_superadmin)
+    if kind == 'member' and item.admin_id == session.get('admin_id') and not founder_linked:
+        abort(403,description='Não pode remover a sua própria conta de colaborador.')
     name=item.name if kind=='member' else item.title
+    if kind == 'member' and item.removed_at and request.method == 'GET':
+        flash('Este colaborador já foi removido. O histórico permanece disponível.','info')
+        return redirect(url_for('staff.team'))
     consequences={
         'manuscript':'Retira a submissão dos fluxos activos e impede novas acções editoriais. Versões, pareceres, decisões, artigos publicados, DOI e ficheiros são preservados.',
         'member':'Revoga todos os mandatos e o acesso administrativo, inclusive sessões abertas. Cancela o convite de colaboração. A conta pública, autoria e histórico são preservados. Responsabilidades pendentes podem ser reatribuídas.',
@@ -907,15 +913,15 @@ def remove_record(kind,ident):
             if kind=='member':
                 item.status='ended';item.available=False;item.public_visible=False
                 for mandate in item.appointments:mandate.active=False
-                if item.admin:
+                if item.admin and not item.admin.is_superadmin:
                     item.admin.active=False;item.admin.governance_managed=True
                     item.admin.security_version+=1
             audit(kind+'.removed',kind,ident,name)
             db.session.commit()
         flash('Remoção registada. O histórico foi preservado.','success')
-        destination=url_for('staff.responsibilities',ident=ident) if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list')
+        destination=url_for('staff.team') if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list')
         return redirect(destination,code=303)
-    return render_template('admin/remove_confirmation.html',item_name=name,kind=kind,ident=ident,consequence=consequences[kind])
+    return render_template('admin/remove_confirmation.html',item_name=name,kind=kind,ident=ident,consequence=consequences[kind] + (' A conta principal do fundador continuará activa e protegida.' if founder_linked else ''))
 
 
 @staff_bp.get('/historico-remocoes')
