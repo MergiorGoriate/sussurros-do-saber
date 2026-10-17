@@ -189,3 +189,25 @@ class EditorialAuditTests(unittest.TestCase):
         finally:
             role.permissions = saved
             db.session.commit()
+
+    def test_unlinked_collaborator_cannot_receive_electronic_editor_or_review_assignment(self):
+        editor = self.member('associate_editor', self.journal.id)
+        reviewer = self.member('reviewer', self.journal.id)
+        unlinked_editor = self.member('associate_editor', self.journal.id)
+        unlinked_reviewer = self.member('reviewer', self.journal.id)
+        unlinked_editor.admin_id = unlinked_reviewer.admin_id = None
+        item, _ = self.manuscript(editor)
+        review = StaffPeerReview(manuscript_id=item.id, reviewer_id=reviewer.id, version_number=1, due_on=date.today())
+        db.session.add(review); db.session.commit()
+        self.signin(self.primary)
+        page = self.client.get(f'/admin/pareceres?manuscript_id={item.id}')
+        self.assertNotIn(f'value="{unlinked_reviewer.id}"'.encode(), page.data)
+        self.assertEqual(self.post('/admin/pareceres', manuscript_id=item.id,
+                                   reviewer_id=unlinked_reviewer.id, due_on=str(date.today())).status_code, 400)
+        self.assertEqual(self.post(f'/admin/equipa/{editor.id}/responsabilidades', kind='editor',
+                                   resource_id=item.id, target_id=unlinked_editor.id).status_code, 400)
+        self.assertEqual(self.post(f'/admin/equipa/{reviewer.id}/responsabilidades', kind='review',
+                                   resource_id=review.id, target_id=unlinked_reviewer.id).status_code, 400)
+        db.session.expire_all()
+        self.assertEqual(item.editor_id, editor.admin_id)
+        self.assertEqual(review.status, 'invited')
