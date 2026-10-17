@@ -59,3 +59,14 @@ O botão “Gerir consentimento de publicidade” só fica disponível após `CO
 6. Continuar a revisão de conta, políticas e inventário antes de implementar a exibição de anúncios. Esta fase integra a mensagem e a reabertura, não conclui a monetização. A análise opcional continua gerida pelo banner local, sem usar TCF como autorização implícita.
 
 Os testes usam simulações: confirmam ordem da pausa, disponibilidade e reabertura da API, falha e exclusão de páginas privadas/erros. Não certificam o comportamento da mensagem real, a conta ou os fornecedores publicados pelo operador.
+
+
+## Correcção de inicialização e diagnóstico (18 de Outubro)
+
+Observação no site publicado: a tag AdSense e show_ads_impl foram carregados, sem aparecer uma tag Funding Choices na lista de scripts do documento durante a visita de pré-visualização. Não foram observados erros CSP relativos à CMP na consola consultada. Isto confirma carregamento da tag, mas não confirma a publicação da mensagem nem identifica sozinho a causa de ausência de resposta.
+
+A implementação anterior só anexava a tag com pedidos pausados. Acrescentada a inicialização documentada `push({google_ad_client: ..., enable_page_level_ads: true})` com a pausa definida ANTES do comando e do carregamento. Esta é uma alteração da sequência de inicialização, não uma confirmação de que a conta ou a mensagem estão configuradas. Nenhum caminho define `pauseAdRequests=0`.
+
+Dez segundos sem API deixam agora o estado como não confirmado, com possibilidade de tentar recarregando a página; já não é apresentado como falha comprovada do Google. Erro do pedido tem mensagem própria. Respostas tardias em CONSENT_API_READY/CONSENT_DATA_READY restauram a gestão do consentimento. A indicação de não aplicação da mensagem europeia só é mostrada quando a CMP real confirma `gdprApplies=false` pela API TCF; o tempo decorrido não determina região ou aplicabilidade. Essa indicação não elimina requisitos de outras regiões.
+
+Os testes reproduzem erro de rede, resposta tardia e aplicabilidade confirmada; não substituem a validação da mensagem real depois de publicar a alteração. Foi alterada a versão do script para evitar servir a cópia anterior em cache. Se a mensagem continuar ausente, é necessário verificar o estado Publicada/domínio no AdSense e os pedidos reais do fornecedor; não se deve despausar anúncios ou inventar uma tag de recuperação de adblock como substituto da CMP.

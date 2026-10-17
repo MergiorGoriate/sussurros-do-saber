@@ -22,38 +22,58 @@ test('malformed cookie fails closed',()=>{
 
 
 function cmpHarness(){
- const button={disabled:true,addEventListener(name,callback){this[name]=callback}};
+ const button={disabled:true,textContent:'Gerir consentimento de publicidade',addEventListener(name,callback){this[name]=callback}};
  const status={textContent:''};
- let external,timer;
- const context={window:{},document:{getElementById(id){return id==='googleCmpSettings'?button:status},createElement(){return {addEventListener(name,callback){this[name]=callback}}},head:{appendChild(script){assert.equal(context.window.adsbygoogle.pauseAdRequests,1);external=script}}},setTimeout(callback){timer=callback;return 1},clearTimeout(){}};
+ let external,timer,reloads=0;
+ const context={window:{location:{reload(){reloads++}}},document:{getElementById(id){return id==='googleCmpSettings'?button:status},createElement(){return {addEventListener(name,callback){this[name]=callback}}},head:{appendChild(script){assert.equal(context.window.adsbygoogle.pauseAdRequests,1);external=script}}},setTimeout(callback){timer=callback;return 1},clearTimeout(){}};
  vm.createContext(context);
  vm.runInContext(fs.readFileSync('static/js/google-cmp.js','utf8'),context);
- return {context,button,status,external,timeout:()=>timer()};
+ return {context,button,status,external,timeout:()=>timer(),reloads:()=>reloads};
 }
-test('CMP initialises paused before loading the tag and never creates consent or ad inventory',()=>{
+test('CMP queues documented initialisation while paused before loading Google',()=>{
  const h=cmpHarness();
  assert.match(h.external.src,/client=ca-pub-7920973591685812$/);
  assert.equal(h.external.crossOrigin,'anonymous');
- assert.equal(h.button.disabled,true);
+ assert.equal(h.context.window.adsbygoogle.length,1);
+ assert.equal(h.context.window.adsbygoogle[0].google_ad_client,'ca-pub-7920973591685812');
  const googlefc=h.context.window.googlefc;
  let revoked=0;googlefc.showRevocationMessage=()=>revoked++;
  googlefc.callbackQueue[0].CONSENT_API_READY();
  assert.equal(h.button.disabled,false);
  h.button.click();
  assert.equal(revoked,0);
- googlefc.callbackQueue[1].CONSENT_API_READY();
+ googlefc.callbackQueue.at(-1).CONSENT_API_READY();
  assert.equal(revoked,1);
  assert.equal(h.context.window.adsbygoogle.pauseAdRequests,1);
- assert.equal(h.context.window.adsbygoogle.length,0);
 });
-test('CMP error, missing API or timeout cannot enable ads or fake revocation',()=>{
- for(const failure of ['error','timeout','missing']){
-  const h=cmpHarness();
-  if(failure==='error')h.external.error();
-  if(failure==='timeout')h.timeout();
-  if(failure==='missing')h.context.window.googlefc.callbackQueue[0].CONSENT_API_READY();
-  assert.equal(h.button.disabled,true);
-  assert.match(h.status.textContent,/indisponíveis/);
-  assert.equal(h.context.window.adsbygoogle.pauseAdRequests,1);
- }
+test('network error allows manual retry without unpausing ads',()=>{
+ const h=cmpHarness();h.external.error();
+ assert.match(h.status.textContent,/Não foi possível carregar/);
+ assert.equal(h.button.disabled,false);h.button.click();
+ assert.equal(h.reloads(),1);
+ assert.equal(h.context.window.adsbygoogle.pauseAdRequests,1);
+});
+test('timeout does not diagnose failure; late CMP response restores settings',()=>{
+ const h=cmpHarness();h.timeout();
+ assert.match(h.status.textContent,/ainda não disponibilizou/);
+ const googlefc=h.context.window.googlefc;
+ googlefc.callbackQueue[0].CONSENT_API_READY(); // method not defined yet
+ googlefc.showRevocationMessage=()=>{};
+ googlefc.callbackQueue[1].CONSENT_DATA_READY();
+ assert.equal(h.button.disabled,false);
+ assert.equal(h.button.textContent,'Gerir consentimento de publicidade');
+ assert.match(h.status.textContent,/geridas pelo Google/);
+ assert.equal(h.context.window.adsbygoogle.pauseAdRequests,1);
+});
+test('non-European applicability must come from CMP, not a timeout',()=>{
+ const h=cmpHarness();const googlefc=h.context.window.googlefc;
+ googlefc.showRevocationMessage=()=>{throw Error('Must not revoke outside applicable message')};
+ let callback;
+ h.context.window.__tcfapi=(command,version,cb)=>{assert.equal(command,'addEventListener');assert.equal(version,0);callback=cb};
+ googlefc.callbackQueue[0].CONSENT_API_READY();
+ callback({gdprApplies:false},true);h.timeout();
+ assert.equal(h.button.hidden,true);assert.equal(h.button.disabled,true);
+ assert.match(h.status.textContent,/não se aplica/);
+ h.button.click();assert.equal(h.reloads(),0);
+ assert.equal(h.context.window.adsbygoogle.pauseAdRequests,1);
 });
