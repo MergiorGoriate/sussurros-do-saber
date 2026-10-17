@@ -59,6 +59,7 @@ jobs:
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_editorial_audit.py' -v
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_portal_reviewer_account.py' -v
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_role_access_contract.py' -v
+          /tmp/drill/bin/python -m unittest discover -s tests -p 'test_portal_workflow_transitions.py' -v
       - name: Restore synthetic archive and verify production fixture is unchanged
         run: |
           createdb sussurros_fixture
@@ -185,4 +186,5 @@ jobs:
             /tmp/sussurros-server.log
           if-no-files-found: ignore
           retention-days: 7
+
 

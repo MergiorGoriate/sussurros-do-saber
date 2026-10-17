@@ -18,7 +18,7 @@ EVENT_LABELS={
  'manuscript.decision':'Decisão editorial registada','manuscript.published':'Artigo científico publicado','manuscript.prepared_for_publication':'Produção editorial iniciada',
  'manuscript.publication_hidden':'Publicação ocultada','manuscript.internal_note':'Nota editorial registada','manuscript.removed':'Submissão eliminada',
  'article.submit':'Artigo submetido para revisão','article.assign':'Revisor atribuído','article.reviewed':'Revisão concluída','article.changes':'Correcções solicitadas',
- 'article.approve':'Artigo aprovado','article.publish':'Artigo publicado','article.schedule':'Publicação programada','article.saved':'Artigo guardado'}
+ 'article.approve':'Artigo aprovado','article.publish':'Artigo publicado','article.schedule':'Publicação programada','article.saved':'Artigo guardado','article.reopen':'Artigo reaberto como rascunho'}
 
 
 def emit(admin_id, subject, body='', *, researcher_id=None, key=None, resource=None):
@@ -105,6 +105,8 @@ def dispatch(action, entity, ident, detail='', key=None):
             for member in [flow.owner,flow.reviewer,flow.editor]:
                 if member and member.admin_id and active_member(member) and mandates(member):targets.add(member.admin_id)
         permission='article.publish' if action=='article.approve' else 'article.approve' if action=='article.reviewed' else None
+        if action=='article.submit' or (action=='article.saved' and flow and flow.stage=='submitted'):
+            permission='article.edit'
         if permission:targets.update(recipients(permission))
     else:return
     for target in targets:
@@ -192,3 +194,4 @@ def summary(*,public=False):
     query=active_inbox(public=public)
     endpoint='submissions.open_internal_notice' if public else 'staff.open_notice'
     return dict(unread=query.filter(StaffNotice.read_at.is_(None)).count(),items=[dict(id=n.id,title=n.subject,description=n.body,date=n.created_at.strftime('%d/%m/%Y %H:%M')+' UTC',unread=not bool(n.read_at),url=url_for(endpoint,ident=n.id) if n.resource_type else None) for n in query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5)])
+

@@ -673,6 +673,10 @@ def article_scope(query):
     return query.filter(or_(*clauses) if clauses else db.false())
 
 
+def independent_article_reviewer(member, article, owner_id):
+    return bool(member and member.id != owner_id and member.author_id != article.author_id)
+
+
 def article_edit_access(article):
     if has_permission('article.edit'):
         return
@@ -726,6 +730,7 @@ def article_save_guard(article,status,author_id):
             abort(403)
         workflow.stage='draft' if status=='draft' else 'submitted'
         workflow.reviewed_at=workflow.approved_at=None
+        workflow.editor=None
     if workflow and status in {'approved','published','scheduled'}:
         changes=any(request.form.get(key,'').strip()!=str(getattr(article,key) or '').strip() for key in ('title','body','summary','references','keywords','doi','image','cover_video'))
         if changes or author_id!=article.author_id or request.form.get('category_id',type=int)!=article.category_id or request.files.get('image_file') or request.files.get('cover_video_file'):
@@ -773,18 +778,19 @@ def article_workflow(ident):
         elif action=='assign' and item.stage in {'draft','submitted','changes','review'}:
             require('article.edit')
             reviewer=db.get_or_404(TeamMember,request.form.get('reviewer_id',type=int))
-            if not reviewer.admin_id or not reviewer.admin or not reviewer.admin.active or not reviewer.available or reviewer.id==item.owner_id or not has_permission('article.review',member=reviewer):
+            if not reviewer.admin_id or not reviewer.admin or not reviewer.admin.active or not reviewer.available or not independent_article_reviewer(reviewer,article,item.owner_id) or not has_permission('article.review',member=reviewer):
                 abort(400,description='Escolha um revisor independente com conta administrativa activa e mandato válido.')
             if item.reviewer_id==reviewer.id and item.stage=='review' and not item.reviewed_at:return redirect(url_for('staff.article_workflow',ident=ident))
-            item.reviewer_id,item.stage,article.status=reviewer.id,'review','review'
+            item.reviewer,item.stage,article.status=reviewer,'review','review'
+            item.editor=None
             item.approved_at=item.reviewed_at=None
         elif action in {'reviewed','changes'} and item.stage=='review':
-            if not member or member.id!=item.reviewer_id or not has_permission('article.review'):
+            if not member or member.id!=item.reviewer_id or not has_permission('article.review') or not independent_article_reviewer(member,article,item.owner_id):
                 abort(403)
             note=field('note',20000,True)
-            if action=='reviewed' and item.reviewed_at:
+            if item.reviewed_at:
                 previous=PortalReview.query.filter_by(article_id=ident,reviewer_id=member.id,action='reviewed').order_by(PortalReview.id.desc()).first()
-                if previous and previous.report==note:
+                if action=='reviewed' and previous and previous.report==note:
                     return redirect(url_for('staff.article_workflow',ident=ident))
                 abort(409,description='A revisão já foi concluída. Reabra o fluxo para alterar o parecer.')
             db.session.add(PortalReview(article_id=ident,reviewer_id=member.id,action=action,report=note))
@@ -797,6 +803,8 @@ def article_workflow(ident):
             require('article.approve')
             if member and (member.id in {item.owner_id,item.reviewer_id} or member.author_id==article.author_id):
                 abort(403,description='A aprovação exige um responsável diferente do autor e do revisor.')
+            if not independent_article_reviewer(item.reviewer,article,item.owner_id):
+                abort(409,description='A associação do revisor ao autor mudou. Atribua uma revisão independente.')
             if len(article.body or '')<50:
                 abort(400)
             item.editor_id=member.id if member else None
@@ -822,6 +830,7 @@ def article_workflow(ident):
             require('article.edit')
             item.stage,article.status='draft','draft'
             item.approved_at=item.reviewed_at=None
+            item.editor=None
             article.scheduled_at=None
         else:
             abort(409,description='Transição editorial indisponível.')
@@ -830,8 +839,9 @@ def article_workflow(ident):
         return redirect(url_for('staff.article_workflow',ident=ident))
     # GET does not persist a newly initialised workflow.
     return render_template('admin/article_workflow.html',article=article,workflow=item,
-                           reviewers=[m for m in eligible('article.review') if m.admin_id and m.admin and m.admin.active and m.available and m.id!=item.owner_id],
-                           member=current_member(),reviews=PortalReview.query.filter_by(article_id=ident).order_by(PortalReview.id).all())
+                           reviewers=[m for m in eligible('article.review') if m.admin_id and m.admin and m.admin.active and m.available and independent_article_reviewer(m,article,item.owner_id)],
+                           member=current_member(),reviewer_independent=independent_article_reviewer(item.reviewer,article,item.owner_id),
+                           reviews=PortalReview.query.filter_by(article_id=ident).order_by(PortalReview.id).all())
 
 
 @public_team_bp.get('/equipa')
@@ -998,18 +1008,18 @@ def responsibilities(ident):
             item=ArticleWorkflow.query.filter_by(article_id=item.article_id).with_for_update().populate_existing().first_or_404()
             if article.status=='published' or item.stage=='published':abort(409)
             permission='article.review' if kind=='portal_reviewer' else 'article.approve'
-            if not target.admin_id or not target.admin or not target.admin.active or not has_permission(permission,member=target) or target.id==item.owner_id:abort(400)
+            if not target.admin_id or not target.admin or not target.admin.active or not has_permission(permission,member=target) or not independent_article_reviewer(target,article,item.owner_id):abort(400)
             if kind=='portal_reviewer':
                 if item.editor_id==target.id:abort(400)
                 if item.reviewer_id!=target.id:
-                    item.reviewer_id=target.id
+                    item.reviewer=target
                     item.reviewed_at=item.approved_at=None
-                    item.editor_id=None
+                    item.editor=None
                     item.stage=item.article.status='review'
                     item.article.scheduled_at=None
             else:
                 if item.reviewer_id==target.id:abort(400)
-                item.editor_id=target.id
+                item.editor=target
         else:abort(400)
         entity='task' if kind=='task' else 'manuscript' if kind=='editor' else 'article' if kind in {'portal_reviewer','portal_editor'} else 'review'
         audit('responsibility.reassigned',entity,rid,'Membro '+str(ident)+' → '+str(target.id));db.session.commit()
@@ -1025,5 +1035,6 @@ def notification_context():
         return dict(notice_unread=0,notice_recent=[])
     query=active_inbox()
     return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())
+
 
 
