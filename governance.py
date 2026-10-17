@@ -891,11 +891,10 @@ def remove_record(kind,ident):
     if kind not in models:abort(404)
     query=models[kind].query.filter_by(id=ident)
     item=query.with_for_update().first_or_404() if request.method=='POST' else query.first_or_404()
-    # A team membership may reference the founder's account. Removing the membership
-    # must not delete or disable the founder's administrative identity.
-    founder_linked = kind == 'member' and bool(item.admin and item.admin.is_superadmin)
-    if kind == 'member' and item.admin_id == session.get('admin_id') and not founder_linked:
-        abort(403,description='Não pode remover a sua própria conta de colaborador.')
+    # Never remove a membership attached to the founder's identity.
+    # Ordinary collaborators can be removed without touching the founder account.
+    if kind == 'member' and (item.admin_id == session.get('admin_id') or (item.admin and item.admin.is_superadmin)):
+        abort(403,description='Não pode remover a conta do fundador.')
     name=item.name if kind=='member' else item.title
     if kind == 'member' and item.removed_at and request.method == 'GET':
         flash('Este colaborador já foi removido. O histórico permanece disponível.','info')
@@ -921,7 +920,7 @@ def remove_record(kind,ident):
         flash('Remoção registada. O histórico foi preservado.','success')
         destination=url_for('staff.team') if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list')
         return redirect(destination,code=303)
-    return render_template('admin/remove_confirmation.html',item_name=name,kind=kind,ident=ident,consequence=consequences[kind] + (' A conta principal do fundador continuará activa e protegida.' if founder_linked else ''))
+    return render_template('admin/remove_confirmation.html',item_name=name,kind=kind,ident=ident,consequence=consequences[kind])
 
 
 @staff_bp.get('/historico-remocoes')
