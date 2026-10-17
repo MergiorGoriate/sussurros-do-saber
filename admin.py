@@ -555,6 +555,15 @@ def dashboard():
 @admin_bp.route("/administradores", methods=["GET", "POST"])
 @superadmin_required
 def administrators():
+    from governance import parse_identifier
+    from governance_models import TeamMember
+    member_id=parse_identifier((request.form if request.method=='POST' else request.args).get('member_id'))
+    selected_member=None
+    if member_id:
+        query=TeamMember.query.filter_by(id=member_id)
+        selected_member=query.with_for_update().populate_existing().first_or_404() if request.method=='POST' else query.first_or_404()
+        if selected_member.removed_at or selected_member.admin_id:
+            abort(409,description='Escolha um colaborador não removido e sem conta associada.')
     if request.method == "POST":
         validate_csrf()
         username = request.form.get("username", "").strip().lower()
@@ -586,11 +595,11 @@ def administrators():
             )
             db.session.add(administrator)
             db.session.flush()
-            from governance_models import TeamMember
             from governance import audit
-            invited_member=TeamMember(admin_id=administrator.id,name=display_name,email=email or '',status='invited')
+            invited_member=selected_member or TeamMember(name=display_name,email=email or '',status='invited')
+            invited_member.admin=administrator
             db.session.add(invited_member);db.session.flush()
-            audit('member.invited','member',invited_member.id)
+            audit('member.saved' if selected_member else 'member.invited','member',invited_member.id,'Conta administrativa associada' if selected_member else '')
             audit('account.created','admin',administrator.id)
             db.session.commit()
             flash("Novo administrador criado com sucesso.", "success")
@@ -598,6 +607,8 @@ def administrators():
     return render_template(
         "admin/administrators.html",
         administrators=AdminUser.query.order_by(AdminUser.is_superadmin.desc(), AdminUser.created_at.desc()).all(),
+        available_members=TeamMember.query.filter(TeamMember.admin_id.is_(None),TeamMember.removed_at.is_(None)).order_by(TeamMember.name).all(),
+        selected_member=selected_member,
         configured_primary=os.getenv("ADMIN_USERNAME"),
     )
 
@@ -1250,6 +1261,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 
