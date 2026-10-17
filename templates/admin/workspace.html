@@ -17,6 +17,7 @@
   {% if staff_has_any('manuscript.read') or staff_has_any('manuscript.edit') or staff_has_any('manuscript.production') or staff_has_any('manuscript.assign') or staff_has_any('manuscript.decide') or staff_has_any('submissions.configure') %}<a href="{{ url_for('admin.submissions_list') }}">Submissões <span aria-hidden="true">↗</span></a>{% endif %}
   {% if staff_has_any('manuscript.review') %}<a href="{{ url_for('staff.reviews') }}">Meus pareceres <span aria-hidden="true">↗</span></a>{% endif %}
   {% if staff_can('contacts.manage') %}<a href="{{ url_for('admin.contacts') }}">Contactos <span aria-hidden="true">↗</span></a>{% endif %}
+  {% if staff_can('article.review') %}<a href="#artigos-para-revisao">Artigos do portal para rever <span aria-hidden="true">↗</span></a>{% endif %}
   {% if staff_can('reports.read') %}<a href="{{ url_for('staff.reports') }}">Relatórios e auditoria <span aria-hidden="true">↗</span></a>{% endif %}
   {% if staff_can('team.manage') %}<a href="{{ url_for('staff.team') }}">Equipa e convites <span aria-hidden="true">↗</span></a>{% endif %}
 </section>
@@ -38,6 +39,22 @@
     <ul class="workspace-permissions">{% for code,label in staff_permissions.items() if staff_has_any(code) %}<li>{{ label }}{% if code in staff_journal_permissions %}<small>Limitado às revistas dos mandatos</small>{% endif %}</li>{% else %}<li>Sem permissões de gestão efectivas.</li>{% endfor %}</ul>
     {% for a in mandates if a.journal_id %}{% for code in a.role.permissions if code not in staff_journal_permissions %}<p class="workspace-warning">{{ staff_permissions.get(code,code) }}: este acesso ao portal exige um mandato geral; o mandato «{{ a.role.name }}» está limitado a uma revista.</p>{% endfor %}{% endfor %}
   </details>
+</section>
+{% endif %}
+{% if staff_can('article.review') %}
+<section id="artigos-para-revisao" aria-labelledby="assigned-articles-title">
+  <div class="workspace-section-heading"><div><h2 id="assigned-articles-title">Artigos do portal para rever</h2><p>Artigos atribuídos directamente a si no fluxo editorial do portal.</p></div><span class="workspace-badge">{{ assigned_articles|length }}</span></div>
+  <div class="workspace-tasks">
+  {% for flow in assigned_articles %}
+    <article class="admin-panel workspace-task">
+      <header><h3>{{ flow.article.title }}</h3><span class="workspace-badge">Em revisão</span></header>
+      <p class="workspace-task-description">Este artigo foi-lhe atribuído para revisão independente.</p>
+      <div class="workspace-form-footer"><small>Estado: {{ article_stages[flow.stage] }}</small><a class="admin-primary" href="{{ url_for('staff.article_workflow',ident=flow.article_id) }}">Abrir artigo para rever</a></div>
+    </article>
+  {% else %}
+    <div class="admin-panel workspace-empty"><h3>Não tem artigos atribuídos para revisão</h3><p>Quando o responsável editorial lhe atribuir um artigo, este aparecerá aqui.</p></div>
+  {% endfor %}
+  </div>
 </section>
 {% endif %}
 {% if manager %}
