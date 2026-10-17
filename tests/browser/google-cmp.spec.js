@@ -24,7 +24,37 @@ test('Google CMP message controls become available through API; ads remain pause
 test('failed CMP reports unavailable and cannot enable advertisements',async({page})=>{
  await page.route('**/pagead/js/adsbygoogle.js?*',route=>route.abort());
  await page.goto('/');
- await expect(page.locator('#googleCmpStatus')).toContainText('indisponíveis');
- await expect(page.locator('#googleCmpSettings')).toBeDisabled();
+ await expect(page.locator('#googleCmpStatus')).toContainText('Não foi possível carregar');
+ await expect(page.locator('#googleCmpSettings')).toBeEnabled();
+ await expect(page.locator('#googleCmpSettings')).toContainText('Tentar carregar');
+ expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
+});
+
+
+test('slow CMP recovers after the initial waiting period',async({page})=>{
+ await page.clock.install();
+ await page.route('**/pagead/js/adsbygoogle.js?*',route=>route.fulfill({contentType:'application/javascript',body:`
+  setTimeout(()=>{
+   window.googlefc.showRevocationMessage=()=>{};
+   window.googlefc.callbackQueue.splice(0).forEach(entry=>{entry.CONSENT_API_READY?.();entry.CONSENT_DATA_READY?.()});
+  },20000);
+ `}));
+ await page.goto('/');
+ await page.clock.fastForward(11000);
+ await expect(page.locator('#googleCmpStatus')).toContainText('ainda não disponibilizou');
+ await page.clock.fastForward(10000);
+ await expect(page.locator('#googleCmpStatus')).toContainText('geridas pelo Google');
+ await expect(page.locator('#googleCmpSettings')).toHaveText('Gerir consentimento de publicidade');
+ expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
+});
+test('confirmed non-applicable region does not display a CMP failure',async({page})=>{
+ await page.route('**/pagead/js/adsbygoogle.js?*',route=>route.fulfill({contentType:'application/javascript',body:`
+  window.googlefc.showRevocationMessage=()=>{};
+  window.__tcfapi=(command,version,callback)=>callback({gdprApplies:false},true);
+  window.googlefc.callbackQueue.splice(0).forEach(entry=>{entry.CONSENT_API_READY?.();entry.CONSENT_DATA_READY?.()});
+ `}));
+ await page.goto('/');
+ await expect(page.locator('#googleCmpStatus')).toContainText('não se aplica');
+ await expect(page.locator('#googleCmpSettings')).toBeHidden();
  expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
 });
