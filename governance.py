@@ -69,7 +69,7 @@ def current_member():
 
 def active_member(member):
     return bool(member and not member.removed_at and member.status == 'active' and member.accepted_at
-                and (not member.admin or member.admin.active))
+                and member.admin_id and member.admin and member.admin.active)
 
 
 def mandates(member):
@@ -1025,4 +1025,5 @@ def notification_context():
         return dict(notice_unread=0,notice_recent=[])
     query=active_inbox()
     return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())
+
 
