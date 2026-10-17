@@ -2,7 +2,6 @@ FROM node:22-bookworm-slim AS assets
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
-COPY tailwind.config.js ./
 COPY static ./static
 COPY templates ./templates
 RUN npm run build:css
