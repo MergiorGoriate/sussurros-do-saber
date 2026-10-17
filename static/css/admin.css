@@ -657,3 +657,22 @@ input,textarea,select,button{font-size:16px}
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Accessible administrator theme switch; no backend/session changes. */
+.admin-theme-toggle{position:fixed;right:16px;bottom:16px;z-index:60;width:auto;min-height:44px;padding:10px 16px;border:1px solid #94a3b8;border-radius:999px;background:#fff;color:#102c50;box-shadow:0 3px 18px #0002;cursor:pointer;font-weight:700}
+.admin-theme-toggle:focus-visible{outline:3px solid #60a5fa;outline-offset:3px}
+body.admin-dark{--ink:#edf3fa;--green:#8bbdff;--paper:#101827;--line:#364457;background:var(--paper);color:var(--ink);color-scheme:dark}
+.admin-dark .admin-main{color:var(--ink)}
+.admin-dark .admin-panel,.admin-dark .metric-grid article,.admin-dark .editor-main,.admin-dark .editor-side,.admin-dark .administrator-card,.admin-dark .login-card,.admin-dark .markdown-preview,.admin-dark .policy-preview,.admin-dark .docs-toc a{background:#1b283a;color:#edf3fa;border-color:#364457}
+.admin-dark input,.admin-dark select,.admin-dark textarea,.admin-dark .slug-field,.admin-dark .editor-toolbar button,.admin-dark .admin-list article form button{background:#152235;color:#edf3fa;border-color:#52647c}
+.admin-dark .editor-toolbar,.admin-dark .administrator-editor,.admin-dark .inline-image-panel,.admin-dark .slug-field span,.admin-dark .markdown-preview th{background:#25364c;color:#edf3fa}
+.admin-dark .metric-grid span,.admin-dark .admin-list small,.admin-dark td small,.admin-dark .form-help,.admin-dark .field-help,.admin-dark .optional,.admin-dark .docs-intro,.admin-dark th{color:#b8c8db}
+.admin-dark .admin-primary{background:#3977bf;color:#fff!important}
+.admin-dark .admin-secondary,.admin-dark .danger-button{background:#1b283a;color:#ffb1a9;border-color:#8b5556}
+.admin-dark .admin-theme-toggle{background:#25364c;color:#fff;border-color:#7893b1}
+.admin-dark .alert{background:#16483f;color:#d7fff2}
+.admin-dark .alert.error{background:#572b32;color:#ffe4e4}
+.admin-dark .status.draft,.admin-dark .role-badge.secondary{background:#33465d;color:#e1ebf7}
+.admin-dark .status.published{background:#16483f;color:#c8ffe6}
+.admin-dark .status.scheduled{background:#604b23;color:#ffe8a8}
+@media print{.admin-theme-toggle{display:none!important}}
