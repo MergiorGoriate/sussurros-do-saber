@@ -41,6 +41,8 @@ test('founder confirmation cancellation, four archives, reassignment and open-se
  for(const [kind,id] of [['document',d.document_id],['report',d.report_id],['manuscript',d.manuscript_id],['member',d.member_id]]) {
    await page.goto(`/admin/remover/${kind}/${id}`);
    await page.getByRole('button',{name:'Confirmar remoção',exact:true}).click();
+   const destination={document:'/admin/documentos-equipa',report:'/admin/relatorios-equipa',manuscript:'/admin/submissoes',member:`/admin/equipa/${id}/responsabilidades`}[kind];
+   await expect(page).toHaveURL(new RegExp(destination+'$'));
  }
  await expect(page).toHaveURL(new RegExp(`/admin/equipa/${d.member_id}/responsabilidades$`));
  const form=page.locator('section').filter({has:page.getByRole('heading',{name:new RegExp('Responsabilidade '+d.suffix)})}).locator('form');
@@ -81,3 +83,4 @@ for(const width of [320,1440]) {
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
  });
 }
+

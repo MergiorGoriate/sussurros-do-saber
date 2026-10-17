@@ -154,7 +154,13 @@ def resource_url(item, *, public=False):
         if journal and journal.published and watching:return url_for('journal_detail',slug=journal.slug)
     if public:return None
     if kind=='member':
-        if ident and has_permission('team.manage'):return url_for('staff.team',edit=ident)
+        if ident:
+            member=db.session.get(TeamMember,ident)
+            if not member:return None
+            if has_permission('team.manage'):
+                if member.removed_at:
+                    return url_for('staff.responsibilities',ident=ident) if session.get('admin_superuser') else url_for('staff.team')
+                return url_for('staff.team',edit=ident)
         return url_for('staff.workspace')
     if kind=='task':
         t=db.session.get(StaffTask,ident);member=current_member()
@@ -193,5 +199,6 @@ def summary(*,public=False):
         sync_internal_updates(researcher())
     query=active_inbox(public=public)
     endpoint='submissions.open_internal_notice' if public else 'staff.open_notice'
-    return dict(unread=query.filter(StaffNotice.read_at.is_(None)).count(),items=[dict(id=n.id,title=n.subject,description=n.body,date=n.created_at.strftime('%d/%m/%Y %H:%M')+' UTC',unread=not bool(n.read_at),url=url_for(endpoint,ident=n.id) if n.resource_type else None) for n in query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5)])
+    return dict(unread=query.filter(StaffNotice.read_at.is_(None)).count(),items=[dict(id=n.id,title=n.subject,description=n.body,date=n.created_at.strftime('%d/%m/%Y %H:%M')+' UTC',unread=not bool(n.read_at),url=url_for(endpoint,ident=n.id) if n.resource_type and resource_url(n,public=public) else None) for n in query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5)])
+
 

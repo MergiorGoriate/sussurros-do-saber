@@ -1,40 +1,51 @@
-/* Private, bounded summary, refreshed only in a visible tab. Text is never HTML. */
+/* Private, bounded inbox summary. All notification text is inserted as text. */
 (() => {
   const bar = document.querySelector('[data-notice-bar]');
   if (!bar) return;
   const status = bar.querySelector('[data-notice-status]');
   const list = bar.querySelector('[data-notice-items]');
   const template = bar.querySelector('form');
-  const node = (tag, text) => { const el = document.createElement(tag); if (text) el.textContent = text; return el; };
+  const node = (tag, text, className) => { const el = document.createElement(tag); if (text) el.textContent = text; if (className) el.className = className; return el; };
   const hidden = (name, value) => { const el = node('input'); el.type = 'hidden'; el.name = name; el.value = value; return el; };
   let busy = false;
   const refresh = async () => {
     if (busy || document.hidden) return;
-    busy = true; status.textContent = 'A actualizar notificações…';
+    busy = true;
+    bar.setAttribute('aria-busy', 'true');
+    if (bar.open) status.textContent = 'A actualizar notificações…';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-      const response = await fetch(bar.dataset.summaryUrl, {credentials: 'same-origin', cache: 'no-store'});
+      const response = await fetch(bar.dataset.summaryUrl, {credentials: 'same-origin', cache: 'no-store', signal: controller.signal});
       if (!response.ok) throw new Error('inbox');
       const data = await response.json();
+      if (!Number.isInteger(data.unread) || data.unread < 0 || !Array.isArray(data.items)) throw new Error('inbox');
       document.querySelectorAll('[data-notice-count]').forEach(el => { el.textContent = String(data.unread); if (el.classList.contains('notice-badge')) el.hidden = !data.unread; });
+      bar.querySelector('[data-notice-preview-count]').textContent = String(data.unread);
       bar.querySelector('[data-notice-label]').textContent = `Notificações · ${data.unread} por ler`;
       bar.querySelector('summary').setAttribute('aria-label', `Notificações internas · ${data.unread} por ler`);
-      list.replaceChildren();
+      bar.querySelector('[data-notice-read-all]').disabled = !data.unread;
+      const items = document.createDocumentFragment();
       for (const item of data.items) {
-        const section = node('section');
-        section.append(node('strong', item.title), node('p', item.description), node('time', item.date), node('p', item.unread ? 'Por ler' : 'Lida'));
-        if (item.url) { const link = node('a', 'Abrir recurso'); link.setAttribute('href', item.url); section.append(link); }
+        const section = node('section', '', `notice-item${item.unread ? ' is-unread' : ''}`);
+        const heading = node('div', '', 'notice-item-heading');
+        heading.append(node('strong', item.title), node('span', item.unread ? 'Por ler' : 'Lida', `notice-state${item.unread ? ' notice-state-unread' : ''}`));
+        section.append(heading, node('p', item.description, 'notice-preview-body'), node('time', item.date));
+        const actions = node('div', '', 'notice-item-actions');
+        if (item.url) { const link = node('a', 'Abrir recurso', 'notice-button'); link.setAttribute('href', item.url); actions.append(link); }
         const form = node('form'); form.method = 'post'; form.setAttribute('action', template.getAttribute('action'));
         form.append(hidden('csrf_token', template.querySelector('[name="csrf_token"]').value), hidden('id', item.id));
         for (const [action, label] of [['read', 'Marcar como lida'], ['delete', 'Eliminar aviso']]) {
           if (action === 'read' && !item.unread) continue;
-          const button = node('button', label); button.name = 'action'; button.value = action; form.append(button);
+          const button = node('button', label, `notice-button${action === 'delete' ? ' notice-button-danger' : ''}`); button.type = 'submit'; button.name = 'action'; button.value = action; form.append(button);
         }
-        section.append(form); list.append(section);
+        actions.append(form); section.append(actions); items.append(section);
       }
-      if (!data.items.length) list.append(node('p', 'Sem notificações.'));
-      status.textContent = 'Notificações actualizadas.';
-    } catch (_) { status.textContent = 'Não foi possível actualizar. Volte a abrir a página de notificações.'; }
-    finally { busy = false; }
+      if (!data.items.length) items.append(node('p', 'Sem notificações.', 'notice-preview-empty'));
+      list.replaceChildren(items);
+      status.textContent = bar.open ? 'Notificações actualizadas.' : '';
+    } catch (_) { if (bar.open) status.textContent = 'Não foi possível actualizar. Consulte todas as notificações ou volte a abrir este menu.'; }
+    finally { clearTimeout(timeout); busy = false; bar.removeAttribute('aria-busy'); }
   };
   bar.addEventListener('toggle', () => { if (bar.open) refresh(); });
   document.addEventListener('click', event => { if (!bar.contains(event.target)) bar.open = false; });
