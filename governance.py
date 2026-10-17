@@ -418,7 +418,8 @@ def workspace():
     assigned_articles=[]
     if active_member(member) and mandates(member) and has_permission('article.review',member=member):
         assigned_articles=(ArticleWorkflow.query.join(Article,Article.id==ArticleWorkflow.article_id)
-            .filter(ArticleWorkflow.reviewer_id==member.id,ArticleWorkflow.stage=='review')
+            .filter(ArticleWorkflow.reviewer_id==member.id,ArticleWorkflow.stage=='review',
+                    ArticleWorkflow.reviewed_at.is_(None))
             .order_by(ArticleWorkflow.article_id.desc())
             .all())
         assigned_articles=[flow for flow in assigned_articles

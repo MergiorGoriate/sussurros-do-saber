@@ -220,6 +220,48 @@ class StaffGovernanceTests(unittest.TestCase):
         self.assertEqual(article.status,'approved');self.assertEqual(PortalReview.query.filter_by(article_id=article.id).one().report,note)
         self.signin(owner.admin);self.assertEqual(self.client.get(f'/admin/artigos/{article.id}/editar').status_code,409)
 
+    def test_workspace_review_queue_tracks_assignment_and_completion(self):
+        owner=self.member();reviewer=self.member('portal_reviewer');other=self.member('portal_reviewer')
+        editor=self.member('portal_editor');article=self.article(owner)
+        path=f'/admin/fluxo-artigos/{article.id}'
+        self.signin(editor.admin)
+        self.assertEqual(self.post(path,action='assign',reviewer_id=reviewer.id).status_code,302)
+        self.signin(reviewer.admin)
+        self.assertIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.signin(other.admin)
+        self.assertNotIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.assertEqual(self.client.get(path).status_code,404)
+        self.signin(editor.admin)
+        self.assertEqual(self.post(path,action='assign',reviewer_id=other.id).status_code,302)
+        self.signin(reviewer.admin)
+        self.assertNotIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.assertEqual(self.client.get(path).status_code,404)
+        self.signin(other.admin)
+        self.assertIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.assertEqual(self.post(path,action='reviewed',note='Fontes e metodologia verificadas.').status_code,302)
+        self.assertNotIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.assertEqual(self.client.get(path).status_code,200)
+
+    def test_workspace_review_queue_respects_live_permission_and_mandate(self):
+        owner=self.member();reviewer=self.member('portal_reviewer');article=self.article(owner)
+        flow=db.session.get(ArticleWorkflow,article.id)
+        flow.reviewer_id=reviewer.id;flow.stage='review';article.status='review';db.session.commit()
+        path=f'/admin/fluxo-artigos/{article.id}'
+        self.signin(reviewer.admin)
+        self.assertIn(path.encode(),self.client.get('/admin/trabalho').data)
+        role=reviewer.appointments[0].role;permissions=list(role.permissions)
+        role.permissions=[p for p in permissions if p!='article.review'];db.session.commit()
+        self.assertNotIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.assertEqual(self.client.get(path).status_code,404)
+        role.permissions=permissions;db.session.commit()
+        reviewer.appointments[0].active=False;db.session.commit()
+        self.assertNotIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.assertEqual(self.client.get(path).status_code,404)
+        reviewer.appointments[0].active=True
+        reviewer.appointments[0].ends_on=date.today()-timedelta(days=1);db.session.commit()
+        self.assertNotIn(path.encode(),self.client.get('/admin/trabalho').data)
+        self.assertEqual(self.client.get(path).status_code,404)
+
     def test_article_form_cannot_bypass_approval(self):
         member=self.member();article=self.article(member);self.signin(member.admin)
         response=self.post(f'/admin/artigos/{article.id}/editar',title=article.title,summary=article.summary,body=article.body,
