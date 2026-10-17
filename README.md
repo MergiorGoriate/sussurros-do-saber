@@ -2,7 +2,7 @@
 
 Plataforma de divulgação científica e publicação editorial em português, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.
 
-Este README descreve a implementação revista em **8 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
+Este README descreve a implementação revista em **17 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
 
 ## Índice
 
@@ -30,6 +30,9 @@ Este README descreve a implementação revista em **8 de outubro de 2026**, com 
 ## Actualizações recentes
 
 As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em produção depende de um deploy bem-sucedido e da configuração dos serviços externos.
+
+- **Compilação CSS:** Tailwind 4.3.3 com CLI própria, configuração em CSS e fontes de classes explícitas; Playwright 1.64.0. [Migração, compatibilidade de navegadores e limitações da validação](docs/TAILWIND4_MIGRATION_20261017.md).
+- **Ícones de leitura:** ORCID, partilhas Bluesky/Reddit e seta da conta com representação local, utilizável mesmo quando a fonte externa de ícones falha.
 
 - **Equipa e governação:** colaboradores, contactos, convites registados, mandatos gerais ou de revista, 11 funções padrão e 24 permissões independentes; configurações personalizadas preservadas.
 - **Trabalho editorial:** tarefas e comentários, documentos privados com aceite, revisão independente de artigos, atribuição de revisores científicos por versão e relatórios de actividade.

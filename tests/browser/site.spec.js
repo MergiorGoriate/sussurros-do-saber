@@ -270,6 +270,7 @@ async function signInAdministrator(page) {
 
 for (const width of [1440,320]) {
   test(`journal authors and editorial information can be administered at ${width}px`, async ({page,context},testInfo)=>{
+    await page.route('**/font-awesome/**',route=>route.abort());
     await context.route('https://example.org/capa.png',route=>route.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAGAAAACACAIAAAB7vvvtAAABFElEQVR4nO3QQRHAIADAMEDIJKEM0VOw65M9EgW9zmefwbd1O+DvDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFAwKBgUDAoGBYOCQcGgYFB4AdaOAfh0q+/GAAAAAElFTkSuQmCC','base64')}));
     await page.setViewportSize({width,height:900});
     await signInAdministrator(page);
@@ -498,6 +499,7 @@ test('Bluesky and Reddit links work without JavaScript',async({browser})=>{
 });
 for(const width of [1440,390,320]){
  test(`scientific article shares to Bluesky and Reddit at ${width}px`,async({page})=>{
+  await page.route('**/font-awesome/**',route=>route.abort());
   await page.setViewportSize({width,height:1000});
   await page.goto('/revistas/revista-de-teste-cientifico');
   await page.getByRole('button',{name:'Recusar não essenciais',exact:true}).click();
