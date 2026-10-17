@@ -17,6 +17,9 @@ gtag('consent','default',{
 </script>
 <!-- Verification does not load advertising or set advertising cookies. -->
 <meta name="google-adsense-account" content="ca-pub-7920973591685812">
+{% if google_cmp_enabled %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/google-cmp.js', v='20261018-cmp-v1') }}" defer></script>
+{% endif %}
 <meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
@@ -185,6 +188,10 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/diretrizes-para-autores">Diretrizes para Autores</a>
 <a href="/politica-de-correcoes">Política de Correções</a>
 <a href="/acessibilidade">Acessibilidade</a>
+{% if google_cmp_enabled %}
+<button id="googleCmpSettings" class="footer-cookie-link" type="button" disabled>Gerir consentimento de publicidade</button>
+<p id="googleCmpStatus" role="status" class="text-sm">A carregar as opções de privacidade do Google…</p>
+{% endif %}
 <button id="cookieSettingsLink" class="footer-cookie-link" type="button">Configurar cookies</button>
 <a href="/feed.xml">Feed RSS</a>
 </div>
@@ -233,5 +240,6 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-favorite-cards-v7') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js') }}" defer></script></body>
 </html>
+
 
 

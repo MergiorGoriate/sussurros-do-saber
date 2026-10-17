@@ -175,6 +175,24 @@ jobs:
           exit 1
       - run: node --test tests/consent.test.cjs
       - run: npm run test:e2e
+      - name: Test Google CMP with mocked Google services
+        env:
+          GOOGLE_CMP_ENABLED: 'true'
+        run: |
+          previous_pid=$(cat /tmp/sussurros-server.pid)
+          kill "$previous_pid"
+          for attempt in {1..30}; do
+            if ! kill -0 "$previous_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          python -m gunicorn --pythonpath tests/browser browser_test_server:app --bind 127.0.0.1:5000 --workers 1 --timeout 60 > /tmp/sussurros-cmp-server.log 2>&1 &
+          cmp_pid=$!
+          trap 'kill "$cmp_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:5000/healthz; then break; fi
+            sleep 1
+          done
+          npx playwright test google-cmp.spec.js
       - name: Show isolated server failures
         if: failure()
         run: tail -n 120 /tmp/sussurros-server.log
