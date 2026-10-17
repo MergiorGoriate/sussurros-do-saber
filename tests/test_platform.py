@@ -24,6 +24,21 @@ from models import AdminUser, Article, Author, Comment, Journal, db  # noqa: E40
 from security_test_support import authenticate_test_session
 
 class PlatformTests(unittest.TestCase):
+    def test_adsense_verification_without_automatic_advertising(self):
+        client = app.test_client()
+        for path in ["/", "/politica-de-privacidade", "/politica-de-publicidade", "/pagina-inexistente-adsense"]:
+            response = client.get(path)
+            html = response.get_data(as_text=True)
+            if response.status_code == 200:
+                self.assertIn('name="google-adsense-account" content="ca-pub-7920973591685812"', html)
+            self.assertNotIn("adsbygoogle.js", html)
+            self.assertNotIn("googletagmanager.com/ns.html", html)
+        response = client.get("/ads.txt")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("google.com, pub-7920973591685812, DIRECT, f08c47fec0942fa0", response.get_data(as_text=True))
+        self.assertIn("CMP", client.get("/politica-de-privacidade").get_data(as_text=True))
+
+
     def test_review_and_approved_articles_remain_private_until_publication(self):
         client = app.test_client()
         with app.app_context():
@@ -1315,6 +1330,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
