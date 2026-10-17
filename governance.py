@@ -138,6 +138,19 @@ def field(name, maximum, required=False):
     return value
 
 
+def parse_identifier(value, required=False):
+    if value is None or value == '':
+        if required:abort(400,description='Seleccione o registo obrigatório.')
+        return None
+    try:
+        if not isinstance(value,str) or not re.fullmatch(r'[0-9]{1,10}',value):raise ValueError()
+        ident=int(value)
+        if not 0 < ident <= 2147483647:raise ValueError()
+    except (TypeError,ValueError):
+        abort(400,description='Identificador inválido.')
+    return ident
+
+
 def eligible(permission, journal_id=None):
     return [m for m in TeamMember.query.order_by(TeamMember.name).all() if has_permission(permission,journal_id,member=m)]
 
@@ -233,8 +246,8 @@ def team():
     require('team.manage')
     if request.method == 'POST':
         validate_csrf()
-        ident = request.form.get('id',type=int)
-        member = db.get_or_404(TeamMember,ident) if ident else TeamMember()
+        ident = parse_identifier(request.form.get('id'))
+        member = TeamMember.query.filter_by(id=ident).with_for_update().populate_existing().first_or_404() if ident else TeamMember()
         if member.removed_at:
             abort(409,description='Colaborador removido. O histórico não pode recuperar acesso.')
         previous_contact=member.contact_note or ''
@@ -242,11 +255,13 @@ def team():
         name, email = field('name',180,True), field('email',254,True).lower()
         if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email):
             abort(400,description='E-mail inválido.')
-        admin_id = request.form.get('admin_id',type=int)
-        author_id = request.form.get('author_id',type=int)
+        admin_id = parse_identifier(request.form.get('admin_id'))
+        author_id = parse_identifier(request.form.get('author_id'))
         for model, key, value in ((AdminUser,'admin_id',admin_id),(Author,'author_id',author_id)):
-            if value and (not db.session.get(model,value) or TeamMember.query.filter(getattr(TeamMember,key)==value,TeamMember.id!=member.id).first()):
-                abort(400,description='Conta já associada ou inexistente.')
+            if value:
+                account=model.query.filter_by(id=value).with_for_update().populate_existing().first()
+                if not account or TeamMember.query.filter(getattr(TeamMember,key)==value,TeamMember.id!=member.id).first():
+                    abort(400,description='Conta já associada ou inexistente.')
         if not session.get('admin_superuser') and (admin_id!=member.admin_id or author_id!=member.author_id):
             abort(403,description='A associação de contas exige o responsável principal.')
         status = field('status',30,True)
@@ -269,7 +284,9 @@ def team():
             if account.is_superadmin:
                 abort(400,description='A conta principal não deve ser associada a um mandato de colaborador.')
             account.governance_managed=True
-        member.name,member.email,member.admin_id,member.author_id,member.status = name,email,admin_id,author_id,status
+        member.name,member.email,member.status = name,email,status
+        member.admin=db.session.get(AdminUser,admin_id) if admin_id else None
+        member.author=db.session.get(Author,author_id) if author_id else None
         for name,limit in [('affiliation',300),('specialty',300),('bio',10000),('contact_note',10000)]:
             setattr(member,name,field(name,limit))
         group = field('group',40)
@@ -291,9 +308,16 @@ def team():
         db.session.commit()
         flash('Membro guardado. Nenhuma mensagem externa foi enviada.','success')
         return redirect(url_for('staff.team',edit=member.id))
+    ident=parse_identifier(request.args.get('edit'))
+    selected=db.get_or_404(TeamMember,ident) if ident else None
+    if selected and selected.removed_at:abort(410,description='Este colaborador foi removido. Consulte o histórico de remoções.')
+    others=TeamMember.query.filter(TeamMember.id!=ident) if ident else TeamMember.query
+    used_admins=others.filter(TeamMember.admin_id.isnot(None)).with_entities(TeamMember.admin_id)
+    used_authors=others.filter(TeamMember.author_id.isnot(None)).with_entities(TeamMember.author_id)
     return render_template('admin/team.html',members=TeamMember.query.filter(TeamMember.removed_at.is_(None)).order_by(TeamMember.name).all(),
-                           selected=db.session.get(TeamMember,request.args.get('edit',type=int)) if request.args.get('edit',type=int) else None,
-                           admins=AdminUser.query.order_by(AdminUser.display_name).all(),authors=Author.query.order_by(Author.name).all(),
+                           selected=selected,
+                           admins=AdminUser.query.filter(AdminUser.is_superadmin.is_(False),~AdminUser.id.in_(used_admins)).order_by(AdminUser.display_name).all(),
+                           authors=Author.query.filter(~Author.id.in_(used_authors)).order_by(Author.name).all(),
                            roles=TeamRole.query.order_by(TeamRole.name).all(),journals=Journal.query.order_by(Journal.title).all())
 
 
@@ -301,9 +325,9 @@ def team():
 @superadmin_required
 def appointment(ident):
     validate_csrf()
-    member = db.get_or_404(TeamMember,ident)
+    member = TeamMember.query.filter_by(id=ident).with_for_update().populate_existing().first_or_404()
     if member.removed_at:abort(409)
-    role = db.get_or_404(TeamRole,request.form.get('role_id',type=int))
+    role = db.get_or_404(TeamRole,parse_identifier(request.form.get('role_id'),True))
     start,end = parse_date(request.form.get('starts_on'),True),parse_date(request.form.get('ends_on'))
     if end and end < start:
         abort(400,description='O fim deve ser posterior ao início.')
@@ -313,14 +337,19 @@ def appointment(ident):
             raise ValueError()
     except ValueError:
         abort(400)
-    journal_id=request.form.get('journal_id',type=int)
-    substitute_id=request.form.get('substitute_id',type=int)
+    journal_id=parse_identifier(request.form.get('journal_id'))
+    substitute_id=parse_identifier(request.form.get('substitute_id'))
     if journal_id and not db.session.get(Journal,journal_id):
         abort(400)
-    if substitute_id and (substitute_id==ident or not db.session.get(TeamMember,substitute_id)):
+    substitute=db.session.get(TeamMember,substitute_id) if substitute_id else None
+    if substitute_id and (substitute_id==ident or not substitute or substitute.removed_at):
         abort(400)
+    area,conditions=field('area',180),field('conditions',10000)
+    duplicate=TeamAppointment.query.filter_by(member_id=ident,role_id=role.id,journal_id=journal_id,starts_on=start,
+        ends_on=end,weekly_hours=hours,area=area,conditions=conditions,substitute_id=substitute_id,active=True).first()
+    if duplicate:return redirect(url_for('staff.team',edit=ident))
     item=TeamAppointment(member=member,role=role,journal_id=journal_id,starts_on=start,ends_on=end,
-                         weekly_hours=hours,area=field('area',180),conditions=field('conditions',10000),substitute_id=substitute_id)
+                         weekly_hours=hours,area=area,conditions=conditions,substitute_id=substitute_id)
     db.session.add(item)
     audit('mandate.created','member',ident,role.name)
     db.session.commit()
@@ -332,6 +361,8 @@ def appointment(ident):
 def end_appointment(ident):
     validate_csrf()
     item=db.get_or_404(TeamAppointment,ident)
+    TeamMember.query.filter_by(id=item.member_id).with_for_update().populate_existing().first_or_404()
+    item=TeamAppointment.query.filter_by(id=ident).with_for_update().populate_existing().first_or_404()
     if not item.active:return redirect(url_for('staff.team',edit=item.member_id))
     item.active=False
     audit('mandate.ended','member',item.member_id,item.role.name)
@@ -1035,6 +1066,7 @@ def notification_context():
         return dict(notice_unread=0,notice_recent=[])
     query=active_inbox()
     return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())
+
 
 
 

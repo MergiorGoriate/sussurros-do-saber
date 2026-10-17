@@ -16,10 +16,12 @@
     <h2>Cadastrar novo administrador</h2>
     <p class="form-help">A nova conta será secundária. A palavra-passe é guardada de forma protegida e nunca será exibida.</p>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Nome completo<input name="display_name" required minlength="2" maxlength="120" autocomplete="name"></label>
+    <label>Colaborador da equipa<select name="member_id"><option value="">Criar novo convite</option>{% for m in available_members %}<option value="{{ m.id }}" {% if selected_member and selected_member.id==m.id %}selected{% endif %}>{{ m.name }}{% if m.email %} · {{ m.email }}{% endif %}</option>{% endfor %}</select></label>
+    <p class="form-help">Escolha um colaborador existente para preservar o convite, o aceite e os mandatos. Criar a conta não envia e-mail nem activa um convite pendente.</p>
+    <label>Nome completo<input name="display_name" required minlength="2" maxlength="120" autocomplete="name" value="{{ selected_member.name if selected_member else '' }}"></label>
     <label>Utilizador<input name="username" required minlength="3" maxlength="60" pattern="[a-zA-Z0-9._-]+" autocomplete="username" aria-describedby="usernameHelp"></label>
     <small id="usernameHelp" class="field-help">Use letras, números, ponto, hífen ou sublinhado.</small>
-    <label>E-mail <span class="optional">opcional</span><input name="email" type="email" maxlength="180" autocomplete="email"></label>
+    <label>E-mail <span class="optional">opcional</span><input name="email" type="email" maxlength="180" autocomplete="email" value="{{ selected_member.email if selected_member else '' }}"></label>
     <label>Palavra-passe<input name="password" type="password" required minlength="14" autocomplete="new-password"></label>
     <label>Confirmar palavra-passe<input name="password_confirmation" type="password" required minlength="14" autocomplete="new-password"></label>
     <button class="admin-primary">Criar administrador</button>
@@ -78,3 +80,4 @@
   </section>
 </div>
 {% endblock %}
+
