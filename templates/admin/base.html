@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261017-admin-theme') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css',v='20261008-editorial-workflow') }}">
   {% block extra_head %}{% endblock %}
-<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261008-bell-top') }}"></head>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notifications') }}"></head>
 <body>
   <button type="button" class="admin-theme-toggle" data-admin-theme-toggle aria-label="Alternar tema do painel" aria-pressed="false" title="Alternar tema claro e escuro">Tema escuro</button>
   <aside class="admin-sidebar" id="admin-sidebar">
@@ -58,9 +58,10 @@
     {% block content %}{% endblock %}
   </main>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js',v='20261017-admin-theme') }}" defer></script>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-notifications') }}" defer></script>
 </body>
 </html>
+
 
 
 

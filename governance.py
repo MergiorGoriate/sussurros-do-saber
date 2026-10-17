@@ -233,11 +233,13 @@ def guard_existing_endpoint():
 
 @staff_bp.app_context_processor
 def staff_context():
+    from internal_notices import resource_url
     return dict(staff_can=has_permission, staff_has_any=has_any_permission, staff_member=current_member(), member_states=MEMBER_STATES,
                 task_states=TASK_STATES, article_stages=ARTICLE_STAGES,
                 staff_valid_mandates=mandates, staff_article_editable=article_editable, staff_journal_can=journal_can,
                 staff_article_statuses=article_statuses, staff_permissions=PERMISSIONS,
-                staff_journal_permissions=JOURNAL_PERMISSIONS, staff_manuscript_permissions=MANUSCRIPT_ACCESS_PERMISSIONS)
+                staff_journal_permissions=JOURNAL_PERMISSIONS, staff_manuscript_permissions=MANUSCRIPT_ACCESS_PERMISSIONS,
+                notice_resource_url=resource_url)
 
 
 @staff_bp.route('/equipa', methods=['GET','POST'])
@@ -537,24 +539,42 @@ def accept_document(ident):
 @staff_bp.route('/notificacoes',methods=['GET','POST'])
 @login_required
 def notifications():
-    from internal_notices import active_inbox, mutate
+    from internal_notices import active_inbox, mutate, resource_url
+    selected=request.args.get('status','all')
+    if selected not in {'all','unread','read'}:abort(400)
+    current_page=request.args.get('page',1,type=int)
+    if current_page < 1:abort(400)
     if request.method=='POST':
         validate_csrf()
         mutate(request.form.get('action','read'),request.form.get('id',type=int))
-        return redirect(url_for('staff.notifications'),code=303)
-    page=active_inbox().order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
-    return render_template('admin/staff_notices.html',notices=page.items,pagination=page)
+        return redirect(url_for('staff.notifications',**({'status':selected} if selected!='all' else {}),**({'page':current_page} if current_page>1 else {})),code=303)
+    query=active_inbox()
+    total=query.count()
+    unread=query.filter(StaffNotice.read_at.is_(None)).count()
+    if selected=='unread':query=query.filter(StaffNotice.read_at.is_(None))
+    elif selected=='read':query=query.filter(StaffNotice.read_at.isnot(None))
+    filtered_total=unread if selected=='unread' else total-unread if selected=='read' else total
+    last_page=max(1,(filtered_total+29)//30)
+    if current_page>last_page:
+        return redirect(url_for('staff.notifications',status=selected,page=last_page))
+    page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=current_page,per_page=30,error_out=False)
+    return render_template('admin/staff_notices.html',notices=page.items,pagination=page,
+        notice_filter=selected,notice_total=total,notice_unread_total=unread,
+        notice_targets={n.id:resource_url(n) for n in page.items})
 
 
 @staff_bp.get('/notificacoes/<int:ident>/abrir')
 @login_required
 def open_notice(ident):
     from internal_notices import active_inbox, resource_url
-    item=active_inbox().filter_by(id=ident).first_or_404()
+    item=active_inbox().filter_by(id=ident).with_for_update().first_or_404()
     target=resource_url(item)
     if not target:
         flash('O recurso foi eliminado ou já não tem acesso a ele.','warning')
         return redirect(url_for('staff.notifications'))
+    if not item.read_at:
+        item.read_at=utcnow()
+        db.session.commit()
     return redirect(target)
 
 
@@ -1066,6 +1086,7 @@ def notification_context():
         return dict(notice_unread=0,notice_recent=[])
     query=active_inbox()
     return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())
+
 
 
 
