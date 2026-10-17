@@ -696,8 +696,8 @@ def article_editable(article):
 
 def article_statuses(article):
     # Approval belongs to the workflow; publication has its own route.
-    if session.get('admin_superuser'):
-        return ['draft','review','approved','published','scheduled']
+    # Approval and publication are workflow transitions, not form status changes.
+    # Offering these values to superusers causes a 409 for unapproved articles.
     return ['draft','review'] if article_editable(article) else []
 
 
