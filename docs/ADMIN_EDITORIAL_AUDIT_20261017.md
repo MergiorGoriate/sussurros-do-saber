@@ -154,6 +154,8 @@ Protecções verificadas: autenticação/2FA/CSRF, expiração e vínculo de ses
 - `npm run build:css`, `node --check tests/browser/editorial-audit.spec.js`, `git diff --check`: aprovados. `app.py`, configuração e modelos sem alterações.
 - PostgreSQL 18, migrações/restauro, dependências e Docker desta alteração: execução remota do PR ainda pendente ao escrever este ficheiro. O corpo do PR regista o resultado posterior com links. Nenhum resultado antigo foi reutilizado como teste desta revisão.
 
+O primeiro job PostgreSQL expôs um erro no teste de diagnóstico: `str(db.engine.url)` mascara a palavra-passe, causando falha de autenticação na segunda ligação. Corrigida exclusivamente a construção do URL dentro dos dois testes, com `render_as_string(hide_password=False)` passado directamente ao diagnóstico, sem imprimir o URL. A autenticação e a configuração da aplicação não foram alteradas. Todos os restantes novos percursos PostgreSQL dessa execução passaram; a execução final fica registada no PR.
+
 ## L. Regressões
 
 A suite existente cobre artigos/revistas/PDF, Google, favoritos, sino, administração, ficheiros, recuperação de login, migrações, permissões e publicação programada. Nenhum teste existente foi enfraquecido ou removido. A primeira execução do novo teste de navegador falhou por selector ambíguo entre sino e parecer; corrigido para `td details summary`, sem alterar comportamento da aplicação.

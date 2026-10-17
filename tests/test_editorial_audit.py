@@ -160,7 +160,7 @@ class EditorialAuditTests(unittest.TestCase):
         member = self.grant('contacts.manage')
         member.removed_at = utcnow()
         db.session.commit()
-        record = next(r for r in inspect_database(str(db.engine.url))['members'] if r['member_id'] == member.id)
+        record = next(r for r in inspect_database(db.engine.url.render_as_string(hide_password=False))['members'] if r['member_id'] == member.id)
         self.assertTrue(record['removed'])
         self.assertEqual(record['effective_general'], [])
         self.assertFalse(has_permission('contacts.manage', member=member))
