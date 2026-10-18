@@ -167,7 +167,7 @@ class PortalWorkflowTransitions(unittest.TestCase):
         self.assertEqual(self.post(path,action='reviewed',note='Referências corrigidas e verificadas na nova revisão.').status_code,302)
         self.signin(editor.admin)
         self.assertEqual(self.post(path,action='approve').status_code,302)
-        self.assertEqual(flow.stage,'approved')
+        self.assertEqual(flow.stage,'published')
         reports=PortalReview.query.filter_by(article_id=article.id).order_by(PortalReview.id).all()
         self.assertEqual([r.action for r in reports],['changes','reviewed'])
 
