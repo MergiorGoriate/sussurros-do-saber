@@ -58,6 +58,8 @@ for(const width of [320,1440]){
       expect(await contrast(page.locator(selector).first()),selector).toBeGreaterThanOrEqual(4.5);
     }
     await page.screenshot({path:`/tmp/dark-panel-previews/submissions-dark-${width}.png`,fullPage:true,animations:'disabled'});
+    const editorCookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();
+    await page.context().addCookies([{name:'session',value:editorCookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
     const article=JSON.parse(execFileSync('python',['tests/browser/workflow_fixture.py'],{encoding:'utf8'}));
     await page.goto('/admin/fluxo-artigos/'+article.article_id);
     await page.getByRole('button',{name:'Submeter para revisão',exact:true}).click();
