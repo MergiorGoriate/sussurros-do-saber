@@ -39,6 +39,8 @@ for(const width of [320,1440]){
     await expect(field).toBeVisible();
     expect(await field.evaluate(el=>getComputedStyle(el).colorScheme)).toBe('dark');
     expect(await contrast(field)).toBeGreaterThanOrEqual(4.5);
+    expect(await contrast(page.locator('.management-save .admin-primary'))).toBeGreaterThanOrEqual(4.5);
+    expect(await contrast(page.locator('.management-item-heading a').first())).toBeGreaterThanOrEqual(4.5);
     await page.screenshot({path:`/tmp/dark-panel-previews/team-dark-${width}.png`,fullPage:true,animations:'disabled'});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });

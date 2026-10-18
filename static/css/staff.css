@@ -210,8 +210,8 @@
 .admin-dark :is(.management-role.is-selected,.workspace-overview>a:hover,.workspace-shortcuts a:hover){background:var(--admin-soft);border-color:var(--admin-accent)}
 .admin-dark .staff-management button:not(.notice-button),
 .admin-dark :is(.management-actions a,.management-pagination a):not(.notice-button){background:var(--admin-soft);color:var(--admin-accent);border-color:#52647c}
-.admin-dark .staff-management .admin-primary{background:#99c8fb;border-color:#99c8fb;color:#13273e!important}
-.admin-dark .staff-management .management-danger{background:#442b36;border-color:#98616d;color:#ffbdc7}
+.admin-dark .staff-management .admin-primary:not(.notice-button){background:#99c8fb;border-color:#99c8fb;color:#13273e!important}
+.admin-dark .staff-management .management-danger:not(.notice-button){background:#442b36;border-color:#98616d;color:#ffbdc7}
 .admin-dark :is(.management-badge,.workspace-status-in_progress){background:#263f5c;color:#b7d9ff}
 .admin-dark :is(.workspace-status-done,.workflow-progress .is-complete){background:#193f38;color:#b9ead6}
 .admin-dark :is(.workspace-status-blocked,.workspace-warning,.workflow-status-note){background:#493d25;color:#f7dda4;border-color:#b99a59}
@@ -223,3 +223,5 @@
 .admin-dark .workflow-progress .is-current{background:#263f5c;color:#d4e9ff;outline-color:#86bdf5}
 .admin-dark .workflow-progress .is-current>span{background:#99c8fb;color:#13273e;border-color:#99c8fb}
 .admin-dark .workflow-progress .is-complete{background:#193f38;color:#b9ead6}
+
+.admin-dark .staff-management a:not([class]){color:var(--admin-accent)}
