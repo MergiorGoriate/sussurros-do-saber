@@ -1,0 +1,15 @@
+{% extends 'admin/base.html' %}
+{% block title %}Eliminar administrador secundário{% endblock %}
+{% block content %}
+<section class="admin-panel compact-form">
+  <h1>Eliminar administrador secundário</h1>
+  <p>Confirme a remoção de <strong>{{ administrator.display_name }}</strong> (@{{ administrator.username }}).</p>
+  <p>O acesso administrativo, incluindo sessões abertas, e todos os mandatos serão revogados. O convite de colaboração deixará de estar activo.</p>
+  <p>A conta sai da lista de administradores. Artigos, autoria, pareceres, documentos e auditoria ficam preservados no histórico de remoções. Responsabilidades pendentes podem ser reatribuídas na equipa.</p>
+  <form method="post" class="compact-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="check-row"><input type="checkbox" name="confirm" value="yes" required>Confirmo a remoção deste administrador secundário.</label>
+    <div class="administrator-actions"><button class="danger-button">Confirmar remoção</button> <a href="{{ url_for('admin.administrators') }}">Cancelar</a></div>
+  </form>
+</section>
+{% endblock %}

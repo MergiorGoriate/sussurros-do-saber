@@ -63,15 +63,14 @@
               <button class="admin-primary">Guardar alterações</button>
             </div>
           </form>
+        </details>
+        <div class="administrator-summary">
           {% if not administrator.is_superadmin and current_admin_id != administrator.id %}
-          <form method="post" action="{{ url_for('admin.delete_administrator', administrator_id=administrator.id) }}" data-confirm="Eliminar definitivamente este administrador?">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="danger-button">Eliminar administrador</button>
-          </form>
+          <a class="danger-button" href="{{ url_for('admin.delete_administrator', administrator_id=administrator.id) }}">Eliminar administrador secundário</a>
           {% else %}
           <small class="protected-account">{{ 'A conta principal não pode ser eliminada.' if administrator.is_superadmin else 'Não pode eliminar a conta que está a utilizar.' }}</small>
           {% endif %}
-        </details>
+        </div>
       </article>
       {% else %}
       <p>Ainda não existem administradores cadastrados na base de dados. O acesso principal continua disponível pelas configurações seguras do servidor.</p>
@@ -80,4 +79,5 @@
   </section>
 </div>
 {% endblock %}
+
 
