@@ -208,6 +208,7 @@ jobs:
             /tmp/history-layout-previews/
             /tmp/notification-layout-previews/
             /tmp/dark-panel-previews/
+            /tmp/dropcap-previews/
           if-no-files-found: ignore
           retention-days: 7
 
