@@ -145,3 +145,8 @@
   .notifications-page .notice-filters a{padding-inline:10px}
 }
 @media(prefers-reduced-motion:reduce){.notifications-page .notice-card{transition:none}}
+
+.notifications-page .notice-inbox-summary>span{color:var(--notice-muted);font-size:12px;letter-spacing:0;text-transform:none;font-weight:400}
+.notifications-page .notice-intro h1,.notifications-page .notice-card-heading h2{font-family:inherit}
+.notice-filters a{white-space:nowrap}
+@media(max-width:600px){.notifications-page .notice-filters a{gap:6px;padding-inline:8px;font-size:12px}}
