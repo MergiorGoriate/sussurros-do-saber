@@ -8,6 +8,9 @@ for(const width of [320,1440]){
     await page.setViewportSize({width,height:1000});
     const editor='/admin/artigos/'+data.article_id+'/editar';
     await page.goto(editor);
+    await page.getByRole('link',{name:'Histórico de versões e recuperação',exact:true}).click();
+    await page.screenshot({path:`/tmp/history-layout-previews/history-empty-${width}.png`,fullPage:true});
+    await page.getByRole('link',{name:'Voltar ao editor',exact:true}).click();
     const original=await page.locator('#bodyEditor').inputValue();
     await page.locator('#bodyEditor').fill(Array(401).fill('ciência').join(' '));
     await expect(page.locator('#editorWordCount')).toHaveText('401 palavras');
@@ -21,7 +24,11 @@ for(const width of [320,1440]){
     await page.getByRole('link',{name:'Versão 1',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Histórico de versões',exact:true})).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    await page.screenshot({path:`test-results/history-layout-${width}.png`,fullPage:true});
+    await page.screenshot({path:`/tmp/history-layout-previews/history-layout-${width}.png`,fullPage:true});
+    await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();
+    await expect(page.locator('body')).toHaveClass(/admin-dark/);
+    await page.screenshot({path:`/tmp/history-layout-previews/history-dark-${width}.png`,fullPage:true});
+    await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();
     await page.getByText('Recuperar esta versão',{exact:true}).click();
     await page.getByRole('checkbox',{name:'Confirmo a recuperação como rascunho.',exact:true}).check();
     await page.getByRole('button',{name:'Recuperar versão 1 como rascunho',exact:true}).click();
