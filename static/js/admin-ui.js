@@ -46,7 +46,6 @@ document.addEventListener('click', (event) => {
   function apply() {
     document.body.classList.toggle('admin-dark', dark);
     button.setAttribute('aria-pressed', String(dark));
-    button.textContent = dark ? 'Tema claro' : 'Tema escuro';
     button.title = dark ? 'Activar tema claro' : 'Activar tema escuro';
   }
   apply();

@@ -7,12 +7,11 @@
   <meta name="referrer" content="same-origin">
   <title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title>
   <link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}">
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261017-admin-theme') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261018-compact-theme') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css',v='20261008-editorial-workflow') }}">
   {% block extra_head %}{% endblock %}
 <link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notifications') }}"></head>
 <body>
-  <button type="button" class="admin-theme-toggle" data-admin-theme-toggle aria-label="Alternar tema do painel" aria-pressed="false" title="Alternar tema claro e escuro">Tema escuro</button>
   <aside class="admin-sidebar" id="admin-sidebar">
     <button type="button" class="admin-sidebar-toggle" data-sidebar-toggle aria-controls="admin-sidebar" aria-expanded="true" aria-label="Recolher barra lateral" title="Recolher barra lateral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
     <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
@@ -51,13 +50,16 @@
     </form>
   </aside>
   <main class="admin-main">
-    {% include "admin/notice_bar.html" %}
+    <div class="admin-utilities">
+      <button type="button" class="admin-theme-toggle" data-admin-theme-toggle aria-label="Alternar tema do painel" aria-pressed="false" title="Alternar tema claro e escuro"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor"/></svg></button>
+      {% include "admin/notice_bar.html" %}
+    </div>
     {% with messages=get_flashed_messages(with_categories=true) %}
       {% for category,message in messages %}<div class="alert {{ category }}" role="status">{{ message }}</div>{% endfor %}
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js',v='20261017-admin-theme') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js',v='20261018-compact-theme') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-notifications') }}" defer></script>
 </body>
 </html>
