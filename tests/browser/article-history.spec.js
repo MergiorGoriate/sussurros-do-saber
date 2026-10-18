@@ -21,6 +21,8 @@ for(const width of [320,1440]){
     await page.getByRole('link',{name:'Versão 1',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Histórico de versões',exact:true})).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.screenshot({path:`test-results/history-layout-${width}.png`,fullPage:true});
+    await page.getByText('Recuperar esta versão',{exact:true}).click();
     await page.getByRole('checkbox',{name:'Confirmo a recuperação como rascunho.',exact:true}).check();
     await page.getByRole('button',{name:'Recuperar versão 1 como rascunho',exact:true}).click();
     await expect(page).toHaveURL(new RegExp(editor+'$'));
