@@ -62,6 +62,7 @@ jobs:
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_portal_workflow_transitions.py' -v
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_team_invitation_flow.py' -v
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_notification_inbox_ui.py' -v
+          /tmp/drill/bin/python -m unittest discover -s tests -p 'test_article_autosave.py' -v
       - name: Restore synthetic archive and verify production fixture is unchanged
         run: |
           createdb sussurros_fixture
@@ -209,6 +210,7 @@ jobs:
             /tmp/notification-layout-previews/
             /tmp/dark-panel-previews/
             /tmp/dropcap-previews/
+            /tmp/autosave-previews/
           if-no-files-found: ignore
           retention-days: 7
 

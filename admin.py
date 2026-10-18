@@ -850,6 +850,8 @@ def article_form(article_id=None):
             record_revision(article)
             db.session.commit()
             flash("Artigo guardado com sucesso.", "success")
+            if request.form.get("save_mode") == "continue":
+                return redirect(url_for("admin.article_form", article_id=article.id))
             return redirect(url_for("admin.articles"))
     return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
 
