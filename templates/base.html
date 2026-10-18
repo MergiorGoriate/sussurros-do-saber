@@ -92,7 +92,7 @@ window.dataLayer.push({event:'default_consent'});
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 <link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-notification-cards-v9') }}">
 {% block head_extra %}{% endblock %}
-<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css') }}"></head>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notice-layout') }}"></head>
 <body class="bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
 
 <div id="readingProgress">
@@ -238,7 +238,7 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 </script>
 {% include 'reader_dialog.html' %}
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-favorite-cards-v7') }}" defer></script>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js') }}" defer></script></body>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-notice-layout') }}" defer></script></body>
 </html>
 
 

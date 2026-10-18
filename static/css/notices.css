@@ -73,3 +73,80 @@
 
 .notice-popover.opens-above{top:auto;bottom:54px}
 @media(max-height:480px){.notice-popover-tools{display:none}.notice-popover-heading{padding-block:10px}.notice-popover-footer>a{min-height:44px}}
+
+/* Compact inbox: one scroll region, quiet actions and clear unread markers. */
+.notice-popover{width:min(440px,calc(100vw - 32px));border-radius:18px;box-shadow:0 20px 60px #102d4e26}
+.notice-popover-heading{padding:20px 20px 12px}
+.notice-popover-heading>strong{font-size:18px;letter-spacing:-.35px}
+.notice-popover-count{color:var(--notice-accent);font-weight:600}
+.notice-popover-tools{padding:0 20px 12px}
+.notice-bar .notice-popover-tools .notice-button{min-height:44px;border:0;background:var(--notice-soft);padding:8px 12px;font-size:12px}
+.notice-bar .notice-sync{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
+.notice-bar.has-error .notice-sync{position:static;width:auto;height:auto;overflow:visible;clip-path:none;margin:10px 0 6px;color:var(--notice-danger)}
+.notice-bar [data-notice-retry][hidden]{display:none}
+.notice-preview-list{flex:1 1 auto;max-height:min(52dvh,440px)}
+.notice-item{position:relative;padding:16px 20px 16px 38px}
+.notice-item:before{content:'';position:absolute;left:18px;top:23px;width:7px;height:7px;border-radius:50%;background:var(--notice-line)}
+.notice-item.is-unread{background:var(--notice-soft);box-shadow:none}
+.notice-item.is-unread:before{background:var(--notice-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--notice-accent) 10%,transparent)}
+.notice-item-heading{gap:10px}
+.notice-item-heading>strong{font-size:14px;line-height:1.5;font-weight:650}
+.notice-item-heading .notice-state{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.notice-bar .notice-preview-body{font-size:13px;line-height:1.5;margin:5px 0 8px;-webkit-line-clamp:2}
+.notice-bar time{font-size:11px;letter-spacing:.1px;color:var(--notice-muted)}
+.notice-item-actions{gap:6px;margin-top:10px}
+.notice-bar .notice-item-actions>a{margin-right:auto;border:0;background:transparent;padding-inline:0;color:var(--notice-accent);font-size:12px;min-height:44px}
+.notice-bar .notice-icon-action{width:44px;height:44px;padding:0;border:1px solid var(--notice-line);border-radius:10px;background:var(--notice-surface)}
+.notice-icon-action svg{width:18px;height:18px;pointer-events:none}
+.notice-bar .notice-icon-action:hover{background:var(--notice-soft);border-color:var(--notice-accent)}
+.notice-bar .notice-icon-action.notice-button-danger:hover{border-color:var(--notice-danger);color:var(--notice-danger)}
+.notice-popover-footer>a{padding:14px 20px;min-height:52px;font-size:13px}
+.notifications-page{max-width:1040px}
+.notifications-page .management-header{padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--notice-line)}
+.notifications-page .notice-intro>span{font-size:11px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--notice-accent)}
+.notifications-page .notice-intro h1{font-size:clamp(25px,3vw,34px);letter-spacing:-.9px;margin:8px 0}
+.notifications-page .notice-intro p{font-size:14px;line-height:1.6;max-width:480px}
+.notifications-page .notice-header-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.notice-inbox-summary{display:flex;flex-direction:column;padding-right:16px;border-right:1px solid var(--notice-line);gap:2px;color:var(--notice-muted);font-size:12px}
+.notice-inbox-summary strong{font-size:26px;line-height:1.1;color:var(--notice-ink);font-variant-numeric:tabular-nums}
+.notifications-page .notice-filters{padding:4px;gap:4px;border-radius:12px;background:var(--notice-soft);border-color:transparent}
+.notifications-page .notice-filters a{min-height:44px;font-size:13px;padding:8px 16px}
+.notifications-page .notice-filters a[aria-current]{background:var(--notice-surface);color:var(--notice-ink);box-shadow:0 1px 4px #102d4e12}
+.notice-filters a span{background:var(--notice-soft);border-radius:20px;padding:2px 7px;font-variant-numeric:tabular-nums}
+.notice-full-list{gap:10px}
+.notifications-page .notice-card{position:relative;padding:22px 24px;border-radius:14px;transition:border-color .15s}
+.notifications-page .notice-card:hover{border-color:var(--notice-accent)}
+.notifications-page .notice-card.is-unread{border-inline-start:3px solid var(--notice-accent);background:var(--notice-surface)}
+.notice-card-heading h2{font-size:16px;line-height:1.5;margin-top:8px;letter-spacing:-.2px}
+.notice-card-heading>div{min-width:0}
+.notice-card-heading time{font-size:11px;padding-top:3px}
+.notice-card-body{font-size:14px;color:var(--notice-muted);margin:10px 0}
+.notice-card-actions{padding-top:14px;margin-top:14px;border-top:1px solid var(--notice-line);gap:8px}
+.notifications-page .notice-card-actions .notice-button{font-size:12px;min-height:44px}
+.notifications-page .notice-card-actions .notice-button-primary{background:var(--notice-soft);color:var(--notice-accent);border-color:transparent}
+.notifications-page .notice-card-actions form{margin-left:auto}
+.notice-list-meta{font-size:12px}
+.notice-privacy-note{padding:14px 16px;background:var(--notice-soft);border-radius:10px;line-height:1.6}
+@media(max-width:600px){
+  .notice-popover-heading{padding:16px 16px 10px}
+  .notice-popover-tools{padding-inline:16px}
+  .notice-item{padding:14px 16px 14px 32px}
+  .notice-item:before{left:13px;top:21px}
+  .notice-popover-footer>a{padding-inline:16px}
+  .notifications-page .management-header{gap:20px}
+  .notifications-page .notice-header-actions{width:100%;justify-content:space-between;gap:10px}
+  .notifications-page .notice-header-actions .notice-button{font-size:12px;padding-inline:10px}
+  .notice-inbox-summary{border:0;padding:0}
+  .notifications-page .notice-card{padding:18px}
+  .notice-card-heading{gap:10px}
+  .notice-card-actions{align-items:stretch;flex-direction:row;flex-wrap:wrap}
+  .notifications-page .notice-card-actions form{margin-left:0;width:auto;flex-wrap:wrap}
+  .notice-card-actions .notice-button{flex:0 1 auto}
+  .notifications-page .notice-filters a{padding-inline:10px}
+}
+@media(prefers-reduced-motion:reduce){.notifications-page .notice-card{transition:none}}
+
+.notifications-page .notice-inbox-summary>span{color:var(--notice-muted);font-size:12px;letter-spacing:0;text-transform:none;font-weight:400}
+.notifications-page .notice-intro h1,.notifications-page .notice-card-heading h2{font-family:inherit}
+.notice-filters a{white-space:nowrap}
+@media(max-width:600px){.notifications-page .notice-filters a{gap:6px;padding-inline:8px;font-size:12px}}

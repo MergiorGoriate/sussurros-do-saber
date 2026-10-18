@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261018-compact-theme') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css',v='20261008-editorial-workflow') }}">
   {% block extra_head %}{% endblock %}
-<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notifications') }}"></head>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notice-layout') }}"></head>
 <body>
   <aside class="admin-sidebar" id="admin-sidebar">
     <button type="button" class="admin-sidebar-toggle" data-sidebar-toggle aria-controls="admin-sidebar" aria-expanded="true" aria-label="Recolher barra lateral" title="Recolher barra lateral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -60,7 +60,7 @@
     {% block content %}{% endblock %}
   </main>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-ui.js',v='20261018-compact-theme') }}" defer></script>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-notifications') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-notice-layout') }}" defer></script>
 </body>
 </html>
 
