@@ -205,6 +205,7 @@ jobs:
             playwright-report/
             test-results/
             /tmp/sussurros-server.log
+            /tmp/history-layout-previews/
           if-no-files-found: ignore
           retention-days: 7
 
