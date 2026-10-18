@@ -150,3 +150,12 @@
 .notifications-page .notice-intro h1,.notifications-page .notice-card-heading h2{font-family:inherit}
 .notice-filters a{white-space:nowrap}
 @media(max-width:600px){.notifications-page .notice-filters a{gap:6px;padding-inline:8px;font-size:12px}}
+
+/* Empty, disabled and selected states need explicit dark surfaces too. */
+.admin-dark .notifications-page .notice-empty{background:var(--notice-surface);color:var(--notice-ink);border-color:var(--notice-line);box-shadow:none}
+.admin-dark .notifications-page .notice-empty h2{color:var(--notice-ink)}
+.admin-dark .notifications-page .notice-empty :is(p,svg){color:var(--notice-muted)}
+.admin-dark .notifications-page .notice-filters a[aria-current]{background:#304965;color:#f0f6ff;box-shadow:none}
+.admin-dark .notifications-page .notice-filters a[aria-current] span{background:#1b3048;color:#e3edf8}
+.admin-dark :is(.notice-bar,.notifications-page) .notice-button:disabled{opacity:1;background:#23354b;color:#b5c5d8;border-color:#3c5069;cursor:not-allowed}
+.admin-dark .notifications-page .notice-inbox-summary>span{color:var(--notice-muted)}
