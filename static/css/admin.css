@@ -686,3 +686,11 @@ body.admin-dark{--ink:#edf3fa;--green:#8bbdff;--paper:#101827;--line:#364457;--a
 .admin-dark .admin-header>div>span{color:var(--admin-accent)}
 .admin-dark :is(input,textarea,select){color-scheme:dark;accent-color:var(--admin-accent)}
 .admin-dark .admin-main :focus-visible{outline-color:var(--admin-accent)}
+
+/* Every status has its own foreground, including review and unknown states. */
+.status{color:#314758}
+.admin-dark .status{background:#33465d;color:#e1ebf7}
+.admin-dark .status.review{background:#493d25;color:#f7dda4}
+.admin-dark .status.published{background:#16483f;color:#c8ffe6}
+.admin-dark .status.scheduled{background:#604b23;color:#ffe8a8}
+.admin-dark .admin-main a:not([class]){color:var(--admin-accent)}
