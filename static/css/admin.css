@@ -659,7 +659,12 @@ input,textarea,select,button{font-size:16px}
 }
 
 /* Accessible administrator theme switch; no backend/session changes. */
-.admin-theme-toggle{position:fixed;right:16px;bottom:16px;z-index:60;width:auto;min-height:44px;padding:10px 16px;border:1px solid #94a3b8;border-radius:999px;background:#fff;color:#102c50;box-shadow:0 3px 18px #0002;cursor:pointer;font-weight:700}
+.admin-utilities{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-block:0 1rem}
+@media(min-width:851px){.admin-main>.admin-utilities{margin-block-start:-28px}}
+.admin-utilities .notice-toolbar{margin:0}
+.admin-theme-toggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;min-height:44px;margin:0;padding:0;border:1px solid #dce5ee;border-radius:50%;background:#fff;color:#17334d;cursor:pointer;box-shadow:none}
+.admin-theme-toggle svg{width:24px;height:24px}
+.admin-theme-toggle:hover{background:#f3f7fb;border-color:#245f97}
 .admin-theme-toggle:focus-visible{outline:3px solid #60a5fa;outline-offset:3px}
 body.admin-dark{--ink:#edf3fa;--green:#8bbdff;--paper:#101827;--line:#364457;background:var(--paper);color:var(--ink);color-scheme:dark}
 .admin-dark .admin-main{color:var(--ink)}
