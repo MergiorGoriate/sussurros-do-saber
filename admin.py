@@ -758,8 +758,14 @@ def article_form(article_id=None):
         abort(404)
     from governance import article_edit_access, article_save_guard, article_saved
     article_edit_access(article)
+    from article_history import snapshot, record_revision
+    previous_content = snapshot(article) if article.id else None
+    previous_updated_at = article.updated_at
     if request.method == "POST":
         validate_csrf()
+        if article.id and request.form.get('version_token') and request.form['version_token'] != article.updated_at.isoformat():
+            flash('O artigo foi alterado por outra pessoa. Guarde uma cópia do seu texto e consulte o histórico antes de voltar a guardar.', 'error')
+            return render_template('admin/article_form.html', article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all()), 409
         title = request.form.get("title", "").strip()
         if not 5 <= len(title) <= 240:
             flash("O título deve ter entre 5 e 240 caracteres.", "error")
@@ -837,6 +843,10 @@ def article_form(article_id=None):
                 db.session.add(article)
             db.session.flush()
             article_saved(article)
+            if previous_content and not article.revisions:
+                record_revision(article, content=previous_content, baseline=True,
+                                reason='Conteúdo anterior ao primeiro registo', created_at=previous_updated_at)
+            record_revision(article)
             db.session.commit()
             flash("Artigo guardado com sucesso.", "success")
             return redirect(url_for("admin.articles"))

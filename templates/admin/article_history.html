@@ -1,0 +1,20 @@
+{% extends 'admin/base.html' %}
+{% block title %}Histórico de versões{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css') }}">{% endblock %}
+{% block content %}
+<header class="admin-header"><div><span>Conteúdo editorial</span><h1>Histórico de versões</h1><p>{{ article.title }}</p></div><a href="{{ url_for('admin.article_form',article_id=article.id) }}">Voltar ao editor</a></header>
+<p>O histórico começa no primeiro registo de alterações. Recuperar uma versão guarda um rascunho e exige nova revisão. A autoria e o endereço do artigo não são alterados.</p>
+<div class="revision-layout">
+<section class="admin-panel"><h2>Versões guardadas</h2>
+{% for revision in pagination.items %}<article class="revision-entry"><h3><a href="{{ url_for('article_history.history',ident=article.id,version=revision.id,page=pagination.page) }}">Versão {{ revision.number }}</a></h3><p>{{ revision.created_at.strftime('%d/%m/%Y %H:%M') }} UTC · {{ revision.actor_name }}</p><small>{{ revision.reason }}</small></article>{% else %}<p>Ainda não há versões guardadas. O conteúdo actual será preservado quando guardar uma alteração.</p>{% endfor %}
+<nav aria-label="Páginas do histórico">{% if pagination.has_prev %}<a href="{{ url_for('article_history.history',ident=article.id,page=pagination.prev_num) }}">Mais recentes</a>{% endif %} {% if pagination.has_next %}<a href="{{ url_for('article_history.history',ident=article.id,page=pagination.next_num) }}">Mais antigas</a>{% endif %}</nav>
+</section>
+{% if selected %}<section class="admin-panel"><h2>Versão {{ selected.number }}</h2><p>{{ selected.actor_name }} · {{ selected.created_at.strftime('%d/%m/%Y %H:%M') }} UTC</p>
+<form method="get" class="compact-form"><input type="hidden" name="version" value="{{ selected.id }}"><input type="hidden" name="page" value="{{ pagination.page }}"><label>Comparar com<select name="against"><option value="">Conteúdo actual</option>{% for revision in pagination.items %}<option value="{{ revision.id }}" {% if against and against.id==revision.id %}selected{% endif %}>Versão {{ revision.number }}</option>{% endfor %}</select></label><button class="admin-primary">Comparar versões</button></form>
+<p>Linhas com − pertencem à versão seleccionada; linhas com + pertencem à comparação. A comparação mostra até 20 000 caracteres e 400 linhas por campo.</p>
+{% for label, difference in changes %}<details class="revision-entry" open><summary>{{ label }}</summary><pre class="revision-diff">{{ difference }}</pre></details>{% else %}<p>Esta versão coincide com o conteúdo comparado.</p>{% endfor %}
+<details class="revision-entry"><summary>Ler o texto integral desta versão</summary><pre class="revision-diff">{{ selected.snapshot.get('body','') }}</pre><h3>Referências</h3><pre class="revision-diff">{{ selected.snapshot.get('references','') }}</pre></details>
+<form method="post" action="{{ url_for('article_history.restore',ident=article.id,revision_id=selected.id) }}" class="compact-form revision-restore"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="version_token" value="{{ article.updated_at.isoformat() }}"><p>A recuperação substitui o texto, referências e apresentação actuais pelo conteúdo da versão {{ selected.number }}. A versão actual fica no histórico. O artigo deixa de estar publicado até concluir nova revisão e aprovação.</p><label class="check-row"><input type="checkbox" name="confirm" value="yes" required>Confirmo a recuperação como rascunho.</label><button class="danger-button">Recuperar versão {{ selected.number }} como rascunho</button></form>
+</section>{% endif %}
+</div>
+{% endblock %}

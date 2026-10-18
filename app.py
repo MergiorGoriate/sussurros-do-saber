@@ -87,6 +87,8 @@ app.register_blueprint(staff_bp)
 app.register_blueprint(public_team_bp)
 install_staff_cli(app)
 app.register_blueprint(admin_bp)
+from article_history import history_bp
+app.register_blueprint(history_bp)
 app.register_blueprint(submissions_bp)
 from reader_accounts import reader_bp
 app.register_blueprint(reader_bp)
