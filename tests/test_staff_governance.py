@@ -217,7 +217,7 @@ class StaffGovernanceTests(unittest.TestCase):
         self.assertIsNotNone(notice)
         self.assertIn('Artigo:',notice.subject)
         self.signin(editor.admin);self.assertEqual(self.post(path,action='approve').status_code,302)
-        self.assertEqual(article.status,'approved');self.assertEqual(PortalReview.query.filter_by(article_id=article.id).one().report,note)
+        self.assertEqual(article.status,'published');self.assertEqual(PortalReview.query.filter_by(article_id=article.id).one().report,note)
         self.signin(owner.admin);self.assertEqual(self.client.get(f'/admin/artigos/{article.id}/editar').status_code,409)
 
     def test_workspace_review_queue_tracks_assignment_and_completion(self):
@@ -309,3 +309,4 @@ class StaffGovernanceTests(unittest.TestCase):
         self.signin(reviewer.admin)
         self.assertEqual(self.post(f'/admin/fluxo-artigos/{article.id}',action='approve').status_code,403)
         self.assertIsNone(item.approved_at)
+

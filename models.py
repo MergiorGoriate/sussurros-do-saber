@@ -193,34 +193,47 @@ class Article(db.Model):
 
     @classmethod
     def publish_due_scheduled(cls):
-        """Promove artigos programados vencidos para publicados.
+        """Publica aprovações pendentes e agendamentos vencidos, sob bloqueio.
 
-        O agendamento é guardado em UTC sem timezone, tal como utcnow().
-        A atualização em lote mantém o estado persistido coerente no /admin.
+        Aprovações antigas exigem revisão independente e decisão registadas no
+        fluxo. Programações futuras permanecem privadas até ao horário UTC.
         """
         now = utcnow()
-        due = cls.query.filter(
-            cls.status == "scheduled",
-            cls.scheduled_at.isnot(None),
-            cls.scheduled_at <= now,
-        )
+        due = cls.query.filter(or_(
+            cls.status == "approved",
+            and_(cls.status == "scheduled", cls.scheduled_at.isnot(None),
+                 cls.scheduled_at <= now),
+        ))
         # Lock due rows so concurrent workers cannot publish or notify twice.
         from governance_models import ArticleWorkflow, GovernanceAudit
         from internal_notices import dispatch
         changed = 0
         for article in due.with_for_update(skip_locked=True).all():
             workflow = ArticleWorkflow.query.filter_by(article_id=article.id).with_for_update().first()
-            if workflow and (not workflow.approved_at or workflow.stage != 'scheduled'):
+            was_approved = article.status == 'approved'
+            if was_approved:
+                from governance import independent_article_reviewer
+                if (not workflow or workflow.stage != 'approved' or not workflow.approved_at
+                    or not workflow.reviewed_at
+                    or not independent_article_reviewer(workflow.reviewer, article, workflow.owner_id)
+                    or (workflow.editor and (workflow.editor_id in {workflow.owner_id, workflow.reviewer_id}
+                                            or workflow.editor.author_id == article.author_id))):
+                    continue
+            elif workflow and (not workflow.approved_at or workflow.stage != 'scheduled'):
                 continue
             article.status = 'published'
-            article.published_at = article.published_at or article.scheduled_at
+            article.published_at = now if was_approved else (article.published_at or article.scheduled_at)
+            if was_approved:
+                article.scheduled_at = None
             article.updated_at = now
             if workflow:
                 workflow.stage = 'published'
-            db.session.add(GovernanceAudit(actor_name='Publicação programada', action='article.publish',
-                entity='article', entity_id=article.id, detail='Publicação automática na data programada.'))
-            dispatch('article.publish', 'article', article.id, 'Publicação automática na data programada.',
-                key=f'scheduled-publication:{article.id}:{article.scheduled_at.isoformat()}')
+            detail = 'Publicação automática após aprovação editorial.' if was_approved else 'Publicação automática na data programada.'
+            event_key = (f'approved-publication:{article.id}:{workflow.approved_at.isoformat()}' if was_approved
+                         else f'scheduled-publication:{article.id}:{article.scheduled_at.isoformat()}')
+            db.session.add(GovernanceAudit(actor_name='Publicação automática', action='article.publish',
+                entity='article', entity_id=article.id, detail=detail))
+            dispatch('article.publish', 'article', article.id, detail, key=event_key)
             changed += 1
         if changed:
             db.session.commit()
@@ -272,6 +285,7 @@ class Subscriber(db.Model):
     email = db.Column(db.String(180), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
 
 
 

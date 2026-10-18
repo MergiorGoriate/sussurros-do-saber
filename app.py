@@ -118,7 +118,7 @@ def ads_txt():
 
 @app.before_request
 def publish_due_scheduled_articles():
-    """Sincroniza o estado de publicações cujo horário programado já chegou."""
+    """Publica aprovações pendentes e agendamentos cujo horário já chegou."""
     if request.endpoint != "static" and request.path not in {"/healthz", "/ads.txt", "/robots.txt"}:
         Article.publish_due_scheduled()
 
@@ -413,6 +413,9 @@ def security_headers(response):
         )
         if private_response:
             response.headers["Cache-Control"] = "no-store"
+        elif request.endpoint in {"home", "articles", "author_detail", "feed", "sitemap"}:
+            # Revalidate lists on every visit so a publication is immediately visible.
+            response.headers["Cache-Control"] = "public, no-cache, max-age=0, must-revalidate"
         elif not response.headers.get("Cache-Control") or response.headers["Cache-Control"] == "no-store":
             response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
     if request.path.startswith("/admin") or response.status_code >= 400:
@@ -639,7 +642,9 @@ LEARNING_RESOURCES = [
 
 @app.get("/")
 def home():
-    items = Article.public_card_query().order_by(Article.featured.desc(), Article.published_at.desc()).limit(10).all()
+    hero = Article.public_card_query().order_by(Article.featured.desc(), Article.published_at.desc(), Article.id.desc()).first()
+    items = ([hero] + Article.public_card_query().filter(Article.id != hero.id)
+             .order_by(Article.published_at.desc(), Article.id.desc()).limit(9).all()) if hero else []
     return render_template("index.html", articles=items, journals=Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).limit(3).all())
 
 @app.get("/artigos")
