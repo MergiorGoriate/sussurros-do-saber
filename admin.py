@@ -759,6 +759,7 @@ def article_form(article_id=None):
     from governance import article_edit_access, article_save_guard, article_saved
     article_edit_access(article)
     from article_history import snapshot, record_revision
+    from governance_models import ArticleRevision
     previous_content = snapshot(article) if article.id else None
     previous_updated_at = article.updated_at
     if request.method == "POST":
@@ -843,7 +844,7 @@ def article_form(article_id=None):
                 db.session.add(article)
             db.session.flush()
             article_saved(article)
-            if previous_content and not article.revisions:
+            if previous_content and not ArticleRevision.query.with_entities(ArticleRevision.id).filter_by(article_id=article.id).first():
                 record_revision(article, content=previous_content, baseline=True,
                                 reason='Conteúdo anterior ao primeiro registo', created_at=previous_updated_at)
             record_revision(article)
