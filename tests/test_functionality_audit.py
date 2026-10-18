@@ -25,6 +25,13 @@ class FunctionalityAuditTests(unittest.TestCase):
                 report=PortalReview(article_id=article.id,reviewer_id=old.id,action='reviewed',report='Parecer original preservado')
                 db.session.add(report);db.session.commit();self.signin(self.primary)
                 response=self.post(f'/admin/equipa/{old.id}/responsabilidades',kind='portal_reviewer',resource_id=article.id,target_id=new.id)
+                if stage == 'approved':
+                    # Valid existing approvals now publish before the request.
+                    # Published decisions require an explicit reopening first.
+                    self.assertEqual(response.status_code,404)
+                    self.assertEqual(article.status,'published')
+                    self.assertEqual(self.post(f'/admin/fluxo-artigos/{article.id}',action='reopen').status_code,302)
+                    response=self.post(f'/admin/equipa/{old.id}/responsabilidades',kind='portal_reviewer',resource_id=article.id,target_id=new.id)
                 self.assertEqual(response.status_code,303)
                 db.session.refresh(flow);db.session.refresh(article)
                 self.assertEqual(flow.reviewer_id,new.id);self.assertEqual(flow.stage,'review');self.assertEqual(article.status,'review')
@@ -113,3 +120,4 @@ class FunctionalityAuditTests(unittest.TestCase):
         member=self.member('reviewer',self.other_journal.id);member.appointments[0].active=False;db.session.commit()
         self.assertEqual(self.post(f'/admin/revistas/{self.other_journal.id}/eliminar').status_code,409)
         self.assertEqual(member.appointments[0].journal_id,self.other_journal.id)
+

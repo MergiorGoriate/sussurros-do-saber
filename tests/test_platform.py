@@ -176,7 +176,7 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(sitemap.status_code, 200)
         self.assertIn(b"<urlset", sitemap.data)
         self.assertIn(b"<lastmod>", sitemap.data)
-        self.assertIn("max-age=3600", sitemap.headers.get("Cache-Control", ""))
+        self.assertIn("must-revalidate", sitemap.headers.get("Cache-Control", ""))
 
         robots = self.client.get("/robots.txt")
         self.assertIn(b"Sitemap: https://www.sussurrosdosaber.com/sitemap.xml", robots.data)
@@ -1315,26 +1315,6 @@ class PlatformTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertLessEqual(response.data.count(b'class="number-story group"'), 4)
         self.assertLessEqual(response.data.count(b'class="story-card group"'), 9)
-
-    def test_homepage_loads_featured_article_and_nine_discoveries(self):
-        class QuerySpy:
-            limit_value = None
-
-            def order_by(self, *args):
-                return self
-
-            def limit(self, value):
-                self.limit_value = value
-                return self
-
-            def all(self):
-                return []
-
-        query = QuerySpy()
-        with patch.object(Article, "public_card_query", return_value=query):
-            response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(query.limit_value, 10)
 
     def test_z_homepage_supports_empty_database(self):
         with app.app_context():

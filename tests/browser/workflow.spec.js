@@ -11,7 +11,7 @@ for(const width of [1440,390,320]){
   await expect(page.getByRole('heading',{name:'Fluxo editorial do portal',exact:true})).toBeVisible();
   await expect(page.locator('.workflow-progress li')).toHaveCount(5);
   await expect(page.locator('[aria-current="step"]')).toContainText('Preparação');
-  await expect(page.getByRole('button',{name:'Aprovar artigo',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Aprovar e publicar artigo',exact:true})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Publicar artigo aprovado',exact:true})).toHaveCount(0);
   await page.getByText('Ler conteúdo',{exact:true}).click();
   await expect(page.locator('.workflow-body')).toBeVisible();
@@ -23,3 +23,4 @@ for(const width of [1440,390,320]){
   await page.reload();await expect(page.locator('[aria-current="step"]')).toContainText('Submissão');
  });
 }
+

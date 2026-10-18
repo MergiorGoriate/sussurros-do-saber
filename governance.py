@@ -19,7 +19,7 @@ PERMISSIONS = {
     'team.manage': 'Gerir equipa, convites e mandatos', 'tasks.manage': 'Distribuir tarefas',
     'reports.read': 'Consultar relatórios e auditoria', 'article.write': 'Escrever artigos próprios',
     'article.edit': 'Editar todos os artigos', 'article.review': 'Rever artigos atribuídos',
-    'article.approve': 'Aprovar artigos revistos', 'article.publish': 'Publicar artigos aprovados',
+    'article.approve': 'Aprovar e publicar artigos revistos', 'article.publish': 'Publicar artigos aprovados',
     'article.delete': 'Eliminar artigos', 'authors.manage': 'Gerir autores', 'categories.manage': 'Gerir categorias',
     'journal.manage': 'Gerir revistas', 'journal.publish': 'Publicar revistas',
     'manuscript.read': 'Consultar submissões da revista', 'manuscript.edit': 'Tratar submissões atribuídas',
@@ -37,7 +37,7 @@ DEFAULT_ROLES = [
     ('reviewer', 'Revisor científico', 'Pareceres fundamentados, disponibilidade e conflitos.', ['manuscript.review']),
     ('author', 'Autor do portal', 'Produção de artigos de divulgação.', ['article.write']),
     ('portal_reviewer', 'Revisor do portal', 'Verificação dos artigos atribuídos.', ['article.review']),
-    ('portal_editor', 'Editor do portal', 'Aprovação editorial após revisão independente.', ['article.edit','article.approve']),
+    ('portal_editor', 'Editor do portal', 'Aprovação e publicação automática após revisão independente.', ['article.edit','article.approve']),
     ('publisher', 'Responsável de publicação', 'Publicação de conteúdos aprovados.', ['article.publish']),
     ('secretariat', 'Secretariado editorial', 'Apoio documental e acompanhamento das submissões.', ['tasks.manage','manuscript.read']),
     ('production', 'Produção científica', 'Preparação de publicações aceites.', ['manuscript.production']),
@@ -859,7 +859,16 @@ def article_workflow(ident):
             if len(article.body or '')<50:
                 abort(400)
             item.editor_id=member.id if member else None
-            item.stage,article.status,item.approved_at='approved','approved',utcnow()
+            now = utcnow()
+            item.approved_at = now
+            audit('article.approve','article',ident,field('note',20000)[:1000])
+            item.stage = article.status = 'published'
+            article.scheduled_at = None
+            article.published_at = now
+            article.updated_at = now
+            action = 'publish'  # Approval and publication commit atomically.
+        elif action=='approve' and item.stage=='published' and item.approved_at:
+            return redirect(url_for('staff.article_workflow',ident=ident))
         elif action in {'publish','schedule'} and item.stage in {'approved','scheduled','published'} and item.approved_at:
             require('article.publish')
             from admin import parse_datetime
