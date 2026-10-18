@@ -1451,7 +1451,7 @@ def seed_database():
                 frequency=item["frequency"],
                 current_issue=item["issue"],
                 guidelines=default_guidelines,
-                published=True,
+                published=not IS_PRODUCTION,
             ))
         db.session.commit()
     if Article.query.first():
@@ -1481,14 +1481,15 @@ def seed_database():
         db.session.add(category)
         categories[name] = category
     db.session.flush()
-    default_body = "A ciência começa com uma pergunta bem formulada. Este artigo apresenta o tema de forma acessível, sem perder o rigor nem a ligação às evidências.\n\nCombinando observação, experimentação e análise crítica, investigadores conseguem transformar fenómenos pouco visíveis em conhecimento verificável. O contexto local também importa: perguntas científicas relevantes surgem das necessidades das comunidades e dos ecossistemas onde a pesquisa acontece.\n\nCompreender ciência ajuda estudantes e cidadãos a tomar decisões informadas e aproxima a produção académica do público."
+    from content_audit import DEMO_ARTICLE_BODY
+    default_body = DEMO_ARTICLE_BODY
     month_numbers = {"Janeiro": 1, "Fevereiro": 2, "Março": 3, "Abril": 4, "Maio": 5, "Junho": 6, "Julho": 7, "Agosto": 8, "Setembro": 9, "Outubro": 10, "Novembro": 11, "Dezembro": 12}
     for item in SEED_ARTICLES:
         day, month_name, year = item["date"].split()
         published_at = datetime(int(year), month_numbers[month_name], int(day))
         db.session.add(Article(
             title=item["title"], slug=slugify(item["title"]), summary=item["summary"], body=default_body,
-            image=item["image"], status="published", read_minutes=int(item["read_time"].split()[0]),
+            image=item["image"], status=("draft" if IS_PRODUCTION else "published"), read_minutes=int(item["read_time"].split()[0]),
             featured=item.get("featured", False), published_at=published_at, author_rel=authors[item["author"]], category_rel=categories[item["category"]],
         ))
     db.session.commit()
@@ -1503,6 +1504,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
