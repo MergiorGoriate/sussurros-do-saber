@@ -784,11 +784,11 @@ class PlatformTests(unittest.TestCase):
             self.assertIsNotNone(AdminUser.query.filter_by(username="editor.atualizado").first())
         response = self.client.post(
             f"/admin/administradores/{administrator_id}/eliminar",
-            data={"csrf_token": "manage-csrf"},
+            data={"csrf_token": "manage-csrf", "confirm": "yes"},
         )
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 303)
         with app.app_context():
-            self.assertIsNone(db.session.get(AdminUser, administrator_id))
+            self.assertFalse(db.session.get(AdminUser, administrator_id).active)
 
     def test_secondary_admin_without_2fa_is_forced_to_enrol(self):
         from werkzeug.security import generate_password_hash

@@ -606,7 +606,9 @@ def administrators():
             return redirect(url_for("admin.administrators"))
     return render_template(
         "admin/administrators.html",
-        administrators=AdminUser.query.order_by(AdminUser.is_superadmin.desc(), AdminUser.created_at.desc()).all(),
+        administrators=AdminUser.query.filter(~db.exists().where(
+            TeamMember.admin_id == AdminUser.id, TeamMember.removed_at.is_not(None)
+        )).order_by(AdminUser.is_superadmin.desc(), AdminUser.created_at.desc()).all(),
         available_members=TeamMember.query.filter(TeamMember.admin_id.is_(None),TeamMember.removed_at.is_(None)).order_by(TeamMember.name).all(),
         selected_member=selected_member,
         configured_primary=os.getenv("ADMIN_USERNAME"),
@@ -618,6 +620,9 @@ def administrators():
 def edit_administrator(administrator_id):
     validate_csrf()
     administrator = db.get_or_404(AdminUser, administrator_id)
+    from governance_models import TeamMember
+    if TeamMember.query.filter_by(admin_id=administrator.id).filter(TeamMember.removed_at.is_not(None)).first():
+        abort(409, description='Esta conta foi removida. Consulte o histórico de remoções.')
     username = request.form.get("username", "").strip().lower()
     display_name = request.form.get("display_name", "").strip()
     email = request.form.get("email", "").strip().lower() or None
@@ -665,38 +670,45 @@ def edit_administrator(administrator_id):
     return redirect(url_for("admin.administrators"))
 
 
-@admin_bp.post("/administradores/<int:administrator_id>/eliminar")
+@admin_bp.route("/administradores/<int:administrator_id>/eliminar", methods=["GET", "POST"])
 @superadmin_required
 def delete_administrator(administrator_id):
+    from governance_models import TeamMember
+    from governance import audit
+    query = AdminUser.query.filter_by(id=administrator_id)
+    administrator = query.with_for_update().populate_existing().first_or_404() if request.method == 'POST' else query.first_or_404()
+    if administrator.is_superadmin or session.get('admin_id') == administrator.id:
+        abort(403, description='Não pode eliminar a conta principal nem a conta que está a utilizar.')
+    member = TeamMember.query.filter_by(admin_id=administrator.id).first()
+    if request.method == 'GET':
+        if member and member.removed_at:
+            return redirect(url_for('admin.administrators'))
+        return render_template('admin/remove_administrator.html', administrator=administrator)
     validate_csrf()
-    administrator = db.get_or_404(AdminUser, administrator_id)
-    if administrator.is_superadmin:
-        flash("O Administrador principal não pode ser eliminado.", "error")
-    elif session.get("admin_id") == administrator.id:
-        flash("Não pode eliminar a conta que está a utilizar.", "error")
-    else:
-        from governance_models import TeamMember, TeamAppointment, GovernanceAudit, StaffNotice, StaffTask, StaffDocument, TaskComment, StaffPeerReview, StaffContactLog, AuditReport
-        from submission_models import Manuscript, ReviewAssignment
-        from governance import audit
-        member=TeamMember.query.filter_by(admin_id=administrator.id).first()
-        has_history = member and (member.accepted_at or member.appointments or StaffDocument.query.filter_by(member_id=member.id).first() or StaffTask.query.filter_by(assignee_id=member.id).first() or StaffPeerReview.query.filter_by(reviewer_id=member.id).first())
-        if has_history or AuditReport.query.filter_by(created_by=administrator.id).first() or Manuscript.query.filter_by(editor_id=administrator.id).first() or ReviewAssignment.query.filter_by(assigned_by=administrator.id).first():
-            abort(409,description='Esta conta tem histórico editorial. Desactive-a para preservar os registos.')
-        if member:
-            member.admin_id=None
-        audit('account.deleted','admin',administrator.id)
+    if request.form.get('confirm') != 'yes':
+        abort(400, description='Confirme a remoção do administrador.')
+    if not member:
+        # Legacy accounts may predate staff governance. Preserve their identity
+        # and foreign keys in the same removal history as current accounts.
+        member = TeamMember(admin=administrator, name=administrator.display_name,
+                            email=administrator.email or '', status='ended')
+        db.session.add(member)
         db.session.flush()
-        GovernanceAudit.query.filter_by(actor_id=administrator.id).update({'actor_id':None})
-        StaffNotice.query.filter_by(admin_id=administrator.id).delete()
-        StaffTask.query.filter_by(created_by=administrator.id).update({'created_by':None})
-        StaffDocument.query.filter_by(accepted_by=administrator.id).update({'accepted_by':None})
-        TaskComment.query.filter_by(actor_id=administrator.id).update({'actor_id':None})
-        StaffContactLog.query.filter_by(actor_id=administrator.id).update({'actor_id':None})
-        StaffPeerReview.query.filter_by(assigned_by=administrator.id).update({'assigned_by':None})
-        db.session.delete(administrator)
+    if not member.removed_at:
+        member.removed_at = utcnow()
+        member.status = 'ended'
+        member.available = False
+        member.public_visible = False
+        for mandate in member.appointments:
+            mandate.active = False
+        administrator.active = False
+        administrator.governance_managed = True
+        administrator.security_version += 1
+        audit('account.removed', 'admin', administrator.id, administrator.display_name)
+        audit('member.removed', 'member', member.id, member.name)
         db.session.commit()
-        flash("Administrador eliminado com sucesso.", "success")
-    return redirect(url_for("admin.administrators"))
+    flash('Administrador removido. O acesso e os mandatos foram revogados; o histórico foi preservado.', 'success')
+    return redirect(url_for('admin.administrators'), code=303)
 
 
 @admin_bp.get("/artigos")
@@ -1261,6 +1273,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 
