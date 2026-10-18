@@ -7,7 +7,13 @@ from models import Article, db, utcnow
 from governance_models import ArticleWorkflow, GovernanceAudit
 
 class ApprovalPublicationTests(unittest.TestCase):
-    setUp=fixtures.StaffGovernanceTests.setUp
+    def setUp(self):
+        fixtures.StaffGovernanceTests.setUp(self)
+        from unittest.mock import patch
+        from extensions import limiter
+        patcher = patch.object(limiter, 'enabled', False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
     tearDown=fixtures.StaffGovernanceTests.tearDown
     member=fixtures.StaffGovernanceTests.member
     article=fixtures.StaffGovernanceTests.article
