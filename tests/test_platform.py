@@ -470,6 +470,19 @@ class PlatformTests(unittest.TestCase):
             "https://example.org/image.jpg",
         )
 
+    def test_dropcap_preserves_inline_formatting_and_limits_it_to_one_paragraph(self):
+        rendered = str(render_markdown("[capitular] À medida que **observamos** o céu.\n\nOutro parágrafo."))
+        self.assertIn('<p class="article-dropcap">À medida que <strong>observamos</strong> o céu.</p>', rendered)
+        self.assertIn("<p>Outro parágrafo.</p>", rendered)
+        self.assertEqual(rendered.count('class="article-dropcap"'), 1)
+
+    def test_dropcap_does_not_bypass_sanitization_or_format_code(self):
+        rendered = str(render_markdown('[capitular] Texto <img src="x" onerror="alert(1)">'))
+        self.assertNotIn("onerror", rendered)
+        code = str(render_markdown("\x60\x60\x60\n[capitular] Texto literal\n\x60\x60\x60"))
+        self.assertNotIn('class="article-dropcap"', code)
+        self.assertIn("[capitular]", code)
+
     def test_markdown_renders_tables_and_safe_charts(self):
         table = render_markdown("| Grupo | Valor |\n| --- | --- |\n| A | 12 |")
         self.assertIn("<table>", str(table))

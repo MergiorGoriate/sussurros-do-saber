@@ -49,7 +49,7 @@
   };
   let estimatedReadingMinutes = 1;
   const updateEditorStatistics = () => {
-    const words = editor.value.match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) || [];
+    const words = editor.value.replace(/^\[capitular\]\s*/gm, '').match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) || [];
     estimatedReadingMinutes = Math.max(1, Math.min(120, Math.ceil(words.length / 200)));
     const count = document.querySelector('#editorWordCount');
     const reading = document.querySelector('#editorReadingTime');
@@ -80,11 +80,44 @@
       .replace(/^- (.+)$/gm, '<li>$1</li>')
       .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
       .split(/\n{2,}/)
-      .map((part) => /^<(h|ul|blockquote|figure)/.test(part) ? part : `<p>${part.replace(/\n/g, '<br>')}</p>`)
+      .map((part) => {
+        if (/^\[capitular\]/.test(part)) return `<p class="article-dropcap">${part.replace(/^\[capitular\]\s*/, '').replace(/\n/g, '<br>')}</p>`;
+        return /^<(h|ul|blockquote|figure)/.test(part) ? part : `<p>${part.replace(/\n/g, '<br>')}</p>`;
+      })
       .join('');
     preview.innerHTML = html || '<p class="preview-empty">A pré-visualização aparecerá aqui.</p>';
     editor.dispatchEvent(new Event('editor:rendered'));
   };
+
+  const dropcapButton = document.querySelector('#toggleDropcap');
+  const dropcapStatus = document.querySelector('#dropcapStatus');
+  const currentParagraph = () => {
+    const value = editor.value, cursor = editor.selectionStart;
+    const breaks = /\n[ \t]*\n/g;
+    let start = 0, match;
+    while ((match = breaks.exec(value)) && match.index + match[0].length <= cursor) start = match.index + match[0].length;
+    const rest = value.slice(start), end = rest.search(/\n[ \t]*\n/);
+    return {start, text: end < 0 ? rest : rest.slice(0,end)};
+  };
+  const updateDropcapState = () => {
+    if (dropcapButton) dropcapButton.setAttribute('aria-pressed', String(/^\[capitular\]/.test(currentParagraph().text)));
+  };
+  dropcapButton?.addEventListener('click', () => {
+    const {start,text} = currentParagraph();
+    if (/^\s*(?:#{1,6}\s|>|[-*+]\s|\d+[.)]\s|\x60{3}|~{3}|\||!\[|\[(?:destaque|chart|video|portrait):)/.test(text)) {
+      dropcapStatus.textContent = 'Coloque o cursor num parágrafo de texto para aplicar a capitular.';
+      return;
+    }
+    const marker = text.match(/^\[capitular\][ \t]*/)?.[0];
+    const cursor = editor.selectionStart;
+    editor.setRangeText(marker ? '' : '[capitular] ', start, marker ? start+marker.length : start, 'preserve');
+    const next = Math.max(start,cursor+(marker ? -marker.length : '[capitular] '.length));
+    editor.setSelectionRange(next,next);
+    dropcapStatus.textContent = marker ? 'Capitular removida deste parágrafo.' : 'Capitular aplicada a este parágrafo.';
+    editor.focus(); render(); updateDropcapState();
+  });
+  for (const event of ['click','keyup','select','input','editor:rendered']) editor.addEventListener(event,updateDropcapState);
+  updateDropcapState();
 
   document.querySelectorAll('.editor-toolbar button[data-before]').forEach((button) => button.addEventListener('click', () => {
     const start=editor.selectionStart,end=editor.selectionEnd,before=button.dataset.before||'',after=button.dataset.after||'';
