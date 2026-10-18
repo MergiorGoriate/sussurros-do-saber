@@ -42,6 +42,30 @@ for(const width of [320,1440]){
     expect(await contrast(page.locator('.management-save .admin-primary'))).toBeGreaterThanOrEqual(4.5);
     expect(await contrast(page.locator('.management-item-heading a').first())).toBeGreaterThanOrEqual(4.5);
     await page.screenshot({path:`/tmp/dark-panel-previews/team-dark-${width}.png`,fullPage:true,animations:'disabled'});
+
+    await page.goto('/admin/funcoes');
+    for(const selector of ['h1','.management-intro','.management-role strong','.management-role small','label','legend','.staff-check span']){
+      expect(await contrast(page.locator(selector).first()),selector).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.screenshot({path:`/tmp/dark-panel-previews/roles-dark-${width}.png`,fullPage:true,animations:'disabled'});
+    await page.goto('/admin/historico-remocoes');
+    for(const selector of ['h1','.management-summary strong','.management-summary span','.admin-panel h2','.management-empty']){
+      expect(await contrast(page.locator(selector).first()),selector).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.screenshot({path:`/tmp/dark-panel-previews/archive-dark-${width}.png`,fullPage:true,animations:'disabled'});
+    await page.goto('/admin/submissoes');
+    for(const selector of ['.submission-heading h1','.submission-admin-filters label','.submission-admin-filters input','.submission-admin-filters select','.submission-button','.submission-table-wrap th','.submission-table-wrap tbody td:nth-child(2)','.submission-table-wrap tbody td:nth-child(3)']){
+      expect(await contrast(page.locator(selector).first()),selector).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.screenshot({path:`/tmp/dark-panel-previews/submissions-dark-${width}.png`,fullPage:true,animations:'disabled'});
+    const article=JSON.parse(execFileSync('python',['tests/browser/workflow_fixture.py'],{encoding:'utf8'}));
+    await page.goto('/admin/fluxo-artigos/'+article.article_id);
+    await page.getByRole('button',{name:'Submeter para revisão',exact:true}).click();
+    await page.goto('/admin');
+    const review=page.locator('.admin-list .status.review').first();
+    await expect(review).toBeVisible();
+    expect(await contrast(review)).toBeGreaterThanOrEqual(4.5);
+    await page.screenshot({path:`/tmp/dark-panel-previews/dashboard-dark-${width}.png`,fullPage:true,animations:'disabled'});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
