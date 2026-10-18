@@ -666,7 +666,7 @@ input,textarea,select,button{font-size:16px}
 .admin-theme-toggle svg{width:24px;height:24px}
 .admin-theme-toggle:hover{background:#f3f7fb;border-color:#245f97}
 .admin-theme-toggle:focus-visible{outline:3px solid #60a5fa;outline-offset:3px}
-body.admin-dark{--ink:#edf3fa;--green:#8bbdff;--paper:#101827;--line:#364457;background:var(--paper);color:var(--ink);color-scheme:dark}
+body.admin-dark{--ink:#edf3fa;--green:#8bbdff;--paper:#101827;--line:#364457;--admin-surface:#1b283a;--admin-soft:#23354b;--admin-muted:#b5c5d8;--admin-accent:#9acbff;background:var(--paper);color:var(--ink);color-scheme:dark}
 .admin-dark .admin-main{color:var(--ink)}
 .admin-dark .admin-panel,.admin-dark .metric-grid article,.admin-dark .editor-main,.admin-dark .editor-side,.admin-dark .administrator-card,.admin-dark .login-card,.admin-dark .markdown-preview,.admin-dark .policy-preview,.admin-dark .docs-toc a{background:#1b283a;color:#edf3fa;border-color:#364457}
 .admin-dark input,.admin-dark select,.admin-dark textarea,.admin-dark .slug-field,.admin-dark .editor-toolbar button,.admin-dark .admin-list article form button{background:#152235;color:#edf3fa;border-color:#52647c}
@@ -681,3 +681,8 @@ body.admin-dark{--ink:#edf3fa;--green:#8bbdff;--paper:#101827;--line:#364457;bac
 .admin-dark .status.published{background:#16483f;color:#c8ffe6}
 .admin-dark .status.scheduled{background:#604b23;color:#ffe8a8}
 @media print{.admin-theme-toggle{display:none!important}}
+
+/* Shared dark palette; component styles must use matching surfaces and text. */
+.admin-dark .admin-header>div>span{color:var(--admin-accent)}
+.admin-dark :is(input,textarea,select){color-scheme:dark;accent-color:var(--admin-accent)}
+.admin-dark .admin-main :focus-visible{outline-color:var(--admin-accent)}

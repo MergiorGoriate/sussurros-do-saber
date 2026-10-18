@@ -194,3 +194,32 @@
 .workflow-columns{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px;}.workflow-actions .workflow-action{padding:16px;border:1px solid #dce5ef;border-radius:12px;margin:14px 0;display:grid;gap:12px;}.workflow-actions .actions{display:flex;flex-wrap:wrap;gap:10px;}.workflow-actions>a{display:inline-flex;align-items:center;min-height:44px;color:#21547f;}.workflow-content summary{cursor:pointer;color:#21547f;font-weight:600;padding:12px 0;min-height:44px;}.workflow-body{max-height:580px;overflow:auto;padding:16px;background:#f5f8fc;border-radius:10px;}.editorial-workflow .staff-pre{overflow-wrap:anywhere;}.workflow-status-note{padding:12px 16px;background:#fff8e8;color:#76541b;border-radius:10px;}
 @media(max-width:1000px){.workflow-columns{grid-template-columns:1fr;}.workflow-progress{grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media(max-width:520px){.workflow-progress{grid-template-columns:1fr 1fr;gap:8px;}.workflow-progress li{padding:10px;}.workflow-people{grid-template-columns:1fr;gap:14px;}.workflow-actions button{width:100%;}.workflow-actions .actions{flex-direction:column;}.editorial-workflow{gap:16px;}}
+
+/* These component selectors intentionally override the light management styles. */
+.admin-dark .staff-management{color:var(--ink)}
+.admin-dark .staff-management .admin-panel,
+.admin-dark :is(.management-summary>div,.management-item,.workspace-overview>a,.workspace-mandates article){background:var(--admin-surface);color:var(--ink);border-color:var(--line);box-shadow:none}
+.admin-dark :is(.staff-management .management-header p,.management-intro,.management-summary span,.management-item p,.management-item small,.management-role small,.management-role span,.management-meta,.workspace-header p,.workspace-profile-heading p,.workspace-section-heading p,.workspace-eyebrow,.workspace-overview small,.workspace-details summary span,.workspace-mandates dt,.workspace-task-meta dt,.workspace-permissions small,.workspace-form-footer small,.workspace-comments time,.workspace-empty){color:var(--admin-muted)}
+.admin-dark :is(.management-summary strong,.staff-management legend,.workspace-details summary,.workspace-empty h3){color:var(--ink)}
+.admin-dark .staff-management :is(input:not([type=checkbox]),select,textarea),
+.admin-dark .staff-workspace .staff-form :is(input,select,textarea){background:#152235;color:var(--ink);border-color:#52647c;color-scheme:dark}
+.admin-dark .staff-management .staff-form fieldset,
+.admin-dark :is(.management-role,.management-permission-group,.workspace-details,.workspace-comments li,.workflow-actions .workflow-action){border-color:var(--line)}
+.admin-dark :is(.staff-management .staff-check,.management-empty,.management-callout,.workspace-shortcuts a,.workspace-badge,.workspace-task-description,.workflow-body){background:var(--admin-soft);color:var(--ink);border-color:var(--line)}
+.admin-dark .management-role{color:var(--ink)}
+.admin-dark :is(.management-role.is-selected,.workspace-overview>a:hover,.workspace-shortcuts a:hover){background:var(--admin-soft);border-color:var(--admin-accent)}
+.admin-dark .staff-management button:not(.notice-button),
+.admin-dark :is(.management-actions a,.management-pagination a):not(.notice-button){background:var(--admin-soft);color:var(--admin-accent);border-color:#52647c}
+.admin-dark .staff-management .admin-primary{background:#99c8fb;border-color:#99c8fb;color:#13273e!important}
+.admin-dark .staff-management .management-danger{background:#442b36;border-color:#98616d;color:#ffbdc7}
+.admin-dark :is(.management-badge,.workspace-status-in_progress){background:#263f5c;color:#b7d9ff}
+.admin-dark :is(.workspace-status-done,.workflow-progress .is-complete){background:#193f38;color:#b9ead6}
+.admin-dark :is(.workspace-status-blocked,.workspace-warning,.workflow-status-note){background:#493d25;color:#f7dda4;border-color:#b99a59}
+.admin-dark .workspace-status-cancelled{background:var(--admin-soft);color:var(--admin-muted)}
+.admin-dark :is(.workflow-back,.workflow-content summary,.workflow-actions>a){color:var(--admin-accent)}
+.admin-dark .workflow-people dt{color:var(--admin-muted)}
+.admin-dark .workflow-progress li{background:var(--admin-soft);color:var(--admin-muted)}
+.admin-dark .workflow-progress li>span{border-color:#637b96}
+.admin-dark .workflow-progress .is-current{background:#263f5c;color:#d4e9ff;outline-color:#86bdf5}
+.admin-dark .workflow-progress .is-current>span{background:#99c8fb;color:#13273e;border-color:#99c8fb}
+.admin-dark .workflow-progress .is-complete{background:#193f38;color:#b9ead6}

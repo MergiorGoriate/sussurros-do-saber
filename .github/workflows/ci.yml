@@ -207,6 +207,7 @@ jobs:
             /tmp/sussurros-server.log
             /tmp/history-layout-previews/
             /tmp/notification-layout-previews/
+            /tmp/dark-panel-previews/
           if-no-files-found: ignore
           retention-days: 7
 
