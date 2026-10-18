@@ -4,6 +4,8 @@ test.use({ launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] } });
 
 for (const width of [320, 390, 768, 1440]) {
   test(`editing forms stay within the viewport at ${width}px`, async ({ page }, testInfo) => {
+    // This layout test deliberately discards its synthetic title changes.
+    page.on('dialog', dialog => dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss());
     const cookie = execFileSync('python', ['tests/browser/staff_fixture.py'], { encoding: 'utf8' }).trim();
     await page.context().addCookies([{ name: 'session', value: cookie, url: 'http://127.0.0.1:5000', httpOnly: true, sameSite: 'Lax' }]);
     const records = JSON.parse(execFileSync('python', ['tests/browser/editor_fixture.py'], { encoding: 'utf8' }));
@@ -52,3 +54,4 @@ for (const width of [320, 390, 768, 1440]) {
     }
   });
 }
+

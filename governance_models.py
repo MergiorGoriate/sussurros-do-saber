@@ -168,3 +168,18 @@ class AuditReport(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('admin_user.id'))
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     removed_at = db.Column(db.DateTime, index=True)
+
+
+
+class ArticleRevision(db.Model):
+    """Immutable content snapshots; restoring never restores publication authority."""
+    __table_args__ = (db.UniqueConstraint('article_id', 'number'),)
+    id = db.Column(db.Integer, primary_key=True)
+    article_id = db.Column(db.Integer, db.ForeignKey('article.id', ondelete='CASCADE'), nullable=False, index=True)
+    number = db.Column(db.Integer, nullable=False)
+    snapshot = db.Column(db.JSON, nullable=False)
+    actor_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'))
+    actor_name = db.Column(db.String(160), nullable=False)
+    reason = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    article = db.relationship('Article', backref=db.backref('revisions', cascade='all, delete-orphan'))

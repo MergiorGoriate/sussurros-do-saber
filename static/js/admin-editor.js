@@ -47,7 +47,17 @@
     }
     return `<figure class="preview-chart"><svg viewBox="0 0 800 390" role="img" aria-label="${title}"><line x1="80" y1="315" x2="760" y2="315" stroke="#94a3b8"/>${shapes}</svg><figcaption>${title}</figcaption></figure>`;
   };
+  let estimatedReadingMinutes = 1;
+  const updateEditorStatistics = () => {
+    const words = editor.value.match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) || [];
+    estimatedReadingMinutes = Math.max(1, Math.min(120, Math.ceil(words.length / 200)));
+    const count = document.querySelector('#editorWordCount');
+    const reading = document.querySelector('#editorReadingTime');
+    if (count) count.textContent = `${words.length} palavras`;
+    if (reading) reading.textContent = `${estimatedReadingMinutes} min de leitura estimada`;
+  };
   const render = () => {
+    updateEditorStatistics();
     const html = escape(editor.value)
       .replace(/^\[destaque:\s*([^\]\n]+)\]\s*$/gm, (_,details) => {
         const [text,author='']=details.split('|');
@@ -73,6 +83,7 @@
       .map((part) => /^<(h|ul|blockquote|figure)/.test(part) ? part : `<p>${part.replace(/\n/g, '<br>')}</p>`)
       .join('');
     preview.innerHTML = html || '<p class="preview-empty">A pré-visualização aparecerá aqui.</p>';
+    editor.dispatchEvent(new Event('editor:rendered'));
   };
 
   document.querySelectorAll('.editor-toolbar button[data-before]').forEach((button) => button.addEventListener('click', () => {
@@ -245,8 +256,29 @@
     if(slugField)slugField.value=slugify(slugField.value||titleField?.value||'artigo');
   });
   updateSlugPreview();
+  const editorForm = editor.closest('form');
+  const formState = () => JSON.stringify(Array.from(new FormData(editorForm)).filter(([key, value]) => typeof value === 'string' && !['csrf_token','version_token'].includes(key)));
+  const initialState = formState();
+  let submitting = false;
+  const hasChanges = () => formState() !== initialState || Array.from(editorForm.querySelectorAll('input[type="file"]')).some(input => input.files.length);
+  const updateSaveState = () => {
+    const state = document.querySelector('#editorSaveState');
+    if (state) state.textContent = hasChanges() ? 'Alterações por guardar' : '';
+  };
+  editor.addEventListener('editor:rendered', updateSaveState);
+  editorForm.addEventListener('input', updateSaveState);
+  editorForm.addEventListener('change', updateSaveState);
+  editorForm.addEventListener('submit', () => { submitting = true; });
+  window.addEventListener('beforeunload', event => {
+    if (!submitting && hasChanges()) { event.preventDefault(); event.returnValue = ''; }
+  });
+  document.querySelector('#useEstimatedReadingTime')?.addEventListener('click', () => {
+    const input = editorForm.querySelector('input[name="read_minutes"]');
+    if (input) { input.value = estimatedReadingMinutes; input.dispatchEvent(new Event('input', {bubbles:true})); }
+  });
 
   const url=document.querySelector('#imageUrl'),file=document.querySelector('#imageFile'),image=document.querySelector('#imagePreview');
   url?.addEventListener('input',()=>{image.src=url.value;image.hidden=!url.value});
   file?.addEventListener('change',()=>{if(file.files[0]){image.src=URL.createObjectURL(file.files[0]);image.hidden=false}});
 })();
+

@@ -1,9 +1,11 @@
 {% extends 'admin/base.html' %}
 {% block title %}{{ 'Editar artigo' if article.id else 'Novo artigo' }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css') }}">{% endblock %}
 {% block content %}
 <header class="admin-header"><div><span>Conteúdo editorial</span><h1>{{ 'Editar artigo' if article.id else 'Novo artigo' }}</h1></div><a href="{{ url_for('admin.articles') }}">← Voltar</a></header>
 <form method="post" enctype="multipart/form-data" class="editor-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if article.id %}<input type="hidden" name="version_token" value="{{ request.form.get('version_token', article.updated_at.isoformat()) }}">{% endif %}
   <section class="editor-main">
     <label>Título<input id="titleField" name="title" maxlength="240" value="{{ request.form.get('title', article.title or '') }}" required minlength="5"></label>
     <label>Resumo<textarea name="summary" maxlength="2000" rows="3" required>{{ request.form.get('summary', article.summary or '') }}</textarea></label>
@@ -49,6 +51,7 @@
         </div>
         <div class="inline-image-actions"><button type="button" id="insertChart" class="admin-primary">Inserir gráfico</button><span id="chartStatus" role="status" aria-live="polite"></span></div>
       </section>
+      <div class="editor-statistics"><span id="editorWordCount">0 palavras</span><span id="editorReadingTime">1 min de leitura estimada</span><button type="button" id="useEstimatedReadingTime">Usar tempo estimado</button><span id="editorSaveState" role="status" aria-live="polite"></span></div>
       <div class="editor-workspace"><textarea id="bodyEditor" name="body" maxlength="400000" rows="20" placeholder="Escreva em Markdown...">{{ request.form.get('body', article.body or '') }}</textarea><div><span class="preview-title">Pré-visualização</span><div id="markdownPreview" class="markdown-preview"></div></div></div>
     </div>
     <label>Referências bibliográficas<textarea name="references" maxlength="100000" rows="8" placeholder="## Referências&#10;&#10;1. Autor. Título. Revista...&#10;2. DOI: https://doi.org/...">{{ request.form.get('references', article.references or '') }}</textarea><small>Aceita Markdown. Inclua DOI ou URL quando disponíveis.</small></label>
@@ -61,6 +64,7 @@
     <img id="imagePreview" class="image-preview" src="{{ request.form.get('image', article.image or '')|safe_image_url }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}>
   </section>
   <aside class="editor-side">
+    {% if article.id %}<a href="{{ url_for('article_history.history',ident=article.id) }}">Histórico de versões e recuperação</a>{% endif %}
     <label>Estado<select name="status">{% for code in staff_article_statuses(article) %}<option value="{{ code }}" {% if request.form.get('status',article.status)==code %}selected{% endif %}>{{ 'Submeter para revisão' if code=='review' else article_stages[code] }}</option>{% endfor %}</select></label><p>A revisão, aprovação e publicação são realizadas no fluxo editorial.</p>
     <label>Programar para<input name="scheduled_at" type="datetime-local" value="{{ request.form.get('scheduled_at', article.scheduled_at.strftime('%Y-%m-%dT%H:%M') if article.scheduled_at else '') }}"></label>
     <label>Autor<select name="author_id" required>{% for author in authors if staff_can('article.edit') or (staff_member and author.id==staff_member.author_id) %}<option value="{{ author.id }}" {% if request.form.get('author_id', article.author_id)|string==author.id|string %}selected{% endif %}>{{ author.name }}</option>{% endfor %}</select></label>
@@ -72,7 +76,8 @@
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if (request.method=='POST' and request.form.get('featured')=='on') or (request.method!='POST' and article.featured) %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261004-video-upload-v2') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261018-editor-history-v1') }}"></script>
 {% endblock %}
+
 
 
