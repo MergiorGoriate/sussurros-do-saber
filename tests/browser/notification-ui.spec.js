@@ -16,20 +16,23 @@ for(const width of [320,390,1440]) {
     expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
     expect(bounds.y+bounds.height).toBeLessThanOrEqual(900);
     expect(await bar.locator('button').first().evaluate(el=>parseFloat(getComputedStyle(el).borderRadius))).toBeGreaterThan(0);
-    await page.screenshot({path:`test-results/notification-menu-${width}.png`,fullPage:true});
+    await page.screenshot({path:`/tmp/notification-layout-previews/notification-menu-${width}.png`,fullPage:true});
+    const iconAction=bar.locator('.notice-icon-action').first();
+    await expect(iconAction.locator('svg')).toBeVisible();
+    expect((await iconAction.boundingBox()).width).toBeGreaterThanOrEqual(44);
     await bar.locator('summary').press('Escape');
     await expect(bar).not.toHaveAttribute('open','');
     await expect(bar.locator('summary')).toBeFocused();
     await page.locator('.notice-filters a').filter({hasText:'Por ler'}).click();
     await expect(page.locator('.notice-filters [aria-current]')).toContainText('Por ler');
     await expect(page.locator('.notice-card')).toHaveCount(2);
-    await page.screenshot({path:`test-results/notification-inbox-${width}.png`,fullPage:true});
+    await page.screenshot({path:`/tmp/notification-layout-previews/notification-inbox-${width}.png`,fullPage:true});
     await page.locator('.notice-card').first().getByRole('link',{name:'Abrir recurso'}).click();
     await page.goto('/admin/notificacoes?status=read');
     await expect(page.locator('.notice-card')).toHaveCount(1);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await page.evaluate(()=>document.body.classList.add('admin-dark'));
-    await page.screenshot({path:`test-results/notification-dark-${width}.png`,fullPage:true});
+    await page.screenshot({path:`/tmp/notification-layout-previews/notification-dark-${width}.png`,fullPage:true});
   });
 }
 
@@ -45,5 +48,5 @@ test('notification menu fits a short mobile viewport',async({page})=>{
   expect(popup.y).toBeGreaterThanOrEqual(0);
   expect(popup.y+popup.height).toBeLessThanOrEqual(560);
   await expect(bar.getByRole('link',{name:'Todas as notificações'})).toBeInViewport();
-  await page.screenshot({path:'test-results/notification-menu-short-mobile.png',fullPage:true});
+  await page.screenshot({path:'/tmp/notification-layout-previews/notification-menu-short-mobile.png',fullPage:true});
 });

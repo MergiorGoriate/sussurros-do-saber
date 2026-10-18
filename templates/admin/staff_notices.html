@@ -2,7 +2,7 @@
 {% block title %}Notificações internas{% endblock %}
 {% block content %}
 <div class="staff-management notifications-page">
-  <header class="admin-header management-header"><div><span>Acompanhamento pessoal</span><h1>Notificações internas</h1><p>Actualizações da equipa e do seu trabalho editorial.</p></div><form method="post" class="management-toolbar"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="notice-button notice-button-primary" name="action" value="read_all" {% if not notice_unread_total %}disabled{% endif %}>Marcar todas como lidas</button></form></header>
+  <header class="admin-header management-header"><div class="notice-intro"><span>Caixa de entrada</span><h1>Notificações internas</h1><p>Actualizações da equipa e do seu trabalho editorial.</p></div><div class="notice-header-actions"><div class="notice-inbox-summary"><strong>{{ notice_unread_total }}</strong><span>por ler</span></div><form method="post" class="management-toolbar"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="notice-button notice-button-primary" name="action" value="read_all" {% if not notice_unread_total %}disabled{% endif %}>Marcar todas como lidas</button></form></div></header>
   <nav class="notice-filters" aria-label="Filtrar notificações">
     {% for key,label,count in [('all','Todas',notice_total),('unread','Por ler',notice_unread_total),('read','Lidas',notice_total-notice_unread_total)] %}<a href="{{ url_for('staff.notifications',status=key) }}" {% if notice_filter==key %}aria-current="page"{% endif %}>{{ label }} <span>{{ count }}</span></a>{% endfor %}
   </nav>

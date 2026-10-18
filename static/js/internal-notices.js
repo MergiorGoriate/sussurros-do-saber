@@ -3,6 +3,7 @@
   const bar = document.querySelector('[data-notice-bar]');
   if (!bar) return;
   const status = bar.querySelector('[data-notice-status]');
+  const retry = bar.querySelector('[data-notice-retry]');
   const list = bar.querySelector('[data-notice-items]');
   const template = bar.querySelector('form');
   const node = (tag, text, className) => { const el = document.createElement(tag); if (text) el.textContent = text; if (className) el.className = className; return el; };
@@ -24,6 +25,7 @@
     if (busy || document.hidden) return;
     busy = true;
     bar.setAttribute('aria-busy', 'true');
+    retry.disabled = true;
     if (bar.open) status.textContent = 'A actualizar notificações…';
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -49,16 +51,31 @@
         form.append(hidden('csrf_token', template.querySelector('[name="csrf_token"]').value), hidden('id', item.id));
         for (const [action, label] of [['read', 'Marcar como lida'], ['delete', 'Eliminar aviso']]) {
           if (action === 'read' && !item.unread) continue;
-          const button = node('button', label, `notice-button${action === 'delete' ? ' notice-button-danger' : ''}`); button.type = 'submit'; button.name = 'action'; button.value = action; form.append(button);
+          const button = node('button', '', `notice-button notice-icon-action${action === 'delete' ? ' notice-button-danger' : ''}`);
+          button.title = label;
+          const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          for (const [key,value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true'})) icon.setAttribute(key,value);
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', action === 'read' ? 'M5 12l4 4L19 6' : 'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7');
+          icon.append(path); button.append(icon, node('span', label, 'notice-sr-only'));
+          button.type = 'submit'; button.name = 'action'; button.value = action; form.append(button);
         }
         actions.append(form); section.append(actions); items.append(section);
       }
       if (!data.items.length) items.append(node('p', 'Sem notificações.', 'notice-preview-empty'));
       list.replaceChildren(items);
+      bar.classList.remove('has-error');
+      retry.hidden = true;
+      fitPopover();
       status.textContent = bar.open ? 'Notificações actualizadas.' : '';
-    } catch (_) { if (bar.open) status.textContent = 'Não foi possível actualizar. Consulte todas as notificações ou volte a abrir este menu.'; }
-    finally { clearTimeout(timeout); busy = false; bar.removeAttribute('aria-busy'); }
+    } catch (_) {
+      bar.classList.add('has-error'); retry.hidden = false;
+      if (bar.open) status.textContent = 'Não foi possível actualizar. Os avisos apresentados continuam disponíveis.';
+      fitPopover();
+    }
+    finally { clearTimeout(timeout); busy = false; retry.disabled = false; bar.removeAttribute('aria-busy'); }
   };
+  retry.addEventListener('click', refresh);
   bar.addEventListener('toggle', () => { if (bar.open) { fitPopover(); refresh(); } });
   document.addEventListener('click', event => { if (!bar.contains(event.target)) bar.open = false; });
   bar.addEventListener('keydown', event => { if (event.key === 'Escape') { bar.open = false; bar.querySelector('summary').focus(); } });

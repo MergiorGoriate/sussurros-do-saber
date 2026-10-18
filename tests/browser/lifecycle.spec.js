@@ -59,7 +59,9 @@ test('notice loading/error state recovers and actions remain usable',async({page
  const bar=page.locator('[data-notice-bar]');await bar.locator('summary').click();
  await expect(bar.locator('[data-notice-status]')).toContainText('Não foi possível actualizar');
  await expect(bar.getByRole('link',{name:'Todas as notificações'})).toBeVisible();
- await page.unroute('**/admin/api/notificacoes');await bar.locator('summary').click();await bar.locator('summary').click();
+ await expect(bar.locator('.notice-item')).toHaveCount(2);
+ await page.unroute('**/admin/api/notificacoes');
+ await bar.getByRole('button',{name:'Tentar novamente',exact:true}).click();
  await expect(bar.locator('[data-notice-status]')).toHaveText('Notificações actualizadas.');
 });
 
