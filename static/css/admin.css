@@ -660,6 +660,7 @@ input,textarea,select,button{font-size:16px}
 
 /* Accessible administrator theme switch; no backend/session changes. */
 .admin-utilities{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-block:0 1rem}
+@media(min-width:851px){.admin-main>.admin-utilities{margin-block-start:-28px}}
 .admin-utilities .notice-toolbar{margin:0}
 .admin-theme-toggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;min-height:44px;margin:0;padding:0;border:1px solid #dce5ee;border-radius:50%;background:#fff;color:#17334d;cursor:pointer;box-shadow:none}
 .admin-theme-toggle svg{width:24px;height:24px}
