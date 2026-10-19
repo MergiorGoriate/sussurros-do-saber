@@ -12,7 +12,7 @@ const savedResponse=page=>page.waitForResponse(r=>r.url().endsWith('/rascunho')&
 for(const width of [320,1440]){
   test(`draft autosave survives reload and records history at ${width}px`,async({page})=>{
     await page.setViewportSize({width,height:1000});
-    const data=await openDraft(page),text='Texto guardado automaticamente com acentuação. '.repeat(12);
+    const data=await openDraft(page),text='    exemplo de código indentado\n\n'+'Texto guardado automaticamente com acentuação. '.repeat(12)+'  \n';
     const slug=await page.locator('[name=slug]').inputValue();
     const response=savedResponse(page);
     await page.locator('#bodyEditor').fill(text);
@@ -20,7 +20,7 @@ for(const width of [320,1440]){
     await expect(page.locator('#editorAutosaveStatus')).toContainText('Guardado automaticamente');
     await expect(page.locator('#editorSaveState')).toHaveText('');
     await page.reload();
-    await expect(page.locator('#bodyEditor')).toHaveValue(text.trim());
+    await expect(page.locator('#bodyEditor')).toHaveValue(text);
     await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();
     await page.screenshot({path:`/tmp/autosave-previews/editor-${width}.png`,fullPage:true,animations:'disabled'});
     await page.getByRole('link',{name:'Histórico de versões e recuperação',exact:true}).click();
@@ -40,7 +40,7 @@ test('failed connection keeps text and retry saves it',async({page})=>{
   await page.locator('#retryAutosave').click();
   expect((await response).status()).toBe(200);
   await expect(page.locator('#editorSaveState')).toHaveText('');
-  await page.reload();await expect(page.locator('#bodyEditor')).toHaveValue(text.trim());
+  await page.reload();await expect(page.locator('#bodyEditor')).toHaveValue(text);
 });
 test('two open editors never overwrite a newer draft',async({page,context})=>{
   const data=await openDraft(page),other=await context.newPage();await other.goto(data.path);
@@ -51,7 +51,7 @@ test('two open editors never overwrite a newer draft',async({page,context})=>{
   await expect(other.locator('#editorAutosaveStatus')).toContainText('alterado noutra sessão');
   await expect(other.locator('#bodyEditor')).toHaveValue(second);
   await expect(other.locator('#editorSaveState')).toHaveText('Alterações por guardar');
-  await page.reload();await expect(page.locator('#bodyEditor')).toHaveValue(first.trim());
+  await page.reload();await expect(page.locator('#bodyEditor')).toHaveValue(first);
   await other.close();
 });
 test('manual save waits for an outstanding autosave and keeps later typing',async({page})=>{
@@ -66,7 +66,7 @@ test('manual save waits for an outstanding autosave and keeps later typing',asyn
   await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
   release();
   await expect(page).toHaveURL(/\/admin\/artigos$/);
-  await page.goto(data.path);await expect(page.locator('#bodyEditor')).toHaveValue(final.trim());
+  await page.goto(data.path);await expect(page.locator('#bodyEditor')).toHaveValue(final);
 });
 test('new article can be saved without leaving the editor to enable autosave',async({page})=>{
   await openDraft(page);

@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
 from admin import validate_csrf, csrf_token
 from extensions import limiter
+from request_values import pagination_page
 from models import db, Journal, Article, utcnow
 from submission_models import Researcher
 from submissions import researcher, email_valid, notify, account_link, DUMMY_PASSWORD_HASH
@@ -255,7 +256,7 @@ def notifications():
     from journal_metadata import journal_authors
     authors={row.journal_id:[author['name'] for author in journal_authors(row.journal) if author.get('name')] for row in rows}
     query=active_inbox(public=True) if account and account.verified else StaffNotice.query.filter(db.false())
-    page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
+    page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=pagination_page(),per_page=30,error_out=False)
     unread_journals={n.resource_id for n in query.filter(StaffNotice.resource_type=='reader_journal',StaffNotice.read_at.is_(None))}
     return render_template('reader_library.html',reader_rows=rows,reader_account=account,reader_notification_authors=authors,
         notifications=True,internal_notices=page.items,notice_journal_slugs={r.journal_id:r.journal.slug for r in rows},notice_pagination=page,notice_public=True,notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),
@@ -278,3 +279,4 @@ def sync_internal_updates(account):
         emit(None,'Artigo actualizado: '+title,'Nova actualização em '+row.journal.updated_at.strftime('%d/%m/%Y %H:%M')+' UTC.',researcher_id=account.id,key=key,resource=('reader_journal',row.journal_id))
         added=True
     if added:db.session.commit()
+

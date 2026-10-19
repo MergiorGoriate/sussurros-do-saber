@@ -20,7 +20,7 @@ for(const width of [320,1440]){
     await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
     await expect(page).toHaveURL(/\/admin\/artigos$/);
     await page.goto(path);
-    await expect(editor).toHaveValue(saved.trim());
+    await expect(editor).toHaveValue(saved);
     await expect(page.locator('#markdownPreview .footnote')).toHaveCount(1);
     await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();
     await page.screenshot({path:`/tmp/footnote-previews/editor-dark-${width}.png`,fullPage:true,animations:'disabled'});
