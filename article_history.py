@@ -141,3 +141,18 @@ def autosave(ident):
         record_revision(article, reason='Gravação automática de rascunho')
         db.session.commit()
     return jsonify(ok=True, version_token=article.updated_at.isoformat(), saved_at=article.updated_at.isoformat())
+
+
+@history_bp.post('/previsualizar')
+@login_required
+@limiter.limit('120 per minute', key_func=lambda: str(session.get('admin_id') or session.get('admin_username')), override_defaults=True)
+def preview():
+    validate_csrf()
+    from governance import has_permission
+    if not (has_permission('article.write') or has_permission('article.edit')):
+        abort(403)
+    content = request.form.get('content','')
+    if len(content) > 400000:
+        return jsonify(error='O texto excede o limite do editor.'), 400
+    from app import render_markdown
+    return jsonify(html=str(render_markdown(content)))

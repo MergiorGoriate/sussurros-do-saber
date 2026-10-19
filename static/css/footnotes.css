@@ -1,0 +1,18 @@
+/* Shared article/editor footnotes, including native anchor navigation. */
+.footnote{margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #cbd5e1;font-size:.94em;line-height:1.75;color:inherit}
+.footnote>hr{display:none}
+.footnote h2{margin:0 0 1rem;font-size:1.35em}
+.footnote ol{padding-left:1.6rem;list-style-type:decimal}
+.footnote li{padding:.3rem .4rem;margin-bottom:1rem;overflow-wrap:anywhere;scroll-margin-top:180px}
+.footnote li p{margin:.3rem 0}
+a.footnote-ref{font-size:.85em;font-weight:700;text-decoration:none;padding:.1em .2em;color:#245f97}
+sup:has(>a.footnote-ref){scroll-margin-top:180px;line-height:0}
+a.footnote-backref{display:inline-flex;align-items:center;min-height:44px;padding:.25rem .5rem;margin:.25rem .3rem .1rem 0;border:1px solid #b8c9da;border-radius:7px;font-size:.85em;text-decoration:none;color:#245f97}
+.footnote :focus-visible,sup:has(>a.footnote-ref):focus-visible{outline:3px solid #508ac0;outline-offset:3px}
+.footnote li:target{outline:2px solid #508ac0;outline-offset:4px;border-radius:4px}
+.dark .footnote,.admin-dark .footnote{border-color:#52647c}
+.dark a.footnote-ref,.dark a.footnote-backref,.admin-dark a.footnote-ref,.admin-dark a.footnote-backref{color:#9acbff;border-color:#637b96}
+.markdown-preview .footnote{font-size:13px}
+#footnotePreviewStatus{display:block}
+#footnotePreviewStatus:empty{display:none}
+@media print{a.footnote-backref{display:none}.footnote li:target{outline:none}.footnote{break-inside:auto}.footnote li{break-inside:avoid}}

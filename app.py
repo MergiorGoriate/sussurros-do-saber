@@ -18,6 +18,7 @@ from html import escape as html_escape, unescape as html_unescape
 from urllib.parse import parse_qs, quote, unquote, urlparse
 import bleach
 import markdown
+from article_notes import render_notes_markdown, allowed_markdown_attribute, decorate_notes
 import math
 from markupsafe import Markup
 from sqlalchemy import inspect, or_, text
@@ -341,7 +342,9 @@ def render_markdown(value):
     prepared = IMAGE_DIRECTIVE.sub(image_placeholder, prepared)
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
-    rendered = markdown.markdown(prepared, extensions=["extra", "sane_lists"])
+    rendered, note_info = render_notes_markdown(prepared)
+    if note_info['notes']:
+        rendered = rendered.replace('&#160;', '\u00a0').replace('&nbsp;', '\u00a0')
     # Torna URLs HTTP(S) escritas como texto em links clicáveis, sem alterar
     # URLs que já estejam dentro de atributos HTML ou links Markdown.
     url_pattern = re.compile(r'''(?<!["'=])(https?://[^\s<]+)''', re.I)
@@ -370,14 +373,15 @@ def render_markdown(value):
             return f'<a href="{safe_url}" rel="noopener noreferrer">{safe_label}</a>{html_escape(suffix)}'
         parts[index] = url_pattern.sub(linkify, part)
     rendered = "".join(parts)
-    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img"})
+    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img", "sup", "div"})
     cleaned = bleach.clean(
         rendered,
         tags=allowed,
-        attributes={"a": ["href", "title", "rel"], "img": ["src", "srcset", "sizes", "alt", "title", "loading", "decoding", "width", "height"]},
+        attributes=lambda tag,name,value: allowed_markdown_attribute(note_info,tag,name,value),
         protocols=["http", "https", "mailto"],
         strip=True,
     )
+    cleaned = decorate_notes(cleaned, note_info)
     cleaned = re.sub(r"<p>\[capitular\]\s*", '<p class="article-dropcap">', cleaned)
     for token, embed in embeds.items():
         cleaned = cleaned.replace(f"<p>{token}</p>", embed).replace(token, embed)
