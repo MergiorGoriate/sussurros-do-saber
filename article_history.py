@@ -1,9 +1,11 @@
 """Private article revisions and explicit draft restoration."""
 from difflib import unified_diff
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from datetime import timedelta
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for, jsonify
 from admin import login_required, validate_csrf, enforce_admin_authentication, protect_admin_responses
 from models import Article, db, utcnow
-from governance_models import ArticleRevision
+from governance_models import ArticleRevision, ArticleWorkflow
+from extensions import limiter
 
 history_bp = Blueprint('article_history', __name__, url_prefix='/admin/artigos')
 history_bp.before_request(enforce_admin_authentication)
@@ -91,3 +93,51 @@ def restore(ident, revision_id):
     db.session.commit()
     flash('Versão recuperada como rascunho. Submeta o artigo a nova revisão antes de publicar.', 'success')
     return redirect(url_for('admin.article_form', article_id=ident), code=303)
+
+
+AUTOSAVE_LIMITS = {'title':240, 'summary':2000, 'body':400000, 'references':100000, 'keywords':500, 'doi':180}
+
+
+@history_bp.post('/<int:ident>/rascunho')
+@login_required
+@limiter.limit('12 per minute', key_func=lambda: str(session.get('admin_id') or session.get('admin_username')), override_defaults=True)
+def autosave(ident):
+    validate_csrf()
+    if request.content_length and request.content_length > 8000000:
+        abort(413)
+    article = permitted_article(ident, lock=True)
+    workflow = db.session.get(ArticleWorkflow, ident)
+    if article.status != 'draft' or (workflow and workflow.stage not in {'draft', 'changes'}):
+        return jsonify(ok=False, code='state', error='A gravação automática só está disponível em rascunhos. Guarde manualmente como rascunho para continuar.'), 409
+    if not request.form.get('version_token') or request.form['version_token'] != article.updated_at.isoformat():
+        return jsonify(ok=False, code='conflict', error='O artigo foi alterado noutra sessão. O seu texto continua no editor. Consulte o histórico antes de voltar a guardar.'), 409
+    if request.files or any(name not in request.form for name in (*AUTOSAVE_LIMITS, 'read_minutes')):
+        return jsonify(ok=False, code='validation', error='O pedido de gravação está incompleto.'), 400
+    values = {name:request.form[name].strip() for name in AUTOSAVE_LIMITS}
+    if any(len(values[name]) > limit for name,limit in AUTOSAVE_LIMITS.items()) or len(values['title']) < 5 or len(values['summary']) < 10:
+        return jsonify(ok=False, code='validation', error='Reveja o título, o resumo e os limites dos campos antes de guardar.'), 422
+    try:
+        values['read_minutes'] = int(request.form['read_minutes'])
+        if not 1 <= values['read_minutes'] <= 120:
+            raise ValueError()
+    except (ValueError,TypeError):
+        return jsonify(ok=False, code='validation', error='O tempo de leitura deve estar entre 1 e 120 minutos.'), 422
+    previous = snapshot(article)
+    previous_time = article.updated_at
+    if any(previous[name] != value for name,value in values.items()):
+        now = max(utcnow(), previous_time + timedelta(microseconds=1))
+        # The predicate also protects SQLite, where SELECT FOR UPDATE is ignored.
+        changed = Article.query.filter_by(id=ident, status='draft', updated_at=previous_time).update(
+            dict(values, updated_at=now), synchronize_session=False)
+        if changed != 1:
+            db.session.rollback()
+            return jsonify(ok=False, code='conflict', error='O artigo mudou entretanto. O seu texto continua no editor.'), 409
+        db.session.refresh(article)
+        from governance import article_save_guard
+        article_save_guard(article, 'draft', article.author_id)
+        if not ArticleRevision.query.with_entities(ArticleRevision.id).filter_by(article_id=ident).first():
+            record_revision(article, content=previous, baseline=True,
+                            reason='Conteúdo anterior ao primeiro registo', created_at=previous_time)
+        record_revision(article, reason='Gravação automática de rascunho')
+        db.session.commit()
+    return jsonify(ok=True, version_token=article.updated_at.isoformat(), saved_at=article.updated_at.isoformat())

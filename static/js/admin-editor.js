@@ -291,13 +291,17 @@
   updateSlugPreview();
   const editorForm = editor.closest('form');
   const formState = () => JSON.stringify(Array.from(new FormData(editorForm)).filter(([key, value]) => typeof value === 'string' && !['csrf_token','version_token'].includes(key)));
-  const initialState = formState();
+  let initialState = formState();
   let submitting = false;
   const hasChanges = () => formState() !== initialState || Array.from(editorForm.querySelectorAll('input[type="file"]')).some(input => input.files.length);
   const updateSaveState = () => {
     const state = document.querySelector('#editorSaveState');
     if (state) state.textContent = hasChanges() ? 'Alterações por guardar' : '';
   };
+  editorForm.addEventListener('editor:autosaved', event => {
+    initialState = event.detail.fingerprint;
+    updateSaveState();
+  });
   editor.addEventListener('editor:rendered', updateSaveState);
   editorForm.addEventListener('input', updateSaveState);
   editorForm.addEventListener('change', updateSaveState);

@@ -21,3 +21,16 @@ A migração `20261018_04` cria apenas `article_revision` e o respectivo índice
 ## Uso do REA
 
 Foi tentada a análise estática de `static/js` com `rea-agents analyze-javascript-application`. O REA interrompeu a operação porque a inspecção de propriedade de processos através de `ps` não está disponível neste ambiente Linux. O resultado parcial não foi considerado uma análise concluída. A implementação e a validação usam directamente o código-fonte do projecto e os seus testes. O setup MCP não foi executado nem foram alteradas configurações do agente.
+
+
+## Gravação automática de rascunhos
+
+Depois do primeiro registo do artigo, o editor guarda automaticamente título, resumo, texto, referências, palavras-chave, DOI e tempo de leitura. Para criar um artigo e permanecer no editor, use **Guardar e continuar**. A primeira alteração de texto é enviada após dois segundos sem edição; as seguintes respeitam um intervalo de pelo menos trinta segundos. Ao ocultar a página, o editor tenta antecipar a gravação pendente. O indicador só confirma a gravação depois de receber a resposta do servidor.
+
+Cada alteração efectiva cria uma versão com responsável e motivo **Gravação automática de rascunho**. A primeira gravação preserva uma versão de base do conteúdo anterior. Pedidos sem alterações não criam versões nem alteram a data. A API privada exige sessão, permissões actuais, CSRF e um token actualizado; a escrita usa uma condição sobre a data de alteração para proteger também SQLite. O endpoint tem limite próprio de doze pedidos por minuto por identidade, em substituição dos limites gerais.
+
+A gravação automática só altera rascunhos; não publica, aprova ou reabre artigos. Alterações de autoria, categoria, endereço, estado, capas, destaque ou ficheiros seleccionados pausam a gravação automática e exigem **Guardar artigo**. Campos inválidos também a pausam. Conteúdo em revisão, aprovado, programado ou publicado exige uma acção manual adequada ao fluxo editorial.
+
+Se outra sessão alterar o artigo, a gravação automática pára e conserva o texto no editor. Copie esse texto e consulte o histórico antes de voltar a guardar. Falhas de ligação mantêm o indicador de alterações por guardar e disponibilizam **Tentar novamente**. Se o servidor tiver guardado mas a resposta se perder, uma nova tentativa pode detectar um conflito; o histórico permite conferir o conteúdo registado. A gravação manual aguarda pedidos automáticos em curso e usa o token mais recente, preservando texto escrito durante o pedido.
+
+Não se guarda conteúdo de artigos em localStorage ou sessionStorage. Fechar o navegador antes de uma confirmação pode perder as alterações ainda pendentes; o aviso de saída permanece activo nessas situações. As alterações confirmadas ficam no servidor e no histórico. Incluir a tabela de versões nos backups. Esta funcionalidade não exige migrações adicionais.
