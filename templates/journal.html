@@ -39,7 +39,7 @@
     <strong>Revista Científica Sussurros do Saber</strong>
     <span>•</span><span>{{ journal.publication_date.strftime('%d/%m/%Y') if journal.publication_date else 'Data a definir' }}</span>
     <span>•</span><span>{{ journal.current_issue or 'Edição em preparação' }}</span>
-    {% if journal.doi %}<span>•</span><a class="journal-doi-link" href="{{ url_for('journal_detail', slug=journal.slug) }}" aria-label="Abrir página do artigo — DOI {{ journal.doi }}">DOI: {{ journal.doi }}</a>{% endif %}
+    {% if journal.doi %}<span>•</span>{% if journal.doi|doi_url %}<a class="journal-doi-link" href="{{ journal.doi|doi_url }}" rel="external noopener" aria-label="Consultar DOI {{ journal.doi }}">DOI: {{ journal.doi }}</a>{% else %}<span>DOI: {{ journal.doi }}</span>{% endif %}{% endif %}
   </div>
   <div class="journal-article-actions" aria-label="Ações do artigo">
     <button type="button" class="journal-alert-btn" aria-label="Receber notificações de artigos na minha conta" title="Receber notificações de artigos na minha conta" aria-pressed="false"><i class="fa-regular fa-bell"></i></button>
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  const title={{ article_title|tojson }};
  const journalTitle={{ 'Revista Científica Sussurros do Saber'|tojson }};
  const issue={{ (journal.current_issue or 'Edição em preparação')|tojson }};
- const doi={{ (journal.doi or '')|tojson }};
+ const doi={{ journal.doi|doi_url|tojson }};
  const url={{ public_url|tojson }};
  const alertBtn=document.querySelector('.journal-alert-btn');
  const saveBtn=document.querySelector('.journal-save-btn');
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  citeBtn?.addEventListener('click',()=>{
    const authors={{ journal_authors|map(attribute='name')|select|join(', ')|tojson }};
    const year={{ (journal.publication_date.year|string if journal.publication_date else 's.d.')|tojson }};
-   const citation=(authors?authors+'. ':'')+'('+year+'). '+title+'. '+journalTitle+'. '+issue+'. '+(doi?'https://doi.org/'+doi.replace(/^https?:\/\/doi\.org\//,''):url);
+   const citation=(authors?authors+'. ':'')+'('+year+'). '+title+'. '+journalTitle+'. '+issue+'. '+(doi||url);
    citationText.value=citation;
    citationStatus.textContent='';
    if(!citationDialog.open)citationDialog.showModal();
@@ -186,6 +186,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/journal-details.js', v='20261003-1') }}" defer></script>
 {% endblock %}
+
 
 
 

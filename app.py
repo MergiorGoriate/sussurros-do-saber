@@ -26,6 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
 from journal_metadata import journal_authors
+from scientific_search import metadata_match, doi_url
 from editorial_content import prepare_guidelines
 from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
@@ -33,6 +34,7 @@ from request_values import DatabaseIdConverter, pagination_page
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
 
 app = Flask(__name__)
+app.jinja_env.filters['doi_url'] = doi_url
 app.url_map.converters['int'] = DatabaseIdConverter
 def trusted_proxy_hops(name, default):
     value = int(os.getenv(name, str(default)))
@@ -663,8 +665,9 @@ def articles():
     if category:
         results = results.join(Category).filter(db.func.lower(Category.name) == category)
     if query:
-        like = f"%{query}%"
-        results = results.join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like), db.func.lower(Author.name).like(like)))
+        results = results.join(Author).filter(metadata_match(query,
+            Article.title, Article.summary, Article.body, Article.keywords,
+            Article.doi, Author.name, Author.orcid))
     page = pagination_page()
     pagination = results.order_by(Article.published_at.desc()).paginate(page=page, per_page=12, error_out=False)
     return render_template(
@@ -847,9 +850,18 @@ def scientific_editing():
 
 @app.get("/revistas")
 def journals():
+    query = request.args.get('q', '').strip()[:120]
+    results = Journal.query.filter_by(published=True)
+    if query:
+        results = results.filter(metadata_match(query,
+            Journal.title, Journal.article_title, Journal.article_title_en,
+            Journal.field, Journal.description, Journal.summary, Journal.abstract,
+            Journal.keywords, Journal.abstract_keywords, Journal.authors_data,
+            Journal.authors_orcid, Journal.doi, Journal.current_issue))
     return render_template(
         "journals.html",
-        journals=Journal.query.filter_by(published=True).order_by(Journal.title).all(),
+        journals=results.order_by(Journal.title, Journal.id).all(),
+        query=query,
     )
 
 
@@ -1028,13 +1040,9 @@ def api_articles():
         items = items.filter(Article.id.in_(requested_ids))
         limit = min(50, len(requested_ids))
     if query:
-        like = f"%{query}%"
-        items = items.join(Category).join(Author).filter(or_(
-            db.func.lower(Article.title).like(like),
-            db.func.lower(Article.summary).like(like),
-            db.func.lower(Category.name).like(like),
-            db.func.lower(Author.name).like(like),
-        ))
+        items = items.join(Category).join(Author).filter(metadata_match(query,
+            Article.title, Article.summary, Article.keywords, Article.doi,
+            Category.name, Author.name, Author.orcid))
     articles = items.order_by(Article.published_at.desc()).limit(limit).all()
     response = jsonify([
         {
@@ -1517,6 +1525,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 

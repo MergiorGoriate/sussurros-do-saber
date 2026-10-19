@@ -53,7 +53,7 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
     <div class="article-markdown">{{ article.body|markdown }}</div>
     {% if article.keywords or article.doi %}<div class="article-identifiers">
       {% if article.keywords %}<p><strong>Palavras-chave:</strong> {{ article.keywords }}</p>{% endif %}
-      {% if article.doi %}<p><strong>DOI:</strong> <a href="https://doi.org/{{ article.doi }}" rel="external noopener">{{ article.doi }}</a></p>{% endif %}
+      {% if article.doi %}<p><strong>DOI:</strong> {% if article.doi|doi_url %}<a href="{{ article.doi|doi_url }}" rel="external noopener">{{ article.doi }}</a>{% else %}{{ article.doi }}{% endif %}</p>{% endif %}
     </div>{% endif %}
     {% if article.references %}<section class="article-references" aria-labelledby="references-title"><h2 id="references-title">Referências</h2><div class="article-markdown">{{ article.references|markdown }}</div></section>{% endif %}
     {% set share_url = site_url ~ url_for('article', slug=article.slug) %}
@@ -230,4 +230,5 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
 </section>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/social-share.js',v='20261017-mobile-x') }}" defer></script>
 {% endblock %}
+
 

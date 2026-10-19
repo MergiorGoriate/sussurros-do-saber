@@ -29,6 +29,8 @@ Este README descreve a implementação revista em **17 de outubro de 2026**, com
 
 ## Actualizações recentes
 
+- **Pesquisa científica e DOI:** a pesquisa existente inclui identificadores e palavras-chave; o catálogo de revistas pesquisa também títulos científicos e autores, com formulário GET na mesma barra. As ligações DOI usam um normalizador comum, sem alterar dados nem comprovar registo externo. Ver [âmbito, testes e limitações](docs/SCIENTIFIC_SEARCH.md).
+
 As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em produção depende de um deploy bem-sucedido e da configuração dos serviços externos.
 
 - **Compilação CSS:** Tailwind 4.3.3 com CLI própria, configuração em CSS e fontes de classes explícitas; Playwright 1.64.0. [Migração, compatibilidade de navegadores e limitações da validação](docs/TAILWIND4_MIGRATION_20261017.md).
@@ -105,7 +107,7 @@ A execução de referência usa Python 3.11 e Node 22. As dependências efectiva
 ### Início, artigos e autores
 
 - A página inicial apresenta até 10 artigos publicados, ordenados por destaque e data, e até três revistas/publicações públicas recentes.
-- O catálogo de artigos aceita `q`, `categoria` e `page`, com 12 resultados por página. A pesquisa consulta título, resumo, corpo e nome do autor; a categoria usa o nome normalizado.
+- O catálogo de artigos aceita `q`, `categoria` e `page`, com 12 resultados por página. A pesquisa consulta título, resumo, corpo, palavras-chave, DOI e nome/ORCID do autor; a categoria usa o nome normalizado.
 - O artigo apresenta título, resumo, autor, categoria, data, tempo de leitura, capa/imagem ou vídeo, corpo Markdown, referências e metadados editoriais disponíveis.
 - Os três artigos sugeridos são publicações recentes diferentes do artigo aberto; não existe motor de recomendação semântica.
 - Ligações antigas por ID, incluindo `artigo-N`, redireccionam para o slug quando a publicação existe. Rascunhos e artigos programados ainda não publicados ficam fora das consultas públicas.
@@ -168,7 +170,7 @@ Configuração e cenários de associação estão em [docs/google-login.md](docs
 
 ### Catálogo e leitura
 
-`/revistas` mostra apenas registos publicados, com pesquisa/filtros no navegador. Cada `/revistas/<slug>` apresenta a identidade da revista e o conteúdo científico disponível. Um registo `Journal` combina dados da revista com uma página de publicação; não há, neste momento, entidades relacionais independentes de volume, edição e artigo científico.
+`/revistas` mostra apenas registos publicados, com filtro imediato no navegador e pesquisa GET por título, área, resumo, autores, DOI, ORCID, palavras-chave e edição. Cada `/revistas/<slug>` apresenta a identidade da revista e o conteúdo científico disponível. Um registo `Journal` combina dados da revista com uma página de publicação; não há, neste momento, entidades relacionais independentes de volume, edição e artigo científico.
 
 Os campos incluem nome/abreviatura, área, descrição, ISSN, periodicidade, edição actual, capa e texto alternativo, DOI, data de publicação, título científico, autores e ORCID, correspondente, resumo, palavras-chave, abstract e keywords.
 
@@ -953,5 +955,6 @@ Os formulários e JavaScript do repositório definem os nomes exactos dos campos
 ## Como manter esta documentação
 
 Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates ou tarefas de operação, actualizar esta documentação e os guias relacionados no mesmo trabalho. Separar claramente o que está implementado, o que é configuração do deployment e o que ainda é futuro. Não marcar uma integração como validada só porque há um botão ou uma variável.
+
 
 
