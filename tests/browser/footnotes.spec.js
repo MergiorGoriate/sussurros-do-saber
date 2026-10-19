@@ -1,0 +1,55 @@
+const {test,expect}=require('@playwright/test');
+const {execFileSync}=require('node:child_process');
+for(const width of [320,1440]){
+  test(`footnote insertion, persistence and navigation at ${width}px`,async({page})=>{
+    const cookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();
+    const data=JSON.parse(execFileSync('python',['tests/browser/footnote_fixture.py'],{encoding:'utf8'}));
+    await page.context().addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
+    await page.setViewportSize({width,height:1000});
+    const path='/admin/artigos/'+data.article_id+'/editar';
+    await page.goto(path);
+    const editor=page.locator('#bodyEditor');
+    await editor.evaluate(el=>{el.focus();el.setSelectionRange(0,7);});
+    await page.getByRole('button',{name:'Nota de rodapé',exact:true}).click();
+    await page.locator('#footnoteText').fill('Fonte https://example.org');
+    await page.getByRole('button',{name:'Inserir nota',exact:true}).click();
+    await expect(editor).toHaveValue(data.body.slice(0,7)+'[^nota-1]'+data.body.slice(7)+'\n\n[^nota-1]: Fonte https://example.org\n');
+    await expect(page.locator('#markdownPreview .footnote')).toHaveCount(1);
+    await expect(page.locator('#markdownPreview .footnote a[href="https://example.org"]')).toHaveCount(1);
+    const saved=await editor.inputValue();
+    await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
+    await expect(page).toHaveURL(/\/admin\/artigos$/);
+    await page.goto(path);
+    await expect(editor).toHaveValue(saved);
+    await expect(page.locator('#markdownPreview .footnote')).toHaveCount(1);
+    await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();
+    await page.screenshot({path:`/tmp/footnote-previews/editor-dark-${width}.png`,fullPage:true,animations:'disabled'});
+    await page.goto('/artigo/'+data.slug);
+    const call=page.locator('a.footnote-ref').first();
+    const target=(await call.getAttribute('href')).slice(1);
+    await call.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(`[id="${target}"]`)).toBeInViewport();
+    const backlink=page.locator(`[id="${target}"] a.footnote-backref`).first();
+    const returnId=(await backlink.getAttribute('href')).slice(1);
+    await backlink.click();
+    await expect(page.locator(`[id="${returnId}"]`)).toBeInViewport();
+    const ids=await page.locator('.article-markdown [id]').evaluateAll(els=>els.map(el=>el.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.screenshot({path:`/tmp/footnote-previews/public-light-${width}.png`,fullPage:true,animations:'disabled'});
+    await page.locator('#themeToggle').click();
+    await page.screenshot({path:`/tmp/footnote-previews/public-dark-${width}.png`,fullPage:true,animations:'disabled'});
+  });
+}
+test('public footnotes work without JavaScript',async({browser})=>{
+  const data=JSON.parse(execFileSync('python',['tests/browser/footnote_fixture.py'],{encoding:'utf8'}));
+  const context=await browser.newContext({javaScriptEnabled:false});
+  const page=await context.newPage();
+  await page.goto('http://127.0.0.1:5000/artigo/'+data.slug);
+  const call=page.locator('a.footnote-ref').first();
+  const href=await call.getAttribute('href');
+  await call.click();
+  expect(new URL(page.url()).hash).toBe(href);
+  await context.close();
+});
