@@ -1,2 +1,66 @@
-{% extends 'admin/base.html' %}{% block title %}Subscritores{% endblock %}{% block content %}<header class="admin-header"><div><span>Boletim</span><h1>Subscritores</h1></div><a class="admin-primary" href="{{ url_for('admin.export_subscribers') }}">Exportar CSV</a></header><section class="admin-panel" aria-labelledby="newsletter-title"><h2 id="newsletter-title">Boletim científico</h2><p>Edição {{ newsletter_edition.issue }} · {{ newsletter_edition.start.strftime('%d/%m/%Y') }} até {{ newsletter_edition.end.strftime('%d/%m/%Y') }} (fim exclusivo, UTC).</p><p>{% if newsletter_smtp_ready %}Configuração SMTP detectada. Confirme a entrega e o agendamento no servidor.{% else %}O envio aguarda configuração de SMTP seguro ou está em pausa.{% endif %}</p><p>A selecção usa até cinco artigos publicados na última semana completa. Cada subscritor activo recebe no máximo uma preparação por edição; inscrições canceladas são verificadas antes da entrega.</p>{% if newsletter_edition.articles %}<ul>{% for article in newsletter_edition.articles %}<li><a href="{{ url_for('article',slug=article.slug) }}">{{ article.title }}</a><p>{{ article.summary }}</p></li>{% endfor %}</ul>{% if newsletter_smtp_ready %}<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="prepare_newsletter"><input type="hidden" name="fingerprint" value="{{ newsletter_edition.fingerprint }}"><label><input type="checkbox" name="confirm" required> Revi esta selecção e confirmo a preparação do envio aos subscritores activos.</label><p><button type="submit" class="admin-primary">Preparar envio do boletim</button></p></form>{% endif %}{% else %}<p>Não há artigos publicados nesta semana. Nenhum boletim vazio será preparado.</p>{% endif %}</section><section class="admin-panel table-wrap"><table><thead><tr><th>E-mail</th><th>Estado</th><th>Inscrição</th><th>Ação</th></tr></thead><tbody>{% for item in subscribers %}<tr><td>{{ item.email }}</td><td>{{ 'Ativo' if item.active else 'Inativo' }}</td><td><time datetime="{{ item.created_at.isoformat() }}">{{ item.created_at.strftime('%d/%m/%Y %H:%M') }}</time></td><td><form action="{{ url_for('admin.toggle_subscriber', subscriber_id=item.id) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>{{ 'Desativar' if item.active else 'Reativar' }}</button></form></td></tr>{% else %}<tr><td colspan="4">Nenhum subscritor.</td></tr>{% endfor %}</tbody></table></section>{% endblock %}
-
+{% extends 'admin/base.html' %}
+{% block title %}Subscritores{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-subscribers.css', v='20261020-v1') }}">
+{% endblock %}
+{% block content %}
+{% set total = subscribers|length %}
+{% set active = subscribers|selectattr('active')|list|length %}
+<div class="subscribers-page">
+  <header class="admin-header subscribers-header">
+    <div><span>Boletim científico</span><h1>Subscritores</h1><p>Gira as inscrições e reveja a próxima edição do boletim.</p></div>
+    <a class="subscribers-export" href="{{ url_for('admin.export_subscribers') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg>Exportar CSV</a>
+  </header>
+  <dl class="subscriber-metrics" aria-label="Resumo das inscrições">
+    <div><dt>Total de subscritores</dt><dd>{{ total }}</dd><p>Inscrições registadas</p></div>
+    <div><dt><i class="subscriber-dot" aria-hidden="true"></i>Activos</dt><dd>{{ active }}</dd><p>Podem receber o boletim</p></div>
+    <div><dt>Inactivos</dt><dd>{{ total - active }}</dd><p>Fora dos próximos envios</p></div>
+  </dl>
+  <div class="newsletter-layout">
+    <section class="admin-panel newsletter-preview" aria-labelledby="newsletter-title">
+      <div class="subscriber-section-head"><div><span class="subscriber-eyebrow">Selecção semanal</span><h2 id="newsletter-title">Boletim científico</h2></div><span class="subscriber-edition">{{ newsletter_edition.issue }}</span></div>
+      <p class="newsletter-period">{{ newsletter_edition.start.strftime('%d/%m/%Y') }} até {{ newsletter_edition.end.strftime('%d/%m/%Y') }} <span>· fim exclusivo, UTC</span></p>
+      <div class="newsletter-selection-heading"><h3>Artigos desta edição</h3><span>{{ newsletter_edition.articles|length }} de até 5</span></div>
+      {% if newsletter_edition.articles %}
+      <ol class="newsletter-articles">
+        {% for article in newsletter_edition.articles %}
+        <li><span class="newsletter-article-number" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span><div><h3><a href="{{ url_for('article', slug=article.slug) }}">{{ article.title }}</a></h3>{% if article.summary %}<p>{{ article.summary }}</p>{% endif %}</div></li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <div class="subscriber-empty"><h3>Nenhum artigo nesta edição</h3><p>Não há artigos publicados na última semana completa. Nenhum boletim vazio será preparado.</p></div>
+      {% endif %}
+      <p class="newsletter-caption">Selecção de artigos publicados na última semana completa.</p>
+    </section>
+    <aside class="admin-panel newsletter-controls" aria-labelledby="newsletter-prepare-title">
+      <span class="subscriber-eyebrow">Preparação</span><h2 id="newsletter-prepare-title">Rever e preparar</h2>
+      <div class="newsletter-connection {{ 'is-ready' if newsletter_smtp_ready else 'is-paused' }}"><span class="subscriber-dot" aria-hidden="true"></span><strong>{{ 'SMTP configurado' if newsletter_smtp_ready else 'Envio indisponível' }}</strong></div>
+      <p class="newsletter-delivery-note">{% if newsletter_smtp_ready %}A configuração foi detectada. A entrega e o agendamento devem ser confirmados no servidor.{% else %}Configure o SMTP seguro ou retome o boletim para disponibilizar a preparação.{% endif %}</p>
+      <dl class="newsletter-facts"><div><dt>Destinatários activos</dt><dd>{{ active }}</dd></div><div><dt>Frequência</dt><dd>Semanal</dd></div></dl>
+      <p class="newsletter-explanation">Cada subscritor activo recebe no máximo uma preparação por edição. As inscrições canceladas são verificadas antes da entrega.</p>
+      {% if newsletter_edition.articles and newsletter_smtp_ready %}
+      <form method="post" class="newsletter-prepare-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="prepare_newsletter">
+        <input type="hidden" name="fingerprint" value="{{ newsletter_edition.fingerprint }}">
+        <label class="newsletter-confirm"><input type="checkbox" name="confirm" required><span>Revi esta selecção e confirmo a preparação do envio aos subscritores activos.</span></label>
+        <button type="submit" class="admin-primary">Preparar envio do boletim</button>
+        <p class="newsletter-caption">A preparação adiciona as mensagens à fila de envio.</p>
+      </form>
+      {% endif %}
+    </aside>
+  </div>
+  <section class="admin-panel subscribers-directory" aria-labelledby="subscriber-list-title">
+    <div class="subscriber-section-head"><div><h2 id="subscriber-list-title">Lista de subscritores</h2><p>Consulte as inscrições e altere o estado de cada subscritor.</p></div><span class="subscriber-count">{{ total }} {{ 'inscrição' if total == 1 else 'inscrições' }}</span></div>
+    {% if subscribers %}
+    <table class="subscriber-table"><caption class="subscriber-sr-only">Subscritores, estado da inscrição e acções disponíveis</caption><thead><tr><th scope="col">E-mail</th><th scope="col">Estado</th><th scope="col">Inscrição</th><th scope="col">Acção</th></tr></thead><tbody>
+      {% for item in subscribers %}
+      <tr><td data-label="E-mail"><div class="subscriber-identity"><span class="subscriber-avatar" aria-hidden="true">{{ item.email[0]|upper }}</span><span>{{ item.email }}</span></div></td><td data-label="Estado"><span class="subscriber-status {{ 'is-active' if item.active else 'is-inactive' }}"><i class="subscriber-dot" aria-hidden="true"></i>{{ 'Activo' if item.active else 'Inactivo' }}</span></td><td data-label="Inscrição"><time datetime="{{ item.created_at.isoformat() }}">{{ item.created_at.strftime('%d/%m/%Y') }}<small>{{ item.created_at.strftime('%H:%M') }}</small></time></td><td data-label="Acção"><form action="{{ url_for('admin.toggle_subscriber', subscriber_id=item.id) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="subscriber-toggle {{ 'is-deactivate' if item.active else '' }}" aria-label="{{ 'Desactivar' if item.active else 'Reactivar' }} inscrição de {{ item.email }}">{{ 'Desactivar' if item.active else 'Reactivar' }}</button></form></td></tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}
+    <div class="subscriber-empty"><h3>Ainda não há subscritores</h3><p>As inscrições feitas no site aparecerão aqui.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
