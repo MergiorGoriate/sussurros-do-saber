@@ -1,5 +1,7 @@
 # Clareza editorial e descoberta de artigos
 
+Registo histórico do PR #218. A activação posterior do boletim e a correcção da mensagem de inscrição estão descritas em [NEWSLETTER.md](NEWSLETTER.md); os parágrafos abaixo descrevem a etapa anterior.
+
 A página inicial usa «Artigos recentes» no bloco que apresenta as publicações mais recentes depois do destaque. O conteúdo e o destaque mantêm a selecção existente; não há contagem de leituras nem ranking de popularidade.
 
 A área de inscrição passa a apresentar «Boletim científico», «Registar interesse» e a indicação de que o envio ainda não está activo. O formulário, os seus identificadores, o endpoint de inscrição, a deduplicação, a gestão de subscritores e a exportação existentes são preservados. Não foi criado um serviço de campanhas, uma subscrição paga ou um canal adicional de notificações.
@@ -19,3 +21,4 @@ O endpoint guarda a inscrição e responde com sucesso, mas a interface substitu
 Não há migrações, alterações de permissões, estados editoriais ou configurações de produção. A reversão do commit repõe os rótulos e a ordenação anterior, sem operações sobre os dados. A validação do deployment efectivo continua separada dos ensaios locais. A reformulação das políticas editoriais, novas áreas temáticas, podcasts e envio de newsletters ficam fora desta alteração.
 
 Em 19/10/2026 passaram 298 testes Python em SQLite, incluindo cinco novos. Os cenários de navegador novos foram executados a 320 e 1440 px com Chromium 153 alternativo, em processos separados devido às limitações de contextos desse executável. A suite completa de navegador, PostgreSQL e o deployment não foram executados nesta validação local.
+

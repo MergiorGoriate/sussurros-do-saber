@@ -1229,10 +1229,28 @@ def contacts():
     return render_template("admin/contacts.html", messages=messages)
 
 
-@admin_bp.get("/subscritores")
+@admin_bp.route("/subscritores", methods=["GET", "POST"])
 @login_required
 def subscribers():
-    return render_template("admin/subscribers.html", subscribers=Subscriber.query.order_by(Subscriber.created_at.desc()).all())
+    from newsletter_service import digest, queue_digest, smtp_ready
+    if request.method == 'POST':
+        validate_csrf()
+        if request.form.get('action') != 'prepare_newsletter' or request.form.get('confirm') != 'on':
+            abort(400)
+        fingerprint = request.form.get('fingerprint', '')
+        if not re.fullmatch(r'[0-9a-f]{64}', fingerprint):
+            abort(400)
+        try:
+            count = queue_digest(expected_hash=fingerprint)
+        except ValueError as error:
+            db.session.rollback()
+            flash(str(error), 'error')
+        else:
+            flash(f'{count} boletins preparados. A entrega será feita pelo serviço SMTP existente.', 'success')
+        return redirect(url_for('admin.subscribers'), code=303)
+    return render_template("admin/subscribers.html",
+        subscribers=Subscriber.query.order_by(Subscriber.created_at.desc()).all(),
+        newsletter_edition=digest(), newsletter_smtp_ready=smtp_ready())
 
 
 @admin_bp.post("/contactos/<int:message_id>/eliminar")
@@ -1286,6 +1304,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 

@@ -89,6 +89,7 @@ class EditorialDiscoveryTests(unittest.TestCase):
         self.assertIn('Artigos recentes', soup.get_text())
         self.assertNotIn('Mais lidos', soup.get_text())
         self.assertNotIn('Boletim semanal', soup.get_text())
-        self.assertIn('O envio do boletim ainda não está activo.', soup.get_text())
+        self.assertIn('Boletim científico', soup.get_text())
         self.assertIsNotNone(soup.select_one('#newsletterForm input[type="email"]'))
-        self.assertEqual(soup.select_one('#newsletterForm button').get_text(), 'Registar interesse')
+        self.assertEqual(soup.select_one('#newsletterForm button').get_text(), 'Subscrever')
+

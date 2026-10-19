@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Cancelar boletim — Sussurros do Saber{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-16">
+  {% if cancelled %}<h1 class="font-serif text-4xl">Inscrição cancelada</h1><p class="mt-5">Deixará de receber o boletim científico. Pode voltar a subscrever na página inicial.</p>
+  {% else %}<h1 class="font-serif text-4xl">Cancelar o boletim</h1><p class="mt-5">Confirme que pretende deixar de receber o boletim científico do Sussurros do Saber.</p><form method="post" class="mt-6"><button class="primary-btn" type="submit">Cancelar inscrição</button></form>{% endif %}
+  <a class="inline-block mt-6" href="{{ url_for('home') }}">Voltar à página inicial</a>
+</section>
+{% endblock %}

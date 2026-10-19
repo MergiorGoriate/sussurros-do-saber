@@ -786,7 +786,12 @@ def install_submission_cli(app):
         ssl = os.getenv('SMTP_SSL', 'false').lower() == 'true'
         if not tls and not ssl and not app.testing:
             raise click.ClickException('É obrigatório utilizar SMTP_TLS ou SMTP_SSL.')
-        rows = EditorialNotification.query.filter_by(sent_at=None).order_by(EditorialNotification.id).limit(limit).with_for_update(skip_locked=True).all()
+        from newsletter_service import CANCELLED, is_newsletter, smtp_ready, unsubscribe_url
+        from models import Subscriber
+        pending = EditorialNotification.query.filter_by(sent_at=None).filter(EditorialNotification.last_error != CANCELLED)
+        if not smtp_ready():
+            pending = pending.filter(~EditorialNotification.subject.like('Sussurros do Saber — Boletim %'))
+        rows = pending.order_by(EditorialNotification.id).limit(limit).with_for_update(skip_locked=True).all()
         delivered = 0
         try:
             factory = smtplib.SMTP_SSL if ssl else smtplib.SMTP
@@ -796,10 +801,19 @@ def install_submission_cli(app):
                 if os.getenv('SMTP_USERNAME'):
                     smtp.login(os.environ['SMTP_USERNAME'], os.environ.get('SMTP_PASSWORD', ''))
                 for row in rows:
+                    subscriber = None
+                    if is_newsletter(row):
+                        subscriber = Subscriber.query.filter_by(email=row.recipient, active=True).first()
+                        if subscriber is None:
+                            row.last_error = CANCELLED
+                            continue
                     row.attempts += 1
                     message = EmailMessage()
                     message['From'], message['To'], message['Subject'] = sender, row.recipient, row.subject
                     message['Message-ID'] = f'<editorial-{row.id}@sussurrosdosaber.com>'
+                    if subscriber is not None:
+                        message['List-Unsubscribe'] = '<' + unsubscribe_url(subscriber) + '>'
+                        message['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
                     message.set_content(row.body)
                     try:
                         smtp.send_message(message)
@@ -891,4 +905,5 @@ def internal_notice_summary():
     from flask import jsonify
     from internal_notices import summary
     return jsonify(summary(public=True))
+
 

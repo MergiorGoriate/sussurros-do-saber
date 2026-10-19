@@ -120,9 +120,9 @@ Comentários exigem nome, e-mail e texto válido, token CSRF e campo anti-robô.
 
 O formulário de contacto envia para `/api/contacto` e guarda a mensagem na base de dados. A equipa consulta e gere essas mensagens no painel. Guardar uma mensagem não equivale a encaminhá-la automaticamente por e-mail.
 
-A página inicial apresenta «Artigos recentes» em vez de atribuir popularidade sem métricas. A área do boletim permite registar interesse e informa que o envio ainda não está activo.
+A página inicial apresenta «Artigos recentes» em vez de atribuir popularidade sem métricas. A área do boletim permite subscrever e apresenta a disponibilidade de envio segundo a configuração SMTP.
 
-A newsletter regista o endereço, evita duplicação e permite reactivar uma inscrição. O painel gere subscritores e exporta CSV. O código não inclui um serviço de campanhas nem envio automático de newsletters.
+A newsletter reutiliza o cadastro de subscritores e a fila SMTP. O painel permite rever e preparar uma selecção de até cinco artigos da última semana completa; o comando preparar-boletim permite automatizar essa preparação. Cada edição é preparada uma vez por destinatário e inclui cancelamento de inscrição. A entrega usa enviar-notificacoes e exige SMTP seguro e tarefas agendadas no servidor. Ver [activação e operação do boletim](docs/NEWSLETTER.md).
 
 ### Recursos educativos
 
@@ -656,6 +656,7 @@ Segredos pertencem às variáveis protegidas do serviço/Worker. Os valores abai
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | Autenticação quando o provedor a exige |
 | `SMTP_TLS` | Padrão `true`, usa STARTTLS se SSL não estiver activo |
 | `SMTP_SSL` | Padrão `false`, ligação SSL directa quando `true` |
+| `NEWSLETTER_ENABLED` | Padrão `true`; `false` pausa preparação e entrega de boletins, preservando e-mails transaccionais |
 
 Estas variáveis configuram envio, não DNS do domínio. MX, SPF, DKIM e DMARC são configurados no DNS conforme o provedor de e-mail contratado; os seus valores não devem ser inventados ou copiados de exemplos de outro serviço.
 
@@ -762,7 +763,7 @@ Continuam pendentes a confirmação no aparelho físico e no deployment efectivo
 - Publicação científica usa `Journal` como registo combinado; template ou campo legado sem rota activa não comprova um módulo completo de edições.
 - DOI/ISSN, licenças e histórico são metadados editoriais. Não há emissão Crossref, depósito DOI, registo ISSN, indexação automática ou verificação externa implementados.
 - Há portal de pareceres atribuídos, com controlo de versão e conflito; não há anonimização garantida nem revisão duplamente cega.
-- Newsletter guarda inscrições; contacto guarda mensagens. Não existe motor de campanhas ou encaminhamento automático desses contactos.
+- O boletim tem preparação semanal e entrega pela fila SMTP existente; activar e validar SMTP e agendamentos no servidor é uma etapa operacional separada. Não há editor de campanhas arbitrárias. O contacto continua a guardar mensagens, sem encaminhamento automático.
 - Notificações de acompanhamento são internas; e-mails editoriais dependem de SMTP e do comando agendado.
 - PDF é uma composição própria e a conversão DOCX é limitada. Publicar exige revisão humana do conteúdo e das figuras.
 - O catálogo educativo é definido no código; as preferências educativas locais não sincronizam entre dispositivos.
@@ -815,6 +816,7 @@ Inventário dos decoradores de rotas do código revisto. `GET` inclui o tratamen
 | GET | `/robots.txt` | `robots` |
 | GET | `/healthz` | `healthcheck` |
 | POST | `/api/newsletter` | `newsletter` |
+| GET, POST | `/boletim/cancelar/<token>` | `newsletter_public.unsubscribe` |
 | POST | `/api/assistente` | `assistant` |
 | POST | `/api/contacto` | `submit_contact` |
 
@@ -852,7 +854,7 @@ Inventário dos decoradores de rotas do código revisto. `GET` inclui o tratamen
 | POST | `/admin/comentarios/<int:comment_id>/estado` | `update_comment_status` |
 | POST | `/admin/comentarios/<int:comment_id>/eliminar` | `delete_comment` |
 | GET | `/admin/contactos` | `contacts` |
-| GET | `/admin/subscritores` | `subscribers` |
+| GET, POST | `/admin/subscritores` | `subscribers` |
 | POST | `/admin/contactos/<int:message_id>/eliminar` | `delete_contact` |
 | POST | `/admin/subscritores/<int:subscriber_id>/estado` | `toggle_subscriber` |
 | GET | `/admin/contactos/exportar.csv` | `export_contacts` |
@@ -957,6 +959,7 @@ Os formulários e JavaScript do repositório definem os nomes exactos dos campos
 ## Como manter esta documentação
 
 Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates ou tarefas de operação, actualizar esta documentação e os guias relacionados no mesmo trabalho. Separar claramente o que está implementado, o que é configuração do deployment e o que ainda é futuro. Não marcar uma integração como validada só porque há um botão ou uma variável.
+
 
 
 

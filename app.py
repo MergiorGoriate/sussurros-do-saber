@@ -101,6 +101,8 @@ install_submission_cli(app)
 from google_auth import google_bp, install_google_cli
 app.register_blueprint(google_bp)
 install_google_cli(app)
+from newsletter_service import install_newsletter
+install_newsletter(app)
 
 
 @app.get("/diretrizes-para-autores")
@@ -1162,7 +1164,7 @@ def newsletter():
     if data is None:
         return jsonify(ok=False, message="Introduza um endereço de e-mail válido."), 400
     email = data["email"].lower()
-    if not valid_email(email):
+    if not valid_email(email) or len(email) > 180:
         return jsonify({"ok": False, "message": "Introduza um endereço de e-mail válido."}), 400
     subscriber = Subscriber.query.filter_by(email=email).first()
     if subscriber:
@@ -1170,7 +1172,11 @@ def newsletter():
     else:
         db.session.add(Subscriber(email=email))
     db.session.commit()
-    return jsonify({"ok": True, "message": "Inscrição confirmada. Bem-vindo ao Sussurros do Saber!"})
+    from newsletter_service import smtp_ready
+    message = "Inscrição confirmada. Pode cancelar através da ligação incluída em cada boletim."
+    if not smtp_ready():
+        message += " O envio de e-mails ainda aguarda activação no servidor."
+    return jsonify({"ok": True, "message": message})
 
 @app.post("/api/assistente")
 @limiter.limit("5 per minute; 20 per hour")
@@ -1533,6 +1539,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
