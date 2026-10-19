@@ -25,6 +25,8 @@ for(const width of [320,1440]){
     await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();
     await page.screenshot({path:`/tmp/footnote-previews/editor-dark-${width}.png`,fullPage:true,animations:'disabled'});
     await page.goto('/artigo/'+data.slug);
+    await page.getByRole('button',{name:'Recusar não essenciais',exact:true}).click();
+    await expect(page.locator('.footnote ol').first()).toHaveCSS('list-style-type','decimal');
     const call=page.locator('a.footnote-ref').first();
     const target=(await call.getAttribute('href')).slice(1);
     await call.focus();

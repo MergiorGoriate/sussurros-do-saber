@@ -2,7 +2,7 @@
 .footnote{margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #cbd5e1;font-size:.94em;line-height:1.75;color:inherit}
 .footnote>hr{display:none}
 .footnote h2{margin:0 0 1rem;font-size:1.35em}
-.footnote ol{padding-left:1.6rem}
+.footnote ol{padding-left:1.6rem;list-style-type:decimal}
 .footnote li{padding:.3rem .4rem;margin-bottom:1rem;overflow-wrap:anywhere;scroll-margin-top:180px}
 .footnote li p{margin:.3rem 0}
 a.footnote-ref{font-size:.85em;font-weight:700;text-decoration:none;padding:.1em .2em;color:#245f97}
