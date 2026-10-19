@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 from admin import admin_bp, admin_session_valid, login_required, validate_csrf
 from extensions import limiter
+from request_values import pagination_page
 from models import AdminUser, Journal, db, utcnow
 from journal_metadata import normalize_orcid, legacy_author_lines
 from journal_article import ARTICLE_FIELD_LIMITS
@@ -313,7 +314,7 @@ def incomplete(manuscript):
 @submissions_bp.get('/')
 @author_required
 def mine():
-    page = request.args.get('page', 1, type=int)
+    page = pagination_page()
     manuscripts = Manuscript.query.filter_by(owner_id=researcher().id).filter(Manuscript.removed_at.is_(None)).order_by(Manuscript.updated_at.desc()).paginate(page=page, per_page=20, error_out=False)
     return render_template('submissions/list.html', manuscripts=manuscripts)
 
@@ -604,7 +605,7 @@ def submissions_list():
                 flash('Use datas válidas nos filtros.', 'error')
     order = request.args.get('order', 'newest')
     ordering = Manuscript.title.asc() if order == 'title' else Manuscript.submitted_at.asc() if order == 'oldest' else Manuscript.submitted_at.desc()
-    rows = query.order_by(ordering, Manuscript.id.desc()).paginate(page=request.args.get('page', 1, type=int), per_page=25, error_out=False)
+    rows = query.order_by(ordering, Manuscript.id.desc()).paginate(page=pagination_page(), per_page=25, error_out=False)
     from governance import has_permission
     pending = EditorialNotification.query.filter_by(sent_at=None).count() if has_permission('submissions.configure') else 0
     return render_template('admin/submissions.html', manuscripts=rows, states=STATES, journals=[j for j in Journal.query.order_by(Journal.title).all() if any(has_permission(p,j.id) for p in MANUSCRIPT_ACCESS_PERMISSIONS+('submissions.configure',))], pending_notifications=pending)
@@ -859,7 +860,7 @@ def internal_notifications():
     from reader_accounts import sync_internal_updates
     sync_internal_updates(researcher())
     query=active_inbox(public=True)
-    page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=request.args.get('page',1,type=int),per_page=30,error_out=False)
+    page=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).paginate(page=pagination_page(),per_page=30,error_out=False)
     return render_template('submissions/notices.html',notices=page.items,pagination=page,unread=query.filter(StaffNotice.read_at.is_(None)).count())
 
 
@@ -890,3 +891,4 @@ def internal_notice_summary():
     from flask import jsonify
     from internal_notices import summary
     return jsonify(summary(public=True))
+

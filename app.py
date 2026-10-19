@@ -29,9 +29,11 @@ from journal_metadata import journal_authors
 from editorial_content import prepare_guidelines
 from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
+from request_values import DatabaseIdConverter, pagination_page
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
 
 app = Flask(__name__)
+app.url_map.converters['int'] = DatabaseIdConverter
 def trusted_proxy_hops(name, default):
     value = int(os.getenv(name, str(default)))
     if not 0 <= value <= 5:
@@ -663,7 +665,7 @@ def articles():
     if query:
         like = f"%{query}%"
         results = results.join(Author).filter(or_(db.func.lower(Article.title).like(like), db.func.lower(Article.summary).like(like), db.func.lower(Article.body).like(like), db.func.lower(Author.name).like(like)))
-    page = max(1, request.args.get("page", 1, type=int))
+    page = pagination_page()
     pagination = results.order_by(Article.published_at.desc()).paginate(page=page, per_page=12, error_out=False)
     return render_template(
         "articles.html",
@@ -759,7 +761,7 @@ def author_detail(slug):
     author = Author.query.filter_by(slug=slug, active=True).first()
     if not author:
         return render_template("404.html"), 404
-    page = max(request.args.get("pagina", 1, type=int) or 1, 1)
+    page = pagination_page('pagina')
     pagination = (
         Article.public_card_query()
         .filter(Article.author_id == author.id)

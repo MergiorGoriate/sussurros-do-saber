@@ -183,6 +183,9 @@ def mutate(action, ident=None, *, public=False):
     if action=='read_all':
         query.filter(StaffNotice.removed_at.is_(None),StaffNotice.read_at.is_(None)).update({'read_at':utcnow()},synchronize_session='fetch')
     else:
+        from request_values import MAX_DATABASE_ID
+        if not isinstance(ident, int) or not 1 <= ident <= MAX_DATABASE_ID:
+            abort(404)
         item=query.filter_by(id=ident).with_for_update().first_or_404()
         if action=='delete':
             if not item.removed_at:item.removed_at=utcnow()

@@ -113,7 +113,8 @@ def autosave(ident):
         return jsonify(ok=False, code='conflict', error='O artigo foi alterado noutra sessão. O seu texto continua no editor. Consulte o histórico antes de voltar a guardar.'), 409
     if request.files or any(name not in request.form for name in (*AUTOSAVE_LIMITS, 'read_minutes')):
         return jsonify(ok=False, code='validation', error='O pedido de gravação está incompleto.'), 400
-    values = {name:request.form[name].strip() for name in AUTOSAVE_LIMITS}
+    values = {name:request.form[name] if name in {'body', 'references'} else request.form[name].strip()
+              for name in AUTOSAVE_LIMITS}
     if any(len(values[name]) > limit for name,limit in AUTOSAVE_LIMITS.items()) or len(values['title']) < 5 or len(values['summary']) < 10:
         return jsonify(ok=False, code='validation', error='Reveja o título, o resumo e os limites dos campos antes de guardar.'), 422
     try:

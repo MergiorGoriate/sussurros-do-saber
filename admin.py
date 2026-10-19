@@ -772,7 +772,7 @@ def article_form(article_id=None):
             flash("O título deve ter entre 5 e 240 caracteres.", "error")
         else:
             summary = request.form.get("summary", "").strip()
-            body = request.form.get("body", "").strip()
+            body = request.form.get("body", "")
             status = request.form.get("status", "draft")
             try:
                 author_id = int(request.form.get("author_id", ""))
@@ -785,7 +785,7 @@ def article_form(article_id=None):
             if not 10 <= len(summary) <= 2000 or status not in {"draft", "review", "approved", "published", "scheduled"}:
                 flash("O resumo deve ter entre 10 e 2000 caracteres e o estado deve ser válido.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
-            if status in {"approved", "published", "scheduled"} and len(body) < 50:
+            if status in {"approved", "published", "scheduled"} and len(body.strip()) < 50:
                 flash("Artigos aprovados, publicados ou programados precisam de conteúdo completo.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             limits = {"body": 400000, "references": 100000, "keywords": 500, "doi": 180, "slug": 260}
@@ -820,7 +820,7 @@ def article_form(article_id=None):
             article.slug = candidate
             article.summary = summary
             article.body = body
-            article.references = request.form.get("references", "").strip()
+            article.references = request.form.get("references", "")
             article.keywords = request.form.get("keywords", "").strip()
             article.doi = request.form.get("doi", "").strip()
             image_file = request.files.get("image_file")
@@ -1124,8 +1124,8 @@ def journal_form(journal_id=None):
             for name in ARTICLE_FIELD_LIMITS:
                 if name in request.form:
                     setattr(journal, name, request.form[name].strip())
-            journal.content_markdown = request.form.get("content_markdown", "").strip()
-            journal.references = request.form.get("references", "").strip()
+            journal.content_markdown = request.form.get("content_markdown", "")
+            journal.references = request.form.get("references", "")
             journal.editorial_policy = request.form.get("editorial_policy", "").strip()
             journal.copyright_policy = request.form.get("copyright_policy", "").strip()
             journal.cover_image = cover_url
