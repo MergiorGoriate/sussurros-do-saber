@@ -109,7 +109,7 @@ A execução de referência usa Python 3.11 e Node 22. As dependências efectiva
 - A página inicial apresenta até 10 artigos publicados, ordenados por destaque e data, e até três revistas/publicações públicas recentes.
 - O catálogo de artigos aceita `q`, `categoria` e `page`, com 12 resultados por página. A pesquisa consulta título, resumo, corpo, palavras-chave, DOI e nome/ORCID do autor; a categoria usa o nome normalizado.
 - O artigo apresenta título, resumo, autor, categoria, data, tempo de leitura, capa/imagem ou vídeo, corpo Markdown, referências e metadados editoriais disponíveis.
-- Os três artigos sugeridos são publicações recentes diferentes do artigo aberto; não existe motor de recomendação semântica.
+- Os três artigos sugeridos dão prioridade à categoria do artigo aberto, ordenados por data e ID; quando faltam artigos do mesmo tema, completam com publicações recentes de outras categorias. O artigo aberto e conteúdos privados são excluídos; não existe motor de recomendação semântica.
 - Ligações antigas por ID, incluindo `artigo-N`, redireccionam para o slug quando a publicação existe. Rascunhos e artigos programados ainda não publicados ficam fora das consultas públicas.
 - Perfis de autores incluem os campos preenchidos: função, apresentação, formação, instituição, biografia, interesses, projectos, publicações, experiência editorial, fotografia e ligações académicas. A lista respeita activação/ordenação; o perfil reúne artigos publicados do autor.
 - Ferramentas de leitura e partilha incluem guardar por conta, partilhar por WhatsApp, Facebook, X, LinkedIn, Telegram, Bluesky, Reddit ou e-mail e copiar a ligação. Alguns recursos usam APIs do navegador, como a área de transferência, com alternativa manual em caso de falha.
@@ -119,6 +119,8 @@ A execução de referência usa Python 3.11 e Node 22. As dependências efectiva
 Comentários exigem nome, e-mail e texto válido, token CSRF e campo anti-robô. São guardados para moderação; apenas aprovados aparecem publicamente, até 100 por artigo. O envio tem limite específico de cinco pedidos por hora. O nome admite 2–80 caracteres e o comentário 10–2000.
 
 O formulário de contacto envia para `/api/contacto` e guarda a mensagem na base de dados. A equipa consulta e gere essas mensagens no painel. Guardar uma mensagem não equivale a encaminhá-la automaticamente por e-mail.
+
+A página inicial apresenta «Artigos recentes» em vez de atribuir popularidade sem métricas. A área do boletim permite registar interesse e informa que o envio ainda não está activo.
 
 A newsletter regista o endereço, evita duplicação e permite reactivar uma inscrição. O painel gere subscritores e exporta CSV. O código não inclui um serviço de campanhas nem envio automático de newsletters.
 
@@ -955,6 +957,7 @@ Os formulários e JavaScript do repositório definem os nomes exactos dos campos
 ## Como manter esta documentação
 
 Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates ou tarefas de operação, actualizar esta documentação e os guias relacionados no mesmo trabalho. Separar claramente o que está implementado, o que é configuração do deployment e o que ainda é futuro. Não marcar uma integração como validada só porque há um botão ou uma variável.
+
 
 
 

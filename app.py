@@ -21,7 +21,7 @@ import markdown
 from article_notes import render_notes_markdown, allowed_markdown_attribute, decorate_notes
 import math
 from markupsafe import Markup
-from sqlalchemy import inspect, or_, text
+from sqlalchemy import case, inspect, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
@@ -695,7 +695,15 @@ def article(slug):
             return redirect(url_for("article", slug=legacy.slug), code=301)
         return render_template("404.html"), 404
     g.google_cmp_public_content = True
-    related = Article.public_card_query().filter(Article.id != selected.id).order_by(Article.published_at.desc()).limit(3).all()
+    related = (
+        Article.public_card_query()
+        .filter(Article.id != selected.id)
+        .order_by(
+            case((Article.category_id == selected.category_id, 0), else_=1),
+            Article.published_at.desc(), Article.id.desc(),
+        )
+        .limit(3).all()
+    )
     comments = Comment.query.filter_by(article_id=selected.id, approved=True).order_by(Comment.created_at.desc()).limit(100).all()
     return render_template(
         "article.html",
@@ -1525,6 +1533,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
