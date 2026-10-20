@@ -329,3 +329,13 @@
   }
   .public-site .article-byline.has-updated-date .article-reading-time { grid-row: 1 / span 2; }
 }
+
+/* Always show publication and update dates beside the reading actions. */
+@media (max-width: 767px) {
+  .public-site .article-meta-row .article-byline {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .public-site .article-byline > .article-date { grid-column: auto; }
+  .public-site .article-byline .article-reading-time { grid-column: 3; grid-row: 1; gap: 6px; }
+}

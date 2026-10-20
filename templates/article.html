@@ -16,10 +16,9 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
       <a class="article-author-link" href="{{ url_for('author_detail', slug=article.author_rel.slug) }}">Por {{ article.author }}</a>
     </div>
     <div class="article-meta-row">
-    {% set has_updated_date = article.updated_at.date() != (article.published_at or article.created_at).date() %}
-    <p class="article-meta article-byline{{ ' has-updated-date' if has_updated_date else '' }}">
+    <p class="article-meta article-byline">
       <span class="article-date"><span class="article-date-label">Publicado em</span><time datetime="{{ (article.published_at or article.created_at).isoformat() }}">{{ article.date }}</time></span>
-      {% if has_updated_date %}<span class="article-date"><span class="article-date-label">Actualizado em</span><time datetime="{{ article.updated_at.isoformat() }}">{{ article.updated_at.strftime('%d/%m/%Y') }}</time></span>{% endif %}
+      <span class="article-date"><span class="article-date-label">Actualizado em</span><time datetime="{{ article.updated_at.isoformat() }}">{{ article.updated_at.strftime('%d/%m/%Y') }}</time></span>
       <span class="article-reading-time">{{ article.read_time }} <button
         class="bookmark"
         data-id="{{ article.id }}"
