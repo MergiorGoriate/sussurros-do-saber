@@ -120,6 +120,7 @@ class EditorialNotification(db.Model):
     recipient = db.Column(db.String(254), nullable=False)
     subject = db.Column(db.String(300), nullable=False)
     body = db.Column(db.Text, nullable=False)
+    html_body = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     sent_at = db.Column(db.DateTime)
     attempts = db.Column(db.Integer, default=0, nullable=False)
@@ -131,4 +132,5 @@ class PublicationAsset(db.Model):
     journal_id = db.Column(db.Integer, db.ForeignKey('journal.id'), nullable=False, index=True)
     name = db.Column(db.String(180), nullable=False)
     payload = db.Column(db.LargeBinary, nullable=False)
+
 

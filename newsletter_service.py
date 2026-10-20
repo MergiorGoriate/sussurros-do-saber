@@ -1,8 +1,10 @@
 """Weekly digest using existing subscribers and the transactional outbox."""
 import hashlib
+import json
 import os
 import re
 from datetime import timedelta
+from urllib.parse import quote, urljoin, urlparse
 
 import click
 from flask import Blueprint, abort, current_app, render_template, request, url_for
@@ -42,6 +44,29 @@ def is_newsletter(row):
     return bool(re.fullmatch(SUBJECT_PATTERN, row.subject))
 
 
+def newsletter_image_url(value):
+    """Use public, absolute cover URLs; do not fetch images on the mail worker."""
+    from app import responsive_image_url, safe_image_url
+    value = str(value or '').strip()
+    if value.startswith('/static/'):
+        value = urljoin(origin() + '/', value)
+    value = safe_image_url(value)
+    parsed = urlparse(value)
+    if not value or parsed.username or parsed.password:
+        return ''
+    image = responsive_image_url(value, 640)
+    # Email clients have wider JPEG support than automatic AVIF/WebP variants.
+    if parsed.hostname == 'res.cloudinary.com' and '/upload/' in parsed.path:
+        image = image.replace('/upload/f_auto,', '/upload/f_jpg,', 1)
+    return urljoin(origin() + '/', image) if image.startswith('/static/') else image
+
+
+def render_digest_html(edition, subscriber):
+    # Rendering from the CLI must not invoke request/session context processors.
+    return current_app.jinja_env.get_template('emails/newsletter.html').render(
+        edition=edition, site_url=origin(), cancellation_url=unsubscribe_url(subscriber))
+
+
 def digest(now=None):
     """The last complete Monday-to-Monday week, measured in UTC."""
     now = now or utcnow()
@@ -53,10 +78,15 @@ def digest(now=None):
         Article.published_at >= start, Article.published_at < end,
     ).order_by(Article.published_at.desc(), Article.id.desc()).limit(5).all()
     subject = 'Sussurros do Saber — Boletim ' + issue
-    content = '\n\n'.join(f'{a.title}\n{a.summary[:1000]}\n{origin()}/artigo/{a.slug}' for a in articles)
-    fingerprint = hashlib.sha256((subject+'\n'+content).encode()).hexdigest()
+    cards = [{'title':a.title, 'summary':a.summary[:1000], 'category':a.category,
+              'url':origin()+'/artigo/'+quote(a.slug, safe=''),
+              'image':newsletter_image_url(a.image)} for a in articles]
+    content = '\n\n'.join(f"{card['title']}\n{card['summary']}\n{card['url']}" for card in cards)
+    fingerprint = hashlib.sha256((subject+'\n'+json.dumps(cards,ensure_ascii=False,sort_keys=True)).encode()).hexdigest()
+    period = start.strftime('%d/%m/%Y') + ' a ' + (end-timedelta(days=1)).strftime('%d/%m/%Y')
     return {'issue':issue, 'subject':subject, 'start':start, 'end':end,
-            'articles':articles, 'content':content, 'fingerprint':fingerprint}
+            'articles':articles, 'cards':cards, 'period':period,
+            'content':content, 'fingerprint':fingerprint}
 
 
 def queue_digest(limit=500, expected_hash=None, now=None):
@@ -89,7 +119,7 @@ def queue_digest(limit=500, expected_hash=None, now=None):
                 + '\n\nRecebe este boletim porque subscreveu o Sussurros do Saber.'
                 + '\nCancelar a inscrição: ' + unsubscribe_url(subscriber))
         db.session.add(EditorialNotification(recipient=subscriber.email,
-            subject=edition['subject'], body=body))
+            subject=edition['subject'], body=body, html_body=render_digest_html(edition, subscriber)))
     db.session.commit()
     return len(subscribers)
 

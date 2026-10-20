@@ -820,6 +820,8 @@ def install_submission_cli(app):
                         message['List-Unsubscribe'] = '<' + unsubscribe_url(subscriber) + '>'
                         message['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
                     message.set_content(row.body)
+                    if subscriber is not None and row.html_body:
+                        message.add_alternative(row.html_body, subtype='html')
                     try:
                         smtp.send_message(message)
                         row.sent_at, row.last_error = utcnow(), ''

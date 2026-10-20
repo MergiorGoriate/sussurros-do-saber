@@ -11,6 +11,24 @@ from models import db
 
 
 class MigrationTests(unittest.TestCase):
+    def test_html_email_upgrade_preserves_existing_sent_and_pending_notifications(self):
+        with tempfile.TemporaryDirectory() as directory:
+            url='sqlite:///'+str(Path(directory)/'mail.db')
+            engine=create_engine(url)
+            with engine.begin() as connection:
+                connection.execute(text('CREATE TABLE editorial_notification (id INTEGER PRIMARY KEY, recipient VARCHAR(254), subject VARCHAR(300), body TEXT, sent_at DATETIME, attempts INTEGER)'))
+                connection.execute(text("INSERT INTO editorial_notification VALUES (1,'test@example.test','Pendente','Texto original',NULL,0),(2,'test@example.test','Enviada','Texto enviado','2026-10-19 08:00:00',1)"))
+                connection.execute(text('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)'))
+                connection.execute(text("INSERT INTO alembic_version VALUES ('20261018_04')"))
+            self.run_migration(url);self.run_migration(url)
+            with engine.connect() as connection:
+                column=next(c for c in inspect(connection).get_columns('editorial_notification') if c['name']=='html_body')
+                self.assertTrue(column['nullable'])
+                rows=connection.execute(text('SELECT body,sent_at,html_body FROM editorial_notification ORDER BY id')).all()
+                self.assertEqual(rows[0],('Texto original',None,None))
+                self.assertEqual(rows[1],('Texto enviado','2026-10-19 08:00:00',None))
+            engine.dispose()
+
     def run_migration(self, url):
         with patch.dict(os.environ, {"DATABASE_URL": url}):
             command.upgrade(Config(str(Path(__file__).resolve().parents[1] / "alembic.ini")), "head")
@@ -23,7 +41,7 @@ class MigrationTests(unittest.TestCase):
             engine = create_engine(url)
             with engine.connect() as connection:
                 self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message"}.issubset(inspect(connection).get_table_names()))
-                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261018_04")
+                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261020_05")
             engine.dispose()
 
     def test_existing_schema_and_content_are_preserved(self):
@@ -94,4 +112,5 @@ class MigrationTests(unittest.TestCase):
                 self.assertTrue(sa.inspect(conn).get_columns('staff_notice')[1] is not None)
                 self.assertTrue(next(c['nullable'] for c in sa.inspect(conn).get_columns('staff_notice') if c['name']=='admin_id'))
             engine.dispose()
+
 
