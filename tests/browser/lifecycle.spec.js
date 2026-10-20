@@ -35,7 +35,8 @@ test('founder confirmation cancellation, four archives, reassignment and open-se
  const collaborator=await browser.newContext();await signin(collaborator,d.cookie);const other=await collaborator.newPage();
  await other.goto('/admin/trabalho');
  await page.goto(`/admin/remover/document/${d.document_id}`);
- await expect(page.getByRole('heading',{name:/Confirmar remoção: Termo/})).toBeVisible();
+ await expect(page.getByRole('heading',{level:1,name:'Confirmar remoção',exact:true})).toBeVisible();
+ await expect(page.getByRole('region',{name:'Termo '+d.suffix,exact:true})).toBeVisible();
  await page.getByRole('link',{name:'Cancelar',exact:true}).click();
  await expect(page.locator(`#documento-${d.document_id}`)).toBeVisible();
  for(const [kind,id] of [['document',d.document_id],['report',d.report_id],['manuscript',d.manuscript_id],['member',d.member_id]]) {

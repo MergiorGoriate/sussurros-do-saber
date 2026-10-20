@@ -1,1 +1,35 @@
-{% extends 'admin/base.html' %}{% block content %}<h1>Confirmar remoção: {{ item_name }}</h1><p>Registo {{ kind }} #{{ ident }}</p><p>{{ consequence }}</p><p>Eliminação lógica exclusiva do fundador.</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="confirm" value="yes"><button>Confirmar remoção</button> <a href="{{ url_for('staff.team') if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list') }}">Cancelar</a></form>{% endblock %}
+{% extends 'admin/base.html' %}
+{% block title %}Confirmar remoção · {{ item_name }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-removal.css') }}">{% endblock %}
+{% block content %}
+{% set labels = {'member':'Membro da equipa', 'document':'Documento', 'report':'Relatório', 'manuscript':'Submissão'} %}
+{% set cancel_url = url_for('staff.team') if kind=='member' else url_for('staff.documents') if kind=='document' else url_for('staff.reports') if kind=='report' else url_for('admin.submissions_list') %}
+<div class="removal-page">
+  <a class="removal-back" href="{{ cancel_url }}"><span aria-hidden="true">←</span> Voltar à lista</a>
+  <header class="removal-heading">
+    <span class="removal-eyebrow">Gestão de registos</span>
+    <h1>Confirmar remoção</h1>
+    <p>Reveja o registo e as consequências antes de continuar.</p>
+  </header>
+  <section class="removal-card" aria-labelledby="removal-record-title">
+    <div class="removal-record">
+      <span class="removal-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m12 3 10 18H2L12 3Z" stroke-linejoin="round"/><path d="M12 9v5m0 3v1"/></svg></span>
+      <div><span class="removal-kind">{{ labels.get(kind, 'Registo') }} · #{{ ident }}</span><h2 id="removal-record-title">{{ item_name }}</h2></div>
+    </div>
+    <div class="removal-consequences">
+      <h3>O que acontece ao confirmar?</h3>
+      <p>{{ consequence }}</p>
+    </div>
+    <aside class="removal-note" aria-label="Permissão e histórico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 10h14v11H5zM8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>
+      <div><strong>Acção exclusiva do fundador</strong><p>A remoção é lógica e fica registada na auditoria. O histórico é preservado.</p></div>
+    </aside>
+    <form method="post" class="removal-actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="confirm" value="yes">
+      <a class="removal-button removal-cancel" href="{{ cancel_url }}">Cancelar</a>
+      <button type="submit" class="removal-button removal-confirm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg>Confirmar remoção</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

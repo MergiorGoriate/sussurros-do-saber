@@ -999,3 +999,7 @@ Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates o
 Os documentos privados da equipa, as mensagens de contacto e os relatórios de auditoria usam cartões, formulários responsivos e acções com contraste nos temas claro e escuro. Os relatórios incluem atalhos para as secções e tabelas com deslocamento horizontal por teclado em ecrãs pequenos; os tipos de documento são apresentados em português. A página de detalhe dos relatórios segue o mesmo layout.
 
 Mantêm-se as permissões, o aceite pela própria conta do membro, os downloads privados, a exportação CSV e os fluxos de eliminação existentes. «Responder por e-mail» abre o programa de correio do utilizador; não envia mensagens automaticamente. Estas alterações de apresentação não exigem migrações nem configuração SMTP.
+
+### Confirmação de remoção de registos
+
+A página partilhada de confirmação de remoção de documentos, membros, submissões e relatórios identifica o registo em português, explica as consequências e separa visualmente «Cancelar» de «Confirmar remoção». O layout adapta-se ao telemóvel e aos temas claro e escuro. Mantêm-se a autorização exclusiva do fundador, a validação CSRF, a remoção lógica e a preservação do histórico; abrir a página ou cancelar não remove o registo. Não exige migração de dados.
