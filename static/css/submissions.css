@@ -14,3 +14,16 @@ body.admin-dark{--blue:var(--admin-accent,#9acbff)}
 .admin-dark .admin-main .submission-alert.error{background:#442b36;color:#ffbdc7;border-color:#bd7f8d}
 .admin-dark .admin-main :is(.submission-panel,.submission-actions) a:not(.submission-button){color:var(--admin-accent,#9acbff)}
 .admin-dark .admin-main :is(.submission-panel,.submission-actions) :focus-visible{outline-color:var(--admin-accent,#9acbff)}
+
+/* A single inbox control belongs to the author header, alongside navigation. */
+.submission-header-controls{display:flex;align-items:center;justify-content:flex-end;gap:16px;max-width:100%;min-width:0}
+.submission-header-controls>nav{min-width:0}
+.submission-header-notices{flex:0 0 44px;width:44px}
+.submission-header .notice-toolbar{margin:0}
+.submission-header .notice-bar{font-weight:400;padding:0}
+@media(max-width:700px){
+ .submission-header .submission-header-controls{width:100%;justify-content:space-between;gap:12px;align-items:center}
+ .submission-header .submission-header-controls>nav{display:flex;flex:1;flex-wrap:wrap;justify-content:flex-start;width:auto;gap:4px 8px}
+ .submission-header-notices{align-self:center}
+ .submission-header .notice-popover{right:0;width:min(440px,calc(100vw - 32px))}
+}
