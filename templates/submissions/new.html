@@ -1,1 +1,29 @@
-{% extends 'submissions/base.html' %}{% block content %}<span class="submission-eyebrow">Submissão formal</span><h1>Submeter manuscrito</h1><p>Escolha a revista. Pode guardar um rascunho e continuar mais tarde. O envio oficial só acontece após a sua confirmação final.</p><section class="submission-panel">{% if settings %}<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label>Revista<select name="journal_id" required><option value="">Selecione a revista</option>{% for setting in settings %}<option value="{{ setting.journal_id }}">{{ setting.journal.title }}</option>{% endfor %}</select></label><button class="submission-button">Iniciar rascunho</button></form>{% else %}<h2>Submissões ainda não abertas</h2><p>A equipa editorial anunciará aqui as revistas disponíveis para submissão.</p><a href="/contacto">Contactar a equipa editorial</a>{% endif %}</section>{% endblock %}
+{% extends 'submissions/base.html' %}
+{% block title %}Submeter manuscrito{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/author-workspace.css', v='20261020-v1') }}">{% endblock %}
+{% block content %}
+<div class="author-workspace">
+  <nav class="author-breadcrumb" aria-label="Localização"><a href="{{ url_for('submissions.mine') }}">Minhas Submissões</a><span aria-hidden="true">/</span><span aria-current="page">Novo manuscrito</span></nav>
+  <header class="author-page-heading"><div><span class="submission-eyebrow">Submissão formal</span><h1>Submeter manuscrito</h1><p>Comece pela revista. Pode guardar o rascunho e continuar mais tarde.</p></div><a class="author-text-link" href="{{ url_for('submissions.mine') }}">Ver as minhas submissões <span aria-hidden="true">↗</span></a></header>
+  <div class="author-start-grid">
+    <section class="submission-panel author-start-panel" aria-labelledby="start-title">
+      <div class="author-section-heading"><span class="author-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h7l1 2 1-2h7v16h-7l-1 1-1-1H4zM12 6v15M7 9h2M7 13h2M15 9h2M15 13h2"/></svg></span><div><span class="author-kicker">Começar um rascunho</span><h2 id="start-title">Escolha a revista</h2></div></div>
+      {% if settings %}
+      <p class="author-muted">Seleccione uma das revistas com submissões abertas. Nas etapas seguintes, poderá indicar o tipo de artigo e completar os dados.</p>
+      <form method="post" class="author-start-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="new-manuscript-journal">Revista</label>
+        <select id="new-manuscript-journal" name="journal_id" required aria-describedby="journal-help"><option value="">Seleccione a revista</option>{% for setting in settings %}<option value="{{ setting.journal_id }}"{% if request.form.get('journal_id') == setting.journal_id|string %} selected{% endif %}>{{ setting.journal.title }}</option>{% endfor %}</select>
+        <p id="journal-help" class="author-field-help">Só estão disponíveis as revistas que aceitam novas submissões.</p>
+        <div class="author-draft-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5zM12 14v3"/></svg><p><strong>O rascunho ainda não é uma submissão oficial.</strong><span>O envio à equipa editorial só acontece após a sua confirmação final.</span></p></div>
+        <div class="author-form-footer"><button type="submit" class="submission-button">Iniciar rascunho <span aria-hidden="true">→</span></button><span>Pode retomar em Minhas Submissões.</span></div>
+      </form>
+      {% else %}
+      <div class="author-empty"><h3>Submissões ainda não abertas</h3><p>A equipa editorial anunciará aqui as revistas disponíveis para submissão.</p><a class="submission-button secondary" href="/contacto">Contactar a equipa editorial</a></div>
+      {% endif %}
+    </section>
+    <aside class="submission-panel author-guide" aria-labelledby="guide-title"><span class="author-kicker">Antes de começar</span><h2 id="guide-title">Prepare a submissão</h2><ul><li>Dados dos autores e do autor correspondente.</li><li>Título, resumo e palavras-chave do manuscrito.</li><li>Ficheiro principal e materiais complementares.</li><li>Declarações e informações éticas aplicáveis.</li></ul><div class="author-guide-links"><a href="/diretrizes-para-autores">Diretrizes para Autores <span aria-hidden="true">↗</span></a><a href="/politicas-editoriais">Políticas Editoriais <span aria-hidden="true">↗</span></a></div><p>Esta área destina-se a manuscritos para avaliação editorial nas revistas científicas.</p></aside>
+  </div>
+  <section class="submission-panel author-process" aria-labelledby="process-title"><div class="author-section-heading"><div><span class="author-kicker">Do rascunho à confirmação</span><h2 id="process-title">Como funciona a submissão</h2></div><span class="author-count">{{ steps|length }} etapas</span></div><ol>{% for step in steps %}<li><span aria-hidden="true">{{ '%02d'|format(loop.index) }}</span><strong>{{ step }}</strong></li>{% endfor %}</ol><p class="author-field-help">Reveja os dados e os ficheiros antes da confirmação definitiva.</p></section>
+</div>
+{% endblock %}
