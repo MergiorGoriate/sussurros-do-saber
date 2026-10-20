@@ -17,8 +17,8 @@ Saber{% endblock %}{% block meta_description %}{{ article.summary }}{% endblock 
     </div>
     <div class="article-meta-row">
     <p class="article-meta article-byline">
-      <span>Publicado em {{ article.date }}</span>
-      <span>Atualizado em {{ article.updated_at.strftime('%d/%m/%Y') }}</span>
+      <span class="article-date"><span class="article-date-label">Publicado em</span><time datetime="{{ (article.published_at or article.created_at).isoformat() }}">{{ article.date }}</time></span>
+      <span class="article-date"><span class="article-date-label">Actualizado em</span><time datetime="{{ article.updated_at.isoformat() }}">{{ article.updated_at.strftime('%d/%m/%Y') }}</time></span>
       <span class="article-reading-time">{{ article.read_time }} <button
         class="bookmark"
         data-id="{{ article.id }}"
