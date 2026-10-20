@@ -1,1 +1,26 @@
-{% extends 'base.html' %}{% block title %}Equipa — Sussurros do Saber{% endblock %}{% block content %}<section class="container py-12"><h1>A nossa equipa</h1><p>Pessoas que contribuem para a divulgação e a investigação científica no Sussurros do Saber.</p>{% for m in members %}<article class="author-card"><h2>{{ m.name }}</h2>{% if m.photo %}<img src="{{ m.photo }}" alt="Fotografia de {{ m.name }}" width="160" height="160" loading="lazy">{% endif %}<p>{{ m.affiliation }}{% if m.specialty %} · {{ m.specialty }}{% endif %}</p><p>{{ m.bio }}</p><ul>{% for a in mandates(m) %}<li>{{ a.role.name }}</li>{% endfor %}</ul>{% if m.orcid %}<a href="https://orcid.org/{{ m.orcid }}" rel="noopener">ORCID {{ m.orcid }}</a>{% endif %}</article>{% else %}<p>A composição da equipa será apresentada após a confirmação dos colaboradores.</p>{% endfor %}</section>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Equipa — Sussurros do Saber{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/team.css', v='20261020-v1') }}">{% endblock %}
+{% block content %}
+<section class="team-page" aria-labelledby="team-title">
+  <header class="team-hero"><span class="eyebrow">Pessoas e ciência</span><h1 id="team-title">A nossa equipa</h1><p>Pessoas que contribuem para a divulgação e a investigação científica no Sussurros do Saber.</p><a href="{{ url_for('about') }}">Conheça o Sussurros do Saber <span aria-hidden="true">↗</span></a></header>
+  <div class="team-section-heading"><h2>Colaboradores</h2>{% if members %}<span>{{ members|length }} {{ 'pessoa' if members|length == 1 else 'pessoas' }}</span>{% endif %}</div>
+  <div class="team-grid">
+    {% for m in members %}
+    <article class="team-card" aria-labelledby="member-name-{{ m.id }}">
+      <div class="team-card-heading">
+        {% if m.photo %}<img class="team-photo" src="{{ m.photo }}" alt="Fotografia de {{ m.name }}" width="112" height="112" loading="lazy" decoding="async">{% else %}<div class="team-avatar" aria-hidden="true">{{ m.name[:1]|upper }}</div>{% endif %}
+        <h3 id="member-name-{{ m.id }}">{{ m.name }}</h3>
+        {% if m.affiliation or m.specialty %}<p class="team-affiliation">{% if m.affiliation %}{{ m.affiliation }}{% endif %}{% if m.affiliation and m.specialty %}<span aria-hidden="true"> · </span>{% endif %}{% if m.specialty %}{{ m.specialty }}{% endif %}</p>{% endif %}
+      </div>
+      <ul class="team-roles" aria-label="Funções de {{ m.name }}">{% for a in mandates(m) %}<li>{{ a.role.name }}</li>{% endfor %}</ul>
+      {% if m.bio %}<p class="team-bio">{{ m.bio }}</p>{% endif %}
+      {% if m.orcid %}<footer class="team-card-footer"><a class="team-orcid" href="https://orcid.org/{{ m.orcid }}" rel="noopener"><span class="team-orcid-mark" aria-hidden="true">iD</span><span><strong>ORCID</strong><span>{{ m.orcid }}</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6m0-6L10 14M10 4H4v16h16v-6"/></svg></a></footer>{% endif %}
+    </article>
+    {% else %}
+    <div class="team-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M17 4a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-4"/></svg><h3>Conheça a equipa em breve</h3><p>A composição da equipa será apresentada após a confirmação dos colaboradores.</p></div>
+    {% endfor %}
+  </div>
+  <aside class="team-editorial-note"><div><span class="team-note-label">O nosso trabalho</span><h2>Conheça os princípios editoriais</h2><p>Consulte as políticas que orientam a publicação de conteúdos no Sussurros do Saber.</p></div><a href="{{ url_for('editorial_policy') }}">Políticas Editoriais <span aria-hidden="true">→</span></a></aside>
+</section>
+{% endblock %}
