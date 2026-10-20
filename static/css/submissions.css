@@ -27,3 +27,17 @@ body.admin-dark{--blue:var(--admin-accent,#9acbff)}
  .submission-header-notices{align-self:center}
  .submission-header .notice-popover{right:0;width:min(440px,calc(100vw - 32px))}
 }
+
+/* Comfortable touch navigation and forms on phones and small tablets. */
+@media(max-width:767px){
+ .submission-header{padding:16px;gap:12px}
+ .submission-header-controls{width:100%;min-width:0}
+ .submission-header nav{gap:4px 12px}
+ .submission-header nav a,.submission-header nav .link-button,.submission-footer a{display:inline-flex;align-items:center;min-height:44px;padding-block:8px}
+ .submission-shell{padding:24px 16px 40px}
+ .submission-grid>*{min-width:0}
+ .submission-panel :is(input,textarea,select){font-size:16px}
+ .submission-actions{align-items:stretch;gap:10px}
+ .submission-actions .submission-button{flex:1 1 180px;text-align:center}
+ .submission-footer{gap:4px 18px}
+}
