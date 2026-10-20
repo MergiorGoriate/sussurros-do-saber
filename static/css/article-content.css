@@ -308,3 +308,24 @@
 /* Keep author initials readable when a profile has no photograph. */
 .article-page .article-author-fallback { display: grid; place-items: center; }
 .dark .public-site .article-page .article-author-fallback { background: #18334c; color: #bfdbfe; }
+
+/* Keep dates and reading actions together instead of a separate mobile row. */
+@media (max-width: 767px) {
+  .public-site .article-meta-row .article-byline {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+  }
+  .public-site .article-byline > .article-date { grid-column: 1; }
+  .public-site .article-byline .article-reading-time {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+    width: auto;
+    border-top: 0;
+    padding-top: 0;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .public-site .article-byline.has-updated-date .article-reading-time { grid-row: 1 / span 2; }
+}

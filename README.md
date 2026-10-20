@@ -1014,4 +1014,4 @@ As regressões de navegação, foco, conta autenticada e formulários estão em 
 
 ### Introdução dos artigos no telemóvel
 
-Até 767 px, o resumo usa 16 px e entrelinha de 1,6; o nome do autor e a fotografia ocupam menos altura. As datas de publicação e actualização são apresentadas em duas colunas, com elementos `time` e valores ISO. O tempo de leitura e o botão de guardar ficam numa linha própria, mantendo uma área de toque de 44 px. O texto continua alinhado à esquerda e adapta-se aos dois temas. Não altera o conteúdo editorial, as datas guardadas nem o fluxo de favoritos.
+Até 767 px, o resumo usa 16 px e entrelinha de 1,6; o nome do autor e a fotografia ocupam menos altura. A publicação fica à esquerda e o tempo de leitura com o botão de guardar à direita, mantendo uma área de toque de 44 px. A actualização aparece abaixo da publicação quando corresponde a outro dia; datas iguais não são repetidas. Os elementos `time` mantêm os valores ISO. O texto continua alinhado à esquerda e adapta-se aos dois temas. Não altera o conteúdo editorial, as datas guardadas nem o fluxo de favoritos.
