@@ -220,3 +220,8 @@
 
 /* Headlines and introductory summaries share a left reading edge. */
 .article-page .article-header :is(.article-title,.article-summary){text-align:left;text-align-last:auto}
+
+/* Keep category, authorship and dates on the headline's reading edge. */
+.article-page .article-header{text-align:left}
+.article-page .article-author-line,.article-page .article-byline,.article-page .article-header .reading-tools{justify-content:flex-start}
+@media(max-width:767px){.article-page .article-byline{justify-items:start;text-align:left}}
