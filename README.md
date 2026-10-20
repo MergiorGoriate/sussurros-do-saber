@@ -1011,3 +1011,7 @@ A navegação pública usa o menu recolhido abaixo de 1024 px, evitando que liga
 O cabeçalho suporta a campainha e a conta autenticada a 320 px, com ou sem fotografia. Os controlos principais e a navegação das submissões têm áreas de toque de pelo menos 44 px. Os formulários de contacto, a pesquisa, os diálogos e os espaçamentos de leitura adaptam-se ao telemóvel. As secções públicas em ecrãs pequenos deixam de usar alturas estimadas de `content-visibility`; as imagens mantêm o carregamento diferido. Não há alterações de permissões, dados ou SMTP.
 
 As regressões de navegação, foco, conta autenticada e formulários estão em `tests/browser/mobile-layout.spec.js`. Executar com `npx playwright test tests/browser/mobile-layout.spec.js` no ambiente de testes isolado descrito acima. A validação local usa dados sintéticos; envio de mensagens e boletins em produção não faz parte destes testes.
+
+### Introdução dos artigos no telemóvel
+
+Até 767 px, o resumo usa 16 px e entrelinha de 1,6; o nome do autor e a fotografia ocupam menos altura. As datas de publicação e actualização são apresentadas em duas colunas, com elementos `time` e valores ISO. O tempo de leitura e o botão de guardar ficam numa linha própria, mantendo uma área de toque de 44 px. O texto continua alinhado à esquerda e adapta-se aos dois temas. Não altera o conteúdo editorial, as datas guardadas nem o fluxo de favoritos.
