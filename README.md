@@ -123,7 +123,7 @@ O formulário de contacto envia para `/api/contacto` e guarda a mensagem na base
 
 A página inicial apresenta «Artigos recentes» em vez de atribuir popularidade sem métricas. A área do boletim permite subscrever e apresenta a disponibilidade de envio segundo a configuração SMTP.
 
-A newsletter reutiliza o cadastro de subscritores e a fila SMTP. O painel permite rever e preparar uma selecção de até cinco artigos da última semana completa; o comando preparar-boletim permite automatizar essa preparação. Cada edição é preparada uma vez por destinatário e inclui cancelamento de inscrição. A entrega usa enviar-notificacoes e exige SMTP seguro e tarefas agendadas no servidor. Ver [activação e operação do boletim](docs/NEWSLETTER.md).
+A newsletter reutiliza o cadastro de subscritores e a fila SMTP. O painel permite rever e preparar uma selecção de até cinco artigos da última semana completa; o comando preparar-boletim permite automatizar essa preparação. Cada edição é preparada uma vez por destinatário e inclui cancelamento de inscrição. A entrega usa enviar-notificacoes e exige SMTP seguro e tarefas agendadas no servidor. Ver [activação e operação do boletim](docs/NEWSLETTER.md). Os novos boletins incluem uma versão HTML responsiva com capas dos artigos, títulos, resumos e ligações de leitura, além da versão em texto simples. O conteúdo é guardado na preparação e o envio reutiliza o mesmo SMTP. A coluna opcional `EditorialNotification.html_body` é adicionada pela migração `20261020_05` ou pelo arranque com actualização automática activa; mensagens anteriores e a deduplicação são preservadas.
 
 ### Recursos educativos
 

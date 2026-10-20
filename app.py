@@ -1490,6 +1490,13 @@ def ensure_article_slugs():
         db.session.commit()
 
 
+def ensure_notification_columns():
+    columns = {column['name'] for column in inspect(db.engine).get_columns('editorial_notification')}
+    if 'html_body' not in columns:
+        db.session.execute(text('ALTER TABLE editorial_notification ADD COLUMN html_body TEXT'))
+        db.session.commit()
+
+
 def seed_database():
     if os.getenv("AUTO_SCHEMA_UPGRADE", "true").lower() == "true":
         # IMPORTANTE: db.create_all() só cria tabelas; não adiciona colunas a tabelas
@@ -1501,6 +1508,7 @@ def seed_database():
         ensure_journal_columns()
         ensure_editorial_policy_columns()
         ensure_article_columns()
+        ensure_notification_columns()
     from governance import seed_roles
     seed_roles()
     if not Journal.query.first():

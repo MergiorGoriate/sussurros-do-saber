@@ -1,6 +1,6 @@
 # Boletim científico
 
-O boletim reutiliza Subscriber e EditorialNotification. Não há tabelas, migrações ou permissões novas. A gestão continua em /admin/subscritores e exige subscribers.manage, incluindo POST, confirmação e CSRF. O painel apresenta a selecção antes de a colocar na fila; rejeita uma selecção alterada desde a pré-visualização.
+O boletim reutiliza Subscriber e EditorialNotification. Não há tabelas ou permissões novas. A revisão HTML acrescenta a coluna opcional html_body à fila existente, pela migração 20261020_05. A gestão continua em /admin/subscritores e exige subscribers.manage, incluindo POST, confirmação e CSRF. O painel apresenta a selecção antes de a colocar na fila; rejeita uma selecção alterada desde a pré-visualização.
 
 ## Conteúdo e envio
 
@@ -11,6 +11,20 @@ O título da edição contém o ano e a semana ISO. A preparação consulta a fi
 Cada mensagem contém uma ligação de cancelamento assinada, sem expor o endereço no URL, e cabeçalhos List-Unsubscribe/List-Unsubscribe-Post. GET mostra confirmação sem desactivar a inscrição; POST com token válido desactiva-a, incluindo o pedido One-Click. O comando de entrega verifica novamente se a inscrição está activa. Mensagens canceladas permanecem na fila como canceladas, sem serem marcadas como enviadas. A pessoa pode voltar a subscrever pelo formulário existente.
 
 O erro que mostrava falha após uma inscrição guardada foi corrigido: o JavaScript guarda a referência ao formulário antes de aguardar a resposta. A confirmação não depende de envio imediato; inscrever-se apenas guarda a inscrição. A interface informa quando falta configuração SMTP.
+
+## Apresentação do e-mail
+
+Os novos boletins são enviados como multipart/alternative: uma parte text/plain e uma parte text/html. A versão HTML usa o template templates/emails/newsletter.html, com cabeçalho da marca, período da edição, cartões com categoria, capa, título, resumo e ligação de leitura. O layout usa tabelas e estilos essenciais inline, largura máxima de 640 píxeis e adaptação a ecrãs pequenos; não depende do CSS ou JavaScript do site.
+
+As capas usam endereços públicos absolutos, incluindo imagens locais do site. As imagens Cloudinary são redimensionadas e usam uma variante JPEG. Não são descarregadas pelo worker nem anexadas à mensagem; o leitor de e-mail controla o carregamento remoto. Não existe um novo píxel de rastreio. Artigos sem uma capa válida mantêm o cartão com título e ligação, sem uma imagem quebrada. O cliente pode bloquear imagens ou alterar cores; a versão em texto e os textos alternativos continuam disponíveis.
+
+O HTML é guardado quando a edição é preparada, junto com o texto original e o cancelamento individual. Uma mudança posterior na capa não altera silenciosamente mensagens já preparadas; a impressão digital da pré-visualização inclui as imagens. Mensagens antigas com html_body vazio continuam a ser enviadas em texto, e e-mails já entregues não são reenviados. As notificações transaccionais mantêm o formato actual.
+
+### Actualizar uma instalação existente
+
+A migração 20261020_05 acrescenta apenas uma coluna TEXT anulável em editorial_notification e preserva mensagens, estados de envio e tentativas. O arranque com AUTO_SCHEMA_UPGRADE=true também acrescenta esta coluna de forma idempotente. Quando a actualização automática estiver desactivada, executar `python -m alembic upgrade head` no ambiente da aplicação antes de iniciar a nova versão. A migração não prepara nem envia e-mails e não apaga a fila.
+
+Depois do deploy, preparar a próxima edição pelo painel ou pelo comando existente. Manter o mesmo SMTP e os mesmos agendamentos, sem duplicar tarefas. Uma edição já preparada continua sujeita à deduplicação existente por destinatário e assunto.
 
 ## Activação no servidor
 
@@ -44,3 +58,5 @@ tests/test_newsletter.py cobre selecção temporal, exclusão de conteúdo priva
 Os testes de navegador verificam a mensagem de confirmação e limpeza do formulário a 320 e 1440 px, cancelamento e nova inscrição. Usar apenas bases isoladas para fixtures. Para pausar sem reverter dados, definir NEWSLETTER_ENABLED=false e manter a entrega transaccional; as inscrições e a fila ficam preservadas. Reverter o código só depois de pausar os boletins e tratar a fila preparada, pois um worker antigo não reconhece as regras de cancelamento dos boletins.
 
 Validação local de 19/10/2026: passaram 308 testes Python em SQLite, incluindo dez testes novos, e os três cenários de navegador descritos acima. O navegador foi Chromium 153 alternativo, com cenários em processos separados; não foi executada toda a suite de navegador local. A CI passa a incluir test_newsletter.py no job PostgreSQL existente; esse resultado e a entrega SMTP real não estão confirmados por estes ensaios locais. O comando preparar-boletim --dry-run foi executado com base isolada, sem preparar ou enviar mensagens.
+
+Validação da revisão HTML de 20/10/2026: 18 testes de boletim e 5 testes de migrações aprovados localmente, incluindo MIME multipart, URLs absolutas, escape de HTML, ausência de capa, cancelamento, selecção privada, instantâneo da edição e preservação de mensagens antigas. A entrega nestes testes usa SMTP simulado; capturas de navegador não substituem ensaios em Gmail/Outlook reais.

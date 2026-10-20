@@ -3,13 +3,14 @@ import secrets
 import smtplib
 import ssl
 import unittest
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from app import app
 from models import db, Article, Author, Category, Subscriber
-from newsletter_service import CANCELLED, digest, queue_digest, unsubscribe_token
+from newsletter_service import CANCELLED, digest, queue_digest, unsubscribe_token, newsletter_image_url, unsubscribe_url
 from submission_models import EditorialNotification
 import test_staff_governance as staff
 
@@ -80,6 +81,64 @@ class NewsletterTests(unittest.TestCase):
         self.assertIn('/boletim/cancelar/',row.body)
         self.assertIsNone(row.sent_at)
         self.assertEqual(EditorialNotification.query.filter_by(recipient=self.inactive.email).count(),0)
+
+    def test_html_snapshot_contains_covers_and_is_sent_as_multipart_alternative(self):
+        self.article.image='https://res.cloudinary.com/demo/image/upload/v1/cover.png'
+        self.article.title='Ciência <em>com rigor</em>'
+        self.article.summary='Resumo <script>não executar</script> & fontes.'
+        db.session.commit()
+        self.assertEqual(self.queue(),1)
+        row=EditorialNotification.query.filter_by(recipient=self.subscriber.email).one()
+        soup=BeautifulSoup(row.html_body,'html.parser')
+        image=soup.find('img')
+        self.assertIn('/upload/f_jpg,',image['src'])
+        self.assertIn('w_640',image['src'])
+        self.assertIn(self.article.title,image['alt'])
+        self.assertIsNone(soup.find('script'))
+        self.assertIsNone(soup.find('em'))
+        self.assertIn(self.article.title,soup.get_text())
+        self.assertNotIn(self.private.title,row.html_body)
+        self.assertIn(unsubscribe_url(self.subscriber),[a['href'] for a in soup.find_all('a')])
+        self.assertTrue(all(a['href'].startswith('https://') for a in soup.find_all('a')))
+        snapshot=row.html_body
+        self.article.image='https://example.test/changed-cover.jpg';self.article.summary='Resumo alterado depois de preparar.'
+        db.session.commit()
+        smtp=self.deliver();message=smtp.send_message.call_args.args[0]
+        self.assertEqual(message.get_content_type(),'multipart/alternative')
+        self.assertEqual([part.get_content_type() for part in message.iter_parts()],['text/plain','text/html'])
+        self.assertEqual(message.get_body(preferencelist=('html',)).get_content().rstrip('\n'),snapshot.rstrip('\n'))
+        self.assertIn(self.article.title,message.get_body(preferencelist=('plain',)).get_content())
+        self.assertNotIn('changed-cover.jpg',message.as_string())
+        self.assertIn(unsubscribe_url(self.subscriber),message['List-Unsubscribe'])
+
+    def test_cover_urls_are_public_absolute_and_invalid_sources_are_omitted(self):
+        for value in [None,'','javascript:alert(1)','data:image/png;base64,test','https://name:secret@example.test/photo.jpg']:
+            self.assertEqual(newsletter_image_url(value),'')
+        self.assertEqual(newsletter_image_url('//example.test/cover.jpg'),'https://example.test/cover.jpg')
+        self.assertTrue(newsletter_image_url('/static/img/e-coli-niaid-960.jpg').startswith('https://www.sussurrosdosaber.com/static/'))
+        image=newsletter_image_url('https://commons.wikimedia.org/wiki/Special:FilePath/E._coli_Bacteria_(7316101966).jpg')
+        self.assertTrue(image.startswith('https://www.sussurrosdosaber.com/static/img/e-coli-niaid-960.jpg'))
+
+    def test_image_change_invalidates_the_reviewed_digest_fingerprint(self):
+        before=digest(NOW)['fingerprint']
+        self.article.image='https://example.test/new-cover.jpg';db.session.commit()
+        self.assertNotEqual(before,digest(NOW)['fingerprint'])
+        with self.assertRaises(ValueError):self.queue(expected_hash=before)
+
+    def test_article_without_cover_has_no_broken_image_and_keeps_reading_links(self):
+        self.article.image='';db.session.commit();self.queue()
+        row=EditorialNotification.query.filter_by(recipient=self.subscriber.email).one()
+        soup=BeautifulSoup(row.html_body,'html.parser')
+        self.assertIsNone(soup.find('img'))
+        self.assertIn(self.article.title,soup.get_text())
+        self.assertIn('Ler o artigo',soup.get_text())
+
+    def test_legacy_queued_newsletter_still_sends_its_original_plain_text(self):
+        self.queue();row=EditorialNotification.query.filter_by(recipient=self.subscriber.email).one()
+        row.html_body=None;db.session.commit()
+        smtp=self.deliver();message=smtp.send_message.call_args.args[0]
+        self.assertFalse(message.is_multipart())
+        self.assertIn(row.body,message.get_content())
 
     def test_preview_must_be_current_and_empty_editions_are_not_queued(self):
         with self.assertRaises(ValueError):self.queue(expected_hash='0'*64)
@@ -168,13 +227,14 @@ class NewsletterTests(unittest.TestCase):
 
     def test_disabled_newsletter_does_not_block_transactional_mail(self):
         self.queue()
-        transactional=EditorialNotification(recipient=self.subscriber.email,subject='Confirme a conta',body='Mensagem transaccional')
+        transactional=EditorialNotification(recipient=self.subscriber.email,subject='Confirme a conta',body='Mensagem transaccional',html_body='<p>Not a newsletter</p>')
         db.session.add(transactional);db.session.commit()
         with patch.dict('os.environ',{'NEWSLETTER_ENABLED':'false'}):
             with self.assertRaises(ValueError):self.queue()
             smtp=self.deliver()
         self.assertEqual(smtp.send_message.call_count,1)
         self.assertEqual(smtp.send_message.call_args.args[0]['Subject'],'Confirme a conta')
+        self.assertFalse(smtp.send_message.call_args.args[0].is_multipart())
         self.assertIsNotNone(transactional.sent_at)
 
     def test_signup_preserves_deduplication_and_cancelled_accounts_can_resubscribe(self):
