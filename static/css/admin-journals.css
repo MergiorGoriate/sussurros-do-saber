@@ -29,3 +29,26 @@
 }
 .article-dropcap { display: flow-root; }
 .dark .article-dropcap::first-letter { color: #8db9f0; }
+
+/* Journal-specific rules override the light surfaces declared above. */
+body.admin-dark .journal-editor :is(h2,h3,legend){color:var(--admin-accent,#9acbff)}
+body.admin-dark .journal-editor :is(label,.editor-label,.preview-title){color:var(--ink,#edf3fa)}
+body.admin-dark .journal-editor :is(label small,.journal-editor-help,#journal-editor-status,.preview-empty,figcaption){color:var(--admin-muted,#b5c5d8)}
+body.admin-dark .journal-editor :is(.journal-title-fields,.journal-author-card,.journal-editor-note){background:var(--admin-soft,#23354b);color:var(--ink,#edf3fa);border-color:var(--line,#364457)}
+body.admin-dark .journal-editor :is(input,textarea,select){background:#152235;color:var(--ink,#edf3fa);border-color:#71859f;color-scheme:dark}
+body.admin-dark .journal-editor :is(input,textarea)::placeholder{color:var(--admin-muted,#b5c5d8);opacity:1}
+body.admin-dark .journal-editor .editor-main>h2:not(:first-child){border-color:var(--line,#364457)}
+body.admin-dark .journal-editor .markdown-toolbar button{background:var(--admin-soft,#23354b);color:var(--admin-accent,#9acbff);border-color:#71859f}
+body.admin-dark .journal-editor .markdown-toolbar button:hover{background:#314b69;border-color:var(--admin-accent,#9acbff)}
+body.admin-dark .journal-editor .markdown-preview{background:#152235;color:var(--ink,#edf3fa);border-color:#71859f}
+body.admin-dark .journal-editor .markdown-preview :is(h1,h2,h3,h4,h5,h6){color:var(--ink,#edf3fa)}
+body.admin-dark .journal-editor .markdown-preview a{color:var(--admin-accent,#9acbff)}
+body.admin-dark .journal-editor .article-dropcap::first-letter{color:var(--admin-accent,#9acbff)}
+body.admin-dark .journal-editor .markdown-preview :is(blockquote,figcaption){color:var(--admin-muted,#b5c5d8)}
+body.admin-dark .journal-editor .markdown-preview blockquote{border-color:var(--admin-accent,#9acbff)}
+body.admin-dark .journal-editor .markdown-preview :is(th,td){border-color:#52647c}
+body.admin-dark .journal-editor .markdown-preview :is(th,pre,code,.preview-chart){background:var(--admin-soft,#23354b);color:var(--ink,#edf3fa)}
+body.admin-dark .journal-editor .markdown-preview .preview-chart text{fill:var(--ink,#edf3fa)}
+body.admin-dark .journal-editor .markdown-preview th{color:var(--ink,#edf3fa)}
+body.admin-dark .journal-editor :is(.secondary-btn,.admin-secondary){background:var(--admin-soft,#23354b);color:var(--admin-accent,#9acbff);border-color:#71859f}
+body.admin-dark .journal-editor :is(button,a,input,textarea,select):focus-visible{outline:3px solid var(--admin-accent,#9acbff);outline-offset:3px}
