@@ -824,7 +824,7 @@ def install_submission_cli(app):
                         smtp.send_message(message)
                         row.sent_at, row.last_error = utcnow(), ''
                         delivered += 1
-                    except smtplib.SMTPException:
+                    except (OSError, smtplib.SMTPException):
                         row.last_error = 'Falha no envio SMTP; será tentado novamente.'
                 # Persist server acceptance before QUIT: a disconnect while closing
                 # the connection must not turn accepted messages into pending ones.
