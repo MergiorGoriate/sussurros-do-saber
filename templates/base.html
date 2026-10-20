@@ -92,7 +92,7 @@ window.dataLayer.push({event:'default_consent'});
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 <link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-notification-cards-v9') }}">
 {% block head_extra %}{% endblock %}
-<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notice-layout') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footnotes.css', v='20261019-footnotes-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/public-typography.css', v='20261020-v1') }}"></head>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notice-layout') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footnotes.css', v='20261019-footnotes-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/public-typography.css', v='20261020-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css', v='20261020-v1') }}"></head>
 <body class="public-site bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
 
 <div id="readingProgress">
@@ -138,8 +138,8 @@ window.dataLayer.push({event:'default_consent'});
 </div>
 </header>
 <main id="conteudo"><p id="reader-action-feedback" class="max-w-6xl mx-auto px-4 py-2" role="status" aria-live="polite" hidden></p>{% block content %}{% endblock %}</main>
-<footer class="bg-ink text-white mt-20">
-<div class="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-9">
+<footer class="site-footer bg-ink text-white mt-20" aria-label="Rodapé">
+<div class="footer-layout max-w-7xl mx-auto px-4">
 <div>
 <a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-footer.png') }}" alt="Logotipo do Sussurros do Saber" loading="lazy" decoding="async" width="240" height="64"><span>Sussurros do Saber</span></a>
 <p class="text-white/65">Divulgação científica independente, com atenção à investigação em África.</p>
@@ -160,45 +160,58 @@ window.dataLayer.push({event:'default_consent'});
 </div>
 </div>
 </div>
-<div>
-<h3 class="font-bold mb-4">Explorar</h3>
-<div class="grid gap-2 text-white/70">
-<a href="/artigos">Artigos</a>
-<a href="/revistas">Revistas</a>
-<a href="/recursos">Recursos</a>
-<a href="/conta/biblioteca">Os meus favoritos</a>
-</div>
-</div>
-<div>
-<h3 class="font-bold mb-4">Autores e pesquisa</h3>
-<div class="grid gap-2 text-white/70">
-<a href="/servicos">Serviços</a>
-<a href="/servicos/edicao-cientifica">Edição Científica</a>
-<a href="/autores">Autores</a>
-<a href="/contacto">Contacto</a>
-</div>
-</div>
-<div>
-<h3 class="font-bold mb-4">Institucional e legal</h3>
-<div class="grid gap-2 text-white/70">
-<a href="/sobre">Sobre Nós</a>
-<a href="/termos-e-condicoes">Termos e Condições</a>
-<a href="/politica-de-privacidade">Política de Privacidade</a>
-<a href="/politica-de-publicidade">Política de Publicidade</a>
-<a href="{{ url_for('editorial_policy') }}">Políticas Editoriais</a>
-<a href="/diretrizes-para-autores">Diretrizes para Autores</a>
-<a href="/politica-de-correcoes">Política de Correções</a>
+
+<nav class="footer-column" aria-labelledby="footer-explore">
+<h2 id="footer-explore">Explorar</h2>
+<a href="/artigos">Artigos</a><a href="/revistas">Revistas</a>
+<a href="/recursos">Recursos</a><a href="/autores">Autores</a>
+<a href="/conta/biblioteca">Os meus favoritos</a><a href="/feed.xml">Feed RSS</a>
+</nav>
+<nav class="footer-column" aria-labelledby="footer-authors">
+<h2 id="footer-authors">Autores e participação</h2>
+<a href="/submissoes/nova" class="footer-submit">Submeter manuscrito <span aria-hidden="true">↗</span></a>
+<a href="/submissoes/">Minhas submissões</a>
+<a href="/diretrizes-para-autores">Directrizes para autores</a>
+<a href="/servicos/edicao-cientifica">Edição científica</a>
+<a href="/contacto?assunto=Sugerir%20uma%20pauta">Sugerir uma pauta</a>
+<a href="/contacto?assunto=Reportar%20um%20erro">Reportar um erro</a>
+</nav>
+<nav class="footer-column" aria-labelledby="footer-institutional">
+<h2 id="footer-institutional">Institucional</h2>
+<a href="/sobre">Sobre nós</a><a href="/equipa">Equipa</a>
+<a href="/servicos">Serviços</a><a href="/contacto">Contacto</a>
+<a href="/contacto?assunto=Proposta%20de%20parceria">Propor uma parceria</a>
+<a href="#footer-faq">Perguntas frequentes</a>
+</nav>
+<nav class="footer-column" aria-labelledby="footer-policies">
+<h2 id="footer-policies">Políticas e privacidade</h2>
+<a href="{{ url_for('editorial_policy') }}">Políticas editoriais</a>
+<a href="/politica-de-correcoes">Política de correcções</a>
+<a href="/termos-e-condicoes">Termos e condições</a>
+<a href="/politica-de-privacidade">Política de privacidade</a>
+<a href="/politica-de-publicidade">Política de publicidade</a>
 <a href="/acessibilidade">Acessibilidade</a>
-{% if google_cmp_enabled %}
-<button id="googleCmpSettings" class="footer-cookie-link" type="button" disabled>Gerir consentimento de publicidade</button>
-<p id="googleCmpStatus" role="status" class="text-sm">A carregar as opções de privacidade do Google…</p>
-{% endif %}
 <button id="cookieSettingsLink" class="footer-cookie-link" type="button">Configurar cookies</button>
+{% if google_cmp_enabled %}
+<details class="footer-privacy">
+<summary>Preferências de publicidade</summary>
+<button id="googleCmpSettings" class="footer-cookie-link" type="button" disabled>Gerir consentimento de publicidade</button>
+<p id="googleCmpStatus" role="status">A carregar as opções de privacidade do Google…</p>
+</details>
+{% endif %}
+</nav>
 </div>
+<section id="footer-faq" class="footer-faq max-w-7xl mx-auto px-4" aria-labelledby="footer-faq-title">
+<h2 id="footer-faq-title">Perguntas frequentes</h2>
+<div class="footer-faq-grid">
+<details><summary>Como posso submeter um manuscrito?</summary><p>Consulte as <a href="/diretrizes-para-autores">directrizes para autores</a> e aceda a <a href="/submissoes/nova">Submeter manuscrito</a>. Entre ou crie uma conta para iniciar a submissão.</p></details>
+<details><summary>Onde acompanho a minha submissão?</summary><p>Aceda a <a href="/submissoes/">Minhas submissões</a> com a conta utilizada no envio para consultar o estado e as comunicações da equipa editorial.</p></details>
+<details><summary>Como comunico um erro num artigo?</summary><p>Use o <a href="/contacto?assunto=Reportar%20um%20erro">formulário de contacto</a>, indique o título e a ligação do artigo e descreva o problema. Consulte a <a href="/politica-de-correcoes">política de correcções</a>.</p></details>
+<details><summary>Posso sugerir um tema ou uma colaboração?</summary><p>Envie a sua <a href="/contacto?assunto=Sugerir%20uma%20pauta">sugestão de pauta</a> ou <a href="/contacto?assunto=Proposta%20de%20parceria">proposta de parceria</a> através do formulário de contacto, com uma breve descrição.</p></details>
 </div>
-</div>
-<div class="border-t border-white/15">
-<div class="max-w-7xl mx-auto px-4 py-5 text-sm text-white/55">© 2026 Sussurros do Saber.</div>
+</section>
+<div class="footer-bottom">
+<div class="max-w-7xl mx-auto px-4"><span>© 2026 Sussurros do Saber.</span><span>Nampula · Moçambique</span></div>
 </div>
 </footer>
 <section id="cookieConsent" class="cookie-consent" role="dialog" aria-modal="false" aria-labelledby="cookieTitle" aria-describedby="cookieDescription" hidden>
