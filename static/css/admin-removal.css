@@ -1,0 +1,117 @@
+/* The confirmation remains a normal CSRF-protected POST; presentation only. */
+.removal-page {
+  --remove-surface: #fff;
+  --remove-text: #172c43;
+  --remove-muted: #53667a;
+  --remove-border: #d8e1eb;
+  --remove-soft: #f3f6fb;
+  --remove-accent: #24558c;
+  --remove-danger: #a52c38;
+  --remove-warning: #fff1f2;
+  width: 100%;
+  max-width: 850px;
+  color: var(--remove-text);
+  font-family: Inter, system-ui, sans-serif;
+}
+.admin-dark .removal-page {
+  --remove-surface: #1b283a;
+  --remove-text: #edf3fa;
+  --remove-muted: #b5c5d8;
+  --remove-border: #40516a;
+  --remove-soft: #23354b;
+  --remove-accent: #9acbff;
+  --remove-danger: #ffc2c8;
+  --remove-warning: #482b38;
+}
+.removal-page * { box-sizing: border-box; }
+.removal-page h1, .removal-page h2, .removal-page h3 {
+  font-family: inherit;
+  color: var(--remove-text);
+  line-height: 1.3;
+  text-align: left;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.removal-page h1 { font-size: clamp(1.7rem, 3vw, 2.15rem); letter-spacing: -.03em; }
+.removal-page h2 { font-size: clamp(1.2rem, 2vw, 1.5rem); }
+.removal-page h3 { font-size: 1rem; }
+.removal-page p { line-height: 1.7; overflow-wrap: anywhere; }
+.removal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--remove-accent);
+  font-size: .9rem;
+  margin-bottom: 20px;
+  text-decoration: none;
+}
+.removal-back:hover { text-decoration: underline; }
+.removal-eyebrow {
+  display: block;
+  font-size: .75rem;
+  font-weight: 750;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--remove-accent);
+  margin-bottom: 10px;
+}
+.removal-heading { margin-bottom: 28px; }
+.removal-heading p { color: var(--remove-muted); margin: 12px 0 0; }
+.removal-card {
+  border: 1px solid var(--remove-border);
+  border-radius: 20px;
+  padding: 32px;
+  background: var(--remove-surface);
+  box-shadow: 0 6px 24px #14283f06;
+}
+.removal-record { display: flex; align-items: center; gap: 18px; }
+.removal-record > div { min-width: 0; }
+.removal-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  color: var(--remove-danger);
+  background: var(--remove-warning);
+}
+.removal-icon svg { width: 28px; height: 28px; }
+.removal-kind { display: block; color: var(--remove-muted); font-size: .85rem; margin-bottom: 6px; }
+.removal-consequences { border-top: 1px solid var(--remove-border); margin-top: 26px; padding-top: 26px; }
+.removal-consequences p { margin: 12px 0 24px; }
+.removal-note { display: flex; gap: 12px; padding: 18px; background: var(--remove-soft); border-radius: 12px; color: var(--remove-muted); }
+.removal-note > svg { width: 22px; height: 22px; flex-shrink: 0; }
+.removal-note strong { color: var(--remove-text); font-size: .88rem; }
+.removal-note p { font-size: .85rem; margin: 5px 0 0; }
+.removal-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; padding-top: 26px; margin-top: 26px; border-top: 1px solid var(--remove-border); }
+.removal-page .removal-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 12px 18px;
+  border: 1px solid var(--remove-border);
+  border-radius: 10px;
+  font: 650 .9rem/1.5 Inter, system-ui, sans-serif;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+}
+.removal-page .removal-cancel { background: var(--remove-surface); color: var(--remove-accent); }
+.removal-page .removal-confirm { background: #a52c38; border-color: #a52c38; color: #fff; }
+.admin-dark .removal-page .removal-confirm { background: #ffc2c8; border-color: #ffc2c8; color: #48202a; }
+.removal-button svg { width: 20px; height: 20px; flex-shrink: 0; }
+.removal-page .removal-button:hover { filter: brightness(.94); }
+.removal-page :is(a, button):focus-visible { outline: 3px solid var(--remove-accent); outline-offset: 4px; }
+@media (max-width: 600px) {
+  .removal-card { padding: 20px; border-radius: 16px; }
+  .removal-record { gap: 12px; align-items: flex-start; }
+  .removal-icon { width: 44px; height: 44px; border-radius: 12px; }
+  .removal-icon svg { width: 23px; height: 23px; }
+  .removal-note { padding: 14px; }
+  .removal-actions { flex-direction: column; }
+  .removal-button { width: 100%; }
+}
