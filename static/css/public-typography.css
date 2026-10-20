@@ -20,6 +20,18 @@
 .public-site .site-header,.public-site>footer{font-family:var(--public-ui-font)}
 .public-site .site-header #mainNav{font-size:.875rem;line-height:1.5}
 .public-site>footer{font-size:.9375rem;line-height:1.7}
+/* Explicit text colours keep secondary content legible on its actual surface. */
+.public-site .journal-card p{opacity:1;color:#52616b}
+.dark .public-site .journal-card p{color:#c3d0db}
+.public-site .publication-card dt{opacity:1;color:#52616b}
+.public-site :is(.open-badge,.publication-status){color:#1e4e8c;background:#eaf2fb}
+.dark .public-site :is(.open-badge,.publication-status){color:#bfdbfe;background:#18334c}
+.dark .public-site .publication-card footer a{color:#bfdbfe}
+.dark .public-site .contributor-call{background:#142129;color:#edf3fa}
+.dark .public-site :is(.legal-content a,.learning-card a,.save-resource){color:#99c8fb}
+.dark .public-site .publication-card dt{color:#b5c5d8}
+.public-site :is(input,textarea)::placeholder{color:#526477;opacity:1}
+.dark .public-site :is(input,textarea)::placeholder{color:#b5c5d8}
 @media(max-width:640px){
  .public-site main h1{font-size:clamp(1.875rem,7.5vw,2.5rem);line-height:1.18}
  .public-site .article-header .article-title{font-size:clamp(1.875rem,7.5vw,2.5rem);line-height:1.18}

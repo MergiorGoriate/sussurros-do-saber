@@ -146,7 +146,7 @@ class SubmissionTests(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertIn('attachment',response.headers['Content-Disposition'])
         self.assertIn('no-store',response.headers['Cache-Control'])
-        self.assertEqual(response.data,docx_bytes())
+        self.assertEqual(response.data,file.payload)
 
     def test_configurable_types_and_orcid_validation(self):
         manuscript=self.draft()

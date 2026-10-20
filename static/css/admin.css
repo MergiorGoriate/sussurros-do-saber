@@ -342,6 +342,7 @@ select {
 .login-card p {
   color: #657174;
 }
+.admin-dark .login-card :is(p,.security-caption){color:#b5c5d8}
 .login-card > a {
   display: block;
   margin-top: 18px;

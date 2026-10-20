@@ -1,6 +1,7 @@
 """Digest queue, cancellation, delivery, and current management permissions."""
 import secrets
 import smtplib
+import ssl
 import unittest
 from datetime import datetime, timedelta
 from types import SimpleNamespace
@@ -60,10 +61,11 @@ class NewsletterTests(unittest.TestCase):
         with patch('newsletter_service.Subscriber',scoped):
             return queue_digest(now=NOW,**kwargs)
 
-    def deliver(self, failure=False):
+    def deliver(self, failure=False, send_results=None):
         scoped=SimpleNamespace(query=EditorialNotification.query.filter_by(recipient=self.subscriber.email),
             id=EditorialNotification.id,last_error=EditorialNotification.last_error,subject=EditorialNotification.subject)
         with patch('submissions.EditorialNotification',scoped), patch('submissions.smtplib.SMTP') as smtp:
+            if send_results is not None:smtp.return_value.__enter__.return_value.send_message.side_effect=send_results
             if failure:smtp.return_value.__enter__.return_value.send_message.side_effect=smtplib.SMTPException('test failure')
             result=app.test_cli_runner().invoke(args=['enviar-notificacoes'])
             self.assertEqual(result.exit_code,0,result.output)
@@ -111,6 +113,47 @@ class NewsletterTests(unittest.TestCase):
         row=EditorialNotification.query.filter_by(recipient=self.subscriber.email).one()
         self.assertEqual(row.last_error,CANCELLED);self.assertIsNone(row.sent_at)
         self.assertEqual(row.attempts,0)
+
+    def test_smtp_validates_server_certificates_for_starttls_and_ssl(self):
+        self.queue()
+        smtp = self.deliver()
+        context = smtp.starttls.call_args.kwargs['context']
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+        with patch.dict('os.environ', {'SMTP_SSL':'true', 'SMTP_TLS':'false'}), patch('submissions.smtplib.SMTP_SSL') as factory:
+            result = app.test_cli_runner().invoke(args=['enviar-notificacoes'])
+            self.assertEqual(result.exit_code, 0, result.output)
+            context = factory.call_args.kwargs['context']
+            self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+            self.assertTrue(context.check_hostname)
+            factory.return_value.__enter__.return_value.starttls.assert_not_called()
+
+    def test_smtp_disconnect_at_quit_does_not_requeue_accepted_message(self):
+        self.queue()
+        scoped = SimpleNamespace(query=EditorialNotification.query.filter_by(recipient=self.subscriber.email),
+            id=EditorialNotification.id,last_error=EditorialNotification.last_error,subject=EditorialNotification.subject)
+        with patch('submissions.EditorialNotification',scoped), patch('submissions.smtplib.SMTP') as smtp:
+            smtp.return_value.__exit__.side_effect = smtplib.SMTPServerDisconnected('disconnect at QUIT')
+            result = app.test_cli_runner().invoke(args=['enviar-notificacoes'])
+            self.assertNotEqual(result.exit_code, 0)
+        row = EditorialNotification.query.filter_by(recipient=self.subscriber.email).one()
+        self.assertIsNotNone(row.sent_at)
+        self.assertEqual(row.last_error, '')
+        self.deliver().send_message.assert_not_called()
+
+    def test_network_error_mid_batch_keeps_accepted_messages_sent(self):
+        self.queue()
+        second=EditorialNotification(recipient=self.subscriber.email,subject='Mensagem transaccional de teste',body='Segundo envio')
+        db.session.add(second);db.session.commit()
+        self.deliver(send_results=[None,OSError('connection reset')])
+        rows=EditorialNotification.query.filter_by(recipient=self.subscriber.email).order_by(EditorialNotification.id).all()
+        self.assertIsNotNone(rows[0].sent_at)
+        self.assertIsNone(rows[1].sent_at)
+        self.assertEqual(rows[1].attempts,1)
+        self.assertTrue(rows[1].last_error)
+        smtp=self.deliver()
+        self.assertEqual(smtp.send_message.call_count,1)
+        self.assertEqual(smtp.send_message.call_args.args[0]['Subject'],second.subject)
 
     def test_delivery_headers_and_retry_preserve_truthful_sent_state(self):
         self.queue()

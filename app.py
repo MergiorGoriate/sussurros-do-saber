@@ -12,6 +12,7 @@ import os
 import re
 import secrets
 import time
+from functools import lru_cache
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from html import escape as html_escape, unescape as html_unescape
@@ -24,6 +25,7 @@ from markupsafe import Markup
 from sqlalchemy import case, inspect, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.utils import safe_join
 from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
 from journal_metadata import journal_authors
 from scientific_search import metadata_match, doi_url
@@ -51,6 +53,32 @@ app.wsgi_app = ProxyFix(
 )
 with open(os.path.join(app.static_folder, 'css', 'tailwind.css'), 'rb') as built_css:
     TAILWIND_VERSION = hashlib.sha256(built_css.read()).hexdigest()[:12]
+
+
+@lru_cache(maxsize=512)
+def _static_digest(path, modified, size):
+    with open(path, 'rb') as asset:
+        return hashlib.sha256(asset.read()).hexdigest()[:16]
+
+
+def static_asset_version(filename):
+    path = safe_join(app.static_folder, filename)
+    if path:
+        try:
+            stat = os.stat(path)
+            if os.path.isfile(path):
+                return _static_digest(path, stat.st_mtime_ns, stat.st_size)
+        except OSError:
+            pass
+    return None
+
+
+@app.url_defaults
+def version_static_urls(endpoint, values):
+    if endpoint == 'static' and isinstance(values.get('filename'), str):
+        version = static_asset_version(values['filename'])
+        if version:
+            values['v'] = version
 
 IS_PRODUCTION = (
     os.getenv("RENDER", "").lower() == "true"
@@ -414,7 +442,12 @@ def security_headers(response):
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     if request.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        filename = (request.view_args or {}).get('filename', '')
+        version = static_asset_version(filename) if filename else None
+        if response.status_code == 200 and version and request.args.get('v') == version:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "public, no-cache, max-age=0, must-revalidate"
     else:
         # Páginas de artigos contêm um token CSRF individual do formulário de
         # comentários e nunca podem ser guardadas por caches partilhadas.

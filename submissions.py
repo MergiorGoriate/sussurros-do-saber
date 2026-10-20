@@ -5,6 +5,7 @@ import os
 import re
 import secrets
 import smtplib
+import ssl as ssl_module
 from datetime import datetime
 from email.message import EmailMessage
 from functools import wraps
@@ -795,9 +796,13 @@ def install_submission_cli(app):
         delivered = 0
         try:
             factory = smtplib.SMTP_SSL if ssl else smtplib.SMTP
-            with factory(host, int(os.getenv('SMTP_PORT', '465' if ssl else '587')), timeout=15) as smtp:
+            connection_options = {'timeout': 15}
+            tls_context = ssl_module.create_default_context()
+            if ssl:
+                connection_options['context'] = tls_context
+            with factory(host, int(os.getenv('SMTP_PORT', '465' if ssl else '587')), **connection_options) as smtp:
                 if tls and not ssl:
-                    smtp.starttls()
+                    smtp.starttls(context=tls_context)
                 if os.getenv('SMTP_USERNAME'):
                     smtp.login(os.environ['SMTP_USERNAME'], os.environ.get('SMTP_PASSWORD', ''))
                 for row in rows:
@@ -819,9 +824,11 @@ def install_submission_cli(app):
                         smtp.send_message(message)
                         row.sent_at, row.last_error = utcnow(), ''
                         delivered += 1
-                    except smtplib.SMTPException:
+                    except (OSError, smtplib.SMTPException):
                         row.last_error = 'Falha no envio SMTP; será tentado novamente.'
-            db.session.commit()
+                # Persist server acceptance before QUIT: a disconnect while closing
+                # the connection must not turn accepted messages into pending ones.
+                db.session.commit()
         except (OSError, smtplib.SMTPException, ValueError) as error:
             db.session.rollback()
             raise click.ClickException('Falha na ligação SMTP. Notificações preservadas para nova tentativa.') from error
