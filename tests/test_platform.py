@@ -426,9 +426,33 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(csv_safe_cell("texto normal"), "texto normal")
 
     def test_static_assets_have_long_immutable_cache(self):
-        response = self.client.get("/static/css/style.css")
+        from flask import url_for
+        with app.test_request_context():
+            asset_url = url_for('static', filename='css/style.css')
+        response = self.client.get(asset_url)
         self.assertIn("max-age=31536000", response.headers.get("Cache-Control", ""))
         self.assertIn("immutable", response.headers.get("Cache-Control", ""))
+
+    def test_static_assets_without_current_fingerprint_must_revalidate(self):
+        for path in ['/static/css/style.css', '/static/css/style.css?v=old-release', '/static/missing-audit.js']:
+            response = self.client.get(path)
+            self.assertNotIn('immutable', response.headers['Cache-Control'])
+            self.assertIn('must-revalidate', response.headers['Cache-Control'])
+
+    def test_static_url_changes_when_asset_contents_change(self):
+        from flask import url_for
+        from urllib.parse import parse_qs, urlsplit
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as folder, patch.object(app, '_static_folder', folder):
+            path = Path(folder, 'audit.css')
+            path.write_text('body{color:black}')
+            with app.test_request_context():
+                first = url_for('static', filename='audit.css', v='old-manual-version')
+                self.assertEqual(first, url_for('static', filename='audit.css'))
+                path.write_text('body{color:white;background:black}')
+                second = url_for('static', filename='audit.css')
+            self.assertNotEqual(first, second)
+            self.assertRegex(parse_qs(urlsplit(second).query)['v'][0], r'^[0-9a-f]{16}$')
 
     def test_static_gzip_respects_negotiation_ranges_and_cache(self):
         import gzip
@@ -1342,6 +1366,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

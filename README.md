@@ -2,7 +2,7 @@
 
 Plataforma de divulgação científica e publicação editorial em português, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.
 
-Este README descreve a implementação revista em **17 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
+Este README descreve a implementação revista em **20 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
 
 ## Índice
 
@@ -23,6 +23,7 @@ Este README descreve a implementação revista em **17 de outubro de 2026**, com
 - [Configuração](#configuração)
 - [Produção, manutenção e recuperação](#produção-manutenção-e-recuperação)
 - [Segurança, privacidade e desempenho](#segurança-privacidade-e-desempenho)
+- [Auditoria de 20/10/2026](#auditoria-de-20102026)
 - [Testes e validação](#testes-e-validação)
 - [Limites da implementação](#limites-da-implementação)
 - [Inventário completo de rotas](#inventário-completo-de-rotas)
@@ -33,7 +34,7 @@ Este README descreve a implementação revista em **17 de outubro de 2026**, com
 
 As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em produção depende de um deploy bem-sucedido e da configuração dos serviços externos.
 
-- **Compilação CSS:** Tailwind 4.3.3 com CLI própria, configuração em CSS e fontes de classes explícitas; Playwright 1.64.0. [Migração, compatibilidade de navegadores e limitações da validação](docs/TAILWIND4_MIGRATION_20261017.md).
+- **Compilação CSS:** Tailwind 4.3.3 com CLI própria, configuração em CSS e fontes de classes explícitas; Playwright 1.64.1. [Migração, compatibilidade de navegadores e limitações da validação](docs/TAILWIND4_MIGRATION_20261017.md).
 - **Ícones de leitura:** ORCID, partilhas Bluesky/Reddit e seta da conta com representação local, utilizável mesmo quando a fonte externa de ícones falha.
 - **Fila de revisão do portal:** a Área de trabalho mostra artigos atribuídos com parecer por entregar; reatribuição, revogação de permissão e fim do mandato retiram o acesso correspondente.
 
@@ -52,7 +53,7 @@ As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em 
 - **GitHub Packages:** publicação de imagens Docker no GHCR a partir de Releases ou execução manual para uma tag existente.
 - **Leitura e dispositivos móveis:** favoritos/notificações por conta em cartões responsivos, índice recolhível no telemóvel e aberto no computador, carregamento diferido de publicidade e fontes sem bloquear a apresentação.
 - **Presença digital:** perfis Bluesky e Reddit no rodapé, botões de partilha nas páginas de artigos de divulgação e no cabeçalho dos artigos científicos, e meta tags de verificação Bing/Yandex.
-- **Manutenção:** remoção de quatro ficheiros legados sem referências de runtime. A compilação mantém Tailwind 3.4.19; migrar para Tailwind 4 requer adaptar CLI, configuração e CSS, não apenas mudar a dependência.
+- **Manutenção:** remoção de quatro ficheiros legados sem referências de runtime. A compilação actual usa Tailwind 4.3.3 e a CLI própria, conforme package-lock.json e a documentação da migração.
 
 ### Últimas alterações integradas
 
@@ -480,7 +481,7 @@ Registo, recuperação, confirmação de submissão e decisões colocam mensagen
 flask --app app enviar-notificacoes --limit 50
 ```
 
-Agendar, por exemplo, a cada minuto, no ambiente com a mesma base e segredos. O comando aceita limite 1–500, conserva mensagens pendentes, regista tentativas e usa Message-ID estável. TLS ou SSL é obrigatório fora dos testes. Uma falha entre entrega SMTP e commit pode causar duplicação na tentativa seguinte; o Message-ID não garante entrega exactamente uma vez. Sem a tarefa SMTP, as mensagens ficam na fila.
+Agendar, por exemplo, a cada minuto, no ambiente com a mesma base e segredos. O comando aceita limite 1–500, conserva mensagens pendentes, regista tentativas e usa Message-ID estável. TLS ou SSL é obrigatório fora dos testes, com validação do certificado e do nome do servidor. As mensagens aceites são confirmadas na base antes de fechar a ligação SMTP, para uma falha no QUIT não as colocar novamente na fila. Uma falha entre entrega SMTP e commit pode causar duplicação na tentativa seguinte; o Message-ID não garante entrega exactamente uma vez. Sem a tarefa SMTP, as mensagens ficam na fila.
 
 ### Analytics, consentimento e redes sociais
 
@@ -709,12 +710,45 @@ Coolify executa a aplicação; não é o local de delegação de nameservers. N�
 - CSP com nonce/scripts autorizados, `nosniff`, política de referência, restrições de permissões e HSTS quando HTTPS. A política mantém estilos inline permitidos para a interface existente; não declarar uma CSP sem qualquer inline.
 - `ProxyFix` tem confiança configurável em cabeçalhos encaminhados: por padrão, um salto para IP/protocolo e nenhum para host. Ajustar apenas à topologia real de Cloudflare/Coolify; não aceitar cabeçalhos arbitrários directamente na aplicação.
 - Respostas administrativas, contas, Google e submissões usam cache privado/no-store; áreas privadas também recebem restrições de indexação quando previstas.
-- Gzip para texto elegível, respeitando negociação; cache curto nas páginas públicas elegíveis e cache longo de estáticos versionados. Não aplicar cache público ao HTML com sessão/formulário privado.
+- Gzip para texto elegível, respeitando negociação; cache curto nas páginas públicas elegíveis e cache longo apenas de estáticos com a impressão digital actual do conteúdo. `url_for('static', ...)` acrescenta automaticamente `v=<sha256>`; recursos sem a impressão digital actual exigem revalidação. Não aplicar cache público ao HTML com sessão/formulário privado.
 - Imagens responsivas/lazy loading, optimização Cloudinary e listas que evitam carregar corpos desnecessários. CSS Tailwind é compilado no build.
 - Navegação responsiva, labels, foco de teclado, diálogos e página de acessibilidade existem; isso não é certificação WCAG nem auditoria completa por leitores de ecrã.
 - CSV administrativo aplica tratamento de valores para reduzir interpretação como fórmulas. Exportações contêm dados pessoais e são restritas ao painel.
 
 Evitar publicar dumps, tokens, segredos TOTP, anexos privados e credenciais em issues, logs ou ficheiros versionados. As validações existentes não equivalem a auditoria de segurança independente.
+
+## Auditoria de 20/10/2026
+
+Base revista: `main` no commit `03831d527752718db7ec78057fa15a44aab51db2`, incluindo os PRs #235 e #236. Não havia PRs abertos no início da auditoria. Foram analisados código, recursos estáticos, cabeçalhos, navegação, persistência do navegador, consentimento e entrega pela fila existente. Os testes funcionais usaram SQLite e identidades sintéticas; não alteraram a base de produção nem enviaram e-mails reais.
+
+### Problemas corrigidos
+
+| Área | Falha confirmada e correcção |
+| --- | --- |
+| Cache após deploy | Recursos sem versão recebiam um ano de cache imutável. As URLs estáticas geradas por Flask passam a incluir a impressão digital do conteúdo; URLs sem a versão actual exigem revalidação. Erros de recursos não recebem cache imutável. |
+| SMTP seguro | STARTTLS e SMTP_SSL passam a receber um contexto que valida o certificado e o nome do servidor. Um certificado inválido impede autenticação e envio. |
+| Estado da fila SMTP | Uma falha ao fechar a ligação podia desfazer o registo de mensagens já aceites. O estado é agora confirmado antes de QUIT, preservando as tentativas e a prevenção de reenvio desse lote. Continua possível haver duplicação se o processo falhar entre a aceitação SMTP e o commit; não existe garantia de entrega exactamente uma vez. |
+| Contraste | Corrigidos textos secundários dos cartões, metadados e ligações de revistas, convite a autores, ligações educativas e directrizes no modo escuro. A ajuda do login administrativo também mantém contraste quando o tema escuro é aplicado. |
+| Ordem dos estilos | Os estilos de revistas e aprendizagem eram injectados pelo JavaScript depois dos estilos comuns, sobrepondo cores e tipografia. Passaram para CSS local carregado pelos respectivos templates, antes das regras comuns de leitura. |
+| Colecção educativa | JSON inválido, um valor que não fosse uma lista ou armazenamento bloqueado podiam interromper o JavaScript. A leitura passa a validar os dados; falhas de escrita apresentam uma mensagem sem impedir os filtros. |
+| Acessibilidade do glossário | Acrescentado um rótulo explícito ao campo de pesquisa, preservando a apresentação. |
+| Documentação | Actualizadas a data da revisão e a versão do Playwright; removida a afirmação contraditória de que a compilação ainda usava Tailwind 3. |
+
+### Verificações efectuadas
+
+- A suite inicial executou **308 testes Python sem falhas**. Os testes de regressão novos verificam certificados SMTP, desconexão em QUIT e invalidação de cache por conteúdo. Os cinco novos testes de navegador passaram. O teste de download compara agora os bytes com o ficheiro efectivamente guardado, evitando a instabilidade causada pela data interna de um ZIP recriado. Os resultados da suite final constam dos checks do PR.
+- O percurso local por **16 páginas e 76 destinos internos distintos** não encontrou respostas de erro. Foram incluídos os recursos estáticos e as ligações públicas apresentadas nessas páginas; isto não equivale a percorrer todos os registos da base real.
+- As páginas públicas observadas no Chromium não apresentaram erros JavaScript nem transbordo horizontal a 360 e 1280 píxeis. Os testes de contraste cobrem elementos concretos em ambos os temas; os testes de aprendizagem incluem dados locais inválidos e armazenamento bloqueado. Esta amostragem não certifica conformidade integral com WCAG.
+- Os **6 testes JavaScript de consentimento passaram**; a compilação Tailwind foi concluída. `npm audit --omit=dev --audit-level=high` e `pip-audit -r requirements.txt` não encontraram vulnerabilidades conhecidas nas dependências abrangidas, na data da execução. O resultado não cobre vulnerabilidades ainda não publicadas nem constitui uma análise de todo o código por si só.
+- Foram feitos apenas pedidos GET públicos a `/`, `/contacto`, `/equipa`, `/healthz`, `/robots.txt` e `/sitemap.xml` no domínio oficial; os seis responderam com HTTP 200. Não foram ensaiados envios de formulários ou autenticação real em produção.
+
+### Validação no Coolify após integrar
+
+1. Integrar o PR depois de os checks passarem e executar Redeploy da revisão integrada. Confirmar a revisão nos logs e a resposta HTTP 200 de `/healthz`.
+2. Abrir uma janela nova e confirmar que as URLs de CSS/JS incluem `v=`. Verificar artigos, revistas, aprendizagem, rodapé e formulários num telemóvel e nos dois temas disponíveis.
+3. Confirmar SMTP_HOST, SMTP_PORT, SMTP_FROM e o modo TLS/SSL no ambiente. `flask --app app preparar-boletim --dry-run` verifica a selecção e a presença da configuração; **não comprova ligação, autenticação SMTP ou recepção**. Usar um destinatário de teste controlado para validar entrega e inspeccionar também spam e os registos do fornecedor.
+4. Confirmar a tarefa que prepara o boletim e **um único worker** periódico de `enviar-notificacoes`, incluindo fuso horário e última execução. Seguir [a operação do boletim](docs/NEWSLETTER.md), sem criar outro sistema de newsletter ou recomendação.
+5. Verificar backups com recuperação numa base isolada, credenciais Google/Cloudinary/Turnstile, DNS de e-mail e monitorização no ambiente efectivo. A auditoria local não confirma estas configurações nem substitui revisão científica das fontes de cada artigo.
 
 ## Testes e validação
 
@@ -741,7 +775,7 @@ O Playwright espera aplicação em `http://127.0.0.1:5000`, com fixtures/configu
 
 A CI de `main`/pull requests executa testes Python, auditoria pip, build CSS, auditoria npm de dependências de produção, navegador Chromium e upload de diagnóstico. O workflow separado constrói Docker. A CI inclui ensaios de baseline e restauração PostgreSQL 18 com dados sintéticos, verificando preservação do conteúdo e isolamento da base restaurada. Dependabot está configurado para dependências do projecto. Ver o resultado do commit específico no GitHub Actions; a presença de testes não significa que passaram num deployment diferente.
 
-[docs/site-audit-20261005.md](docs/site-audit-20261005.md) guarda uma auditoria histórica com escopo/commit e limitações próprias. Não usar as contagens ou observações daquele documento como prova automática do estado actual. Consultar também [a auditoria funcional de 08/10](docs/PORTAL_AUDIT_20261008.md), [a matriz de permissões](docs/PERMISSIONS_AUDIT.md) e [a recuperação do login](docs/ADMIN_LOGIN_RECOVERY_20261008.md). Testes de navegador usam contas/dados sintéticos, incluindo computador e telemóvel, tarefas, aceites, remoções, notificações e barra lateral. Nesta revisão do README, a verificação é documental contra o código, não um novo ensaio completo de produção. Google real, uploads Cloudinary reais, contas de homologação, SMTP, backups e configuração efectiva do Coolify continuam a exigir validação no ambiente correspondente.
+[docs/site-audit-20261005.md](docs/site-audit-20261005.md) guarda uma auditoria histórica com escopo/commit e limitações próprias. Não usar as contagens ou observações daquele documento como prova automática do estado actual. Consultar também [a auditoria funcional de 08/10](docs/PORTAL_AUDIT_20261008.md), [a matriz de permissões](docs/PERMISSIONS_AUDIT.md) e [a recuperação do login](docs/ADMIN_LOGIN_RECOVERY_20261008.md). Testes de navegador usam contas/dados sintéticos, incluindo computador e telemóvel, tarefas, aceites, remoções, notificações e barra lateral. A evidência histórica deste parágrafo refere-se à revisão documental anterior; os novos ensaios locais estão registados na auditoria de 20/10/2026, acima. Google real, uploads Cloudinary reais, contas de homologação, SMTP, backups e configuração efectiva do Coolify continuam a exigir validação no ambiente correspondente.
 
 ### Evidência recente e verificações pendentes
 
