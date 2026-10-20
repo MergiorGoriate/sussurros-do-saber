@@ -1,0 +1,87 @@
+/* Public mobile layout: keep desktop navigation only where all links fit. */
+@media (max-width: 1023px) {
+  .public-site #menuToggle { display: grid !important; }
+  .public-site #mainNav { display: none !important; }
+  .public-site #mainNav.open {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    height: auto;
+    max-height: min(60dvh, 480px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 0 16px;
+    scrollbar-width: thin;
+  }
+  .public-site #mainNav a {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 8px;
+    margin: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .public-site #mainNav a::after { display: none; }
+  .public-site #mainNav a:focus-visible { outline-offset: -3px; }
+  .public-site #searchPanel .flex { gap: 10px; }
+  .public-site #siteSearch { min-width: 0; font-size: 16px; }
+  .public-site #searchPanel button { min-height: 46px; }
+}
+@media (max-width: 767px) {
+  .public-site .site-header > div > div:first-child {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 8px;
+    height: auto;
+    min-height: 68px;
+    padding-block: 10px;
+  }
+  .public-site .site-header .brand-link { width: 44px; height: 44px; max-width: 100%; }
+  .public-site .site-header .brand-logo { width: 44px; height: 44px; object-fit: cover; object-position: left; }
+  .public-site .reader-header-controls { justify-content: flex-end; align-items: center; gap: 4px; min-width: 0; }
+  .public-site .site-header :is(.icon-btn, .reader-header-notifications) { width: 44px; height: 44px; flex: 0 0 44px; }
+  .public-site .reader-header-login { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  .public-site .reader-header-login.reader-has-avatar { width: 44px; padding: 0; justify-content: center; }
+  .public-site .reader-account-chevron { display: none; }
+  .public-site .reader-header-login.reader-has-avatar .reader-avatar { width: 36px; height: 36px; }
+  .public-site main :is(.grid, .flex) > * { min-width: 0; }
+  .public-site main :is(h1, h2, h3, p, label, a) { overflow-wrap: anywhere; }
+  .public-site .filter-row { scroll-padding-inline: 4px; padding-block: 4px 10px; }
+  .public-site .filter-row a { display: inline-flex; align-items: center; min-height: 44px; flex-shrink: 0; }
+  .public-site :is(.primary-btn, .save-resource, .reader-tabs button) { min-height: 44px; }
+  .public-site .article-category-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .public-site .article-header { padding-top: 28px; }
+  .public-site .institutional-hero > div { padding-block: 36px; }
+  .public-site :is(.article-page, .legal-content) :is(img, video, iframe) { max-width: 100%; }
+  .public-site .article-markdown pre { max-width: 100%; overflow-x: auto; }
+  .public-site #contactForm > .flex { flex-direction: column; align-items: stretch; }
+  .public-site #contactForm > .flex .primary-btn { width: 100%; }
+  .public-site .reader-dialog { max-height: calc(100dvh - 24px); overscroll-behavior: contain; }
+  .public-site .reader-tabs { flex-wrap: wrap; gap: 8px; }
+}
+@media (max-width: 374px) {
+  .public-site .tool-card { padding: 18px; }
+  .public-site .section-rule { flex-wrap: wrap; gap: 8px; }
+  .public-site .section-rule a { white-space: normal; }
+}
+@media (max-width: 374px) {
+  .public-site .reader-header-login { width: 44px; padding: 3px; justify-content: center; font-size: 12px; }
+}
+@media (max-width: 767px) {
+  /* Paginated lists are small; avoid large estimated blank sections while scrolling. */
+  .public-site main > section,
+  .public-site .section-rule ~ .grid,
+  .public-site .story-card,
+  .public-site > footer,
+  .public-site > footer section,
+  .public-site :is(.article-related, .mascot-showcase) {
+    content-visibility: visible;
+    contain-intrinsic-size: none;
+  }
+}
+@media (max-width: 767px) {
+  .public-site .site-footer :is(.footer-column > a, .footer-cookie-link) { display: inline-flex; align-items: center; min-height: 44px; }
+  .public-site .site-footer .social-links a { width: 44px; height: 44px; }
+}

@@ -49,11 +49,13 @@ test('Google manual button preserves favorite intent and rotates CSRF at 360px',
   expect(actions.length).toBe(1);
   await expect(page.locator('.reader-header-login')).toHaveAccessibleName('Abrir a minha conta');
   await expect(page.locator('[data-reader-login-label]')).toBeHidden();
-  await expect(page.locator('.reader-account-chevron')).toBeVisible();
+  await expect(page.locator('.reader-account-chevron')).toBeHidden();
   await expect(page.locator('.reader-header-notifications')).toHaveAccessibleName('Notificações: 2 actualizações');
   await expect(page.locator('[data-reader-notification-count]')).toHaveText('2');
   await expect(page.locator('.reader-header-login [data-reader-avatar]')).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+  await page.setViewportSize({width:1280,height:800});
+  await expect(page.locator('.reader-account-chevron')).toBeVisible();
 });
 
 test('Google login resumes notification intent',async({page})=>{

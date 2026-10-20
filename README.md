@@ -1003,3 +1003,11 @@ Mantêm-se as permissões, o aceite pela própria conta do membro, os downloads 
 ### Confirmação de remoção de registos
 
 A página partilhada de confirmação de remoção de documentos, membros, submissões e relatórios identifica o registo em português, explica as consequências e separa visualmente «Cancelar» de «Confirmar remoção». O layout adapta-se ao telemóvel e aos temas claro e escuro. Mantêm-se a autorização exclusiva do fundador, a validação CSRF, a remoção lógica e a preservação do histórico; abrir a página ou cancelar não remove o registo. Não exige migração de dados.
+
+### Interface móvel (20/10/2026)
+
+A navegação pública usa o menu recolhido abaixo de 1024 px, evitando que ligações fiquem fora do ecrã em tablets. Menu e pesquisa fecham-se mutuamente; Escape devolve o foco ao botão de origem. Em orientação horizontal, o menu tem deslocamento próprio e altura limitada ao ecrã.
+
+O cabeçalho suporta a campainha e a conta autenticada a 320 px, com ou sem fotografia. Os controlos principais e a navegação das submissões têm áreas de toque de pelo menos 44 px. Os formulários de contacto, a pesquisa, os diálogos e os espaçamentos de leitura adaptam-se ao telemóvel. As secções públicas em ecrãs pequenos deixam de usar alturas estimadas de `content-visibility`; as imagens mantêm o carregamento diferido. Não há alterações de permissões, dados ou SMTP.
+
+As regressões de navegação, foco, conta autenticada e formulários estão em `tests/browser/mobile-layout.spec.js`. Executar com `npx playwright test tests/browser/mobile-layout.spec.js` no ambiente de testes isolado descrito acima. A validação local usa dados sintéticos; envio de mensagens e boletins em produção não faz parte destes testes.

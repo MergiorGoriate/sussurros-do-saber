@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),menu=$('#menuToggle'),nav=$('#mainNav'),searchToggle=$('#searchToggle'),searchPanel=$('#searchPanel');
-menu?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Fechar menu':'Abrir menu')});
-searchToggle?.addEventListener('click',()=>{searchPanel.classList.toggle('hidden');const open=!searchPanel.classList.contains('hidden');searchToggle.setAttribute('aria-expanded',String(open));searchToggle.setAttribute('aria-label',open?'Fechar pesquisa':'Abrir pesquisa');if(open)searchPanel.querySelector('input').focus()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(nav?.classList.contains('open'))menu.click();if(searchPanel&&!searchPanel.classList.contains('hidden'))searchToggle.click()}});
+menu?.addEventListener('click',()=>{if(!nav)return;const open=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Fechar menu':'Abrir menu');if(open&&searchPanel&&!searchPanel.classList.contains('hidden')){searchPanel.classList.add('hidden');searchToggle?.setAttribute('aria-expanded','false');searchToggle?.setAttribute('aria-label','Abrir pesquisa')}});
+searchToggle?.addEventListener('click',()=>{searchPanel.classList.toggle('hidden');const open=!searchPanel.classList.contains('hidden');searchToggle.setAttribute('aria-expanded',String(open));searchToggle.setAttribute('aria-label',open?'Fechar pesquisa':'Abrir pesquisa');if(open){closeMobileNav();searchPanel.querySelector('input').focus()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(nav?.classList.contains('open')){closeMobileNav();menu?.focus()}else if(searchPanel&&!searchPanel.classList.contains('hidden')){searchToggle.click();searchToggle.focus()}}});
 let sessionTheme='light';try{sessionTheme=sessionStorage.getItem('theme')||'light'}catch{}
 const brandLogoSource=$('.brand-link source[data-dark-srcset]');
 const updateBrandLogo=dark=>{if(brandLogoSource)brandLogoSource.srcset=dark?brandLogoSource.dataset.darkSrcset:brandLogoSource.dataset.lightSrcset};
@@ -28,7 +28,7 @@ const quiz=[{q:'Qual organelo produz a maior parte do ATP?',o:['Núcleo','Mitoc�
 
 
 // Comportamento responsivo da navegação
-const desktopNav=matchMedia('(min-width: 768px)');
+const desktopNav=matchMedia('(min-width: 1024px)');
 const closeMobileNav=()=>{if(nav?.classList.contains('open')){nav.classList.remove('open');menu?.setAttribute('aria-expanded','false');menu?.setAttribute('aria-label','Abrir menu')}};
 desktopNav.addEventListener?.('change',e=>{if(e.matches)closeMobileNav()});
 nav?.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeMobileNav));
