@@ -231,3 +231,7 @@
 .article-page .article-meta-row .article-byline,.article-page .article-meta-row .reading-tools{margin-top:0}
 .article-page .article-meta-row .reading-tools{flex:0 0 auto}
 @media(max-width:767px){.article-page .article-meta-row{align-items:flex-end}}
+
+/* Bind the existing save button directly to its reading-time label. */
+.article-page .article-byline .article-reading-time{display:inline-flex;align-items:center;gap:12px}
+.article-page .article-reading-time .bookmark{position:static;flex:0 0 auto;width:44px;height:44px;margin:0}
