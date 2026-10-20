@@ -225,3 +225,9 @@
 .article-page .article-header{text-align:left}
 .article-page .article-author-line,.article-page .article-byline,.article-page .article-header .reading-tools{justify-content:flex-start}
 @media(max-width:767px){.article-page .article-byline{justify-items:start;text-align:left}}
+
+/* Keep the save action beside publication dates and reading time. */
+.article-page .article-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;margin-top:1rem}
+.article-page .article-meta-row .article-byline,.article-page .article-meta-row .reading-tools{margin-top:0}
+.article-page .article-meta-row .reading-tools{flex:0 0 auto}
+@media(max-width:767px){.article-page .article-meta-row{align-items:flex-end}}
