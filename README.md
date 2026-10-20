@@ -994,7 +994,8 @@ Os formulários e JavaScript do repositório definem os nomes exactos dos campos
 
 Ao alterar rotas, permissões, estados, campos, limites, variáveis, templates ou tarefas de operação, actualizar esta documentação e os guias relacionados no mesmo trabalho. Separar claramente o que está implementado, o que é configuração do deployment e o que ainda é futuro. Não marcar uma integração como validada só porque há um botão ou uma variável.
 
+### Painéis administrativos: documentos, contactos e relatórios (20/10/2026)
 
+Os documentos privados da equipa, as mensagens de contacto e os relatórios de auditoria usam cartões, formulários responsivos e acções com contraste nos temas claro e escuro. Os relatórios incluem atalhos para as secções e tabelas com deslocamento horizontal por teclado em ecrãs pequenos; os tipos de documento são apresentados em português. A página de detalhe dos relatórios segue o mesmo layout.
 
-
-
+Mantêm-se as permissões, o aceite pela própria conta do membro, os downloads privados, a exportação CSV e os fluxos de eliminação existentes. «Responder por e-mail» abre o programa de correio do utilizador; não envia mensagens automaticamente. Estas alterações de apresentação não exigem migrações nem configuração SMTP.
