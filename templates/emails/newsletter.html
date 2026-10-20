@@ -24,14 +24,14 @@
         </td></tr>
         <tr><td class="email-gutter" style="padding:30px 32px 8px;">
           <h1 class="email-heading email-title" style="margin:0 0 12px;color:#172c43;font-size:29px;line-height:1.25;letter-spacing:-.5px;">Ciência em destaque</h1>
-          <p class="email-copy" style="margin:0;color:#526477;font-size:16px;line-height:1.75;">Uma selecção de histórias de divulgação científica para explorar, compreender e partilhar.</p>
+          <p class="email-copy" style="margin:0;color:#526477;font-size:16px;line-height:1.75;">Conheça os artigos de divulgação científica seleccionados para esta edição.</p>
         </td></tr>
         <tr><td class="email-gutter" style="padding:22px 32px 8px;">
           {% for card in edition.cards %}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-card" style="width:100%;border:1px solid #dbe3ed;border-radius:12px;border-collapse:separate;overflow:hidden;">
             {% if card.image %}<tr><td style="padding:0;">
               <a href="{{ card.url }}" style="display:block;color:#24558c;text-decoration:none;">
-                <img src="{{ card.image }}" alt="Imagem de capa: {{ card.title }}" width="576" border="0" style="display:block;width:100%;max-width:576px;height:auto;border:0;border-radius:11px 11px 0 0;color:#526477;font-size:14px;line-height:1.5;">
+                <img class="email-copy" src="{{ card.image }}" alt="Imagem de capa: {{ card.title }}" width="576" border="0" style="display:block;width:100%;max-width:576px;height:auto;border:0;border-radius:11px 11px 0 0;color:#526477;font-size:14px;line-height:1.5;">
               </a>
             </td></tr>{% endif %}
             <tr><td class="email-card-copy" style="padding:24px;">
