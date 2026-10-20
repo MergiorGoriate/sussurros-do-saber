@@ -1015,3 +1015,7 @@ As regressões de navegação, foco, conta autenticada e formulários estão em 
 ### Introdução dos artigos no telemóvel
 
 Até 767 px, o resumo usa 16 px e entrelinha de 1,6; o nome do autor e a fotografia ocupam menos altura. A publicação fica à esquerda, a actualização ao centro e o tempo de leitura com o botão de guardar à direita, mantendo uma área de toque de 44 px. A data de actualização é sempre apresentada, mesmo quando coincide com a publicação. Os elementos `time` mantêm os valores ISO. O texto continua alinhado à esquerda e adapta-se aos dois temas. Não altera o conteúdo editorial, as datas guardadas nem o fluxo de favoritos.
+
+### Espaçamento do rodapé no telemóvel
+
+Até 767 px, o rodapé reduz os intervalos entre grupos, títulos e ligações, com texto de 14 px e entrelinha de 1,4 nas opções. As ligações mantêm pelo menos 44 px de altura para toque; as opções de duas linhas deixam de acumular margens e preenchimentos excessivos. O layout de computador mantém a sua escala.
