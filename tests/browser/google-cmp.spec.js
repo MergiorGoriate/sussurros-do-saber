@@ -1,5 +1,16 @@
 const {test,expect}=require('@playwright/test');
 test.skip(process.env.GOOGLE_CMP_ENABLED!=='true','Requires isolated server with GOOGLE_CMP_ENABLED=true');
+
+async function openPrivacyPanel(page){
+ await page.locator('#cookieReject').click();
+ await expect(page.locator('#cookieConsent')).toBeHidden();
+ expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
+ const privacyPanel=page.locator('.footer-privacy');
+ await expect(privacyPanel).not.toHaveAttribute('open', '');
+ await privacyPanel.locator('summary').click();
+ await expect(privacyPanel).toHaveAttribute('open', '');
+}
+
 test('Google CMP message controls become available through API; ads remain paused',async({page})=>{
  await page.route(/googletagmanager\.com|doubleclick\.net/,route=>route.fulfill({contentType:'application/javascript',body:''}));
  await page.route('**/pagead/js/adsbygoogle.js?*',route=>route.fulfill({contentType:'application/javascript',body:`
@@ -11,17 +22,12 @@ test('Google CMP message controls become available through API; ads remain pause
   callbacks.forEach(entry=>entry.CONSENT_API_READY?.());
  `}));
  await page.goto('/');
- const privacyPanel=page.locator('.footer-privacy');
- await expect(privacyPanel).not.toHaveAttribute('open', '');
- await privacyPanel.locator('summary').click();
- await expect(privacyPanel).toHaveAttribute('open', '');
+ await openPrivacyPanel(page);
  const settings=page.locator('#googleCmpSettings');
  await expect(settings).toBeEnabled();
  expect(await page.evaluate(()=>window.__pauseAtLoad)).toBe(1);
  await settings.click();
  expect(await page.evaluate(()=>window.__revocationCount)).toBe(1);
- expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
- await page.locator('#cookieReject').click();
  expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
  await page.goto('/artigo/nao-existe-cmp');
  await expect(page.locator('script[src*="google-cmp.js"]')).toHaveCount(0);
@@ -29,10 +35,7 @@ test('Google CMP message controls become available through API; ads remain pause
 test('failed CMP reports unavailable and cannot enable advertisements',async({page})=>{
  await page.route('**/pagead/js/adsbygoogle.js?*',route=>route.abort());
  await page.goto('/');
- const privacyPanel=page.locator('.footer-privacy');
- await expect(privacyPanel).not.toHaveAttribute('open', '');
- await privacyPanel.locator('summary').click();
- await expect(privacyPanel).toHaveAttribute('open', '');
+ await openPrivacyPanel(page);
  await expect(page.locator('#googleCmpStatus')).toContainText('Não foi possível carregar');
  await expect(page.locator('#googleCmpSettings')).toBeEnabled();
  await expect(page.locator('#googleCmpSettings')).toContainText('Tentar carregar');
@@ -49,10 +52,7 @@ test('slow CMP recovers after the initial waiting period',async({page})=>{
   },20000);
  `}));
  await page.goto('/');
- const privacyPanel=page.locator('.footer-privacy');
- await expect(privacyPanel).not.toHaveAttribute('open', '');
- await privacyPanel.locator('summary').click();
- await expect(privacyPanel).toHaveAttribute('open', '');
+ await openPrivacyPanel(page);
  await page.clock.fastForward(11000);
  await expect(page.locator('#googleCmpStatus')).toContainText('ainda não disponibilizou');
  await page.clock.fastForward(10000);
@@ -67,10 +67,7 @@ test('confirmed non-applicable region does not display a CMP failure',async({pag
   window.googlefc.callbackQueue.splice(0).forEach(entry=>{entry.CONSENT_API_READY?.();entry.CONSENT_DATA_READY?.()});
  `}));
  await page.goto('/');
- const privacyPanel=page.locator('.footer-privacy');
- await expect(privacyPanel).not.toHaveAttribute('open', '');
- await privacyPanel.locator('summary').click();
- await expect(privacyPanel).toHaveAttribute('open', '');
+ await openPrivacyPanel(page);
  await expect(page.locator('#googleCmpStatus')).toContainText('não se aplica');
  await expect(page.locator('#googleCmpSettings')).toBeHidden();
  expect(await page.evaluate(()=>window.adsbygoogle.pauseAdRequests)).toBe(1);
