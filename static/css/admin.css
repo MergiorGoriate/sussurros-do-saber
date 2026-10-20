@@ -694,3 +694,9 @@ body.admin-dark{--ink:#edf3fa;--green:#8bbdff;--paper:#101827;--line:#364457;--a
 .admin-dark .status.published{background:#16483f;color:#c8ffe6}
 .admin-dark .status.scheduled{background:#604b23;color:#ffe8a8}
 .admin-dark .admin-main a:not([class]){color:var(--admin-accent)}
+
+/* Keep comment filters legible when --ink becomes a light foreground. */
+body.admin-dark .admin-tabs a{background:#1b283a;color:#c8dcf3;border-color:#71859f}
+body.admin-dark .admin-tabs a:hover{background:#2c405a;color:#fff;border-color:#9acbff}
+body.admin-dark .admin-tabs a[aria-current="page"]{background:#9acbff;color:#102c50;border-color:#9acbff;font-weight:700}
+body.admin-dark .admin-tabs a:focus-visible{outline:3px solid #9acbff;outline-offset:3px}
