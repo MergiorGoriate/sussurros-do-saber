@@ -1,0 +1,13 @@
+/* A stable, high-contrast subscription form in both site themes. */
+.newsletter-signup{background:#1e4e8c;color:#fff}
+.newsletter-signup #newsletterForm{align-items:flex-end;gap:12px;max-width:640px}
+.newsletter-email-field{display:flex;flex:1;flex-direction:column;gap:8px;min-width:0;text-align:left}
+.newsletter-email-field>span{color:#fff;font-size:13px;font-weight:600;line-height:1.5}
+.newsletter-signup #newsletter-email{display:block;width:100%;min-width:0;min-height:52px;padding:13px 16px;background:#fff;color:#172638;border:1px solid #8195ad;border-radius:9px;font:400 16px/1.5 Inter,system-ui,sans-serif;box-shadow:0 2px 6px #0c254b18;color-scheme:light}
+.newsletter-signup #newsletter-email::placeholder{color:#526477;opacity:1}
+.newsletter-signup #newsletterForm button{flex-shrink:0;min-height:52px;padding:13px 24px;border:1px solid #a52d24;border-radius:9px;background:#a52d24;color:#fff;font:700 15px/1.5 Inter,system-ui,sans-serif;cursor:pointer}
+.newsletter-signup #newsletterForm button:hover{background:#89251f;border-color:#89251f}
+.newsletter-signup #newsletterForm button:disabled{background:#74332e;border-color:#d5a49f;color:#fff;cursor:wait;opacity:1}
+.newsletter-signup #newsletterForm :is(input,button):focus-visible{outline:3px solid #fff;outline-offset:4px;box-shadow:0 0 0 3px #102c50}
+.newsletter-signup #newsletterMessage{color:#fff;line-height:1.7}
+@media(max-width:639px){.newsletter-signup #newsletterForm{align-items:stretch;gap:14px}.newsletter-email-field{width:100%}.newsletter-signup #newsletterForm button{width:100%}}
