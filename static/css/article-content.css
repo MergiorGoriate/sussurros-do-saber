@@ -235,3 +235,7 @@
 /* Bind the existing save button directly to its reading-time label. */
 .article-page .article-byline .article-reading-time{display:inline-flex;align-items:center;gap:12px}
 .article-page .article-reading-time .bookmark{position:static;flex:0 0 auto;width:44px;height:44px;margin:0}
+
+/* Category links provide a visible hover and keyboard-focus state. */
+.article-category-link:hover{text-decoration:underline;text-underline-offset:.25em}
+.article-category-link:focus-visible{outline:2px solid currentColor;outline-offset:5px;border-radius:2px}
