@@ -1,36 +1,29 @@
 {% extends 'admin/base.html' %}
-{% block title %}Docs{% endblock %}
+{% block title %}Documentação do site{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-docs.css', v='20261020-v1') }}">{% endblock %}
 {% block content %}
-<header class="admin-header">
-  <div><span>Guia interno</span><h1>Documentação do site</h1></div>
-</header>
-<p class="docs-intro">Consulte os procedimentos para publicar conteúdos e manter o Sussurros do Saber. Esta página é acessível apenas após iniciar sessão no painel.</p>
-<nav class="docs-toc" aria-label="Índice da documentação">
-  <a href="#primeiros-passos">Primeiros passos</a>
-  <a href="#artigos">Artigos</a>
-  <a href="#autores-revistas">Autores e revistas</a>
-  <a href="#comunidade">Comunidade</a>
-  <a href="#seo">SEO</a>
-  <a href="#seguranca">Segurança</a>
-  <a href="#operacao">Operação</a>
-  <a href="#recuperacao">Backups e recuperação</a>
-  <a href="#monitorizacao">Monitorização</a>
-  <a href="#infraestrutura">Infraestrutura e deploy</a>
-  <a href="#marca">Identidade visual</a>
-</nav>
-<div class="docs-content">
-<section class="admin-panel docs-section" id="submissoes"><h2>Submissões científicas</h2><p>Em <a href="/admin/submissoes">Submissões</a>, configure cada revista: tipos aceites, formatos do manuscrito principal, e-mail editorial e abertura explícita. As contas de autor são independentes do acesso administrativo.</p><p>Configure SMTP_HOST, SMTP_PORT, SMTP_FROM, SMTP_USERNAME, SMTP_PASSWORD e SMTP_TLS=true (ou SMTP_SSL=true). Execute <code>flask --app app enviar-notificacoes --limit 50</code> a cada minuto num único worker/agendamento do Coolify. A fila persiste na base de dados; sem SMTP, as confirmações e recuperações de conta ficam pendentes.</p><p>Os originais e versões ficam privados na base de dados, com limites de 8 MB por ficheiro, 25 por versão e 100 MB por conta. Inclua estas tabelas nos backups PostgreSQL. Faça backup antes da implantação. As novas tabelas são criadas idempotentemente pelo padrão create_all existente; nenhum registo anterior é alterado.</p><p>A aceitação permite preparar um rascunho de publicação, sem publicar automaticamente. DOCX importa texto, tabelas e figuras PNG/JPEG; TXT importa texto. PDF permanece como original privado e exige inserção/conferência do conteúdo no editor. Confira a ordem e legendas das figuras, formatação, referências e metadados antes da publicação explícita. Figuras importadas só ficam públicas quando o artigo é publicado.</p><p>A equipa administrativa mantém as permissões existentes e pode atribuir um editor responsável. O modelo de convites/pareceres de revisão está preparado, mas o portal de revisores e a anonimização para revisão cega ainda não estão ativados. Não entregue originais identificados como se fossem documentos anonimizados.</p><p>Rollback: reverta o código sem eliminar as novas tabelas, preservando submissões e auditoria. Antes da abertura pública, teste confirmação de conta e entrega de e-mails no ambiente de produção.</p></section>
-  <section id="primeiros-passos" class="admin-panel docs-section" aria-labelledby="docs-start">
-    <h2 id="docs-start">Primeiros passos</h2>
+{% set docs_groups = [
+ ('Conteúdo e publicação', [('primeiros-passos','Primeiros passos'),('artigos','Artigos'),('autores-revistas','Autores e revistas'),('submissoes','Submissões científicas'),('comunidade','Comunidade'),('seo','SEO e indexação')]),
+ ('Gestão e manutenção', [('seguranca','Segurança e acesso'),('operacao','Operação'),('recuperacao','Backups e recuperação'),('monitorizacao','Monitorização'),('infraestrutura','Infraestrutura e deploy')]),
+ ('Identidade', [('marca','Identidade visual')])
+] %}
+<div class="docs-workspace" id="docs-top">
+<header class="admin-header docs-header"><div><span>Guia interno</span><h1>Documentação do site</h1><p>Procedimentos para publicar, gerir e manter o Sussurros do Saber.</p></div><span class="docs-private-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5zM12 14v3"/></svg>Acesso interno</span></header>
+<div class="docs-search" data-docs-search hidden><label for="docs-query">O que procura?</label><div class="docs-search-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="docs-query" type="search" placeholder="Pesquisar: artigos, SMTP, backups…" autocomplete="off" aria-describedby="docs-search-status"><button type="button" data-docs-clear hidden>Limpar</button></div><p id="docs-search-status" role="status" aria-live="polite" aria-atomic="true">12 secções disponíveis. Pesquise por palavra ou expressão.</p></div>
+<nav class="docs-shortcuts" aria-label="Tarefas frequentes"><a href="#artigos"><span class="docs-shortcut-icon" aria-hidden="true">01</span><span><strong>Publicar um artigo</strong><small>Preparar, rever e publicar</small></span><span aria-hidden="true">↗</span></a><a href="#submissoes"><span class="docs-shortcut-icon" aria-hidden="true">02</span><span><strong>Gerir submissões</strong><small>Revistas, originais e avaliação</small></span><span aria-hidden="true">↗</span></a><a href="#recuperacao"><span class="docs-shortcut-icon" aria-hidden="true">03</span><span><strong>Recuperar o site</strong><small>Backups e procedimentos de emergência</small></span><span aria-hidden="true">↗</span></a></nav>
+<div class="docs-layout">
+<aside class="docs-index"><nav aria-label="Índice da documentação"><div class="docs-index-heading"><strong>Nesta documentação</strong><span>12 secções</span></div>{% for group, entries in docs_groups %}<div class="docs-index-group"><h2>{{ group }}</h2><ul>{% for id, label in entries %}<li><a href="#{{ id }}" data-docs-link>{{ label }}</a></li>{% endfor %}</ul></div>{% endfor %}</nav></aside>
+<div class="docs-reading"><div class="docs-content" data-docs-sections>
+<section id="primeiros-passos" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-start">
+    <h2 id="docs-start"><span class="docs-section-number" aria-hidden="true">01</span>Primeiros passos</h2>
     <ol>
       <li>Abra a <a href="{{ url_for('admin.dashboard') }}">Visão geral</a> para ver artigos, rascunhos, contactos e subscritores.</li>
       <li>Complete a configuração em <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a> antes de trabalhar no painel.</li>
       <li>Use os links do menu para gerir cada tipo de conteúdo. As alterações editoriais só aparecem publicamente depois da publicação.</li>
     </ol>
-  </section>
-
-  <section id="artigos" class="admin-panel docs-section" aria-labelledby="docs-articles">
-    <h2 id="docs-articles">Artigos</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="artigos" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-articles">
+    <h2 id="docs-articles"><span class="docs-section-number" aria-hidden="true">02</span>Artigos</h2>
     <ol>
       <li>Em <a href="{{ url_for('admin.articles') }}">Artigos</a>, escolha <a href="{{ url_for('admin.article_form') }}">Novo artigo</a>.</li>
       <li>Preencha título, resumo, conteúdo em Markdown, autor, categoria, imagem de capa e descrição da imagem. Use a pré-visualização para rever o resultado.</li>
@@ -39,52 +32,46 @@
       <li>Abra o artigo público após publicar e confirme texto, imagens, ligações e leitura em telemóvel.</li>
     </ol>
     <p><strong>Nota:</strong> rascunhos e artigos programados ainda não fazem parte da publicação pública.</p>
-  </section>
-
-  <section id="autores-revistas" class="admin-panel docs-section" aria-labelledby="docs-authors">
-    <h2 id="docs-authors">Autores, categorias e revistas</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="autores-revistas" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-authors">
+    <h2 id="docs-authors"><span class="docs-section-number" aria-hidden="true">03</span>Autores, categorias e revistas</h2>
     <p>Crie o perfil em <a href="{{ url_for('admin.authors') }}">Autores</a> antes de associar uma pessoa a um artigo. Acrescente biografia, fotografia, área de investigação e ligações profissionais apenas quando tiver informação confirmada.</p>
     <p>Organize temas em <a href="{{ url_for('admin.categories') }}">Categorias</a>. Em <a href="{{ url_for('admin.journals') }}">Revistas</a>, preencha os dados editoriais, guarde e use <strong>Publicar</strong> quando o registo estiver pronto; uma revista oculta não aparece no catálogo público.</p>
-  </section>
-
-  <section id="comunidade" class="admin-panel docs-section" aria-labelledby="docs-community">
-    <h2 id="docs-community">Comentários, contactos e subscritores</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section class="admin-panel docs-section" tabindex="-1" id="submissoes"><h2><span class="docs-section-number" aria-hidden="true">04</span>Submissões científicas</h2><p>Em <a href="/admin/submissoes">Submissões</a>, configure cada revista: tipos aceites, formatos do manuscrito principal, e-mail editorial e abertura explícita. As contas de autor são independentes do acesso administrativo.</p><p>Configure SMTP_HOST, SMTP_PORT, SMTP_FROM, SMTP_USERNAME, SMTP_PASSWORD e SMTP_TLS=true (ou SMTP_SSL=true). Execute <code>flask --app app enviar-notificacoes --limit 50</code> a cada minuto num único worker/agendamento do Coolify. A fila persiste na base de dados; sem SMTP, as confirmações e recuperações de conta ficam pendentes.</p><p>Os originais e versões ficam privados na base de dados, com limites de 8 MB por ficheiro, 25 por versão e 100 MB por conta. Inclua estas tabelas nos backups PostgreSQL. Faça backup antes da implantação. As novas tabelas são criadas idempotentemente pelo padrão create_all existente; nenhum registo anterior é alterado.</p><p>A aceitação permite preparar um rascunho de publicação, sem publicar automaticamente. DOCX importa texto, tabelas e figuras PNG/JPEG; TXT importa texto. PDF permanece como original privado e exige inserção/conferência do conteúdo no editor. Confira a ordem e legendas das figuras, formatação, referências e metadados antes da publicação explícita. Figuras importadas só ficam públicas quando o artigo é publicado.</p><p>A equipa administrativa mantém as permissões existentes e pode atribuir um editor responsável. O modelo de convites/pareceres de revisão está preparado, mas o portal de revisores e a anonimização para revisão cega ainda não estão ativados. Não entregue originais identificados como se fossem documentos anonimizados.</p><p>Rollback: reverta o código sem eliminar as novas tabelas, preservando submissões e auditoria. Antes da abertura pública, teste confirmação de conta e entrega de e-mails no ambiente de produção.</p><footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="comunidade" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-community">
+    <h2 id="docs-community"><span class="docs-section-number" aria-hidden="true">05</span>Comentários, contactos e subscritores</h2>
     <p>Em <a href="{{ url_for('admin.comments') }}">Comentários</a>, reveja as mensagens pendentes antes de as aprovar; também pode ocultar as já publicadas. Em <a href="{{ url_for('admin.contacts') }}">Contactos</a>, acompanhe mensagens recebidas. Em <a href="{{ url_for('admin.subscribers') }}">Subscritores</a>, consulte o estado das subscrições.</p>
     <p>Trate dados pessoais somente para a finalidade da mensagem ou subscrição. Evite exportá-los ou partilhá-los sem necessidade operacional.</p>
-  </section>
-
-  <section id="seo" class="admin-panel docs-section" aria-labelledby="docs-seo">
-    <h2 id="docs-seo">SEO e indexação</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="seo" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-seo">
+    <h2 id="docs-seo"><span class="docs-section-number" aria-hidden="true">06</span>SEO e indexação</h2>
     <ul>
       <li>Escreva títulos e resumos específicos; escolha uma URL curta e estável antes de publicar.</li>
       <li>Confirme as imagens de capa e o texto alternativo. Verifique as ligações internas e referências científicas.</li>
       <li>O site disponibiliza <a href="/sitemap.xml" target="_blank" rel="noopener">sitemap.xml ↗</a>, <a href="/robots.txt" target="_blank" rel="noopener">robots.txt ↗</a> e <a href="/feed.xml" target="_blank" rel="noopener">feed.xml ↗</a>. O painel administrativo está excluído da indexação.</li>
       <li><strong>Google AdSense e ads.txt:</strong> o ficheiro público <a href="/ads.txt" target="_blank" rel="noopener">ads.txt ↗</a> identifica o Google como vendedor autorizado de publicidade para o publicador <code>pub-7920973591685812</code>. A declaração publicada é <code>google.com, pub-7920973591685812, DIRECT, f08c47fec0942fa0</code>. O código global do AdSense utiliza <code>ca-pub-7920973591685812</code> no cabeçalho das páginas públicas. Depois de alterações ou de um deploy, confirme que o endereço devolve apenas essa declaração e verifique o estado do site e do ads.txt no painel AdSense. A presença destes elementos não significa aprovação automática pelo Google.</li>
     </ul>
-  </section>
-
-  <section id="seguranca" class="admin-panel docs-section" aria-labelledby="docs-security">
-    <h2 id="docs-security">Segurança e acesso</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="seguranca" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-security">
+    <h2 id="docs-security"><span class="docs-section-number" aria-hidden="true">07</span>Segurança e acesso</h2>
     <ul>
       <li>Ative o 2FA em <a href="{{ url_for('admin.two_factor_settings') }}">Segurança e 2FA</a> e guarde os códigos de recuperação num local privado.</li>
       <li>A conta principal pode gerir outras contas em <a href="{{ url_for('admin.administrators') }}">Administradores</a>, se essa opção aparecer no menu.</li>
       <li>Termine a sessão com <strong>Sair</strong> em computadores partilhados. Não inclua palavras-passe, chaves de API, URLs privadas da base de dados ou códigos de recuperação em artigos ou nesta documentação.</li>
     </ul>
-  </section>
-
-  <section id="operacao" class="admin-panel docs-section" aria-labelledby="docs-operation">
-    <h2 id="docs-operation">Publicação técnica e recuperação</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="operacao" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-operation">
+    <h2 id="docs-operation"><span class="docs-section-number" aria-hidden="true">08</span>Publicação técnica e recuperação</h2>
     <ul>
       <li>O código está no GitHub; a aplicação de produção funciona no VPS da OVHcloud com Coolify e PostgreSQL. Alterações de código só aparecem depois de um deploy bem-sucedido.</li>
       <li>Antes de mudanças na base de dados, confirme no Coolify o estado do backup local e do Cloudflare R2. Teste a restauração num ambiente isolado.</li>
       <li>Depois de um deploy, verifique a página inicial, o login, um artigo publicado e o endereço <a href="/healthz" target="_blank" rel="noopener">/healthz ↗</a>. Consulte os registos no Coolify se houver falhas.</li>
       <li>As configurações sensíveis ficam nas variáveis de ambiente do Coolify; esta página não mostra os seus valores.</li>
     </ul>
-  </section>
-</div>
-<div class="docs-content">
-  <section id="recuperacao" class="admin-panel docs-section" aria-labelledby="docs-recovery">
-    <h2 id="docs-recovery">Backups, restauração e emergência</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="recuperacao" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-recovery">
+    <h2 id="docs-recovery"><span class="docs-section-number" aria-hidden="true">09</span>Backups, restauração e emergência</h2>
     <p>Uma execução de backup bem-sucedida não comprova recuperação. Registe data da cópia, tamanho, destino R2, retenção configurada, tempo de recuperação e resultado do teste. Defina a perda máxima de dados e o tempo máximo de indisponibilidade aceitáveis.</p>
     <ol>
       <li>No Coolify, confirme a última execução e descarregue a cópia completa para um ambiente privado. Use um cliente PostgreSQL 18 e confirme o formato: arquivos custom/tar usam <code>pg_restore</code>; SQL simples usa um procedimento separado.</li>
@@ -95,9 +82,9 @@
     </ol>
     <p><strong>Incidente:</strong> suspenda alterações editoriais, preserve registos e a base afetada, escolha uma cópia validada e restaure numa base nova. Troque <code>DATABASE_URL</code> somente depois da revisão, publique o commit compatível e confirme <code>/healthz</code>, login e conteúdos. Para rollback de código, republique o commit anterior compatível com o esquema; não elimine dados para reverter um deploy.</p>
     <p><strong>Rotina proposta:</strong> backups diários, 7 cópias diárias e 4 semanais, ensaio mensal e antes de alterações de esquema. Estes valores são uma política a configurar e verificar no Coolify/R2, não uma confirmação das configurações atuais.</p>
-  </section>
-  <section id="monitorizacao" class="admin-panel docs-section" aria-labelledby="docs-monitoring">
-    <h2 id="docs-monitoring">Monitorização e desempenho</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="monitorizacao" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-monitoring">
+    <h2 id="docs-monitoring"><span class="docs-section-number" aria-hidden="true">10</span>Monitorização e desempenho</h2>
     <ul>
       <li>Configure um monitor externo para <code>https://www.sussurrosdosaber.com/healthz</code>: HTTP 200 e JSON <code>{"ok":true}</code>. A resposta 503 indica falha de acesso à base. O healthcheck Docker verifica a aplicação a cada 30 segundos.</li>
       <li>No Coolify, configure e teste notificações de falha de deploy, serviço e backup. Confirme a receção no canal escolhido; não considere o alerta ativo apenas porque foi guardado.</li>
@@ -105,9 +92,9 @@
       <li>Semanalmente, confira backups, certificados, espaço livre e registos. Nunca inclua palavras-passe, códigos 2FA, corpos de mensagens ou URLs privadas nos alertas.</li>
       <li>Meça a página inicial e um artigo no PageSpeed e em telemóvel. Acompanhe LCP ≤ 2,5 s, INP ≤ 200 ms e CLS ≤ 0,1 no percentil 75, quando houver dados de campo. O código usa Tailwind compilado e imagens responsivas; confirme o efeito nas medições.</li>
     </ul>
-  </section>
-  <section id="infraestrutura" class="admin-panel docs-section" aria-labelledby="docs-infrastructure">
-    <h2 id="docs-infrastructure">Arquitetura, variáveis e publicação</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="infraestrutura" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-infrastructure">
+    <h2 id="docs-infrastructure"><span class="docs-section-number" aria-hidden="true">11</span>Arquitetura, variáveis e publicação</h2>
     <p>Cloudflare fornece DNS e a camada pública; Coolify no VPS OVHcloud executa a imagem Docker de Flask/Gunicorn e PostgreSQL 18. Cloudinary recebe imagens, R2 guarda backups e o Cloudflare Worker processa o assistente IA. O código está em <code>MergiorGoriate/sussurros-do-saber</code>.</p>
     <ul>
       <li><strong>Aplicação:</strong> <code>FLASK_ENV=production</code>, <code>PORT=8000</code>, <code>SITE_URL=https://www.sussurrosdosaber.com</code>, <code>DATABASE_URL</code> e <code>SECRET_KEY</code> exclusiva.</li>
@@ -123,9 +110,9 @@
       <li>Depois do deploy, confirme healthcheck, login 2FA, publicação, imagens, modo escuro e sitemap. Registe o commit e o resultado.</li>
     </ol>
     <p><strong>Fluxo editorial:</strong> prepare um rascunho, verifique fontes, referências, imagens e acessibilidade, marque <strong>Em revisão</strong> e, após a revisão editorial, <strong>Aprovado para publicação</strong>. Só <strong>Publicado</strong> ou <strong>Programado</strong> com data já alcançada torna o artigo público. Todos os administradores com acesso editorial podem alterar estes estados; a aprovação não implementa uma permissão separada de revisor.</p>
-  </section>
-  <section id="marca" class="admin-panel docs-section" aria-labelledby="docs-brand">
-    <h2 id="docs-brand">Guia de identidade visual</h2>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+<section id="marca" class="admin-panel docs-section" tabindex="-1" aria-labelledby="docs-brand">
+    <h2 id="docs-brand"><span class="docs-section-number" aria-hidden="true">12</span>Guia de identidade visual</h2>
     <p><strong>Sussurros do Saber</strong> comunica ciência, educação e investigação em linguagem clara, com fontes verificáveis e contexto moçambicano.</p>
     <ul>
       <li>Azul principal <code>#1E4E8C</code>; fundo claro <code>#F8F8F8</code>; texto principal <code>#101820</code>. O destaque coral atual é <code>#B2352B</code>, com <code>#FF8A80</code> no modo escuro.</li>
@@ -134,7 +121,8 @@
       <li>A mascote oficial é <code>mascote-3d.webp</code>. Preserve forma e cores, sem cobrir texto ou botões. Use dimensões responsivas e respeite a preferência por movimento reduzido.</li>
       <li>Botões e controlos devem ter foco visível e área de toque suficiente. Teste contraste nos dois modos. Mantenha os ativos oficiais versionados junto do código.</li>
     </ul>
-  </section>
-</div>
+  <footer class="docs-section-footer"><a href="#docs-top">Voltar ao início <span aria-hidden="true">↑</span></a></footer></section>
+</div><section class="docs-no-results" data-docs-empty hidden><h2>Nenhuma secção encontrada</h2><p>Experimente outro termo ou limpe a pesquisa para ver toda a documentação.</p><button type="button" data-docs-reset>Mostrar todas as secções</button></section></div>
+</div></div>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-docs.js', v='20261020-v1') }}" defer></script>
 {% endblock %}
-
