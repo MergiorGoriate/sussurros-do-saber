@@ -533,7 +533,7 @@ python -m alembic upgrade head
 python -m alembic current
 ```
 
-Resultado esperado nesta versão: `20261021_06 (head)`. Ensaiar primeiro numa cópia isolada. `AUTO_SCHEMA_UPGRADE` é compatibilidade de arranque, não substitui a migração explícita; não alterar a configuração de produção apenas para resolver um problema visual. Guias: [governação](docs/STAFF_GOVERNANCE.md) e [remoções/notificações](docs/LIFECYCLE_NOTIFICATIONS.md).
+Resultado esperado nesta versão: `20261021_07 (head)`. Ensaiar primeiro numa cópia isolada. `AUTO_SCHEMA_UPGRADE` é compatibilidade de arranque, não substitui a migração explícita; não alterar a configuração de produção apenas para resolver um problema visual. Guias: [governação](docs/STAFF_GOVERNANCE.md) e [remoções/notificações](docs/LIFECYCLE_NOTIFICATIONS.md).
 
 Comando específico para as tabelas Google/favoritos:
 
@@ -1059,3 +1059,30 @@ npx playwright test article-backgrounds.spec.js
 ```
 
 A suite Python cobre criação, valores inválidos/ausentes, migração de artigos anteriores, persistência, isolamento entre artigos, âmbito do contentor público, permissões, CSRF, concorrência, histórico, autosave e publicação agendada. Os testes de navegador usam dados sintéticos numa base SQLite isolada e verificam selecção pelo teclado, pré-visualização sem gravação, gravação explícita, reabertura, largura de 320/768/1440 px, ambos os temas, contraste de leitura e preservação das superfícies globais. A implantação e a aparência na base de produção devem ser confirmadas após a publicação; os testes não acedem à produção.
+
+### Vídeos como capas dos artigos (21/10/2026)
+
+O editor existente inclui **Formato da capa**: «Imagem estática», «Vídeo animado» e «Vídeo com controlos». Reutiliza `article.image` como capa estática, reserva do vídeo e imagem para cartões, Open Graph, Twitter e dados estruturados. Reutiliza `article.cover_video` para o recurso de vídeo. Só acrescenta `article.cover_mode`; não cria biblioteca de recursos, armazenamento, publicação ou agendamento paralelos.
+
+A opção interna `auto`, por omissão no modelo e na migração, conserva a interpretação histórica: artigos sem vídeo apresentam imagem; artigos com um vídeo anterior conservam a apresentação com controlos. O formulário só apresenta as três escolhas editoriais. Mudar para imagem mantém o vídeo associado; **Remover vídeo da capa** limpa a associação ao guardar, sem eliminar o recurso no Cloudinary. As escolhas ficam no histórico e são recuperadas como rascunho; versões anteriores sem `cover_mode` recuperam o comportamento histórico. O autosave continua limitado ao texto e não altera as opções da capa. Alterar a capa de conteúdo já aprovado continua sujeito à protecção editorial existente e pode exigir guardar como rascunho para nova revisão.
+
+A pré-visualização reutiliza a imagem do formulário e o leitor usado na página pública. Ficheiros seleccionados são apresentados através de URLs `blob:` locais, sem upload ou gravação automática. As directivas `img-src` e `media-src` da CSP permitem esses recursos; a política de scripts, os nonces, CSRF e as permissões continuam aplicáveis. A gravação manual utiliza o carregamento existente no Cloudinary, com limite de **50 MB**, extensões MP4/WebM/OGG, verificação de MIME e assinatura, e confirmação de um recurso de vídeo descodificado com dimensões e duração positivas na resposta do serviço. Mantém a entrega MP4 já utilizada pelo carregamento; vídeos WebM previamente disponíveis também podem ser apresentados.
+
+As ligações novas a ficheiros nativos devem corresponder à conta Cloudinary configurada, em `https://res.cloudinary.com/<conta>/video/upload/...`. Não são procuradas nem descarregadas pelo servidor URLs remotos arbitrários. Recursos nativos anteriores já associados continuam permitidos no modo com controlos. YouTube e Vimeo mantêm o suporte existente nesse modo, com carregamento do leitor só depois de interacção e uma opção para regressar à imagem de reserva. O modo animado exige um ficheiro nativo da conta Cloudinary. O projecto não possui um selector de biblioteca de vídeos; pode carregar um ficheiro ou usar uma ligação de um recurso da conta.
+
+O vídeo nativo animado usa reprodução sem som, `loop` e `playsinline`, com botão de pausa/retoma por teclado. A imagem de reserva é prioritária e tem proporção definida. O vídeo só recebe o endereço ao iniciar a reprodução, quando está visível, e não inicia automaticamente com movimento reduzido, poupança de dados ou ligação 2G indicada pelo navegador. Sai do ecrã ou muda de separador: a animação pausa. Bloqueio de autoplay, erro de rede ou demora no arranque mantêm a imagem e permitem nova tentativa. O modo com controlos só inicia por acção do visitante, apresenta controlos nativos e conserva o enquadramento completo; a animação preenche o espaço da capa sem distorção. Os cartões/listagens continuam a usar apenas imagens e não descarregam vídeos de capa.
+
+URLs Cloudinary da conta utilizam transformações de entrega `q_auto:good,w_1280,c_limit`; animações acrescentam `ac_none`, preservando o recurso original. A reprodução e a compatibilidade de codecs dependem do navegador e do ficheiro. Não se geram legendas, transcrições ou `VideoObject` fictícios: o editor deve manter explicações essenciais no artigo e fornecer as alternativas necessárias para vídeos informativos. As legendas/transcrições e o conteúdo audiovisual exigem revisão humana; testes automáticos de interface não certificam todo o conteúdo.
+
+**Configuração:** usa as variáveis já existentes `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` e, opcionalmente, `CLOUDINARY_VIDEO_FOLDER`. Não introduz credenciais no frontend nem exige novas dependências, serviços, tarefas agendadas ou alterações ao Cloudflare. Sem armazenamento configurado, o carregamento apresenta erro e não substitui a capa guardada; imagens estáticas continuam disponíveis. Os testes do navegador configuram apenas um nome de conta sintético e interceptam a entrega dos vídeos; não usam credenciais reais.
+
+**Migração e Coolify:** a revisão aditiva `20261021_07`, após `20261021_06`, acrescenta `cover_mode VARCHAR(24) NOT NULL DEFAULT 'auto'`, sem alterar imagens, URLs ou outros dados. Faça backup e ensaie numa cópia. Execute com o código da nova versão antes de servir tráfego:
+
+```bash
+python -m alembic upgrade head
+python -m alembic current
+```
+
+Resultado esperado: `20261021_07 (head)`. O mecanismo de compatibilidade de arranque existente também reconhece a coluna; não altere `AUTO_SCHEMA_UPGRADE`. Publique a nova imagem no Coolify e confirme `/healthz`, um artigo antigo, um rascunho, uma capa animada e a imagem de partilha. Não há migrações destrutivas nem implantação automática em produção por esta alteração.
+
+Testes: `tests/test_article_covers.py`, o cenário de actualização em `tests/test_migrations.py` e `tests/browser/article-covers.spec.js`, com registos sintéticos de `cover_fixture.py` e clips sem som gerados em `tests/fixtures/article-cover.mp4` e `.webm`. Os testes de carregamento simulam respostas/erros do SDK Cloudinary; os testes de reprodução usam um vídeo WebM real entregue por uma rota interceptada no navegador. A confirmação com a conta Cloudinary real e nos dispositivos finais deve ser feita após a implantação. O teste browser da moldura YouTube valida a integração com uma resposta simulada, não a disponibilidade do serviço externo.

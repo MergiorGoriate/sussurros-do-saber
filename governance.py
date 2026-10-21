@@ -819,7 +819,8 @@ def article_save_guard(article,status,author_id):
         workflow.editor=None
     if workflow and status in {'approved','published','scheduled'}:
         changes=any(request.form.get(key,'').strip()!=str(getattr(article,key) or '').strip() for key in ('title','body','summary','references','keywords','doi','image','cover_video'))
-        if changes or author_id!=article.author_id or request.form.get('category_id',type=int)!=article.category_id or request.files.get('image_file') or request.files.get('cover_video_file'):
+        cover_change = 'cover_mode' in request.form and request.form['cover_mode'] != article.cover_format
+        if changes or cover_change or author_id!=article.author_id or request.form.get('category_id',type=int)!=article.category_id or request.files.get('image_file') or request.files.get('cover_video_file'):
             abort(409,description='Alterações ao conteúdo aprovado exigem nova revisão. Guarde como rascunho.')
         workflow.stage=status
 

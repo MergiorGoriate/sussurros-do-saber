@@ -157,6 +157,7 @@ class Article(db.Model):
     doi = db.Column(db.String(180), default="")
     image = db.Column(db.String(600), default="")
     cover_video = db.Column(db.String(1000), default="")
+    cover_mode = db.Column(db.String(24), default="auto", server_default="auto", nullable=False)
     background = db.Column(db.String(20), default="default", server_default="default", nullable=False)
     status = db.Column(db.String(20), default="draft", nullable=False)
     read_minutes = db.Column(db.Integer, default=5, nullable=False)
@@ -170,6 +171,11 @@ class Article(db.Model):
     author_rel = db.relationship("Author", back_populates="articles")
     category_rel = db.relationship("Category", back_populates="articles")
     comments = db.relationship("Comment", back_populates="article", cascade="all, delete-orphan")
+
+    @property
+    def cover_format(self):
+        from cover_media import effective_cover_mode
+        return effective_cover_mode(self.cover_mode, self.cover_video)
 
     @staticmethod
     def normalize_background(value):
