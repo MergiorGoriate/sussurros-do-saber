@@ -1,5 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { execFileSync } = require('node:child_process');
+// Six authenticated viewports include full-page screenshots.
+test.setTimeout(90000);
 
 test('assigned editor reads delivered report on mobile and desktop without assignment powers', async ({ page }) => {
   const data = JSON.parse(execFileSync('python', ['tests/browser/editorial_audit_fixture.py'], { encoding: 'utf8' }));
@@ -10,12 +12,13 @@ test('assigned editor reads delivered report on mobile and desktop without assig
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const dark of [false, true]) {
+      await page.addInitScript(theme => localStorage.setItem('sussurros.admin.theme', theme), dark ? 'dark' : 'light');
       await page.goto(`/admin/submissoes/${data.manuscript_id}`);
       await page.emulateMedia({ colorScheme: dark ? 'dark' : 'light' });
       await page.getByRole('link', { name: 'Consultar pareceres científicos', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Revisão científica', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Gestão de pareceres', exact: true })).toBeVisible();
       await expect(page.locator('select[name="reviewer_id"]')).toHaveCount(0);
-      await page.locator('td details summary').click();
+      await page.locator('.review-card .review-report summary').click();
       await expect(page.getByText(data.report, { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await page.screenshot({ path: `test-results/assigned-editor-${width}-${dark ? 'dark' : 'light'}.png`, fullPage: true });
