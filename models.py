@@ -157,6 +157,7 @@ class Article(db.Model):
     doi = db.Column(db.String(180), default="")
     image = db.Column(db.String(600), default="")
     cover_video = db.Column(db.String(1000), default="")
+    background = db.Column(db.String(20), default="default", server_default="default", nullable=False)
     status = db.Column(db.String(20), default="draft", nullable=False)
     read_minutes = db.Column(db.Integer, default=5, nullable=False)
     featured = db.Column(db.Boolean, default=False, nullable=False)
@@ -169,6 +170,14 @@ class Article(db.Model):
     author_rel = db.relationship("Author", back_populates="articles")
     category_rel = db.relationship("Category", back_populates="articles")
     comments = db.relationship("Comment", back_populates="article", cascade="all, delete-orphan")
+
+    @staticmethod
+    def normalize_background(value):
+        return value if value in ("default", "aged_paper") else "default"
+
+    @property
+    def background_style(self):
+        return self.normalize_background(self.background)
 
     @property
     def author(self):

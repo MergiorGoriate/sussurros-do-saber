@@ -818,6 +818,7 @@ def article_form(article_id=None):
             while Article.query.filter(Article.slug == candidate, Article.id != article.id).first():
                 candidate, number = f"{base_slug}-{number}", number + 1
             article.slug = candidate
+            article.background = Article.normalize_background(request.form.get("background"))
             article.summary = summary
             article.body = body
             article.references = request.form.get("references", "")

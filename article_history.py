@@ -10,12 +10,12 @@ from extensions import limiter
 history_bp = Blueprint('article_history', __name__, url_prefix='/admin/artigos')
 history_bp.before_request(enforce_admin_authentication)
 history_bp.after_request(protect_admin_responses)
-CONTENT_FIELDS = ('title', 'summary', 'body', 'references', 'keywords', 'doi', 'image', 'cover_video', 'read_minutes', 'featured')
-FIELD_LABELS = {'title':'Título', 'summary':'Resumo', 'body':'Texto', 'references':'Referências', 'keywords':'Palavras-chave', 'doi':'DOI', 'image':'Imagem de capa', 'cover_video':'Vídeo de capa', 'read_minutes':'Tempo de leitura', 'featured':'Destaque'}
+CONTENT_FIELDS = ('title', 'summary', 'body', 'references', 'keywords', 'doi', 'image', 'cover_video', 'read_minutes', 'featured', 'background')
+FIELD_LABELS = {'title':'Título', 'summary':'Resumo', 'body':'Texto', 'references':'Referências', 'keywords':'Palavras-chave', 'doi':'DOI', 'image':'Imagem de capa', 'cover_video':'Vídeo de capa', 'read_minutes':'Tempo de leitura', 'featured':'Destaque', 'background':'Fundo do artigo'}
 
 
 def snapshot(article):
-    return {name: getattr(article, name) for name in CONTENT_FIELDS}
+    return {name: article.background_style if name == 'background' else getattr(article, name) for name in CONTENT_FIELDS}
 
 
 def record_revision(article, *, content=None, reason='Alteração editorial', baseline=False, created_at=None):
@@ -63,6 +63,8 @@ def history(ident):
     if selected:
         for field in CONTENT_FIELDS:
             old, new = selected.snapshot.get(field), current.get(field)
+            if field == 'background':
+                old, new = Article.normalize_background(old), Article.normalize_background(new)
             if old != new:
                 changes.append((FIELD_LABELS[field], bounded_diff(old, new)))
     return render_template('admin/article_history.html', article=article, pagination=pagination,
@@ -85,6 +87,7 @@ def restore(ident, revision_id):
     for field in CONTENT_FIELDS:
         if field in revision.snapshot:
             setattr(article, field, revision.snapshot[field])
+    article.background = Article.normalize_background(revision.snapshot.get('background'))
     article.status = 'draft'
     article.scheduled_at = None
     article.updated_at = utcnow()

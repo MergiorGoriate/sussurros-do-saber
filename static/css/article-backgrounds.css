@@ -1,0 +1,89 @@
+/* Editorial paper is confined to an opted-in article or its editor preview. */
+.article-paper {
+  --article-paper-bg:#f3e8cd;
+  --article-paper-ink:#342b20;
+  --article-paper-muted:#66553e;
+  --article-paper-link:#754019;
+  --article-paper-line:#b7a382;
+  --article-paper-soft:#e9dcc0;
+  --article-paper-code:#eee0c3;
+  background-color:var(--article-paper-bg);
+  background-image:radial-gradient(ellipse at 15% 10%,#fff7e54d,transparent 65%),repeating-linear-gradient(7deg,#81613405 0 1px,transparent 1px 5px),repeating-linear-gradient(93deg,#81613404 0 1px,transparent 1px 7px);
+  color:var(--article-paper-ink);
+  min-width:0;
+}
+.dark .article-paper,.admin-dark .article-paper {
+  --article-paper-bg:#302b22;
+  --article-paper-ink:#f2e7d1;
+  --article-paper-muted:#d2c3aa;
+  --article-paper-link:#f2ca82;
+  --article-paper-line:#88785f;
+  --article-paper-soft:#3c3529;
+  --article-paper-code:#211e19;
+  background-image:radial-gradient(ellipse at 15% 10%,#d5b87508,transparent 65%),repeating-linear-gradient(7deg,#e7d3a905 0 1px,transparent 1px 5px),repeating-linear-gradient(93deg,#e7d3a904 0 1px,transparent 1px 7px);
+}
+.article-page>.article-paper {display:flow-root;padding-bottom:1px}
+.article-page .article-paper :is(.prose-article,.article-markdown,.article-title,h2,h3,h4,h5,h6,.article-identifiers),
+.article-background-preview.article-paper :is(.markdown-preview,.background-preview-heading) {color:var(--article-paper-ink)}
+.article-page .article-paper .article-header :is(.article-summary,.article-meta,.article-byline),
+.article-page .article-paper :is(figcaption,figcaption small),
+.article-background-preview.article-paper :is(figcaption,.background-preview-heading p) {color:var(--article-paper-muted);opacity:1}
+.article-page .article-paper a,.article-background-preview.article-paper a {color:var(--article-paper-link);text-decoration:underline;text-underline-offset:3px}
+.article-page .article-paper a:focus-visible,.article-background-preview.article-paper a:focus-visible {outline:3px solid var(--article-paper-link);outline-offset:4px}
+.article-page .article-paper .article-markdown blockquote,
+.article-background-preview.article-paper .markdown-preview blockquote {color:var(--article-paper-ink);background:var(--article-paper-soft);border-color:var(--article-paper-link)}
+.article-page .article-paper .article-markdown blockquote::before,
+.article-page .article-paper .article-markdown blockquote::after {color:var(--article-paper-link)}
+.article-page .article-paper :is(th,td,.table-wrapper,.article-identifiers,.article-references,hr),
+.article-background-preview.article-paper :is(th,td,.preview-table-wrapper,.table-wrapper) {border-color:var(--article-paper-line)}
+.article-page .article-paper .article-markdown :is(th,tbody tr:nth-child(even)),
+.article-background-preview.article-paper .markdown-preview :is(th,tbody tr:nth-child(even)) {background:var(--article-paper-soft);color:var(--article-paper-ink)}
+.article-page .article-paper .article-markdown :is(pre,code),
+.article-background-preview.article-paper .markdown-preview :is(pre,code) {background:var(--article-paper-code);color:var(--article-paper-ink)}
+.article-page .article-paper .article-markdown pre code,
+.article-background-preview.article-paper .markdown-preview pre code {background:transparent;color:inherit}
+.article-page .article-paper .article-markdown .article-dropcap::first-letter,
+.article-background-preview.article-paper .article-dropcap::first-letter {color:var(--article-paper-link)}
+.article-page .article-paper .article-author-fallback {background:var(--article-paper-soft);color:var(--article-paper-ink)}
+.article-page .article-paper .bookmark {background:var(--article-paper-soft);color:var(--article-paper-link);border-color:var(--article-paper-line)}
+/* Native radios preserve keyboard navigation and screen-reader state. */
+.article-background-options {min-width:0;border:0;padding:0;margin:0}
+.article-background-options legend {font-size:.9rem;font-weight:700;margin-bottom:8px}
+.article-background-options>p {font-size:.8rem;line-height:1.6;margin:0 0 12px;color:#526177}
+.admin-dark .article-background-options>p {color:#b8c8dc}
+.article-background-choices {display:grid;gap:10px}
+.editor-side .article-background-choice {position:relative;display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px 10px;padding:12px;border:1px solid #b9c7d5;border-radius:12px;cursor:pointer;line-height:1.5;min-width:0}
+.editor-side .article-background-choice input {appearance:auto;position:static;width:18px;height:18px;margin:3px 0;accent-color:#24558c;grid-row:2}
+.article-background-choice :is(strong,small,.background-selected) {grid-column:2;font-size:.8rem}
+.article-background-choice small {font-weight:400;color:#526177}
+.article-background-choice .background-swatch {grid-column:1/-1;display:block;border:1px solid #b9c7d5;border-radius:7px;padding:10px 12px;font:700 1.35rem/1.3 Georgia,serif;min-height:70px}
+.background-swatch>span {display:block;font:400 .72rem/1.5 Inter,system-ui,sans-serif;margin-top:4px}
+.background-swatch.is-default {background:#fff;color:#172c43}
+.article-background-choice .background-selected {visibility:hidden;font-weight:700;min-height:20px;color:#24558c}
+.article-background-choice:has(input:checked) {border-color:#24558c;box-shadow:inset 0 0 0 1px #24558c}
+.article-background-choice:has(input:checked) .background-selected {visibility:visible}
+.article-background-choice:focus-within {outline:3px solid #24558c;outline-offset:3px}
+.admin-dark .article-background-choice {border-color:#697d95}
+.admin-dark .article-background-choice small {color:#bfccdc}
+.admin-dark .background-swatch.is-default {background:#1b283a;color:#edf3fa}
+.admin-dark .article-background-choice:has(input:checked) {border-color:#9acbff;box-shadow:inset 0 0 0 1px #9acbff}
+.admin-dark .article-background-choice:focus-within {outline-color:#9acbff}
+.admin-dark .article-background-choice .background-selected {color:#9acbff}
+.article-background-preview {min-width:0;max-width:100%;border-radius:10px}
+.background-preview-heading {padding:16px 18px 0;overflow-wrap:anywhere}
+.background-preview-heading h2 {font:700 1.5rem/1.3 Inter,system-ui,sans-serif;margin:0;text-align:left}
+.background-preview-heading p {font-size:1rem;line-height:1.65;margin:10px 0 0;font-weight:400}
+.article-background-preview.article-paper .markdown-preview {background:transparent;border-color:var(--article-paper-line);font-family:Georgia,serif;line-height:1.85}
+@media(forced-colors:active) {
+  .article-background-choice:has(input:checked) {outline:2px solid Highlight}
+  .article-paper {background-image:none}
+}
+/* The existing server preview uses table-wrapper when rendering footnotes. */
+.article-background-preview .markdown-preview :is(.table-wrapper,.preview-table-wrapper) {max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.article-background-preview .preview-table-wrapper:focus-visible {outline:3px solid #24558c;outline-offset:2px}
+.admin-dark .article-background-preview .preview-table-wrapper:focus-visible {outline-color:#9acbff}
+.article-background-preview .markdown-preview {display:flow-root}
+.article-background-preview .markdown-preview figcaption small {font-size:.8rem}
+.admin-dark .article-background-preview .markdown-preview figcaption small {color:#b8c8dc}
+.article-background-preview.article-paper .markdown-preview :is(figcaption,figcaption small) {color:var(--article-paper-muted);opacity:1}
+.article-page .article-paper figcaption small {font-size:.85rem}
