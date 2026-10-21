@@ -7,7 +7,7 @@
     if(!template||!player||!button||!restore)return;
     let disposed=false;
     const reset=()=>{if(disposed)return;player.replaceChildren();root.dataset.state='idle';button.hidden=false;restore.hidden=true;};
-    button.hidden=false;button.textContent='Reproduzir vídeo da capa';
+    button.hidden=false;button.textContent='Reproduzir vídeo da capa';button.title=button.textContent;
     button.addEventListener('click',()=>{player.replaceChildren(template.content.cloneNode(true));root.dataset.state='playing';button.hidden=true;restore.hidden=false;player.querySelector('iframe')?.addEventListener('error',reset);});
     restore.addEventListener('click',()=>{reset();button.focus();});
     instances.set(root,{dispose:()=>{reset();disposed=true;}});
@@ -22,7 +22,7 @@
     const connection=navigator.connection;
     const restricted=()=>motion.matches||connection?.saveData||['slow-2g','2g'].includes(connection?.effectiveType);
     const say=message=>{if(disposed)return;status.textContent=message;status.hidden=!message;};
-    const state=value=>{if(disposed)return;root.dataset.state=value;button.textContent=value==='playing'?'Pausar animação da capa':(failed?'Voltar a tentar reproduzir a capa':(animated?'Reproduzir animação da capa':'Reproduzir vídeo da capa'));if(animated)button.setAttribute('aria-pressed',String(value==='playing'));button.hidden=!animated&&ready;};
+    const state=value=>{if(disposed)return;root.dataset.state=value;button.textContent=value==='playing'?'Pausar animação da capa':(failed?'Voltar a tentar reproduzir a capa':(animated?'Reproduzir animação da capa':'Reproduzir vídeo da capa'));if(animated)button.setAttribute('aria-pressed',String(value==='playing'));button.title=button.textContent;button.hidden=!animated&&ready;};
     const pause=()=>{video.pause();clearTimeout(timer);if(ready)state('paused');};
     async function play(manual=false){
       if(disposed||!root.isConnected||document.hidden||(!manual&&(userPaused||blocked||restricted()||!visible)))return;
