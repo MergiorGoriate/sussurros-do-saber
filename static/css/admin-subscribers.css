@@ -75,6 +75,22 @@
 .subscriber-empty h3{margin:0 0 8px;font-size:15px}
 .subscriber-empty p{margin:0;color:var(--sub-muted);font-size:13px;line-height:1.7}
 .subscriber-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.mail-delivery{margin-block:24px;min-width:0;overflow-wrap:anywhere}
+.mail-delivery p{font-size:14px;line-height:1.65;color:var(--sub-muted)}
+.mail-delivery h3{font-size:18px;margin-block:28px 12px}.mail-delivery h4{font-size:15px;margin:0 0 8px}
+.mail-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:12px;margin-block:20px}
+.mail-summary>div,.mail-card{border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--sub-surface);min-width:0}
+.mail-summary dt{font-size:13px;color:var(--sub-muted)}.mail-summary dd{margin:6px 0;font-size:20px;font-weight:700}
+.mail-summary progress{width:100%;max-width:220px;accent-color:var(--sub-accent)}.mail-summary span{font-size:12px;margin-left:5px}
+.mail-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-block:12px}.mail-actions form{margin:0}
+.mail-warning{border-left:3px solid currentColor;padding-left:12px}
+.mail-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-block:18px}
+.mail-settings label,.mail-schedule label{display:grid;gap:7px;font-size:13px;min-width:0}
+.mail-settings :is(input,select),.mail-schedule input{box-sizing:border-box;width:100%;min-width:0;min-height:44px;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--sub-surface);color:var(--sub-text)}
+.mail-settings button{justify-self:start;align-self:end}.mail-delivery summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:14px;font-weight:600}
+.mail-campaigns{display:grid;gap:12px}.mail-card pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 Arial,sans-serif;padding:12px;background:var(--sub-soft);max-height:480px;overflow:auto}
+.mail-schedule{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin-top:15px}
+@media(max-width:650px){.mail-settings{grid-template-columns:minmax(0,1fr)}.mail-card{padding:12px}.mail-schedule{display:grid;grid-template-columns:minmax(0,1fr)}}
 @media(max-width:1150px){.newsletter-layout{grid-template-columns:minmax(0,1fr)}.newsletter-controls .newsletter-explanation{max-width:65ch}}
 @media(max-width:650px){
  .subscribers-header{align-items:flex-start;flex-direction:column;gap:16px}.subscribers-header h1{font-size:30px}.subscribers-export{width:100%}

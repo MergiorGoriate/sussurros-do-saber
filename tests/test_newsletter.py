@@ -11,7 +11,8 @@ from unittest.mock import patch
 from app import app
 from models import db, Article, Author, Category, Subscriber
 from newsletter_service import CANCELLED, digest, queue_digest, unsubscribe_token, newsletter_image_url, unsubscribe_url
-from submission_models import EditorialNotification
+from submission_models import EditorialNotification, NewsletterCampaign, MailDeliveryAttempt
+from mail_delivery import policy, due_messages
 import test_staff_governance as staff
 
 SMTP = {'SMTP_HOST':'smtp.example.test', 'SMTP_FROM':'boletim@example.test',
@@ -44,12 +45,16 @@ class NewsletterTests(unittest.TestCase):
         self.article_scope=patch('newsletter_service.Article',scoped_articles)
         self.article_scope.start()
         self.client=app.test_client()
+        settings=policy();settings.interval_seconds=0;settings.hourly_limit=100000;settings.daily_limit=1000000;settings.paused=False;settings.suspended_until=None;db.session.commit()
 
     def tearDown(self):
         self.article_scope.stop()
         db.session.rollback()
-        EditorialNotification.query.filter(EditorialNotification.recipient.in_(
-            [self.subscriber.email,self.inactive.email])).delete(synchronize_session=False)
+        campaign_ids=[r.campaign_id for r in EditorialNotification.query.filter_by(recipient=self.subscriber.email).all() if r.campaign_id]
+        ids=[r.id for r in EditorialNotification.query.filter(EditorialNotification.recipient.in_([self.subscriber.email,self.inactive.email])).all()]
+        MailDeliveryAttempt.query.filter(MailDeliveryAttempt.notification_id.in_(ids)).delete(synchronize_session=False)
+        EditorialNotification.query.filter(EditorialNotification.id.in_(ids)).delete(synchronize_session=False)
+        NewsletterCampaign.query.filter(NewsletterCampaign.id.in_(campaign_ids)).delete(synchronize_session=False)
         for row in [self.article,self.private,self.subscriber,self.inactive]:db.session.delete(row)
         db.session.flush()
         db.session.delete(self.author);db.session.delete(self.category);db.session.commit()
@@ -62,15 +67,22 @@ class NewsletterTests(unittest.TestCase):
         with patch('newsletter_service.Subscriber',scoped):
             return queue_digest(now=NOW,**kwargs)
 
-    def deliver(self, failure=False, send_results=None):
-        scoped=SimpleNamespace(query=EditorialNotification.query.filter_by(recipient=self.subscriber.email),
-            id=EditorialNotification.id,last_error=EditorialNotification.last_error,subject=EditorialNotification.subject)
-        with patch('submissions.EditorialNotification',scoped), patch('submissions.smtplib.SMTP') as smtp:
-            if send_results is not None:smtp.return_value.__enter__.return_value.send_message.side_effect=send_results
-            if failure:smtp.return_value.__enter__.return_value.send_message.side_effect=smtplib.SMTPException('test failure')
+    def deliver(self, failure=False, send_results=None, quit_failure=False):
+        for row in EditorialNotification.query.filter_by(recipient=self.subscriber.email).all():
+            if row.campaign_id:
+                c=db.session.get(NewsletterCampaign,row.campaign_id)
+                c.status='scheduled';c.approved_at=NOW;c.scheduled_at=NOW
+            if row.status=='temporary':row.next_attempt_at=None
+        db.session.commit()
+        query=due_messages
+        with patch('mail_delivery.due_messages',side_effect=lambda now:query(now).filter_by(recipient=self.subscriber.email)), patch('mail_delivery.smtplib.SMTP') as smtp:
+            smtp.return_value.send_message.return_value={}
+            if quit_failure:smtp.return_value.quit.side_effect=smtplib.SMTPServerDisconnected('disconnect at QUIT')
+            if send_results is not None:smtp.return_value.send_message.side_effect=send_results
+            if failure:smtp.return_value.send_message.side_effect=smtplib.SMTPDataError(451,b'test refusal')
             result=app.test_cli_runner().invoke(args=['enviar-notificacoes'])
             self.assertEqual(result.exit_code,0,result.output)
-            return smtp.return_value.__enter__.return_value
+            return smtp.return_value
 
     def test_queue_is_private_active_only_and_idempotent(self):
         self.assertEqual(self.queue(),1)
@@ -179,32 +191,27 @@ class NewsletterTests(unittest.TestCase):
         context = smtp.starttls.call_args.kwargs['context']
         self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
         self.assertTrue(context.check_hostname)
-        with patch.dict('os.environ', {'SMTP_SSL':'true', 'SMTP_TLS':'false'}), patch('submissions.smtplib.SMTP_SSL') as factory:
-            result = app.test_cli_runner().invoke(args=['enviar-notificacoes'])
-            self.assertEqual(result.exit_code, 0, result.output)
+        db.session.add(EditorialNotification(recipient=self.subscriber.email,subject='Mensagem SSL',body='Teste de validação TLS'));db.session.commit()
+        with patch.dict('os.environ', {'SMTP_SSL':'true', 'SMTP_TLS':'false'}), patch('mail_delivery.smtplib.SMTP_SSL') as factory:
+            factory.return_value.send_message.return_value={}
+            self.deliver()
             context = factory.call_args.kwargs['context']
             self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
             self.assertTrue(context.check_hostname)
-            factory.return_value.__enter__.return_value.starttls.assert_not_called()
+            factory.return_value.starttls.assert_not_called()
 
     def test_smtp_disconnect_at_quit_does_not_requeue_accepted_message(self):
         self.queue()
-        scoped = SimpleNamespace(query=EditorialNotification.query.filter_by(recipient=self.subscriber.email),
-            id=EditorialNotification.id,last_error=EditorialNotification.last_error,subject=EditorialNotification.subject)
-        with patch('submissions.EditorialNotification',scoped), patch('submissions.smtplib.SMTP') as smtp:
-            smtp.return_value.__exit__.side_effect = smtplib.SMTPServerDisconnected('disconnect at QUIT')
-            result = app.test_cli_runner().invoke(args=['enviar-notificacoes'])
-            self.assertNotEqual(result.exit_code, 0)
-        row = EditorialNotification.query.filter_by(recipient=self.subscriber.email).one()
-        self.assertIsNotNone(row.sent_at)
-        self.assertEqual(row.last_error, '')
+        self.deliver(quit_failure=True)
+        row=EditorialNotification.query.filter_by(recipient=self.subscriber.email).one()
+        self.assertIsNotNone(row.sent_at);self.assertEqual(row.last_error,'')
         self.deliver().send_message.assert_not_called()
 
     def test_network_error_mid_batch_keeps_accepted_messages_sent(self):
         self.queue()
         second=EditorialNotification(recipient=self.subscriber.email,subject='Mensagem transaccional de teste',body='Segundo envio')
         db.session.add(second);db.session.commit()
-        self.deliver(send_results=[None,OSError('connection reset')])
+        self.deliver(send_results=[{},smtplib.SMTPDataError(451,b'transient refusal')])
         rows=EditorialNotification.query.filter_by(recipient=self.subscriber.email).order_by(EditorialNotification.id).all()
         self.assertIsNotNone(rows[0].sent_at)
         self.assertIsNone(rows[1].sent_at)
@@ -271,3 +278,16 @@ class NewsletterPermissionsTests(unittest.TestCase):
             response=self.post('/admin/subscritores',action='prepare_newsletter',confirm='on',fingerprint=edition['fingerprint'])
             self.assertEqual(response.status_code,303)
             queue.assert_called_once_with(expected_hash=edition['fingerprint'])
+
+    def test_every_delivery_action_requires_current_permission_and_csrf(self):
+        author=self.member('author');self.signin(author.admin)
+        for action in ['update_limits','pause_all','resume_all','approve','schedule','start','pause','cancel','retry','confirmed_accepted','confirmed_not_accepted']:
+            self.assertEqual(self.post('/admin/subscritores',action=action).status_code,403,action)
+        director=self.member('direction');self.signin(director.admin)
+        self.assertEqual(self.client.post('/admin/subscritores',data={'action':'pause_all'}).status_code,400)
+        self.assertEqual(self.post('/admin/subscritores',action='pause_all').status_code,303)
+        self.assertTrue(policy().paused)
+        self.assertEqual(self.post('/admin/subscritores',action='resume_all').status_code,303)
+        self.assertFalse(policy().paused)
+        self.assertIn('Limites e entrega',self.client.get('/admin/subscritores').get_data(as_text=True))
+

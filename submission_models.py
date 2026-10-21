@@ -116,6 +116,10 @@ class ReviewAssignment(db.Model):
     recommendation = db.Column(db.String(40), default='', nullable=False)
 
 class EditorialNotification(db.Model):
+    __table_args__ = (
+        db.UniqueConstraint('campaign_id', 'recipient', name='uq_mail_campaign_recipient'),
+        db.UniqueConstraint('campaign_id', 'subscriber_id', name='uq_mail_campaign_subscriber'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     recipient = db.Column(db.String(254), nullable=False)
     subject = db.Column(db.String(300), nullable=False)
@@ -125,6 +129,59 @@ class EditorialNotification(db.Model):
     sent_at = db.Column(db.DateTime)
     attempts = db.Column(db.Integer, default=0, nullable=False)
     last_error = db.Column(db.String(120), default='', nullable=False)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('newsletter_campaign.id'), index=True)
+    subscriber_id = db.Column(db.Integer, db.ForeignKey('subscriber.id'))
+    status = db.Column(db.String(24), default='pending', server_default='pending', nullable=False, index=True)
+    next_attempt_at = db.Column(db.DateTime, index=True)
+    last_attempt_at = db.Column(db.DateTime)
+    smtp_code = db.Column(db.Integer)
+    claim_token = db.Column(db.String(64))
+
+
+class NewsletterCampaign(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    issue = db.Column(db.String(16), unique=True, nullable=False)
+    fingerprint = db.Column(db.String(64), nullable=False)
+    subject = db.Column(db.String(300), nullable=False)
+    status = db.Column(db.String(24), default='prepared', nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    approved_at = db.Column(db.DateTime)
+    scheduled_at = db.Column(db.DateTime)
+    suspension_reason = db.Column(db.String(120), default='', nullable=False)
+
+
+class MailDeliveryPolicy(db.Model):
+    """One shared row; limits count reservations for the entire SMTP outbox in UTC."""
+    id = db.Column(db.Integer, primary_key=True)
+    legacy_reconciled = db.Column(db.Boolean, default=False, server_default=db.false(), nullable=False)
+    hourly_limit = db.Column(db.Integer, default=100, nullable=False)
+    daily_limit = db.Column(db.Integer, default=500, nullable=False)
+    edition_limit = db.Column(db.Integer, default=2500, nullable=False)
+    max_retries = db.Column(db.Integer, default=3, nullable=False)
+    interval_seconds = db.Column(db.Integer, default=36, nullable=False)
+    provider_hourly = db.Column(db.Integer)
+    provider_daily = db.Column(db.Integer)
+    provider_source = db.Column(db.String(300), default='', nullable=False)
+    provider_verified_on = db.Column(db.Date)
+    paused = db.Column(db.Boolean, default=False, nullable=False)
+    suspended_until = db.Column(db.DateTime)
+    suspension_reason = db.Column(db.String(120), default='', nullable=False)
+    last_started_at = db.Column(db.DateTime)
+    worker_token = db.Column(db.String(64))
+    worker_lease_until = db.Column(db.DateTime)
+    worker_heartbeat_at = db.Column(db.DateTime)
+
+
+class MailDeliveryAttempt(db.Model):
+    __table_args__ = (db.UniqueConstraint('notification_id', 'number', name='uq_mail_attempt_number'),)
+    id = db.Column(db.Integer, primary_key=True)
+    notification_id = db.Column(db.Integer, db.ForeignKey('editorial_notification.id'), nullable=False, index=True)
+    number = db.Column(db.Integer, nullable=False)
+    started_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
+    finished_at = db.Column(db.DateTime)
+    outcome = db.Column(db.String(24), default='processing', nullable=False)
+    smtp_code = db.Column(db.Integer)
+    reason = db.Column(db.String(120), default='', nullable=False)
 
 class PublicationAsset(db.Model):
     """Sanitized figure copies; originals remain private even after publication."""
@@ -132,5 +189,6 @@ class PublicationAsset(db.Model):
     journal_id = db.Column(db.Integer, db.ForeignKey('journal.id'), nullable=False, index=True)
     name = db.Column(db.String(180), nullable=False)
     payload = db.Column(db.LargeBinary, nullable=False)
+
 
 

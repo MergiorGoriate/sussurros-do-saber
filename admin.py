@@ -1250,24 +1250,40 @@ def contacts():
 @login_required
 def subscribers():
     from newsletter_service import digest, queue_digest, smtp_ready
+    from mail_delivery import dashboard, update_policy, policy, campaign_action, reconcile, retry, audit, record_id
     if request.method == 'POST':
         validate_csrf()
-        if request.form.get('action') != 'prepare_newsletter' or request.form.get('confirm') != 'on':
-            abort(400)
-        fingerprint = request.form.get('fingerprint', '')
-        if not re.fullmatch(r'[0-9a-f]{64}', fingerprint):
-            abort(400)
+        action=request.form.get('action','')
         try:
-            count = queue_digest(expected_hash=fingerprint)
+            if action=='prepare_newsletter':
+                if request.form.get('confirm')!='on':abort(400)
+                fingerprint=request.form.get('fingerprint','')
+                if not re.fullmatch(r'[0-9a-f]{64}',fingerprint):abort(400)
+                count=queue_digest(expected_hash=fingerprint)
+                flash(f'{count} boletins preparados. Reveja a campanha, aprove e autorize o envio separadamente.','success')
+            elif action=='update_limits':
+                update_policy(request.form);flash('Limites guardados. Contagem em UTC e quotas partilhadas por toda a fila.','success')
+            elif action in ('pause_all','resume_all'):
+                settings=policy(lock=True);settings.paused=action=='pause_all'
+                audit(action,1,'A pausa impede novas reservas; uma tentativa já iniciada pode terminar.','mail_policy')
+                db.session.commit();flash('Pausa global actualizada. Limites e adiamentos continuam aplicáveis.','success')
+            elif action in ('approve','schedule','start','pause','cancel'):
+                campaign_action(record_id(request.form.get('campaign_id','')),action,request.form)
+                flash('Campanha actualizada; o processamento cabe ao comando periódico existente.','success')
+            elif action in ('confirmed_accepted','confirmed_not_accepted'):
+                reconcile(record_id(request.form.get('notification_id','')),action,request.form.get('evidence',''))
+                flash('Reconciliação registada.','success')
+            elif action=='retry':
+                retry(record_id(request.form.get('notification_id','')));flash('Reprocessamento elegível registado; mantidos os limites e a espera.','success')
+            else:abort(400)
         except ValueError as error:
             db.session.rollback()
             flash(str(error), 'error')
-        else:
-            flash(f'{count} boletins preparados. A entrega será feita pelo serviço SMTP existente.', 'success')
         return redirect(url_for('admin.subscribers'), code=303)
     return render_template("admin/subscribers.html",
         subscribers=Subscriber.query.order_by(Subscriber.created_at.desc()).all(),
-        newsletter_edition=digest(), newsletter_smtp_ready=smtp_ready())
+        newsletter_edition=digest(), newsletter_smtp_ready=smtp_ready(),
+        delivery=dashboard(request.args.get('campaign_page',1,type=int),request.args.get('failure_page',1,type=int),request.args.get('campaign',type=int)))
 
 
 @admin_bp.post("/contactos/<int:message_id>/eliminar")
@@ -1287,6 +1303,9 @@ def toggle_subscriber(subscriber_id):
     validate_csrf()
     subscriber = db.get_or_404(Subscriber, subscriber_id)
     subscriber.active = not subscriber.active
+    from mail_delivery import audit, cancel_subscriber
+    if not subscriber.active:cancel_subscriber(subscriber.id)
+    audit('recipient.updated',subscriber.id,'Activo: '+str(subscriber.active),'subscriber')
     db.session.commit()
     flash("Estado do subscritor atualizado.", "success")
     return redirect(url_for("admin.subscribers"))
@@ -1321,6 +1340,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 

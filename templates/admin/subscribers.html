@@ -45,11 +45,12 @@
         <input type="hidden" name="fingerprint" value="{{ newsletter_edition.fingerprint }}">
         <label class="newsletter-confirm"><input type="checkbox" name="confirm" required><span>Revi esta selecção e confirmo a preparação do envio aos subscritores activos.</span></label>
         <button type="submit" class="admin-primary">Preparar envio do boletim</button>
-        <p class="newsletter-caption">A preparação adiciona as mensagens à fila de envio.</p>
+        <p class="newsletter-caption">A preparação guarda as mensagens sem enviar. Reveja a campanha em Limites e entrega, aprove e autorize ou agende o processamento.</p>
       </form>
       {% endif %}
     </aside>
   </div>
+  {% include 'admin/mail_delivery.html' %}
   <section class="admin-panel subscribers-directory" aria-labelledby="subscriber-list-title">
     <div class="subscriber-section-head"><div><h2 id="subscriber-list-title">Lista de subscritores</h2><p>Consulte as inscrições e altere o estado de cada subscritor.</p></div><span class="subscriber-count">{{ total }} {{ 'inscrição' if total == 1 else 'inscrições' }}</span></div>
     {% if subscribers %}
@@ -64,3 +65,4 @@
   </section>
 </div>
 {% endblock %}
+
