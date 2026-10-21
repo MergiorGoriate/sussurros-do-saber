@@ -25,5 +25,7 @@ owner=case.member();a=case.article(owner);a.title='Revisão de divulgação cien
 flow=db.session.get(ArticleWorkflow,a.id);flow.stage='review';flow.reviewer_id=reviewer.id
 reviewer.name='Revisor científico de demonstração';db.session.commit()
 def cookie(account):
+ if account is None:
+  return app.session_interface.get_signing_serializer(app).dumps(dict(admin_authenticated=True,admin_id=None,admin_username=os.environ['ADMIN_USERNAME'],admin_superuser=True,admin_last_activity_at=time.time(),admin_2fa_verified=True,admin_security_stamp=admin_security_stamp(),csrf_token='review-browser-fixture'))
  return app.session_interface.get_signing_serializer(app).dumps(dict(admin_authenticated=True,admin_id=account.id,admin_username=account.username,admin_superuser=account.is_superadmin,admin_last_activity_at=time.time(),admin_2fa_verified=True,admin_security_stamp=admin_security_stamp(account),csrf_token='review-browser-fixture'))
-print(json.dumps(dict(founder=cookie(case.primary),reviewer=cookie(reviewer.admin),member_id=reviewer.id,manuscript_id=m.id,code=m.code,file_id=f.id,conflict_id=accepted.id,conflict_file_id=of.id,article_id=a.id,due_on=date.today().isoformat())))
+print(json.dumps(dict(founder=cookie(None if os.environ.get('ADMIN_USERNAME') else case.primary),reviewer=cookie(reviewer.admin),member_id=reviewer.id,manuscript_id=m.id,code=m.code,file_id=f.id,conflict_id=accepted.id,conflict_file_id=of.id,article_id=a.id,due_on=date.today().isoformat())))
