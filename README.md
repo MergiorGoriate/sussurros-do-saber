@@ -1090,3 +1090,5 @@ Testes: `tests/test_article_covers.py`, o cenário de actualização em `tests/t
 ### Capa animada no destaque da página inicial (21/10/2026)
 
 O artigo principal de **Em destaque** também reproduz a capa quando o editor escolhe **Vídeo animado**. Reutiliza o vídeo, a imagem de reserva e o leitor acessível do artigo, sem novos campos ou migrações. A imagem e o título continuam a abrir o artigo; o botão de pausa é independente da ligação. Os modos de imagem e vídeo com controlos conservam a imagem estática na página inicial. Os outros cartões e listagens não carregam vídeos. Movimento reduzido, poupança de dados, falhas de reprodução e pausa fora do ecrã seguem as mesmas regras do leitor existente. Não há configurações adicionais no Coolify: publicar esta versão após a migração `20261021_07` já exigida pelas capas de vídeo.
+
+O controlo sobreposto da capa usa agora um botão circular de 48 px com ícones de reproduzir/pausar. O nome acessível acompanha o estado, o foco permanece visível e o texto descritivo surge também na dica do botão. Aplica-se ao artigo, destaque e pré-visualização do editor, reutilizando o mesmo leitor.
