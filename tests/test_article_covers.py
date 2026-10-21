@@ -87,6 +87,22 @@ class ArticleCoverTests(unittest.TestCase):
             page=app.test_client().get(path);self.assertEqual(page.status_code,200)
             self.assertFalse(BeautifulSoup(page.data,'html.parser').select('video.cover-video,[data-article-cover]'))
 
+    def test_home_animates_only_the_lead_story_and_preserves_links(self):
+        owner=self.member();article=self.article(owner);article.status='published'
+        Article.query.update({Article.featured:False});article.featured=True;article.published_at=utcnow();article.cover_mode='video_animated';article.cover_video=VIDEO
+        article.image='https://example.org/poster.jpg';db.session.commit()
+        soup=BeautifulSoup(app.test_client().get('/').data,'html.parser')
+        hero=soup.select_one('.home-animated-cover');self.assertIsNotNone(hero)
+        self.assertEqual(len(soup.select('video')),1)
+        video=hero.select_one('video');self.assertNotIn('src',video.attrs)
+        self.assertTrue(video.has_attr('muted'));self.assertTrue(video.has_attr('loop'))
+        link=hero.select_one('a');self.assertEqual(link['href'],'/artigo/'+article.slug)
+        self.assertIsNone(link.select_one('button'));self.assertIsNotNone(hero.select_one('button[aria-controls]'))
+        self.assertFalse(BeautifulSoup(app.test_client().get('/artigos').data,'html.parser').select('video'))
+        for mode in ['image','video_controls','auto']:
+            article.cover_mode=mode;db.session.commit()
+            self.assertFalse(BeautifulSoup(app.test_client().get('/').data,'html.parser').select('video'))
+
     def test_preview_blobs_are_allowed_without_weakening_script_policy(self):
         owner=self.member();article=self.article(owner);self.signin(owner.admin)
         response=self.client.get(f'/admin/artigos/{article.id}/editar')

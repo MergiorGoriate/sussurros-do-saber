@@ -84,3 +84,15 @@ test('external controlled covers keep a poster until opened and can return to it
  await page.getByRole('button',{name:'Reproduzir vídeo da capa',exact:true}).click();await expect(page.locator('.cover-external-player iframe')).toHaveAttribute('src',/youtube-nocookie.com/);
  await page.getByRole('button',{name:'Mostrar imagem de reserva',exact:true}).click();await expect(page.locator('.cover-external-player iframe')).toHaveCount(0);await expect(page.locator('.cover-poster')).toBeVisible();
 });
+
+for(const width of [320,1440])test(`homepage lead animation and independent navigation at ${width}px`,async({page})=>{
+ const d=JSON.parse(execFileSync('python',['tests/browser/cover_fixture.py'],{encoding:'utf8',env:{...process.env,COVER_HERO_ANIMATED:'1'}}));
+ await assets(page);await page.setViewportSize({width,height:900});await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.goto('/',{waitUntil:'domcontentloaded'});const root=page.locator('.home-animated-cover');await root.scrollIntoViewIfNeeded();
+ await expect(root).toHaveAttribute('data-state','playing');await expect(page.locator('video')).toHaveCount(1);
+ expect(await root.locator('video').evaluate(v=>v.muted&&v.loop&&v.playsInline)).toBe(true);
+ await root.getByRole('button',{name:'Pausar animação da capa',exact:true}).click();await expect(root).toHaveAttribute('data-state','paused');
+ await fits(page);await page.emulateMedia({reducedMotion:'reduce'});await page.reload({waitUntil:'domcontentloaded'});
+ await expect(root.locator('video')).not.toHaveAttribute('src');await expect(root.locator('.cover-poster')).toBeVisible();
+ await root.locator('.home-cover-link').click({position:{x:30,y:30}});await expect(page).toHaveURL(new RegExp('/artigo/'+d.video_animated.slug+'$'));
+});

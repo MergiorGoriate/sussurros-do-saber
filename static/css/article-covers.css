@@ -39,3 +39,9 @@
 .article-page .article-paper .article-video-cover>.cover-status {color:#fff}
 @media print {.article-video-cover>.cover-external-player,.article-video-cover>.cover-restore {display:none}}
 .article-video-cover[data-mode=video_controls]>.cover-video {object-fit:contain;background:#101820}
+
+/* Only the lead homepage story opts into animation; its link and pause are siblings. */
+.article-video-cover.home-animated-cover {aspect-ratio:16/9;border-radius:0}
+.home-animated-cover>.home-cover-link {position:absolute;inset:0;z-index:1}
+.home-animated-cover>.home-cover-link:focus-visible {outline:3px solid #fff;outline-offset:-5px}
+.home-animated-cover>.cover-status {pointer-events:none}
