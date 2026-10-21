@@ -121,6 +121,7 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: sqlite:////tmp/sussurros-browser-ci.db
+      CLOUDINARY_CLOUD_NAME: cover-fixture
       SECRET_KEY: ci-browser-secret-key
       ADMIN_TOTP_SECRET: JBSWY3DPEHPK3PXP
       ADMIN_USERNAME: ci-admin

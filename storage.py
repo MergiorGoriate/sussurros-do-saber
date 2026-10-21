@@ -94,12 +94,16 @@ class VideoUploadError(ValueError):
     pass
 
 
-def upload_article_video(file):
+def upload_article_video(file, *, cover=False):
     if not file or not file.filename:
         raise VideoUploadError("Seleccione um vídeo para carregar.")
     extension = os.path.splitext(file.filename)[1].lower()
     if extension not in {".mp4", ".webm", ".ogg"}:
         raise VideoUploadError("Use um vídeo MP4, WebM ou OGG.")
+    if cover and file.mimetype not in {'', 'application/octet-stream', 'video/mp4', 'video/webm', 'video/ogg'}:
+        raise VideoUploadError("O tipo do ficheiro deve corresponder a um vídeo MP4, WebM ou OGG.")
+    if cover and file.mimetype.startswith('video/') and file.mimetype != {'.mp4':'video/mp4','.webm':'video/webm','.ogg':'video/ogg'}[extension]:
+        raise VideoUploadError("O tipo e a extensão do vídeo não correspondem.")
     payload = file.read(MAX_VIDEO_BYTES + 1)
     if not payload or len(payload) > MAX_VIDEO_BYTES:
         raise VideoUploadError("O vídeo deve ter entre 1 byte e 50 MB.")
@@ -122,8 +126,17 @@ def upload_article_video(file):
             folder=os.getenv("CLOUDINARY_VIDEO_FOLDER", "sussurros-do-saber/videos"),
             overwrite=False, timeout=120,
         )
-    except CloudinaryError as error:
+    except (CloudinaryError, OSError, TimeoutError) as error:
         raise VideoUploadError("Não foi possível carregar o vídeo. Tente novamente.") from error
-    if not result.get("secure_url"):
+    if not isinstance(result, dict) or not result.get("secure_url"):
         raise VideoUploadError("O armazenamento não devolveu o endereço do vídeo.")
+    if cover:
+        from cover_media import owned_cloudinary_video
+        try:
+            decoded_video = (result.get('resource_type') == 'video' and float(result.get('width', 0)) > 0
+                             and float(result.get('height', 0)) > 0 and float(result.get('duration', 0)) > 0)
+        except (ValueError, TypeError):
+            decoded_video = False
+        if not decoded_video or not owned_cloudinary_video(result['secure_url']):
+            raise VideoUploadError("O armazenamento não confirmou um vídeo válido. Use um ficheiro de vídeo completo, com imagem em movimento.")
     return result["secure_url"]

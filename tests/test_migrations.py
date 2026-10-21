@@ -57,6 +57,28 @@ class MigrationTests(unittest.TestCase):
                 self.assertEqual(connection.execute(text('SELECT background FROM article')).scalar(),'aged_paper')
             engine.dispose()
 
+    def test_cover_mode_upgrade_preserves_images_and_existing_videos(self):
+        from models import Article
+        with tempfile.TemporaryDirectory() as directory:
+            url='sqlite:///'+str(Path(directory)/'covers.db')
+            engine=create_engine(url)
+            with engine.begin() as connection:
+                connection.execute(text('CREATE TABLE article (id INTEGER PRIMARY KEY, image VARCHAR(600), cover_video VARCHAR(1000), body TEXT)'))
+                connection.execute(text("INSERT INTO article VALUES (1,'https://example.org/static.jpg','','Imagem anterior'),(2,'https://example.org/poster.jpg','https://example.org/legacy.mp4','Vídeo anterior')"))
+                connection.execute(text('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)'))
+                connection.execute(text("INSERT INTO alembic_version VALUES ('20261021_06')"))
+            self.run_migration(url)
+            with engine.begin() as connection:
+                rows=connection.execute(text('SELECT image,cover_video,body,cover_mode FROM article ORDER BY id')).all()
+                self.assertEqual(rows[0],('https://example.org/static.jpg','','Imagem anterior','auto'))
+                self.assertEqual(rows[1],('https://example.org/poster.jpg','https://example.org/legacy.mp4','Vídeo anterior','auto'))
+                self.assertEqual([Article(cover_mode=r[3],cover_video=r[1]).cover_format for r in rows],['image','video_controls'])
+                connection.execute(text("UPDATE article SET cover_mode='video_animated' WHERE id=2"))
+            self.run_migration(url)
+            with engine.connect() as connection:
+                self.assertEqual(connection.execute(text('SELECT cover_mode FROM article WHERE id=2')).scalar(),'video_animated')
+            engine.dispose()
+
     def run_migration(self, url):
         with patch.dict(os.environ, {"DATABASE_URL": url}):
             command.upgrade(Config(str(Path(__file__).resolve().parents[1] / "alembic.ini")), "head")
@@ -69,7 +91,7 @@ class MigrationTests(unittest.TestCase):
             engine = create_engine(url)
             with engine.connect() as connection:
                 self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message"}.issubset(inspect(connection).get_table_names()))
-                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261021_06")
+                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261021_07")
             engine.dispose()
 
     def test_existing_schema_and_content_are_preserved(self):

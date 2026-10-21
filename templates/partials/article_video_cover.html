@@ -1,0 +1,10 @@
+{% set native = article.cover_video|native_cover_video %}
+{% set animated = article.cover_format=='video_animated' %}
+{% set poster = article.image|image_variant(1200) if article.image else url_for('static',filename='img/image-fallback.svg') %}
+<figure class="article-cover article-video-cover {{ 'article-main-video is-external' if not native else '' }} max-w-6xl mx-auto mt-8" data-external="{{ 'false' if native else 'true' }}" data-article-cover data-mode="{{ article.cover_format }}" data-state="idle">
+  <img class="article-cover-image cover-poster" src="{{ poster }}" {% if article.image %}srcset="{{ article.image|image_srcset([480,768,1200]) }}"{% endif %} sizes="(max-width:1151px) 100vw,1152px" alt="Imagem de reserva: {{ article.title }}" width="1200" height="600" fetchpriority="high" decoding="async">
+  {% if native %}<video id="article-cover-video-{{ article.id }}" class="cover-video" data-src="{{ article.cover_video|cover_delivery_url(animated) }}" data-poster="{{ poster }}" width="1200" height="600" preload="none" playsinline {% if animated %}autoplay muted loop{% else %}controls{% endif %} aria-label="Vídeo de capa: {{ article.title }}">O navegador não suporta este vídeo. A imagem de reserva mantém-se disponível.</video>
+  {% else %}<div class="cover-external-player" id="article-cover-video-{{ article.id }}"></div><template class="cover-external-template">{{ main_video }}</template><button type="button" class="cover-restore" hidden>Mostrar imagem de reserva</button>{% endif %}
+  <button type="button" class="cover-toggle" aria-controls="article-cover-video-{{ article.id }}" {% if animated %}aria-pressed="false"{% endif %} hidden>{{ 'Reproduzir animação da capa' if animated else 'Reproduzir vídeo da capa' }}</button>
+  <figcaption class="cover-status" role="status" aria-live="polite" hidden></figcaption>
+</figure>

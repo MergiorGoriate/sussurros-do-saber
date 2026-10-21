@@ -218,6 +218,11 @@ def safe_video_embed(url, title):
     return None
 
 
+from cover_media import native_video_url, cover_delivery_url
+app.add_template_filter(native_video_url, "native_cover_video")
+app.add_template_filter(cover_delivery_url, "cover_delivery_url")
+
+
 @app.template_filter("article_cover_video")
 def article_cover_video(url, title):
     try:
@@ -432,12 +437,12 @@ def security_headers(response):
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; "
-        "object-src 'none'; img-src 'self' data: https:; "
+        "object-src 'none'; img-src 'self' data: blob: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://accounts.google.com/gsi/style; "
         f"script-src 'nonce-{getattr(g, 'csp_nonce', '')}' 'strict-dynamic' 'self' https:; "
         "script-src-attr 'none'; "
-        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com https://fundingchoicesmessages.google.com; media-src https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com https://fundingchoicesmessages.google.com; upgrade-insecure-requests",
+        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com https://fundingchoicesmessages.google.com; media-src 'self' blob: https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com https://fundingchoicesmessages.google.com; upgrade-insecure-requests",
     )
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -548,7 +553,13 @@ def cloudinary_cloud_name():
     cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
     if cloud_name:
         return cloud_name
-    return urlparse(os.getenv("CLOUDINARY_URL", "").strip()).hostname or ""
+    try:
+        return urlparse(os.getenv("CLOUDINARY_URL", "").strip()).hostname or ""
+    except ValueError:
+        return ""
+
+
+app.add_template_global(cloudinary_cloud_name, "cover_cloud_name")
 
 
 @app.template_filter("safe_image_url")
@@ -1462,7 +1473,7 @@ def ensure_editorial_policy_columns():
 
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
-    additions = {"background": "VARCHAR(20) DEFAULT 'default' NOT NULL", "cover_video": "VARCHAR(1000) DEFAULT ''", "references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
+    additions = {"cover_mode": "VARCHAR(24) DEFAULT 'auto' NOT NULL", "background": "VARCHAR(20) DEFAULT 'default' NOT NULL", "cover_video": "VARCHAR(1000) DEFAULT ''", "references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
     for name, definition in additions.items():
         if name not in existing:
             db.session.execute(text(f'ALTER TABLE article ADD COLUMN "{name}" {definition}'))

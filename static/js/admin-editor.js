@@ -346,7 +346,68 @@
   });
 
   const url=document.querySelector('#imageUrl'),file=document.querySelector('#imageFile'),image=document.querySelector('#imagePreview');
-  url?.addEventListener('input',()=>{image.src=url.value;image.hidden=!url.value});
-  file?.addEventListener('change',()=>{if(file.files[0]){image.src=URL.createObjectURL(file.files[0]);image.hidden=false}});
+  const mode=document.querySelector('#coverMode'),coverUrl=document.querySelector('#coverVideoUrl'),coverFile=document.querySelector('#coverVideoFile');
+  const coverPreview=document.querySelector('#coverPreview'),coverFields=document.querySelector('#coverVideoFields'),coverStatus=document.querySelector('#coverEditorStatus');
+  const removeCover=document.querySelector('#removeCoverVideo'),removeButton=document.querySelector('#removeCoverVideoButton');
+  const savedVideo=coverUrl?.value||'';
+  let imageBlob='',imageObject=null,videoBlob='',videoObject=null;
+  const replaceBlob=(selected,kind)=>{
+    if(kind==='image'){
+      if(selected!==imageObject){if(imageBlob)URL.revokeObjectURL(imageBlob);imageObject=selected;imageBlob=selected?URL.createObjectURL(selected):'';}
+      return imageBlob;
+    }
+    if(selected!==videoObject){if(videoBlob)URL.revokeObjectURL(videoBlob);videoObject=selected;videoBlob=selected?URL.createObjectURL(selected):'';}
+    return videoBlob;
+  };
+  const renderCoverPreview=()=>{
+    if(!coverPreview||!mode)return;
+    document.dispatchEvent(new CustomEvent('cover:dispose',{detail:{root:coverPreview}}));
+    coverPreview.querySelectorAll(':scope > :not(#imagePreview)').forEach(el=>el.remove());
+    delete coverPreview.dataset.articleCover;delete coverPreview.dataset.mode;delete coverPreview.dataset.external;coverPreview.classList.remove('is-external');coverPreview.dataset.state='idle';
+    const isVideo=mode.value!=='image',selectedFile=coverFile.files[0],selectedImage=file?.files[0];
+    coverFields.hidden=!isVideo;coverFile.disabled=!isVideo;
+    const poster=replaceBlob(selectedImage,'image')||url?.value.trim()||coverPreview.dataset.fallback;
+    image.src=poster;image.hidden=false;image.alt='Pré-visualização da imagem de capa / reserva';
+    coverPreview.hidden=!isVideo&&!selectedImage&&!url?.value.trim();
+    removeButton.hidden=!coverUrl.value&&!selectedFile;
+    coverFile.setCustomValidity('');
+    if(!isVideo){coverStatus.textContent=coverUrl.value?'Imagem estática seleccionada. O vídeo associado será conservado.':'';return;}
+    let source=selectedFile?replaceBlob(selectedFile,'video'):coverUrl.value.trim();
+    if(selectedFile&&(selectedFile.size>50*1024*1024||!selectedFile.size||!/\.(mp4|webm|ogg)$/i.test(selectedFile.name)||selectedFile.type&&!['video/mp4','video/webm','video/ogg','application/octet-stream'].includes(selectedFile.type))){
+      const error='Use um ficheiro MP4, WebM ou OGG com até 50 MB.';coverFile.setCustomValidity(error);coverStatus.textContent=error;return;
+    }
+    let parsed=null;try{parsed=new URL(source);}catch{}
+    if(source&&!selectedFile&&(!parsed||!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)){coverStatus.textContent='Use uma ligação válida de vídeo.';return;}
+    const native=selectedFile||/\.(mp4|webm|ogg)$/i.test(parsed?.pathname||'');
+    const owned=parsed?.protocol==='https:'&&parsed.hostname==='res.cloudinary.com'&&parsed.pathname.startsWith('/'+coverPreview.dataset.cloud+'/video/upload/');
+    if(source&&native&&!selectedFile&&!owned&&(mode.value==='video_animated'||source!==savedVideo)){coverStatus.textContent='Carregue o vídeo para o Cloudinary ou use uma ligação da sua conta.';return;}
+    if(!source){coverStatus.textContent='Seleccione ou carregue um vídeo; a imagem de reserva mantém-se visível.';return;}
+    if(!native){
+      if(mode.value==='video_animated'){coverStatus.textContent='A capa animada exige um ficheiro de vídeo da sua conta Cloudinary.';return;}
+      const host=parsed.hostname.toLowerCase().replace(/^www\./,'');
+      if(!['youtube.com','m.youtube.com','youtube-nocookie.com','youtu.be','vimeo.com','player.vimeo.com'].includes(host)){coverStatus.textContent='Use um vídeo do Cloudinary, YouTube ou Vimeo.';return;}
+      const external=document.createElement('div');external.className='cover-external-player';external.id='cover-editor-video';
+      const template=document.createElement('template');template.className='cover-external-template';template.innerHTML=videoPreview(escape(titleField?.value||'Vídeo da capa'),source);
+      const start=document.createElement('button');start.type='button';start.className='cover-toggle';start.setAttribute('aria-controls',external.id);
+      const restore=document.createElement('button');restore.type='button';restore.className='cover-restore';restore.textContent='Mostrar imagem de reserva';restore.hidden=true;
+      coverPreview.dataset.articleCover='';coverPreview.dataset.external='true';coverPreview.dataset.mode=mode.value;coverPreview.classList.add('is-external');coverPreview.append(external,template,start,restore);document.dispatchEvent(new CustomEvent('cover:mount',{detail:{root:coverPreview}}));
+      coverStatus.textContent='Pré-visualização com controlos. As alterações ainda não foram guardadas.';return;
+    }
+    const video=document.createElement('video');video.className='cover-video';video.id='cover-editor-video';video.dataset.src=source;video.preload='none';video.playsInline=true;video.muted=true;video.defaultMuted=true;
+    video.setAttribute('aria-label','Pré-visualização do vídeo da capa');
+    video.autoplay=mode.value==='video_animated';video.loop=video.autoplay;video.controls=!video.autoplay;
+    const toggle=document.createElement('button');toggle.type='button';toggle.className='cover-toggle';toggle.setAttribute('aria-controls',video.id);toggle.hidden=true;
+    const status=document.createElement('p');status.className='cover-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.hidden=true;
+    coverPreview.dataset.articleCover='';coverPreview.dataset.mode=mode.value;
+    coverPreview.append(video,toggle,status);document.dispatchEvent(new CustomEvent('cover:mount',{detail:{root:coverPreview}}));
+    coverStatus.textContent='Pré-visualização local. Use Guardar artigo para concluir as alterações.';
+  };
+  for(const field of [url,coverUrl])field?.addEventListener('input',()=>{if(field===coverUrl)removeCover.value='';renderCoverPreview();});
+  for(const field of [file,coverFile,mode])field?.addEventListener('change',()=>{if(field===coverFile||field===mode&&mode.value!=='image')removeCover.value='';renderCoverPreview();});
+  removeButton?.addEventListener('click',()=>{coverUrl.value='';coverFile.value='';removeCover.value='yes';mode.value='image';replaceBlob(null,'video');mode.dispatchEvent(new Event('change',{bubbles:true}));coverStatus.textContent='Vídeo removido da capa. Use Guardar artigo para confirmar.';});
+  editorForm.addEventListener('submit',()=>{if(coverFile?.files.length&&!coverFile.disabled){coverStatus.textContent='A carregar e guardar a capa. Aguarde a resposta antes de fechar a página.';coverPreview.setAttribute('aria-busy','true');}});
+  window.addEventListener('pagehide',event=>{if(event.persisted)return;document.dispatchEvent(new CustomEvent('cover:dispose',{detail:{root:coverPreview}}));if(imageBlob)URL.revokeObjectURL(imageBlob);if(videoBlob)URL.revokeObjectURL(videoBlob);});
+  renderCoverPreview();
+
 })();
 

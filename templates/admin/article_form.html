@@ -1,6 +1,6 @@
 {% extends 'admin/base.html' %}
 {% block title %}{{ 'Editar artigo' if article.id else 'Novo artigo' }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css', v='20261018-dropcap-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css',v='20261019-autosave-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-backgrounds.css', v='20261021-v1') }}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css', v='20261018-dropcap-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css',v='20261019-autosave-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-backgrounds.css', v='20261021-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css', v='20261021-v1') }}">{% endblock %}
 {% block content %}
 <header class="admin-header"><div><span>Conteúdo editorial</span><h1>{{ 'Editar artigo' if article.id else 'Novo artigo' }}</h1></div><a href="{{ url_for('admin.articles') }}">← Voltar</a></header>
 <form method="post" enctype="multipart/form-data" class="editor-form" data-notes-preview-url="{{ url_for('article_history.preview') }}" data-autosave-url="{{ url_for('article_history.autosave', ident=article.id) if article.id else '' }}" data-article-status="{{ article.status or 'draft' }}">
@@ -65,11 +65,22 @@
     <label>Referências bibliográficas<textarea name="references" maxlength="100000" rows="8" placeholder="## Referências&#10;&#10;1. Autor. Título. Revista...&#10;2. DOI: https://doi.org/...">{{ request.form.get('references', article.references or '') }}</textarea><small>Aceita Markdown. Inclua DOI ou URL quando disponíveis.</small></label>
     <label>Palavras-chave<input name="keywords" maxlength="500" value="{{ request.form.get('keywords', article.keywords or '') }}" placeholder="biologia, microbiologia, educação"></label>
     <label>DOI<input name="doi" maxlength="180" value="{{ request.form.get('doi', article.doi or '') }}" placeholder="10.xxxx/xxxxx"></label>
-<label>Carregar vídeo principal do dispositivo (MP4, WebM ou OGG; máximo 50 MB)<input name="cover_video_file" type="file" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"><small>O ficheiro seleccionado tem prioridade sobre a ligação abaixo. Guarde o artigo para concluir o carregamento.</small></label>
-<label>Vídeo principal (opcional)<input name="cover_video" type="url" maxlength="1000" value="{{ request.form.get('cover_video', article.cover_video or '') }}" placeholder="https://www.youtube.com/watch?v=..."><small>Aceita YouTube, Vimeo ou URL de MP4, WebM e OGG. Substitui a imagem principal na página do artigo. Mantenha uma imagem para os cartões e as partilhas. Apague a URL para voltar à imagem.</small></label>
+    {% set selected_cover_mode = request.form.get('cover_mode', article.cover_format) %}
+    <fieldset class="cover-format-fields" aria-describedby="coverFormatHelp">
+      <legend>Formato da capa</legend>
+      <label>Apresentação<select id="coverMode" name="cover_mode"><option value="image" {% if selected_cover_mode=='image' %}selected{% endif %}>Imagem estática</option><option value="video_animated" {% if selected_cover_mode=='video_animated' %}selected{% endif %}>Vídeo animado</option><option value="video_controls" {% if selected_cover_mode=='video_controls' %}selected{% endif %}>Vídeo com controlos</option></select></label>
+      <p id="coverFormatHelp">A imagem continua a ser usada nos cartões e nas partilhas. Alterar o formato conserva o vídeo associado; Remover vídeo retira apenas a associação a este artigo. Mantenha as explicações essenciais no texto e forneça transcrição ou legendas para vídeos informativos.</p>
+      <div id="coverVideoFields">
+        <label>Carregar vídeo principal do dispositivo (MP4, WebM ou OGG; máximo 50 MB)<input id="coverVideoFile" name="cover_video_file" type="file" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"><small>O ficheiro seleccionado tem prioridade sobre a ligação. Só é carregado ao guardar.</small></label>
+        <label>Vídeo principal (opcional)<input id="coverVideoUrl" name="cover_video" type="url" maxlength="1000" value="{{ request.form.get('cover_video', article.cover_video or '') }}" placeholder="https://res.cloudinary.com/.../video/upload/...mp4"><small>Animações: vídeo da sua conta Cloudinary. Com controlos: também YouTube, Vimeo e vídeos já associados ao artigo.</small></label>
+      </div>
+      <input id="removeCoverVideo" type="hidden" name="remove_cover_video" value="{{ request.form.get('remove_cover_video','') }}">
+      <button type="button" id="removeCoverVideoButton" class="cover-remove">Remover vídeo da capa</button>
+      <p id="coverEditorStatus" role="status" aria-live="polite"></p>
+    </fieldset>
     <label>Carregar imagem (JPG, PNG ou WebP; máximo 8 MB)<input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
-    <label>Ou endereço externo da imagem<input id="imageUrl" name="image" type="url" value="{{ request.form.get('image', article.image or '')|safe_image_url }}" placeholder="https://..."></label>
-    <img id="imagePreview" class="image-preview" src="{{ request.form.get('image', article.image or '')|safe_image_url }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}>
+    <label>Ou endereço externo da imagem de capa / reserva<input id="imageUrl" name="image" type="url" value="{{ request.form.get('image', article.image or '')|safe_image_url }}" placeholder="https://..."></label>
+    <div id="coverPreview" class="editor-cover-preview article-video-cover" data-fallback="{{ url_for('static',filename='img/image-fallback.svg') }}" data-cloud="{{ cover_cloud_name() }}"><img id="imagePreview" class="image-preview cover-poster" src="{{ request.form.get('image', article.image or '')|safe_image_url }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}></div>
   </section>
   <aside class="editor-side">
     {% if article.id %}<a href="{{ url_for('article_history.history',ident=article.id) }}">Histórico de versões e recuperação</a>{% endif %}
@@ -94,9 +105,10 @@
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if (request.method=='POST' and request.form.get('featured')=='on') or (request.method!='POST' and article.featured) %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>{% if not article.id %}<button type="submit" name="save_mode" value="continue" class="editor-continue">Guardar e continuar</button>{% endif %}
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261021-background-v1') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261021-cover-v1') }}"></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-footnotes.js', v='20261019-footnotes-v1') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-autosave.js', v='20261019-autosave-v1') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/article-cover-player.js',v='20261021-v1') }}" defer></script>
 {% endblock %}
 
 

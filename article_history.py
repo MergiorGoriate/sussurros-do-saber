@@ -10,8 +10,8 @@ from extensions import limiter
 history_bp = Blueprint('article_history', __name__, url_prefix='/admin/artigos')
 history_bp.before_request(enforce_admin_authentication)
 history_bp.after_request(protect_admin_responses)
-CONTENT_FIELDS = ('title', 'summary', 'body', 'references', 'keywords', 'doi', 'image', 'cover_video', 'read_minutes', 'featured', 'background')
-FIELD_LABELS = {'title':'Título', 'summary':'Resumo', 'body':'Texto', 'references':'Referências', 'keywords':'Palavras-chave', 'doi':'DOI', 'image':'Imagem de capa', 'cover_video':'Vídeo de capa', 'read_minutes':'Tempo de leitura', 'featured':'Destaque', 'background':'Fundo do artigo'}
+CONTENT_FIELDS = ('title', 'summary', 'body', 'references', 'keywords', 'doi', 'image', 'cover_video', 'read_minutes', 'featured', 'background', 'cover_mode')
+FIELD_LABELS = {'title':'Título', 'summary':'Resumo', 'body':'Texto', 'references':'Referências', 'keywords':'Palavras-chave', 'doi':'DOI', 'image':'Imagem de capa', 'cover_video':'Vídeo de capa', 'read_minutes':'Tempo de leitura', 'featured':'Destaque', 'background':'Fundo do artigo', 'cover_mode':'Formato da capa'}
 
 
 def snapshot(article):
@@ -65,6 +65,10 @@ def history(ident):
             old, new = selected.snapshot.get(field), current.get(field)
             if field == 'background':
                 old, new = Article.normalize_background(old), Article.normalize_background(new)
+            if field == 'cover_mode':
+                from cover_media import effective_cover_mode
+                old = effective_cover_mode(old, selected.snapshot.get('cover_video'))
+                new = effective_cover_mode(new, current.get('cover_video'))
             if old != new:
                 changes.append((FIELD_LABELS[field], bounded_diff(old, new)))
     return render_template('admin/article_history.html', article=article, pagination=pagination,
@@ -88,6 +92,7 @@ def restore(ident, revision_id):
         if field in revision.snapshot:
             setattr(article, field, revision.snapshot[field])
     article.background = Article.normalize_background(revision.snapshot.get('background'))
+    article.cover_mode = revision.snapshot.get('cover_mode') if revision.snapshot.get('cover_mode') in {'image','video_animated','video_controls'} else 'auto'
     article.status = 'draft'
     article.scheduled_at = None
     article.updated_at = utcnow()

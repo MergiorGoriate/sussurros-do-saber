@@ -801,17 +801,33 @@ def article_form(article_id=None):
             article_save_guard(article,status,author_id)
             from app import article_cover_video
             cover_video = request.form.get("cover_video", "").strip()
+            from cover_media import COVER_MODES, owned_cloudinary_video, native_video_url
+            cover_mode = request.form.get("cover_mode", article.cover_mode or "auto")
+            if "cover_mode" in request.form and cover_mode not in COVER_MODES:
+                flash("Seleccione um formato de capa válido.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if request.form.get("remove_cover_video") == "yes":
+                cover_video, cover_mode = "", "image"
             video_file = request.files.get("cover_video_file")
-            if video_file and video_file.filename:
+            if video_file and video_file.filename and request.form.get("remove_cover_video") != "yes":
                 try:
-                    cover_video = upload_article_video(video_file)
+                    cover_video = upload_article_video(video_file, cover=True)
                 except VideoUploadError as error:
                     flash(str(error), "error")
                     return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
-            if cover_video and (len(cover_video) > 1000 or not article_cover_video(cover_video, title)):
+            if cover_video and (len(cover_video) > 1000 or not article_cover_video(cover_video, title)) and not (cover_mode == "image" and cover_video == article.cover_video):
                 flash("Use uma URL válida do YouTube, Vimeo ou de um vídeo MP4, WebM ou OGG.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if native_video_url(cover_video) and cover_video != article.cover_video and not owned_cloudinary_video(cover_video):
+                flash("Use um vídeo carregado na sua conta Cloudinary. As ligações antigas já associadas são conservadas.", "error")
+                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+            if cover_mode in {"video_animated", "video_controls"}:
+                native = native_video_url(cover_video)
+                if not cover_video or (cover_mode == "video_animated" and not owned_cloudinary_video(cover_video)) or (native and cover_video != article.cover_video and not owned_cloudinary_video(cover_video)):
+                    flash("Para uma capa animada, carregue um vídeo ou use uma ligação de vídeo da sua conta Cloudinary. No modo com controlos, pode também manter vídeos anteriores ou usar YouTube/Vimeo.", "error")
+                    return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             article.cover_video = cover_video
+            article.cover_mode = cover_mode
             article.title = title
             base_slug = slugify(request.form.get("slug") or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
             candidate, number = base_slug, 2

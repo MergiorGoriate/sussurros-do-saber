@@ -1,0 +1,41 @@
+/* Only article covers and their editor preview; lists remain static images. */
+.article-video-cover {position:relative;isolation:isolate;overflow:hidden;background:#15202b;border-radius:1rem;aspect-ratio:2/1;min-width:0}
+.article-video-cover>.cover-poster,.article-video-cover>.cover-video {position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;max-height:none;margin:0;border:0;border-radius:inherit;object-fit:cover}
+.article-video-cover>.cover-video {opacity:0;pointer-events:none}
+.article-video-cover[data-state=playing]>.cover-video,.article-video-cover[data-state=paused]>.cover-video {opacity:1;pointer-events:auto}
+.article-video-cover>.cover-toggle {position:absolute;z-index:2;right:14px;bottom:14px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;max-width:calc(100% - 28px);padding:10px 15px;border:1px solid #c5d7e6;border-radius:10px;background:#172b40;color:#fff;font:650 .85rem/1.4 Inter,system-ui,sans-serif;text-align:center;cursor:pointer;white-space:normal}
+.article-video-cover>.cover-toggle:focus-visible {outline:3px solid #fff;outline-offset:3px;box-shadow:0 0 0 6px #24558c}
+.article-video-cover>.cover-status {position:absolute;z-index:2;left:12px;right:12px;top:12px;width:auto;max-width:none;margin:0;padding:8px 12px;border-radius:8px;background:#172b40;color:#fff;font:400 .8rem/1.5 Inter,system-ui,sans-serif;text-align:left;opacity:1}
+.article-video-cover>[hidden] {display:none}
+.editor-cover-preview {width:100%;max-height:480px;margin-top:12px}
+.editor-cover-preview>.cover-video {object-fit:cover}
+.cover-format-fields {min-width:0;margin:0;padding:18px;border:1px solid #becbd7;border-radius:12px;display:grid;gap:14px}
+.cover-format-fields legend {font-weight:700;padding:0 6px;font-size:1rem}
+.cover-format-fields p,.cover-format-fields small {font-size:.85rem;line-height:1.6;font-weight:400;color:#526177;margin:0}
+.cover-format-fields #coverVideoFields {display:grid;gap:16px;min-width:0}
+.cover-format-fields #coverVideoFields[hidden] {display:none}
+.cover-format-fields .cover-remove {justify-self:start;min-height:44px;padding:10px 14px;border:1px solid #aab9c9;border-radius:9px;background:#fff;color:#244969;font:600 .85rem/1.5 Inter,system-ui,sans-serif;cursor:pointer}
+.cover-format-fields :is(select,input,button):focus-visible {outline:3px solid #24558c;outline-offset:3px}
+.admin-dark .cover-format-fields {border-color:#5b6e85}
+.admin-dark .cover-format-fields :is(p,small) {color:#bfccdc}
+.admin-dark .cover-format-fields .cover-remove {background:#23354b;color:#edf3fa;border-color:#698099}
+.admin-dark .cover-format-fields :is(select,input,button):focus-visible {outline-color:#9acbff}
+@media(max-width:767px) {
+  .article-video-cover {aspect-ratio:4/3;border-radius:.75rem}
+  .article-video-cover>.cover-toggle {right:10px;bottom:10px;font-size:.8rem}
+  .cover-format-fields {padding:14px}
+}
+@media print {.article-video-cover>.cover-video,.article-video-cover>.cover-toggle,.article-video-cover>.cover-status {display:none}.article-video-cover>.cover-poster {display:block}}
+.editor-cover-preview>.cover-external-preview {position:absolute;inset:0}
+.editor-cover-preview .cover-external-preview :is(figure,.preview-video,.preview-video>div) {margin:0;width:100%;height:100%}
+.editor-cover-preview .cover-external-preview iframe {width:100%;height:100%;border:0}
+.article-video-cover.is-external {aspect-ratio:16/9}
+.article-video-cover>.cover-external-player {position:absolute;inset:0;z-index:1}
+.article-video-cover>.cover-external-player:empty {display:none}
+.article-video-cover .cover-external-player :is(figure,.article-video-frame,.preview-video,.preview-video>div) {position:relative;width:100%;height:100%;margin:0;border-radius:inherit}
+.article-video-cover .cover-external-player iframe {width:100%;height:100%;border:0}
+.article-video-cover>.cover-restore {position:absolute;z-index:2;top:10px;right:10px;min-height:44px;max-width:calc(100% - 20px);padding:8px 12px;border:1px solid #c5d7e6;border-radius:9px;background:#172b40;color:#fff;font:600 .8rem/1.4 Inter,system-ui,sans-serif;cursor:pointer}
+.article-video-cover>.cover-restore:focus-visible {outline:3px solid #fff;outline-offset:3px}
+.article-page .article-paper .article-video-cover>.cover-status {color:#fff}
+@media print {.article-video-cover>.cover-external-player,.article-video-cover>.cover-restore {display:none}}
+.article-video-cover[data-mode=video_controls]>.cover-video {object-fit:contain;background:#101820}
