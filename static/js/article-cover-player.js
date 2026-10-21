@@ -37,7 +37,7 @@
     }
     state('idle');
     button.hidden=false;
-    button.addEventListener('click',()=>{if(!video.paused){userPaused=true;pause();say('Animação pausada.');}else play(true);});
+    button.addEventListener('click',()=>{if(!video.paused){userPaused=true;pause();say('');}else play(true);});
     video.addEventListener('playing',()=>{clearTimeout(timer);ready=true;failed=false;say('');state('playing');});
     video.addEventListener('pause',()=>{clearTimeout(timer);if(ready)state('paused');});
     video.addEventListener('error',()=>{clearTimeout(timer);failed=true;ready=false;blocked=true;video.autoplay=false;video.pause();state('error');say('Não foi possível carregar o vídeo. A imagem de reserva mantém-se disponível.');});

@@ -20,7 +20,7 @@ test('animated cover plays muted inline, loops and pauses with the keyboard',asy
  await expect(root).toHaveAttribute('data-state','playing');expect(await player.evaluate(v=>v.muted&&v.loop&&v.playsInline)).toBe(true);
  await expect.poll(()=>player.evaluate(v=>v.currentTime)).toBeGreaterThan(0);
  const toggle=page.getByRole('button',{name:'Pausar animação da capa',exact:true});await toggle.focus();await page.keyboard.press('Enter');
- await expect(root).toHaveAttribute('data-state','paused');expect(await player.evaluate(v=>v.paused)).toBe(true);
+ await expect(root).toHaveAttribute('data-state','paused');expect(await player.evaluate(v=>v.paused)).toBe(true);await expect(root.locator('.cover-status')).toBeHidden();await expect(toggle).toHaveAttribute('aria-pressed','false');
  await page.getByRole('button',{name:'Reproduzir animação da capa',exact:true}).click();await expect(root).toHaveAttribute('data-state','playing');
 });
 
