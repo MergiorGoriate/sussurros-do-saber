@@ -21,6 +21,7 @@ with app.app_context():
                   author_id=author.id,category_id=category.id,image='https://example.org/cover-poster.svg',
                   cover_mode='image' if mode=='draft' else ('video_controls' if mode=='external' else mode),
                   cover_video='https://youtu.be/dQw4w9WgXcQ' if mode=='external' else video,
+                  featured=os.getenv('COVER_HERO_ANIMATED')=='1' and mode=='video_animated',
                   status='draft' if mode=='draft' else 'published',published_at=None if mode=='draft' else utcnow(),
                   background='aged_paper' if mode=='video_animated' else 'default')
         db.session.add(a);db.session.flush();result[mode]={'id':a.id,'slug':a.slug}
