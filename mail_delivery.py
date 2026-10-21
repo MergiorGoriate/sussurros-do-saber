@@ -6,10 +6,11 @@ windows conservatively count *every reserved attempt*, including connection
 failures. No worker sleeps; the existing scheduled CLI resumes due work.
 """
 from contextlib import contextmanager
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.headerregistry import Address
 from email.errors import HeaderParseError
+from email.utils import format_datetime
 import os
 import random
 import re
@@ -367,6 +368,9 @@ def transmit(ident,attempt_id,smtp_factory=None):
     message=EmailMessage();message['From']=os.getenv('SMTP_FROM','')
     message['To'],message['Subject']=Address(addr_spec=row.recipient),row.subject
     message['Message-ID']=f'<editorial-{row.id}@sussurrosdosaber.com>'
+    message['Date']=format_datetime(utcnow().replace(tzinfo=timezone.utc))
+    if os.getenv('SMTP_REPLY_TO',''):
+        message['Reply-To']=Address(addr_spec=os.environ['SMTP_REPLY_TO'])
     subscriber=db.session.get(Subscriber,row.subscriber_id) if row.campaign_id else None
     message.set_content(row.body)
     if subscriber:
@@ -415,6 +419,13 @@ def deliver_batch(limit=50,smtp_factory=None):
     try:Address(addr_spec=os.environ['SMTP_FROM'])
     except (ValueError, IndexError, HeaderParseError) as exc:
         raise ValueError('Configure um único endereço SMTP_FROM válido; fila preservada.') from exc
+    reply_to=os.getenv('SMTP_REPLY_TO','')
+    if reply_to:
+        try:
+            if not email_valid(reply_to):raise ValueError('invalid address')
+            Address(addr_spec=reply_to)
+        except (ValueError, IndexError, HeaderParseError) as exc:
+            raise ValueError('Configure um único endereço SMTP_REPLY_TO válido; fila preservada.') from exc
     if not any(os.getenv(k,default).lower()=='true' for k,default in [('SMTP_TLS','true'),('SMTP_SSL','false')]):
         raise ValueError('É obrigatório utilizar SMTP_TLS ou SMTP_SSL.')
     accepted=0
