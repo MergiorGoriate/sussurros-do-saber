@@ -10,6 +10,9 @@ from app import app
 from models import db,Subscriber
 from submission_models import NewsletterCampaign,EditorialNotification
 with app.app_context():
+    from mail_delivery import policy
+    settings=policy();settings.provider_hourly=None;settings.provider_daily=None
+    settings.provider_source='';settings.provider_verified_on=None;settings.paused=False;settings.suspended_until=None
     campaign=NewsletterCampaign.query.filter_by(issue='2099-W50').first()
     if campaign is None:
         campaign=NewsletterCampaign(issue='2099-W50',subject='Sussurros do Saber — Boletim 2099-W50',fingerprint='e'*64)

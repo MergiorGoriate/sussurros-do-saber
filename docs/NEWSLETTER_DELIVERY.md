@@ -55,7 +55,9 @@ periodicidade arbitrária.
 
 As quotas externas por hora e por dia são opcionais e manuais, acompanhadas da
 origem e data da verificação. Em cada período aplica-se o menor limite interno
-ou externo conhecido. Quando falta uma quota, o painel indica que a verificação
+ou externo conhecido. Quotas externas conhecidas são também protegidas por janelas
+móveis conservadoras de 60 minutos e 24 horas, para não libertar capacidade apenas
+porque mudou a hora ou o dia. Quando falta uma quota, o painel indica que a verificação
 é incompleta e aplica o respectivo limite interno. Credenciais presentes não
 comprovam conectividade, autenticação, quota ou entrega. A integração não consulta
 automaticamente o painel do fornecedor.
@@ -68,7 +70,8 @@ esta aplicação, reservando capacidade para esses outros emissores.
 
 Cada reserva consome uma unidade, incluindo falhas de ligação e cancelamento
 detectado depois da reserva. A contagem é conservadora. As janelas são fixas em
-UTC, reiniciando em HH:00 e 00:00; não são janelas móveis. Não se importam
+UTC, reiniciando em HH:00 e 00:00; as quotas externas acrescentam as janelas móveis
+acima, independentemente do fuso de reposição do fornecedor. Não se importam
 tentativas históricas sem timestamp conhecido. Aceitações antigas com sent_at
 podem ser preservadas no histórico. Uma edição de 2500 requer pelo menos cinco
 dias com o orçamento diário inicial inteiramente disponível, e mais se houver
@@ -149,7 +152,9 @@ aceite novamente em fila. Pausar impede **novas reservas**; uma tentativa já
 reservada pode terminar. O cancelamento é revalidado depois da ligação e antes
 da transmissão, mas um SMTP já em curso não pode ser atomicamente recolhido.
 Cancelamentos retiram imediatamente tarefas ainda pendentes/temporárias e uma
-nova inscrição não reanima esses envios antigos.
+nova inscrição não reanima esses envios antigos. Listas de endereços num único
+destino são rejeitadas; o envelope SMTP usa explicitamente um remetente validado
+e uma lista com exactamente um destinatário.
 
 ## Migração e implantação no Coolify
 

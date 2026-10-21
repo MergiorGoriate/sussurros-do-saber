@@ -33,7 +33,7 @@ abrangem também correio transaccional da mesma fila. A pausa global tem esse
 mesmo alcance; a opção NEWSLETTER_ENABLED conserva o alcance apenas dos boletins.
 
 Quotas externas são manuais, com origem e data, e prevalece o limite mais
-restritivo. A interface não afirma ter validado o fornecedor. Alterar os limites
+restritivo. Quotas externas conhecidas têm também janelas móveis conservadoras de 60 minutos e 24 horas, para proteger a passagem de hora/dia e diferenças de fuso do fornecedor. O envelope SMTP contém exactamente um destinatário explícito e rejeita listas de endereços. A interface não afirma ter validado o fornecedor. Alterar os limites
 é auditado. Reduzir a capacidade de uma edição suspende campanhas autorizadas
 que excedam o novo valor.
 
@@ -59,7 +59,8 @@ reutiliza GovernanceAudit. Não são exibidas credenciais nem respostas SMTP bru
 ## Verificações executadas localmente
 
 - Antes da alteração: 25 testes de newsletter e migrações aprovados.
-- Na revisão funcional: 57 testes direccionados de entrega, migração, boletim e
+- Regressão geral intermédia: 373 testes Python aprovados.
+- Após os ajustes finais de envelope e janelas externas: 60 testes direccionados de entrega, migração, boletim e
   permissões aprovados em SQLite, com SMTP simulado.
 - O ensaio de volume criou 2501 subscritores, preparou 2500 mensagens e aceitou
   apenas 500 no orçamento diário, mantendo 2000 pendentes.

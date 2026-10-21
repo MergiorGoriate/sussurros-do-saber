@@ -29,13 +29,14 @@ SMTP={'SMTP_HOST':'smtp.example.test','SMTP_FROM':'boletim@example.test','SMTP_T
 
 
 class FakeSMTP:
-    def __init__(self):self.messages=[];self.error=None;self.before=None;self.quit_error=False
+    def __init__(self):self.messages=[];self.envelopes=[];self.error=None;self.before=None;self.quit_error=False
     def factory(self,*args,**kwargs):return self
     def starttls(self,**kwargs):
         if self.before:self.before()
     def login(self,*args):pass
-    def send_message(self,message):
+    def send_message(self,message,**kwargs):
         self.messages.append(message)
+        self.envelopes.append(kwargs)
         if self.error:raise self.error
         return {}
     def quit(self):
@@ -324,6 +325,32 @@ class DeliveryTests(unittest.TestCase):
             self.assertEqual(db.session.get(Mail,ident).status,'accepted')
             self.assertEqual(dashboard()['hour_count'],1)
             db.session.remove();db.engine.dispose()
+
+    def test_exactly_one_envelope_recipient_and_invalid_address_list_is_rejected(self):
+        valid=self.mail();invalid=self.mail();invalid.recipient='one@example.test,two@example.test';db.session.commit()
+        self.assertEqual(self.send(),1)
+        self.assertEqual(self.smtp.envelopes,[{'from_addr':SMTP['SMTP_FROM'],'to_addrs':[valid.recipient]}])
+        self.assertEqual(invalid.status,'permanent');self.assertEqual(invalid.attempts,0)
+
+    def test_provider_hourly_budget_cannot_reset_on_utc_hour_boundary(self):
+        p=policy();p.provider_hourly=1;db.session.commit();self.mail();self.mail()
+        first=NOW.replace(minute=59)
+        with patch('mail_delivery.utcnow',return_value=first):self.assertEqual(self.send(),1)
+        with patch('mail_delivery.utcnow',return_value=first+timedelta(minutes=1)):
+            self.assertEqual(self.send(),0)
+            self.assertEqual(policy().suspended_until,first+timedelta(hours=1))
+        with patch('mail_delivery.utcnow',return_value=first+timedelta(hours=1)):
+            self.assertEqual(self.send(),1)
+
+    def test_provider_daily_budget_cannot_reset_on_utc_midnight(self):
+        p=policy();p.provider_daily=1;db.session.commit();self.mail();self.mail()
+        first=NOW.replace(hour=23,minute=59)
+        with patch('mail_delivery.utcnow',return_value=first):self.assertEqual(self.send(),1)
+        with patch('mail_delivery.utcnow',return_value=first+timedelta(minutes=1)):
+            self.assertEqual(self.send(),0)
+            self.assertEqual(policy().suspended_until,first+timedelta(days=1))
+        with patch('mail_delivery.utcnow',return_value=first+timedelta(days=1)):
+            self.assertEqual(self.send(),1)
 
 
 if __name__=='__main__':unittest.main()

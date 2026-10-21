@@ -31,4 +31,11 @@ test('delivery controls preserve responsive themes and require explicit authoris
   await expect(page.getByRole('button',{name:'Autorizar processamento agora',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Autorizar processamento agora',exact:true}).click();
   await expect(page.getByRole('heading',{name:/2099-W50.*Agendada/})).toBeVisible();
+  await page.getByText('Editar limites e quotas',{exact:true}).click();
+  await page.getByLabel('Quota externa por hora',{exact:true}).fill('10');
+  await page.getByLabel('Quota externa por dia',{exact:true}).fill('100');
+  await page.getByLabel('Origem da verificação externa',{exact:true}).fill('Painel fictício para teste');
+  await page.getByLabel('Data da última verificação',{exact:true}).fill('2026-10-20');
+  await page.getByRole('button',{name:'Guardar limites',exact:true}).click();
+  await expect(page.getByText('Contagem conservadora para as quotas externas:',{exact:false})).toContainText('0% da quota horária');
 });

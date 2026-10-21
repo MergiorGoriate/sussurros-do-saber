@@ -8,6 +8,8 @@ failures. No worker sleeps; the existing scheduled CLI resumes due work.
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
+from email.headerregistry import Address
+from email.errors import HeaderParseError
 import os
 import random
 import re
@@ -57,13 +59,14 @@ def policy(lock=False):
     return db.session.get(Policy, 1)
 
 
-def usage(now=None):
+def usage(now=None, rolling=False):
     now = now or utcnow()
-    hour = now.replace(minute=0, second=0, microsecond=0)
-    day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    hour = now-timedelta(hours=1) if rolling else now.replace(minute=0, second=0, microsecond=0)
+    day = now-timedelta(days=1) if rolling else now.replace(hour=0, minute=0, second=0, microsecond=0)
     def count(start):
         return db.session.scalar(select(func.count(Attempt.id)).where(
-            Attempt.started_at >= start, Attempt.started_at < now+timedelta(microseconds=1))) or 0
+            Attempt.started_at > start if rolling else Attempt.started_at >= start,
+            Attempt.started_at < now+timedelta(microseconds=1))) or 0
     return count(hour), count(day)
 
 
@@ -189,6 +192,7 @@ def retry(ident):
 
 def dashboard(campaign_page=1,failure_page=1,selected_id=None):
     p=policy();now=utcnow();hours,days=usage(now);hlimit,dlimit=effective_limits(p)
+    provider_hours,provider_days=usage(now,rolling=True)
     counts=dict(db.session.execute(select(Mail.status,func.count(Mail.id)).group_by(Mail.status)).all())
     campaigns=db.paginate(select(Campaign).order_by(Campaign.id.desc()),page=min(1000000,max(1,campaign_page)),per_page=10,error_out=False)
     failures=db.paginate(select(Mail).where(Mail.status.in_(['temporary','permanent','uncertain','suspended'])).order_by(Mail.id.desc()),page=min(1000000,max(1,failure_page)),per_page=25,error_out=False)
@@ -197,6 +201,7 @@ def dashboard(campaign_page=1,failure_page=1,selected_id=None):
     preview=Mail.query.filter_by(campaign_id=selected.id).order_by(Mail.id).first() if selected else None
     campaign_counts=dict(db.session.execute(select(Mail.status,func.count(Mail.id)).where(Mail.campaign_id==selected.id).group_by(Mail.status)).all()) if selected else {}
     return dict(policy=p,counts=counts,hour_count=hours,day_count=days,hour_limit=hlimit,day_limit=dlimit,
+        provider_hour_count=provider_hours,provider_day_count=provider_days,
         hour_percent=min(100,round(100*hours/hlimit)),day_percent=min(100,round(100*days/dlimit)),
         worker_active=bool(p.worker_token and p.worker_lease_until and p.worker_lease_until>now),
         campaigns=campaigns,failures=failures,selected=selected,preview=preview,campaign_counts=campaign_counts,
@@ -265,16 +270,30 @@ def reserve(token, now):
     if p.paused or (p.suspended_until and p.suspended_until>now):
         db.session.commit();return None
     h,d=usage(now);hl,dl=effective_limits(p)
-    if h>=hl or d>=dl:
-        until=now.replace(minute=0,second=0,microsecond=0)+timedelta(hours=1)
-        if d>=dl:until=now.replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(days=1)
-        p.suspended_until,p.suspension_reason=until,'Limite diário UTC atingido.' if d>=dl else 'Limite horário UTC atingido.'
+    ph,pd=usage(now,rolling=True)
+    blocked=[]
+    if h>=hl:blocked.append(now.replace(minute=0,second=0,microsecond=0)+timedelta(hours=1))
+    if d>=dl:blocked.append(now.replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(days=1))
+    for amount,cap,window in [(ph,p.provider_hourly,timedelta(hours=1)),(pd,p.provider_daily,timedelta(days=1))]:
+        if cap and amount>=cap:
+            # Conservative rolling provider windows also respect an unknown reset timezone.
+            release=db.session.scalar(select(Attempt.started_at).where(
+                Attempt.started_at>now-window,Attempt.started_at<=now).order_by(Attempt.started_at.desc()).offset(cap-1).limit(1))
+            blocked.append(release+window)
+    if blocked:
+        p.suspended_until=max(blocked)
+        p.suspension_reason=('Limite externo em janela móvel atingido.' if (p.provider_hourly and ph>=p.provider_hourly) or (p.provider_daily and pd>=p.provider_daily) else 'Limite diário UTC atingido.' if d>=dl else 'Limite horário UTC atingido.')
         db.session.commit();return None
     if p.last_started_at and now < p.last_started_at+timedelta(seconds=p.interval_seconds):
         db.session.commit();return None
     # Oldest due message first across all campaigns, with transactional mail in the same budget.
     rows=due_messages(now).limit(100)
     for row in rows:
+        try:
+            Address(addr_spec=row.recipient)
+        except (ValueError, IndexError, HeaderParseError):
+            row.status,row.last_error='permanent','Endereço de destinatário inválido; não enviado.'
+            audit('recipient.invalid',row.id);continue
         c=db.session.get(Campaign,row.campaign_id) if row.campaign_id else None
         if row.campaign_id or is_newsletter(row):
             if c is None:
@@ -346,7 +365,7 @@ def transmit(ident,attempt_id,smtp_factory=None):
     from newsletter_service import unsubscribe_url
     row=db.session.get(Mail,ident)
     message=EmailMessage();message['From']=os.getenv('SMTP_FROM','')
-    message['To'],message['Subject']=row.recipient,row.subject
+    message['To'],message['Subject']=Address(addr_spec=row.recipient),row.subject
     message['Message-ID']=f'<editorial-{row.id}@sussurrosdosaber.com>'
     subscriber=db.session.get(Subscriber,row.subscriber_id) if row.campaign_id else None
     message.set_content(row.body)
@@ -374,7 +393,7 @@ def transmit(ident,attempt_id,smtp_factory=None):
                 a.outcome,a.finished_at,a.reason='cancelled',utcnow(),row.last_error
                 audit('recipient.cancelled',row.id);db.session.commit();return
         during=True
-        refused=smtp.send_message(message)
+        refused=smtp.send_message(message,from_addr=os.environ['SMTP_FROM'],to_addrs=[row.recipient])
         if refused:raise smtplib.SMTPRecipientsRefused(refused)
     except (OSError,smtplib.SMTPException,ValueError) as error:
         finish(ident,attempt_id,error,during)
@@ -393,6 +412,9 @@ def deliver_batch(limit=50,smtp_factory=None):
     from submissions import email_valid
     if not os.getenv('SMTP_HOST') or not email_valid(os.getenv('SMTP_FROM','')):
         raise ValueError('Configure SMTP_HOST e SMTP_FROM; fila preservada.')
+    try:Address(addr_spec=os.environ['SMTP_FROM'])
+    except (ValueError, IndexError, HeaderParseError) as exc:
+        raise ValueError('Configure um único endereço SMTP_FROM válido; fila preservada.') from exc
     if not any(os.getenv(k,default).lower()=='true' for k,default in [('SMTP_TLS','true'),('SMTP_SSL','false')]):
         raise ValueError('É obrigatório utilizar SMTP_TLS ou SMTP_SSL.')
     accepted=0
