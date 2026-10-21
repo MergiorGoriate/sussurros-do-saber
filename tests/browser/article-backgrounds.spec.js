@@ -1,6 +1,7 @@
 const {test,expect}=require('@playwright/test');
 const {execFileSync}=require('node:child_process');
 test.setTimeout(90000);
+test.beforeEach(async({page})=>{await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/healthz');});
 function fixture(){return JSON.parse(execFileSync('python',['tests/browser/background_fixture.py'],{encoding:'utf8'}));}
 async function signin(context){const cookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();await context.addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);}
 const fits=async page=>expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(()=>innerWidth));
@@ -24,7 +25,7 @@ test('background preview remains unsaved until explicit save and survives reopen
 test('editor background controls and preview fit mobile, tablet and desktop in both themes',async({page})=>{
  const d=fixture();await signin(page.context());page.on('dialog',dialog=>dialog.accept());
  for(const width of [320,768,1440])for(const theme of ['light','dark']){
-  await page.setViewportSize({width,height:1000});await page.addInitScript(t=>localStorage.setItem('sussurros.admin.theme',t),theme);
+  await page.setViewportSize({width,height:1000});await page.evaluate(t=>localStorage.setItem('sussurros.admin.theme',t),theme);
   await page.goto(`/admin/artigos/${d.draft_id}/editar`,{waitUntil:'domcontentloaded'});
   for(const name of ['Papel antigo','Fundo padrão']){
    await page.getByRole('radio',{name,exact:true}).check();await fits(page);
@@ -46,7 +47,7 @@ test('editor background controls and preview fit mobile, tablet and desktop in b
 test('public paper preserves global surfaces and readable content in both themes',async({page})=>{
  const d=fixture();
  for(const width of [320,768,1440])for(const theme of ['light','dark']){
-  await page.setViewportSize({width,height:1000});await page.addInitScript(t=>sessionStorage.setItem('theme',t),theme);
+  await page.setViewportSize({width,height:1000});await page.evaluate(t=>sessionStorage.setItem('theme',t),theme);
   await page.goto('/artigo/'+d.default_slug,{waitUntil:'domcontentloaded'});await expect(page.locator('.article-title')).toBeVisible();
   const outside=()=>page.evaluate(()=>['body','header','nav','footer','.share-panel','.article-comments'].map(s=>{const el=document.querySelector(s);const c=getComputedStyle(el);return [s,c.backgroundColor,c.color];}));
   const before=await outside();await expect(page.locator('.article-paper')).toHaveCount(0);
