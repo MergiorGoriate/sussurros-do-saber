@@ -1019,3 +1019,15 @@ Até 767 px, o resumo usa 16 px e entrelinha de 1,6; o nome do autor e a fotogra
 ### Espaçamento do rodapé no telemóvel
 
 Até 767 px, o rodapé usa opções de navegação com pelo menos 36 px de altura, texto de 14 px e entrelinha de 1,35. Os grupos ficam separados por 16 px e os títulos por 2 px das opções. Os ícones sociais mantêm 44 px. A linha decorativa da navegação principal não é aplicada às ligações do rodapé. O layout de computador mantém a sua escala.
+
+### Meus pareceres e gestão de atribuições (21/10/2026)
+
+O painel `/admin/pareceres` separa a vista pessoal de «Gerir atribuições». O fundador e os editores com permissões de gestão podem seleccionar uma submissão em avaliação e convidar revisores elegíveis. A lista respeita o âmbito da revista, a atribuição do editor, a disponibilidade, os mandatos activos e os conflitos de autoria; revisores já convidados para a mesma versão deixam de aparecer na selecção. A conta do fundador sem membro pessoal pode acompanhar as atribuições sem receber uma lista pessoal vazia como única opção.
+
+Na vista pessoal, o revisor responde ao convite, confirma a ausência de conflito, consulta os ficheiros da versão atribuída e entrega uma recomendação fundamentada. Pode declarar conflito depois de aceitar, interrompendo o acesso aos ficheiros. Versões anteriores ou submissões fora de avaliação apresentam uma vista fechada para alterações; os pareceres já entregues continuam consultáveis. A validação de uma entrega inválida não altera o relatório nem a recomendação guardados. A decisão científica continua a pertencer ao editor.
+
+As revisões de artigos de divulgação aparecem numa secção distinta, com acesso ao fluxo editorial existente; não são apresentadas como revisão por pares de investigação original. Não se criam atribuições automaticamente: o editor escolhe o manuscrito, o revisor e o prazo. As notificações internas continuam a usar o mecanismo existente.
+
+O layout inclui filtros de estado, contadores da vista, prazos, estados em português e formulários responsivos nos temas claro e escuro. Os testes de permissões e transições estão em `tests/test_review_workspace.py`; o percurso no navegador e a apresentação estão em `tests/browser/reviews.spec.js`, com dados sintéticos de `reviews_fixture.py`. Não exige migração de dados nem configuração SMTP adicional.
+
+A validação de segurança deste deployment exige Pillow 13.0.0, actualizado a partir de 12.3.0. A compatibilidade é verificada pelos testes de submissões, imagens e PDF. Notas oficiais da versão: https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html.
