@@ -1018,4 +1018,4 @@ Até 767 px, o resumo usa 16 px e entrelinha de 1,6; o nome do autor e a fotogra
 
 ### Espaçamento do rodapé no telemóvel
 
-Até 767 px, o rodapé reduz os intervalos entre grupos, títulos e ligações, com texto de 14 px e entrelinha de 1,4 nas opções. As ligações mantêm pelo menos 44 px de altura para toque; as opções de duas linhas deixam de acumular margens e preenchimentos excessivos. O layout de computador mantém a sua escala.
+Até 767 px, o rodapé usa opções de navegação com pelo menos 36 px de altura, texto de 14 px e entrelinha de 1,35. Os grupos ficam separados por 16 px e os títulos por 2 px das opções. Os ícones sociais mantêm 44 px. A linha decorativa da navegação principal não é aplicada às ligações do rodapé. O layout de computador mantém a sua escala.
