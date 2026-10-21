@@ -52,6 +52,9 @@ MANUSCRIPT_ACCESS_PERMISSIONS = ('manuscript.read','manuscript.edit','manuscript
 ARTICLE_ACCESS_PERMISSIONS = ('article.write','article.edit','article.review','article.approve','article.publish','article.delete')
 
 ARTICLE_STAGES = {'draft':'Rascunho','submitted':'Submetido','review':'Em revisão','changes':'Correcções solicitadas','approved':'Aprovado','scheduled':'Programado','published':'Publicado'}
+REVIEW_PHASES = {'screening', 'review', 'revised', 'reevaluation'}
+REVIEW_STATES = {'invited':'Convite por responder', 'accepted':'Em elaboração', 'submitted':'Entregue', 'declined':'Recusado', 'conflict':'Conflito declarado'}
+REVIEW_RECOMMENDATIONS = {'accept':'Aceitar', 'minor_revision':'Correcções menores', 'major_revision':'Revisão substancial', 'reject':'Rejeitar'}
 
 
 def seed_roles():
@@ -627,23 +630,50 @@ def reviews():
         return redirect(url_for('staff.reviews',manuscript_id=manuscript.id))
     ident=request.args.get('manuscript_id',type=int)
     selected=db.get_or_404(Manuscript,ident) if ident else None
-    can_assign=bool(selected and manuscript_access(selected,'manuscript.assign'))
-    manager=bool(selected and (can_assign or manuscript_access(selected,'manuscript.edit')
-                              or manuscript_access(selected,'manuscript.decide')))
-    if selected and not manager:
+    management_permissions=('manuscript.assign','manuscript.edit','manuscript.decide')
+    can_manage=any(has_any_permission(p) for p in management_permissions)
+    can_review=has_any_permission('manuscript.review')
+    can_portal=has_permission('article.review')
+    if not (can_manage or can_review or can_portal):
         abort(403)
-    if not manager and not has_any_permission('manuscript.review'):
+    manager=bool(selected or request.args.get('view')=='manage' or
+                 (request.args.get('view')!='mine' and can_manage and (not active_member(member) or not can_review)))
+    if manager and not can_manage:
         abort(403)
+    def manageable(manuscript):
+        return any(manuscript_access(manuscript,p) for p in management_permissions)
+    if selected and not manageable(selected):
+        abort(403)
+    can_assign=bool(selected and manuscript_access(selected,'manuscript.assign') and selected.status in REVIEW_PHASES)
     rows=StaffPeerReview.query
     if manager:
-        rows=rows.filter_by(manuscript_id=ident)
+        if selected:rows=rows.filter_by(manuscript_id=selected.id)
     else:
-        rows=rows.filter_by(reviewer_id=member.id) if active_member(member) and any('manuscript.review' in a.role.permissions for a in mandates(member)) else rows.filter(db.false())
-    records=rows.order_by(StaffPeerReview.due_on).all()
-    if not manager:
-        records=[r for r in records if not r.manuscript.removed_at and has_permission('manuscript.review',r.manuscript.journal_id)]
-    return render_template('admin/staff_reviews.html',reviews=records,selected=selected,manager=manager,can_assign=can_assign,
-                           reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if m.admin_id and not conflicts(m,selected)] if can_assign else [])
+        rows=rows.filter_by(reviewer_id=member.id) if active_member(member) and can_review else rows.filter(db.false())
+    records=rows.order_by(StaffPeerReview.due_on,StaffPeerReview.id).all()
+    records=[r for r in records if manageable(r.manuscript)] if manager else [
+        r for r in records if not r.manuscript.removed_at and has_permission('manuscript.review',r.manuscript.journal_id)]
+    today=date.today()
+    meta={r.id:dict(stale=r.version_number!=r.manuscript.current_version,
+                    closed=r.manuscript.status not in REVIEW_PHASES,
+                    overdue=r.due_on<today and r.status in {'invited','accepted'} and
+                            r.version_number==r.manuscript.current_version and r.manuscript.status in REVIEW_PHASES)
+          for r in records}
+    counts={code:sum(r.status==code for r in records) for code in REVIEW_STATES}
+    counts.update(all=len(records),overdue=sum(meta[r.id]['overdue'] for r in records))
+    status=request.args.get('estado','all')
+    if status not in {'all','overdue',*REVIEW_STATES}:abort(400)
+    shown=[r for r in records if status=='all' or (meta[r.id]['overdue'] if status=='overdue' else r.status==status)]
+    candidates=[m for m in Manuscript.query.filter(Manuscript.removed_at.is_(None),Manuscript.status.in_(REVIEW_PHASES)).order_by(Manuscript.id.desc()).all()
+                if manageable(m)] if can_manage else []
+    portal_reviews=ArticleWorkflow.query.filter_by(reviewer_id=member.id,stage='review').order_by(ArticleWorkflow.article_id.desc()).all() if active_member(member) and can_portal and not manager else []
+    portal_reviews=[r for r in portal_reviews if r.article and independent_article_reviewer(member,r.article,r.owner_id)]
+    assigned_ids={r.reviewer_id for r in StaffPeerReview.query.filter_by(manuscript_id=selected.id,version_number=selected.current_version)} if can_assign else set()
+    return render_template('admin/staff_reviews.html',reviews=shown,selected=selected,manager=manager,can_assign=can_assign,
+                           can_manage=can_manage,can_review=can_review,can_portal=can_portal,portal_reviews=portal_reviews,
+                           candidates=candidates,review_meta=meta,review_counts=counts,status=status,today=today,
+                           review_states=REVIEW_STATES,recommendations=REVIEW_RECOMMENDATIONS,
+                           reviewers=[m for m in eligible('manuscript.review',selected.journal_id) if m.admin_id and m.available and m.id not in assigned_ids and not conflicts(m,selected)] if can_assign else [])
 
 
 def reviewer_record(ident):
@@ -663,6 +693,8 @@ def reviewer_record(ident):
 def review_detail(ident):
     item=reviewer_record(ident)
     stale=item.version_number!=item.manuscript.current_version
+    phase_open=item.manuscript.status in REVIEW_PHASES
+    author_conflict=conflicts(item.reviewer,item.manuscript)
     if request.method=='POST':
         validate_csrf()
         if stale or item.manuscript.status not in {'screening','review','revised','reevaluation'}:
@@ -678,10 +710,11 @@ def review_detail(ident):
                 item.conflict_declared=action=='conflict'
                 item.conflict_note=field('conflict_note',10000)
         elif action=='submit' and item.status=='accepted' and not conflicts(item.reviewer,item.manuscript):
-            item.report=field('report',50000,True)
-            item.recommendation=field('recommendation',30,True)
-            if item.recommendation not in {'accept','minor_revision','major_revision','reject'} or len(item.report)<50:
+            report=field('report',50000,True)
+            recommendation=field('recommendation',30,True)
+            if recommendation not in REVIEW_RECOMMENDATIONS or len(report)<50:
                 abort(400,description='Informe uma recomendação e um parecer com pelo menos 50 caracteres.')
+            item.report,item.recommendation=report,recommendation
             item.status,item.submitted_at='submitted',utcnow()
             editor=TeamMember.query.filter_by(admin_id=item.manuscript.editor_id).first() if item.manuscript.editor_id else None
         else:
@@ -691,10 +724,12 @@ def review_detail(ident):
         return redirect(url_for('staff.review_detail',ident=ident))
     from submission_models import ManuscriptFile, ManuscriptVersion
     files=[]
-    if item.status=='accepted' and not stale and not conflicts(item.reviewer,item.manuscript):
+    if item.status=='accepted' and not stale and phase_open and not author_conflict:
         files=ManuscriptFile.query.join(ManuscriptVersion).filter(ManuscriptVersion.manuscript_id==item.manuscript_id,
              ManuscriptVersion.number==item.version_number,ManuscriptFile.kind.in_(['main','figure','table'])).all()
-    return render_template('admin/staff_review_detail.html',review=item,files=files,stale=stale)
+    return render_template('admin/staff_review_detail.html',review=item,files=files,stale=stale,
+                           phase_open=phase_open,author_conflict=author_conflict,review_states=REVIEW_STATES,
+                           recommendations=REVIEW_RECOMMENDATIONS)
 
 
 @staff_bp.get('/pareceres/<int:ident>/ficheiros/<int:file_id>')
