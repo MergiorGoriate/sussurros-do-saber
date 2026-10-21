@@ -533,7 +533,7 @@ python -m alembic upgrade head
 python -m alembic current
 ```
 
-Resultado esperado nesta versão: `20261008_03 (head)`. Ensaiar primeiro numa cópia isolada. `AUTO_SCHEMA_UPGRADE` é compatibilidade de arranque, não substitui a migração explícita; não alterar a configuração de produção apenas para resolver um problema visual. Guias: [governação](docs/STAFF_GOVERNANCE.md) e [remoções/notificações](docs/LIFECYCLE_NOTIFICATIONS.md).
+Resultado esperado nesta versão: `20261021_06 (head)`. Ensaiar primeiro numa cópia isolada. `AUTO_SCHEMA_UPGRADE` é compatibilidade de arranque, não substitui a migração explícita; não alterar a configuração de produção apenas para resolver um problema visual. Guias: [governação](docs/STAFF_GOVERNANCE.md) e [remoções/notificações](docs/LIFECYCLE_NOTIFICATIONS.md).
 
 Comando específico para as tabelas Google/favoritos:
 
@@ -1031,3 +1031,31 @@ As revisões de artigos de divulgação aparecem numa secção distinta, com ace
 O layout inclui filtros de estado, contadores da vista, prazos, estados em português e formulários responsivos nos temas claro e escuro. Os testes de permissões e transições estão em `tests/test_review_workspace.py`; o percurso no navegador e a apresentação estão em `tests/browser/reviews.spec.js`, com dados sintéticos de `reviews_fixture.py`. Não exige migração de dados nem configuração SMTP adicional.
 
 A validação de segurança deste deployment exige Pillow 13.0.0, actualizado a partir de 12.3.0. A compatibilidade é verificada pelos testes de submissões, imagens e PDF. Notas oficiais da versão: https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html.
+
+### Fundo dos artigos de divulgação (21/10/2026)
+
+O formulário existente de criação/edição inclui «Fundo do artigo», junto dos controlos de apresentação. Os cartões usam botões de opção nativos, seleccionáveis pelo teclado, com indicação textual da escolha. «Fundo padrão» mantém os estilos públicos actuais; «Papel antigo» usa uma textura criada em CSS, sem imagens externas nem novas dependências, com paletas próprias para os temas claro e escuro.
+
+A escolha altera imediatamente a pré-visualização existente, incluindo título e resumo, sem publicar nem gravar a opção. É necessário usar **Guardar artigo**. A alteração desta opção pausa a gravação automática de texto pelo mecanismo existente de protecção das opções do formulário. O renderizador de Markdown e a pré-visualização de notas continuam a funcionar; as tabelas da pré-visualização ficam em regiões com deslocamento horizontal e foco por teclado.
+
+A coluna `article.background` guarda apenas `default` ou `aged_paper`; valores ausentes, nulos ou desconhecidos são apresentados como `default`. A validação no servidor não converte valores recebidos em classes CSS ou estilos arbitrários. A mesma autorização de edição, CSRF e protecção contra alterações concorrentes continuam aplicáveis. A opção é guardada no histórico; recuperar uma versão anterior à funcionalidade usa o fundo padrão. O autosave de texto não altera o fundo guardado. A publicação e o agendamento existentes preservam a escolha.
+
+Na página individual, o contentor `.article-paper` só existe quando foi escolhido papel antigo e inclui título, capa e conteúdo editorial, incluindo referências. A partilha, os comentários, artigos relacionados, cabeçalho, navegação, publicidade e rodapé ficam fora desse contentor. Os cartões de artigos, pesquisa e a Revista Científica não usam o novo fundo. A preferência do visitante por tema claro/escuro não modifica a escolha editorial.
+
+**Implantação:** a migração aditiva `20261021_06`, após `20261020_05`, acrescenta apenas `article.background VARCHAR(20) NOT NULL DEFAULT 'default'`. Artigos anteriores recebem o fundo padrão; não é necessário regravar nem republicar conteúdo. Faça backup e ensaie a migração numa cópia da base. No ambiente da nova versão, com o `DATABASE_URL` já configurado, execute:
+
+```bash
+python -m alembic upgrade head
+python -m alembic current
+```
+
+O resultado esperado é `20261021_06 (head)`. Aplique a migração com o código da nova versão antes de servir tráfego, sobretudo se `AUTO_SCHEMA_UPGRADE` estiver desactivado. O mecanismo de compatibilidade de arranque já existente, `ensure_article_columns()`, reconhece também esta coluna; a migração é idempotente se a coluna já tiver sido acrescentada por esse mecanismo. Não altere `AUTO_SCHEMA_UPGRADE` para esta funcionalidade. No Coolify, publique a nova versão com a migração aplicada e confirme `/healthz`, a edição e a página pública de um artigo. Não há novas variáveis de ambiente nem alterações ao SMTP, Cloudflare ou agendamentos.
+
+Testes específicos:
+
+```bash
+PYTHONPATH=tests:. python -m unittest test_article_backgrounds test_migrations test_article_history test_article_autosave -v
+npx playwright test article-backgrounds.spec.js
+```
+
+A suite Python cobre criação, valores inválidos/ausentes, migração de artigos anteriores, persistência, isolamento entre artigos, âmbito do contentor público, permissões, CSRF, concorrência, histórico, autosave e publicação agendada. Os testes de navegador usam dados sintéticos numa base SQLite isolada e verificam selecção pelo teclado, pré-visualização sem gravação, gravação explícita, reabertura, largura de 320/768/1440 px, ambos os temas, contraste de leitura e preservação das superfícies globais. A implantação e a aparência na base de produção devem ser confirmadas após a publicação; os testes não acedem à produção.

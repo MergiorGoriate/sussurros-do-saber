@@ -274,6 +274,37 @@
   render();
 
   const titleField=document.querySelector('#titleField');
+  const surfacePreview=document.querySelector('#articleSurfacePreview');
+  const backgroundInputs=document.querySelectorAll('input[name="background"]');
+  // Both the immediate renderer and the existing footnote renderer update this pane.
+  const containPreviewTables=()=>{
+    preview.querySelectorAll('table').forEach(table=>{
+      if(table.parentElement?.matches('.preview-table-wrapper,.table-wrapper'))return;
+      const wrap=document.createElement('div');
+      wrap.className='preview-table-wrapper';wrap.tabIndex=0;
+      wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Tabela com deslocamento horizontal');
+      table.before(wrap);wrap.appendChild(table);
+    });
+  };
+  containPreviewTables();
+  new MutationObserver(containPreviewTables).observe(preview,{childList:true,subtree:true});
+  const updateBackgroundPreview=()=>{
+    const aged=document.querySelector('input[name="background"]:checked')?.value==='aged_paper';
+    surfacePreview?.classList.toggle('article-paper',aged);
+    if(surfacePreview)surfacePreview.dataset.articleBackground=aged?'aged_paper':'default';
+    const heading=document.querySelector('#backgroundPreviewTitle');
+    const summary=document.querySelector('#backgroundPreviewSummary');
+    if(heading)heading.textContent=titleField?.value||'Título do artigo';
+    if(summary)summary.textContent=document.querySelector('[name="summary"]')?.value||'';
+  };
+  backgroundInputs.forEach(input=>input.addEventListener('change',()=>{
+    updateBackgroundPreview();
+    const status=document.querySelector('#articleBackgroundStatus');
+    if(status)status.textContent='Pré-visualização: '+(input.value==='aged_paper'?'Papel antigo':'Fundo padrão')+'. A escolha ainda não foi guardada.';
+  }));
+  titleField?.addEventListener('input',updateBackgroundPreview);
+  document.querySelector('[name="summary"]')?.addEventListener('input',updateBackgroundPreview);
+  updateBackgroundPreview();
   const slugField=document.querySelector('#slugField');
   const slugPreview=document.querySelector('#slugPreview');
   const slugify=(value)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,260);

@@ -1462,7 +1462,7 @@ def ensure_editorial_policy_columns():
 
 def ensure_article_columns():
     existing = {column["name"] for column in inspect(db.engine).get_columns("article")}
-    additions = {"cover_video": "VARCHAR(1000) DEFAULT ''", "references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
+    additions = {"background": "VARCHAR(20) DEFAULT 'default' NOT NULL", "cover_video": "VARCHAR(1000) DEFAULT ''", "references": "TEXT DEFAULT '' NOT NULL", "keywords": "VARCHAR(500) DEFAULT ''", "doi": "VARCHAR(180) DEFAULT ''"}
     for name, definition in additions.items():
         if name not in existing:
             db.session.execute(text(f'ALTER TABLE article ADD COLUMN "{name}" {definition}'))

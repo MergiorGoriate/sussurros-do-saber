@@ -16,6 +16,7 @@ class MigrationTests(unittest.TestCase):
             url='sqlite:///'+str(Path(directory)/'mail.db')
             engine=create_engine(url)
             with engine.begin() as connection:
+                connection.execute(text('CREATE TABLE article (id INTEGER PRIMARY KEY)'))
                 connection.execute(text('CREATE TABLE editorial_notification (id INTEGER PRIMARY KEY, recipient VARCHAR(254), subject VARCHAR(300), body TEXT, sent_at DATETIME, attempts INTEGER)'))
                 connection.execute(text("INSERT INTO editorial_notification VALUES (1,'test@example.test','Pendente','Texto original',NULL,0),(2,'test@example.test','Enviada','Texto enviado','2026-10-19 08:00:00',1)"))
                 connection.execute(text('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)'))
@@ -27,6 +28,33 @@ class MigrationTests(unittest.TestCase):
                 rows=connection.execute(text('SELECT body,sent_at,html_body FROM editorial_notification ORDER BY id')).all()
                 self.assertEqual(rows[0],('Texto original',None,None))
                 self.assertEqual(rows[1],('Texto enviado','2026-10-19 08:00:00',None))
+            engine.dispose()
+
+    def test_article_background_upgrade_preserves_old_content_and_preferences(self):
+        import sqlalchemy as sa
+        import governance_models, submission_models
+        with tempfile.TemporaryDirectory() as directory:
+            url='sqlite:///'+str(Path(directory)/'background.db')
+            engine=create_engine(url)
+            metadata=sa.MetaData()
+            for table in db.metadata.sorted_tables:table.to_metadata(metadata)
+            metadata.tables['article']._columns.remove(metadata.tables['article'].c.background)
+            metadata.create_all(engine)
+            with engine.begin() as connection:
+                connection.execute(text('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)'))
+                connection.execute(text("INSERT INTO alembic_version VALUES ('20261020_05')"))
+                from datetime import datetime
+                connection.execute(metadata.tables['author'].insert().values(id=1,name='Autor',slug='autor'))
+                connection.execute(metadata.tables['category'].insert().values(id=1,name='Biologia',slug='biologia'))
+                connection.execute(metadata.tables['article'].insert().values(id=1,title='Conteúdo anterior',slug='anterior',summary='Resumo preservado',body='Texto preservado',author_id=1,category_id=1,status='published',created_at=datetime(2026,1,1),updated_at=datetime(2026,1,1)))
+            self.run_migration(url)
+            with engine.begin() as connection:
+                self.assertEqual(connection.execute(text('SELECT title,body,background FROM article')).one(),('Conteúdo anterior','Texto preservado','default'))
+                self.assertFalse(next(c for c in inspect(connection).get_columns('article') if c['name']=='background')['nullable'])
+                connection.execute(text("UPDATE article SET background='aged_paper'"))
+            self.run_migration(url)
+            with engine.connect() as connection:
+                self.assertEqual(connection.execute(text('SELECT background FROM article')).scalar(),'aged_paper')
             engine.dispose()
 
     def run_migration(self, url):
@@ -41,7 +69,7 @@ class MigrationTests(unittest.TestCase):
             engine = create_engine(url)
             with engine.connect() as connection:
                 self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message"}.issubset(inspect(connection).get_table_names()))
-                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261020_05")
+                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261021_06")
             engine.dispose()
 
     def test_existing_schema_and_content_are_preserved(self):
