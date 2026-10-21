@@ -87,3 +87,4 @@
 .admin-dark .article-background-preview .markdown-preview figcaption small {color:#b8c8dc}
 .article-background-preview.article-paper .markdown-preview :is(figcaption,figcaption small) {color:var(--article-paper-muted);opacity:1}
 .article-page .article-paper figcaption small {font-size:.85rem}
+.admin-dark .article-background-preview:not(.article-paper) .markdown-preview :is(blockquote,figcaption) {color:#bfccdc}

@@ -29,6 +29,16 @@ test('editor background controls and preview fit mobile, tablet and desktop in b
   for(const name of ['Papel antigo','Fundo padrão']){
    await page.getByRole('radio',{name,exact:true}).check();await fits(page);
    await expect(page.locator('#markdownPreview')).toBeVisible();
+   const ratios=await page.locator('#markdownPreview').evaluate(root=>{
+    const luminance=s=>s.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+    return ['blockquote','figcaption','figcaption small'].map(selector=>{
+     const el=root.querySelector(selector);if(!el)return 0;
+     let parent=el,bg='rgba(0, 0, 0, 0)';
+     while(parent&&bg==='rgba(0, 0, 0, 0)'){bg=getComputedStyle(parent).backgroundColor;parent=parent.parentElement;}
+     const [a,b]=[luminance(getComputedStyle(el).color),luminance(bg)].sort((a,b)=>b-a);return (a+.05)/(b+.05);
+    });
+   });
+   for(const ratio of ratios)expect(ratio,name+' '+theme).toBeGreaterThanOrEqual(4.5);
   }
  }
 });
