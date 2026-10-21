@@ -48,12 +48,12 @@
 
 /* Compact playback control; the text remains available to assistive technology. */
 .article-video-cover>.cover-toggle {
-  width:48px;height:48px;min-height:48px;max-width:48px;padding:0;
+  width:36px;height:36px;min-height:36px;max-width:36px;padding:0;
   border:1px solid #fff;border-radius:50%;background:#0878bd;color:#fff;
   font-size:0;line-height:0;box-shadow:0 2px 10px #0005;
 }
 .article-video-cover>.cover-toggle::before {
-  content:"";display:block;width:20px;height:22px;background:currentColor;
+  content:"";display:block;width:14px;height:16px;background:currentColor;
   clip-path:polygon(15% 0,100% 50%,15% 100%);
 }
 .article-video-cover[data-state=playing]>.cover-toggle::before {
