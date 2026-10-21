@@ -1029,3 +1029,5 @@ Na vista pessoal, o revisor responde ao convite, confirma a ausência de conflit
 As revisões de artigos de divulgação aparecem numa secção distinta, com acesso ao fluxo editorial existente; não são apresentadas como revisão por pares de investigação original. Não se criam atribuições automaticamente: o editor escolhe o manuscrito, o revisor e o prazo. As notificações internas continuam a usar o mecanismo existente.
 
 O layout inclui filtros de estado, contadores da vista, prazos, estados em português e formulários responsivos nos temas claro e escuro. Os testes de permissões e transições estão em `tests/test_review_workspace.py`; o percurso no navegador e a apresentação estão em `tests/browser/reviews.spec.js`, com dados sintéticos de `reviews_fixture.py`. Não exige migração de dados nem configuração SMTP adicional.
+
+A validação de segurança deste deployment exige Pillow 13.0.0, actualizado a partir de 12.3.0. A compatibilidade é verificada pelos testes de submissões, imagens e PDF. Notas oficiais da versão: https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html.
