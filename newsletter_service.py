@@ -12,7 +12,7 @@ from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy import exists, select, text
 
 from models import Article, Subscriber, db, utcnow
-from submission_models import EditorialNotification
+from submission_models import EditorialNotification, NewsletterCampaign
 
 newsletter_bp = Blueprint('newsletter_public', __name__)
 CANCELLED = 'Boletim cancelado: inscrição inactiva.'
@@ -89,10 +89,10 @@ def digest(now=None):
             'content':content, 'fingerprint':fingerprint}
 
 
-def queue_digest(limit=500, expected_hash=None, now=None):
+def queue_digest(limit=2500, expected_hash=None, now=None):
     if not smtp_ready():
         raise ValueError('Configure SMTP seguro e active NEWSLETTER_ENABLED antes de preparar o envio.')
-    # Serialize issue preparation without adding tables or modifying subscribers.
+    # Preserve the existing preparation lock and outbox; preparation never authorizes SMTP.
     if db.engine.dialect.name == 'postgresql':
         db.session.execute(text('SELECT pg_advisory_xact_lock(1936949612)'))
     elif db.engine.dialect.name == 'sqlite':
@@ -105,12 +105,26 @@ def queue_digest(limit=500, expected_hash=None, now=None):
     if not edition['articles']:
         db.session.commit()
         return 0
+    from mail_delivery import policy, audit
+    settings=policy(lock=True)
+    campaign=NewsletterCampaign.query.filter_by(issue=edition['issue']).first()
+    if campaign is None:
+        campaign=NewsletterCampaign(issue=edition['issue'],subject=edition['subject'],fingerprint=edition['fingerprint'])
+        db.session.add(campaign);db.session.flush()
+    elif campaign.status!='prepared':
+        db.session.commit()
+        return 0  # A repeated scheduled preparation never reopens an approved edition.
+    elif campaign.fingerprint!=edition['fingerprint']:
+        raise ValueError('A edição já tem conteúdo preparado diferente. Reveja a campanha guardada antes de prosseguir.')
+    remaining=settings.edition_limit-EditorialNotification.query.filter_by(campaign_id=campaign.id).count()
+    if remaining<=0:
+        db.session.commit();return 0
     already_queued = exists(select(EditorialNotification.id).where(
         EditorialNotification.recipient == Subscriber.email,
         EditorialNotification.subject == edition['subject'],
     ))
     subscribers = Subscriber.query.filter_by(active=True).filter(~already_queued).order_by(
-        Subscriber.id).limit(max(1, min(5000, limit))).all()
+        Subscriber.id).limit(min(remaining,max(1,min(100000,limit)))).all()
     for subscriber in subscribers:
         body = ('Boletim científico — Sussurros do Saber\n'
                 + edition['start'].strftime('%d/%m/%Y') + ' a '
@@ -119,7 +133,9 @@ def queue_digest(limit=500, expected_hash=None, now=None):
                 + '\n\nRecebe este boletim porque subscreveu o Sussurros do Saber.'
                 + '\nCancelar a inscrição: ' + unsubscribe_url(subscriber))
         db.session.add(EditorialNotification(recipient=subscriber.email,
-            subject=edition['subject'], body=body, html_body=render_digest_html(edition, subscriber)))
+            subject=edition['subject'], body=body, html_body=render_digest_html(edition, subscriber),
+            campaign_id=campaign.id,subscriber_id=subscriber.id))
+    audit('campaign.prepared',campaign.id,str(len(subscribers))+' destinatários adicionados; sem autorização de envio.','newsletter_campaign')
     db.session.commit()
     return len(subscribers)
 
@@ -138,6 +154,9 @@ def unsubscribe(token):
     cancelled = request.method == 'POST'
     if cancelled:
         subscriber.active = False
+        from mail_delivery import audit, cancel_subscriber
+        cancel_subscriber(subscriber.id)
+        audit('recipient.unsubscribed',subscriber.id,'Inscrição cancelada pelo titular.','subscriber')
         db.session.commit()
     response = current_app.make_response(render_template('newsletter_unsubscribe.html', cancelled=cancelled))
     response.headers['Cache-Control'] = 'private, no-store'
@@ -153,7 +172,7 @@ def install_newsletter(app):
         return {'newsletter_available': smtp_ready()}
 
     @app.cli.command('preparar-boletim')
-    @click.option('--limit', default=500, type=click.IntRange(1, 5000))
+    @click.option('--limit', default=2500, type=click.IntRange(1, 100000))
     @click.option('--dry-run', is_flag=True, help='Mostrar a edição sem criar mensagens.')
     def prepare(limit, dry_run):
         """Queue the previous complete week's public articles, once per recipient."""
@@ -166,4 +185,5 @@ def install_newsletter(app):
         except ValueError as error:
             db.session.rollback()
             raise click.ClickException(str(error)) from error
-        click.echo(f'{queued} boletins preparados na fila. Execute enviar-notificacoes para entregar.')
+        click.echo(f'{queued} boletins preparados. Reveja, aprove e autorize/agende a campanha no painel antes da entrega.')
+

@@ -4,10 +4,7 @@ import json
 import os
 import re
 import secrets
-import smtplib
-import ssl as ssl_module
 from datetime import datetime
-from email.message import EmailMessage
 from functools import wraps
 import click
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, session, url_for
@@ -780,61 +777,13 @@ def install_submission_cli(app):
     @click.option('--limit', default=50, type=click.IntRange(1, 500))
     def deliver_notifications(limit):
         """Deliver the transactional outbox; run every minute in a single worker."""
-        host, sender = os.getenv('SMTP_HOST', ''), os.getenv('SMTP_FROM', '')
-        if not host or not email_valid(sender):
-            raise click.ClickException('Configure SMTP_HOST e SMTP_FROM. As notificações permanecem pendentes.')
-        tls = os.getenv('SMTP_TLS', 'true').lower() == 'true'
-        ssl = os.getenv('SMTP_SSL', 'false').lower() == 'true'
-        if not tls and not ssl and not app.testing:
-            raise click.ClickException('É obrigatório utilizar SMTP_TLS ou SMTP_SSL.')
-        from newsletter_service import CANCELLED, is_newsletter, smtp_ready, unsubscribe_url
-        from models import Subscriber
-        pending = EditorialNotification.query.filter_by(sent_at=None).filter(EditorialNotification.last_error != CANCELLED)
-        if not smtp_ready():
-            pending = pending.filter(~EditorialNotification.subject.like('Sussurros do Saber — Boletim %'))
-        rows = pending.order_by(EditorialNotification.id).limit(limit).with_for_update(skip_locked=True).all()
-        delivered = 0
+        from mail_delivery import deliver_batch
         try:
-            factory = smtplib.SMTP_SSL if ssl else smtplib.SMTP
-            connection_options = {'timeout': 15}
-            tls_context = ssl_module.create_default_context()
-            if ssl:
-                connection_options['context'] = tls_context
-            with factory(host, int(os.getenv('SMTP_PORT', '465' if ssl else '587')), **connection_options) as smtp:
-                if tls and not ssl:
-                    smtp.starttls(context=tls_context)
-                if os.getenv('SMTP_USERNAME'):
-                    smtp.login(os.environ['SMTP_USERNAME'], os.environ.get('SMTP_PASSWORD', ''))
-                for row in rows:
-                    subscriber = None
-                    if is_newsletter(row):
-                        subscriber = Subscriber.query.filter_by(email=row.recipient, active=True).first()
-                        if subscriber is None:
-                            row.last_error = CANCELLED
-                            continue
-                    row.attempts += 1
-                    message = EmailMessage()
-                    message['From'], message['To'], message['Subject'] = sender, row.recipient, row.subject
-                    message['Message-ID'] = f'<editorial-{row.id}@sussurrosdosaber.com>'
-                    if subscriber is not None:
-                        message['List-Unsubscribe'] = '<' + unsubscribe_url(subscriber) + '>'
-                        message['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
-                    message.set_content(row.body)
-                    if subscriber is not None and row.html_body:
-                        message.add_alternative(row.html_body, subtype='html')
-                    try:
-                        smtp.send_message(message)
-                        row.sent_at, row.last_error = utcnow(), ''
-                        delivered += 1
-                    except (OSError, smtplib.SMTPException):
-                        row.last_error = 'Falha no envio SMTP; será tentado novamente.'
-                # Persist server acceptance before QUIT: a disconnect while closing
-                # the connection must not turn accepted messages into pending ones.
-                db.session.commit()
-        except (OSError, smtplib.SMTPException, ValueError) as error:
+            accepted = deliver_batch(limit)
+        except ValueError as error:
             db.session.rollback()
-            raise click.ClickException('Falha na ligação SMTP. Notificações preservadas para nova tentativa.') from error
-        click.echo(f'{delivered} notificações enviadas; restantes preservadas na fila.')
+            raise click.ClickException(str(error)) from error
+        click.echo(f'{accepted} notificações aceites pelo SMTP; restantes preservadas na fila. Consulte Limites e entrega.')
 
 
 def import_publication_figures(publication, files, main):
@@ -914,5 +863,6 @@ def internal_notice_summary():
     from flask import jsonify
     from internal_notices import summary
     return jsonify(summary(public=True))
+
 
 

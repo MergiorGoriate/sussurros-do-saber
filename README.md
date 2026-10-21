@@ -2,6 +2,8 @@
 
 Plataforma de divulgação científica e publicação editorial em português, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.
 
+**Entrega SMTP:** a revisão de limites usa o head `20261021_08`, aprovação e autorização separadas e contadores globais persistentes. Parar os trabalhadores antigos antes de actualizar. O procedimento actual está em [Limites e entrega](docs/NEWSLETTER_DELIVERY.md); as secções históricas abaixo descrevem também as revisões anteriores.
+
 Este README descreve a implementação revista em **20 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
 
 ## Índice
@@ -1092,3 +1094,11 @@ Testes: `tests/test_article_covers.py`, o cenário de actualização em `tests/t
 O artigo principal de **Em destaque** também reproduz a capa quando o editor escolhe **Vídeo animado**. Reutiliza o vídeo, a imagem de reserva e o leitor acessível do artigo, sem novos campos ou migrações. A imagem e o título continuam a abrir o artigo; o botão de pausa é independente da ligação. Os modos de imagem e vídeo com controlos conservam a imagem estática na página inicial. Os outros cartões e listagens não carregam vídeos. Movimento reduzido, poupança de dados, falhas de reprodução e pausa fora do ecrã seguem as mesmas regras do leitor existente. Não há configurações adicionais no Coolify: publicar esta versão após a migração `20261021_07` já exigida pelas capas de vídeo.
 
 O controlo sobreposto da capa usa agora um botão circular de 48 px com ícones de reproduzir/pausar. O nome acessível acompanha o estado, o foco permanece visível e o texto descritivo surge também na dica do botão. Aplica-se ao artigo, destaque e pré-visualização do editor, reutilizando o mesmo leitor.
+
+### Limites e entrega da newsletter
+
+A fila EditorialNotification passa a ter campanhas aprovadas/agendadas, estados persistentes e histórico de tentativas. A secção **Limites e entrega** em /admin/subscritores usa a permissão existente subscribers.manage e CSRF. Preparar não envia; aprovar e autorizar/agendar são passos separados. Os valores iniciais são 2500 destinatários por edição, 100 tentativas/hora UTC, 500/dia UTC, intervalo de 36 segundos e até três tentativas adicionais. O orçamento é partilhado por toda a fila SMTP, incluindo correio transaccional; quotas externas manuais mais restritivas prevalecem. Não são quotas confirmadas do fornecedor.
+
+Reutiliza enviar-notificacoes periódico no Coolify, com bloqueio coordenado PostgreSQL. Aceitações são guardadas antes de QUIT; resultados incertos e claims abandonados não são reenviados automaticamente. A reconciliação exige evidência registada pelo responsável. Não existe garantia distribuída de entrega exactamente uma vez.
+
+**Migração:** parar trabalhadores antigos, fazer backup e ensaiar a migração antes de executar `python -m alembic upgrade head` com a nova versão. O head desta revisão é 20261021_08. A migração preserva a fila e coloca campanhas legadas em preparação sem autorização de envio. Não executar o worker antigo sobre o esquema novo. Não há novas variáveis de ambiente, serviço pago ou mudança ao Dockerfile. Procedimento, limites, recuperação e testes: [docs/NEWSLETTER_DELIVERY.md](docs/NEWSLETTER_DELIVERY.md).

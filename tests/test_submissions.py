@@ -268,8 +268,11 @@ class SubmissionTests(unittest.TestCase):
         self.assertEqual(self.client.get('/submissoes/recuperar/'+reset).status_code,400)
         self.assertTrue(EditorialNotification.query.filter_by(recipient=email).first())
         runner=app.test_cli_runner()
-        with patch.dict('os.environ',{'SMTP_HOST':'smtp.example.org','SMTP_FROM':'editorial@example.org','SMTP_USERNAME':'','SMTP_TLS':'true'}),patch('submissions.smtplib.SMTP') as smtp:
-            smtp.return_value.__enter__.return_value.send_message.return_value={}
+        from mail_delivery import policy, due_messages
+        settings=policy();settings.interval_seconds=0;settings.hourly_limit=100000;settings.daily_limit=1000000;settings.paused=False;settings.suspended_until=None;db.session.commit()
+        query=due_messages
+        with patch.dict('os.environ',{'SMTP_HOST':'smtp.example.org','SMTP_FROM':'editorial@example.org','SMTP_USERNAME':'','SMTP_TLS':'true'}),patch('mail_delivery.smtplib.SMTP') as smtp,patch('mail_delivery.due_messages',side_effect=lambda now:query(now).filter_by(recipient=email)):
+            smtp.return_value.send_message.return_value={}
             result=runner.invoke(args=['enviar-notificacoes','--limit','500'])
         self.assertEqual(result.exit_code,0,result.output)
         self.assertTrue(EditorialNotification.query.filter_by(recipient=email).first().sent_at)

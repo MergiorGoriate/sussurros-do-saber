@@ -1506,6 +1506,9 @@ def ensure_notification_columns():
     if 'html_body' not in columns:
         db.session.execute(text('ALTER TABLE editorial_notification ADD COLUMN html_body TEXT'))
         db.session.commit()
+    from mail_schema import upgrade_mail_schema
+    upgrade_mail_schema(db.session.connection())
+    db.session.commit()
 
 
 def seed_database():
@@ -1591,6 +1594,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
