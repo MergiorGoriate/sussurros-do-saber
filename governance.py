@@ -846,8 +846,16 @@ def article_workflow(ident):
         if not has_permission('article.edit') and not (has_permission('article.write') and current_member() and current_member().author_id==article.author_id):
             abort(409,description='O editor deve iniciar o fluxo deste artigo.')
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
-        if not owner:
-            abort(409,description='Associe primeiro o autor a um membro da equipa.')
+        if not owner or owner.removed_at:
+            # Missing authorship configuration is recoverable in the admin panel.
+            # Do not invent membership or grant permissions to start a workflow.
+            if request.method == 'POST':
+                validate_csrf()
+                flash('Associe o autor a um membro da equipa antes de continuar o fluxo.', 'warning')
+                return redirect(url_for('staff.article_workflow', ident=ident), code=303)
+            return render_template('admin/article_workflow_setup.html',
+                                   article=article, author=db.session.get(Author, article.author_id),
+                                   linked_member=owner)
         item=ArticleWorkflow(article_id=ident,owner_id=owner.id,owner=owner,
                              stage=article.status if article.status in ARTICLE_STAGES else 'submitted')
         if request.method=='POST':

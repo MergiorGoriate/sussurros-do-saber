@@ -1,0 +1,20 @@
+{% extends 'admin/base.html' %}
+{% block title %}Configurar autoria do artigo{% endblock %}
+{% block content %}
+<div class="staff-management editorial-workflow">
+<header class="admin-header management-header"><div><span>Conteúdo editorial</span><h1>Configurar autoria do artigo</h1><p>{{ article.title }}</p></div><a class="workflow-back" href="{{ url_for('admin.articles') }}">← Voltar aos artigos</a></header>
+<section class="admin-panel">
+<h2>Associação do autor à equipa pendente</h2>
+<p role="status">O autor {{ author.name if author else 'deste artigo' }} ainda não está associado a um membro disponível da equipa. Esta associação identifica o responsável pela autoria e permite verificar a independência da revisão.</p>
+{% if linked_member and linked_member.removed_at %}<p>O registo anteriormente associado foi removido. Peça ao responsável principal para regularizar a autoria, preservando o histórico.</p>{% endif %}
+{% if session.get('admin_superuser') %}
+<p>Abra a gestão da equipa, escolha o membro que corresponde ao autor e seleccione o respectivo autor no formulário. Se ainda não existir um membro, registe-o com os dados correctos. Não é necessário atribuir permissões de revisão ou aprovação ao autor.</p>
+<a class="workflow-back" href="{{ url_for('staff.team', edit=linked_member.id) if linked_member and not linked_member.removed_at else url_for('staff.team') }}">Gerir associação do autor</a>
+{% else %}
+<p>Peça ao responsável principal que associe este autor ao membro correcto da equipa.</p>
+{% endif %}
+<p>Depois de guardar a associação, regresse a esta página.</p>
+<a class="workflow-back" href="{{ url_for('staff.article_workflow', ident=article.id) }}">Verificar associação e continuar</a>
+</section>
+</div>
+{% endblock %}
