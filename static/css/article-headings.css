@@ -1,0 +1,22 @@
+/* One heading scale for the article body and its authenticated preview. */
+.article-headings.article-markdown :is(h2,h3,h4,h5,h6) {
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 2em 0 .8em;
+  color: inherit;
+  overflow-wrap: anywhere;
+  scroll-margin-top: 6rem;
+}
+.article-headings.article-markdown h2 { font-size: 1.65em; }
+.article-headings.article-markdown h3 { font-size: 1.3em; }
+.article-headings.article-markdown h4 { font-size: 1.2em; }
+.article-headings.article-markdown h5 { font-size: 1.1em; }
+.article-headings.article-markdown h6 { font-size: 1em; }
+.markdown-preview.article-headings.article-markdown :is(h2,h3,h4,h5,h6) {
+  font-family: Inter, system-ui, sans-serif;
+}
+@media (max-width: 640px) {
+  .article-headings.article-markdown h2 { font-size: 1.5em; }
+  .article-headings.article-markdown h3 { font-size: 1.25em; }
+}
