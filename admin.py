@@ -1063,7 +1063,7 @@ def journal_form(journal_id=None):
         field = request.form.get("field", "").strip()
         description = request.form.get("description", "").strip()
         issn = request.form.get("issn", "").strip().upper()
-        base_slug = slugify(request.form.get("slug") or article.slug or title)
+        base_slug = slugify(request.form.get("slug") or title)
         duplicate = Journal.query.filter(Journal.slug == base_slug, Journal.id != journal.id).first()
         cover_url = request.form.get("cover_image", "").strip()
         cover_file = request.files.get("cover_file")

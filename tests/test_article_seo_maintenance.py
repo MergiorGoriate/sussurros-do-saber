@@ -105,6 +105,122 @@ class SEOMaintenanceTests(unittest.TestCase):
             self.assertEqual(len(soup.select('meta[name="description"]')), 1)
             self.assertEqual(soup.select_one('meta')['content'], 'Descrição & rigor')
 
+    def test_structure_preserves_prose_fences_and_repeats_without_changes(self):
+        body = '# Título anterior\n\nTexto científico intacto.\n\n### Secção\n\n##### Parte\n\n```markdown\n# Código\n```\n'
+        expected = '\nTexto científico intacto.\n\n## Secção\n\n### Parte\n\n```markdown\n# Código\n```\n'
+        corrected = seo.structure_body(body, 'Título anterior')
+        self.assertEqual(corrected, expected)
+        self.assertEqual(seo.structure_body(corrected, 'Título anterior'), corrected)
+
+    def test_ambiguous_bodies_stay_unchanged(self):
+        for body in ('<h1>Título anterior</h1>\n### Parte',
+                     'Título\n======\n### Parte', '<pre>\n# Exemplo\n</pre>'):
+            self.assertEqual(seo.structure_body(body, 'Título anterior'), body)
+
+    def test_structure_only_update_and_recovery_preserve_metadata(self):
+        import json
+        original = self.before['body']
+        self.plan['articles'][0]['after'] = {'body': seo.structure_body(original, self.before['title'])}
+        backup = Path(self.temp.name) / 'before.json'
+        seo.change(self.engine, self.plan, backup, 'Teste')
+        self.assertEqual(self.row()['summary'], self.before['summary'])
+        seo.change(self.engine, json.loads(backup.read_text()), Path(self.temp.name) / 'undo.json', 'Teste', restore=True)
+        self.assertEqual(self.row()['body'], original)
+
+    def test_body_rewriting_and_unreviewed_plans_are_rejected(self):
+        self.plan['articles'][0]['after'] = {'body': 'Prosa substituída.'}
+        with self.assertRaises(ValueError):
+            seo.change(self.engine, self.plan, Path(self.temp.name) / 'before.json', 'Teste')
+        self.plan['articles'][0]['after'] = {'title': 'Título proposto'}
+        for flag in (False, 'true', 1):
+            self.plan['articles'][0]['reviewed'] = flag
+            with self.assertRaises(ValueError):
+                seo.change(self.engine, self.plan, Path(self.temp.name) / 'before.json', 'Teste')
+
+    def test_editorial_plan_resolves_slug_and_rejects_changed_observations(self):
+        proposal = {'articles': [{'slug': self.before['slug'], 'expected': {k: self.before[k] for k in ('title', 'summary')},
+                     'after': {'title': 'Título novo'}, 'reason': 'Revisão editorial.'}]}
+        result = seo.editorial_plan([self.before], proposal)
+        self.assertEqual(result['articles'][0]['id'], self.before['id'])
+        self.assertFalse(result['articles'][0]['reviewed'])
+        self.assertEqual(result['articles'][0]['fingerprint'], seo.digest(self.before))
+        proposal['articles'][0]['expected']['title'] = 'Desactualizado'
+        with self.assertRaises(ValueError):
+            seo.editorial_plan([self.before], proposal)
+
+    def test_svg_title_is_accessibility_text_not_an_extra_html_title(self):
+        html = '<html><head><title>Artigo</title><meta name="description" content="' + 'a' * 60 + '"></head><body><h1>Artigo</h1><h2>Secção</h2><svg><title>Gráfico acessível</title></svg></body></html>'
+        self.assertTrue(seo.inspect_html(html)['passed'])
+        duplicate = html.replace('</head>', '<meta name="description" content="outra"></head>')
+        self.assertFalse(seo.inspect_html(duplicate)['passed'])
+
+    def test_sql_failure_rolls_back_changes_and_history_after_backup(self):
+        from unittest.mock import patch
+        backup = Path(self.temp.name) / 'before.json'
+        original = seo.revisions
+        count = 0
+        def fail_second(*args, **kwargs):
+            nonlocal count
+            count += 1
+            if count == 2:
+                raise RuntimeError('Simulação de falha SQL')
+            return original(*args, **kwargs)
+        with patch.object(seo, 'revisions', side_effect=fail_second):
+            with self.assertRaises(RuntimeError):
+                seo.change(self.engine, self.plan, backup, 'Teste')
+        self.assertTrue(backup.exists())
+        self.assertEqual(self.row(), self.before)
+        with self.engine.connect() as conn:
+            self.assertEqual(len(conn.execute(select(self.history)).all()), 0)
+
+    def test_executable_cli_audit_plan_apply_and_restore(self):
+        import json
+        import os
+        import subprocess
+        import sys
+        folder = Path(self.temp.name)
+        env = dict(os.environ, DATABASE_URL=str(self.engine.url))
+        def command(*args):
+            return subprocess.run([sys.executable, str(ROOT / 'scripts/article_seo.py'), *map(str, args)],
+                env=env, capture_output=True, text=True, timeout=15)
+        audit = folder / 'audit.json'
+        self.assertEqual(command('audit', '--include-content', '--output', audit).returncode, 0)
+        data = json.loads(audit.read_text())
+        self.assertEqual(data['articles'][0]['body'], self.before['body'])
+        proposal = {'articles': [{'slug': self.before['slug'],
+            'expected': {k: self.before[k] for k in ('title', 'summary')},
+            'after': self.plan['articles'][0]['after'], 'reason': 'Revisão de teste.'}]}
+        source = folder / 'proposal.json'
+        source.write_text(json.dumps(proposal))
+        plan_path = folder / 'plan.json'
+        self.assertEqual(command('plan-editorial', '--input', source, '--output', plan_path).returncode, 0)
+        backup = folder / 'backup.json'
+        self.assertNotEqual(command('apply', '--plan', plan_path, '--backup', backup, '--actor', 'Teste').returncode, 0)
+        plan = json.loads(plan_path.read_text())
+        plan['articles'][0]['reviewed'] = True
+        plan_path.write_text(json.dumps(plan))
+        self.assertEqual(command('apply', '--plan', plan_path, '--backup', backup, '--actor', 'Teste').returncode, 0)
+        self.assertEqual(command('restore', '--plan', backup, '--backup', folder / 'undo.json', '--actor', 'Teste').returncode, 0)
+        self.assertEqual(self.row()['title'], self.before['title'])
+        structural = folder / 'structure.json'
+        self.assertEqual(command('plan-structure', '--output', structural).returncode, 0)
+        self.assertFalse(json.loads(structural.read_text())['articles'][0]['reviewed'])
+
+    def test_public_verification_uses_full_page_and_reports_unchanged_address(self):
+        from unittest.mock import patch
+        from email.message import Message
+        from io import BytesIO
+        html = '<head><title>Artigo</title><meta name="description" content="' + 'a' * 60 + '"></head><body><h1>Artigo</h1><h2>Secção</h2></body>'
+        response = BytesIO(html.encode())
+        response.headers = Message()
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.status = 200
+        response.url = 'https://www.sussurrosdosaber.com/artigo/exemplo'
+        with patch.object(seo, 'urlopen', return_value=response):
+            result = seo.verify_public({'articles': [{'id': 1, 'slug': 'exemplo'}]}, 'https://www.sussurrosdosaber.com')
+        self.assertTrue(result['articles'][0]['passed'])
+        self.assertTrue(result['articles'][0]['unchanged_url'])
+
 
 if __name__ == '__main__':
     unittest.main()

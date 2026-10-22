@@ -339,3 +339,10 @@
   .public-site .article-byline > .article-date { grid-column: auto; }
   .public-site .article-byline .article-reading-time { grid-column: 3; grid-row: 1; gap: 6px; }
 }
+
+
+/* Preserve deeper semantic headings without choosing levels for font size. */
+.article-markdown h4, .article-markdown h5, .article-markdown h6 { font-family: Georgia, serif; line-height: 1.3; margin: 1.5rem 0 .6rem; font-weight: 700; }
+.article-markdown h4 { font-size: 1.2rem; }
+.article-markdown h5 { font-size: 1.1rem; }
+.article-markdown h6 { font-size: 1rem; }

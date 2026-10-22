@@ -412,7 +412,7 @@ def render_markdown(value):
             return f'<a href="{safe_url}" rel="noopener noreferrer">{safe_label}</a>{html_escape(suffix)}'
         parts[index] = url_pattern.sub(linkify, part)
     rendered = "".join(parts)
-    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img", "sup", "div"})
+    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "h5", "h6", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img", "sup", "div"})
     cleaned = bleach.clean(
         rendered,
         tags=allowed,
