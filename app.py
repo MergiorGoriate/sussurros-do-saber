@@ -323,7 +323,7 @@ def safe_chart_embed(chart_type, title, raw_data):
 
 
 @app.template_filter("markdown")
-def render_markdown(value):
+def render_markdown(value, *, strict_headings=False):
     embeds = {}
 
     def store_embed(prefix, embed):
@@ -382,7 +382,7 @@ def render_markdown(value):
     prepared = IMAGE_DIRECTIVE.sub(image_placeholder, prepared)
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
-    rendered, note_info = render_notes_markdown(prepared)
+    rendered, note_info = render_notes_markdown(prepared, strict_headings=strict_headings)
     if note_info['notes']:
         rendered = rendered.replace('&#160;', '\u00a0').replace('&nbsp;', '\u00a0')
     # Torna URLs HTTP(S) escritas como texto em links clicáveis, sem alterar
@@ -432,7 +432,7 @@ def render_markdown(value):
 def render_article_markdown(value, namespace='article-section'):
     # Reuse the existing parser, directives, footnotes and sanitizer.
     # Only article bodies/references normalize H1; journals keep their own flow.
-    return Markup(article_headings(str(render_markdown(value)), namespace))
+    return Markup(article_headings(str(render_markdown(value, strict_headings=True)), namespace))
 
 
 @app.after_request

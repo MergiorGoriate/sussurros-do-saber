@@ -60,11 +60,11 @@ test('editor preview preserves the resource across modes and saves explicitly',a
  await expect(page.locator('#coverPreview video')).toHaveCount(1);await expect(page.locator('#editorAutosaveStatus')).toContainText('Gravação automática pausada');
  await page.locator('#coverVideoFile').setInputFiles('tests/fixtures/article-cover.webm');await expect(page.locator('#coverPreview video')).toHaveAttribute('data-src',/^blob:/);
  await page.locator('#coverPreview .cover-toggle').click();await expect(page.locator('#coverPreview')).toHaveAttribute('data-state','playing');
- await page.locator('#coverVideoFile').setInputFiles([]);await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
+ await page.locator('#coverVideoFile').setInputFiles([]);await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();await expect(page).toHaveURL(/\/admin\/artigos$/);
  await page.goto(path);await expect(page.locator('#coverMode')).toHaveValue('video_animated');await expect(page.locator('#coverVideoUrl')).toHaveValue(previous);
- await page.locator('#coverMode').selectOption('image');await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
+ await page.locator('#coverMode').selectOption('image');await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();await expect(page).toHaveURL(/\/admin\/artigos$/);
  await page.goto(path);await expect(page.locator('#coverVideoUrl')).toHaveValue(previous);
- await page.getByRole('button',{name:'Remover vídeo da capa',exact:true}).click();await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
+ await page.getByRole('button',{name:'Remover vídeo da capa',exact:true}).click();await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();await expect(page).toHaveURL(/\/admin\/artigos$/);
  await page.goto(path);await expect(page.locator('#coverMode')).toHaveValue('image');await expect(page.locator('#coverVideoUrl')).toHaveValue('');
 });
 
@@ -96,3 +96,4 @@ for(const width of [320,1440])test(`homepage lead animation and independent navi
  await expect(root.locator('video')).not.toHaveAttribute('src');await expect(root.locator('.cover-poster')).toBeVisible();
  await root.locator('.home-cover-link').click({position:{x:30,y:30}});await expect(page).toHaveURL(new RegExp('/artigo/'+d.video_animated.slug+'$'));
 });
+

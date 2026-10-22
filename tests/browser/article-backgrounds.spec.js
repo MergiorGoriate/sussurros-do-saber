@@ -1,7 +1,9 @@
 const {test,expect}=require('@playwright/test');
 const {execFileSync}=require('node:child_process');
 test.setTimeout(90000);
-test.beforeEach(async({page})=>{await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/healthz');});
+test.beforeEach(async({page})=>{
+ await page.addInitScript(()=>document.addEventListener('DOMContentLoaded',()=>{const style=document.createElement('style');style.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(style);}));
+ await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/healthz');});
 function fixture(){return JSON.parse(execFileSync('python',['tests/browser/background_fixture.py'],{encoding:'utf8'}));}
 async function signin(context){const cookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();await context.addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);}
 const fits=async page=>expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(()=>innerWidth));
@@ -16,7 +18,7 @@ test('background preview remains unsaved until explicit save and survives reopen
  await expect(page.locator('#articleBackgroundStatus')).toContainText('ainda não foi guardada');
  await expect(page.locator('#editorAutosaveStatus')).toContainText('Gravação automática pausada');
  expect(writes).toEqual([]);expect((await page.request.get('/artigo/'+d.draft_slug)).status()).toBe(404);
- await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
+ await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();await expect(page).toHaveURL(/\/admin\/artigos$/);
  await page.goto(`/admin/artigos/${d.draft_id}/editar`);await expect(paper).toBeChecked();
  await standard.check();await expect(page.locator('#articleSurfacePreview')).not.toHaveClass(/article-paper/);
  page.once('dialog',dialog=>dialog.accept());await page.reload();await expect(paper).toBeChecked();
@@ -67,3 +69,4 @@ test('public paper preserves global surfaces and readable content in both themes
   for(const item of contrast)expect(item.ratio,item.selector+' '+theme).toBeGreaterThanOrEqual(4.5);
  }
 });
+
