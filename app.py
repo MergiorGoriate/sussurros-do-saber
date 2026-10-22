@@ -322,7 +322,7 @@ def safe_chart_embed(chart_type, title, raw_data):
 
 
 @app.template_filter("markdown")
-def render_markdown(value):
+def render_markdown(value, *, article=False, heading_prefix="sec"):
     embeds = {}
 
     def store_embed(prefix, embed):
@@ -381,7 +381,7 @@ def render_markdown(value):
     prepared = IMAGE_DIRECTIVE.sub(image_placeholder, prepared)
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
-    rendered, note_info = render_notes_markdown(prepared)
+    rendered, note_info = render_notes_markdown(prepared, strict_headings=article)
     if note_info['notes']:
         rendered = rendered.replace('&#160;', '\u00a0').replace('&nbsp;', '\u00a0')
     # Torna URLs HTTP(S) escritas como texto em links clicáveis, sem alterar
@@ -424,7 +424,15 @@ def render_markdown(value):
     cleaned = re.sub(r"<p>\[capitular\]\s*", '<p class="article-dropcap">', cleaned)
     for token, embed in embeds.items():
         cleaned = cleaned.replace(f"<p>{token}</p>", embed).replace(token, embed)
+    if article:
+        from article_headings import prepare_article_headings
+        cleaned = prepare_article_headings(cleaned, prefix=heading_prefix)
     return Markup(cleaned)
+
+
+@app.template_filter("article_markdown")
+def render_article_markdown(value, prefix="sec"):
+    return render_markdown(value, article=True, heading_prefix=prefix)
 
 
 @app.after_request

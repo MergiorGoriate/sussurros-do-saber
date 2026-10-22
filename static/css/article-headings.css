@@ -1,0 +1,41 @@
+/* One heading scale for the article body and its authenticated preview. */
+.article-headings.article-markdown :is(h2,h3,h4,h5,h6) {
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 2em 0 .8em;
+  color: inherit;
+  overflow-wrap: anywhere;
+  scroll-margin-top: 6rem;
+}
+.article-headings.article-markdown h2 { font-size: 1.65em; }
+.article-headings.article-markdown h3 { font-size: 1.3em; }
+.article-headings.article-markdown h4 { font-size: 1.2em; }
+.article-headings.article-markdown h5 { font-size: 1.1em; }
+.article-headings.article-markdown h6 { font-size: 1em; }
+.markdown-preview.article-headings.article-markdown :is(h2,h3,h4,h5,h6) {
+  font-family: Inter, system-ui, sans-serif;
+}
+@media (max-width: 640px) {
+  .article-headings.article-markdown h2 { font-size: 1.5em; }
+  .article-headings.article-markdown h3 { font-size: 1.25em; }
+}
+/* Preserve existing media layouts when the preview receives server HTML. */
+.markdown-preview .article-video { margin: 1.25rem 0; }
+.markdown-preview .article-video-frame { position: relative; aspect-ratio: 16/9; overflow: hidden; border-radius: 10px; background: #101820; }
+.markdown-preview .article-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.markdown-preview .article-video video { display: block; width: 100%; max-height: 420px; background: #101820; }
+.markdown-preview .article-chart { margin: 1.25rem 0; padding: 12px; border: 1px solid #d7e0df; border-radius: 12px; background: #fff; }
+.markdown-preview .article-chart svg { display: block; width: 100%; height: auto; }
+.markdown-preview .article-chart text { font: 12px system-ui, sans-serif; fill: #334155; }
+.markdown-preview .article-chart .chart-line { fill: none; stroke: #1e4e8c; stroke-width: 4; }
+.markdown-preview .article-chart .chart-axis { stroke: #64748b; stroke-width: 1.5; }
+.markdown-preview .article-chart .chart-grid { stroke: #e2e8f0; stroke-width: 1; }
+
+/* Server tables and lists remain usable inside the existing editor surface. */
+.markdown-preview.article-headings :is(p,ul,ol,pre,blockquote) { margin-block: 1rem; }
+.markdown-preview.article-headings :is(ul,ol) { padding-left: 1.4rem; }
+.markdown-preview.article-headings ul { list-style-type: disc; }
+.markdown-preview.article-headings ol { list-style-type: decimal; }
+.markdown-preview.article-headings .table-wrapper { max-width: 100%; overflow-x: auto; }
+.markdown-preview.article-headings .table-wrapper:focus-visible { outline: 2px solid currentColor; }

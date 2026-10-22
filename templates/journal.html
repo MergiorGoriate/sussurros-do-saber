@@ -129,13 +129,13 @@ document.addEventListener('DOMContentLoaded',()=>{
  const box=document.getElementById('journal-content-index');
  const root=document.querySelector('#conteudo-revista .article-markdown');
  if(!box||!root)return;
- const headings=[...document.querySelectorAll('.journal-sections h2,.journal-sections h3')];
+ const headings=[...document.querySelectorAll('.journal-sections :is(h2,h3,h4,h5,h6)')];
  const used=new Set();
  const slugify=s=>(s||'secao').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'secao';
  headings.forEach((h,i)=>{
    if(!h.id){let base=slugify(h.textContent),id=base,n=2;while(document.getElementById(id)||used.has(id))id=base+'-'+n++;h.id=id;}
    used.add(h.id);
-   const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent.trim();a.className='journal-index-link '+(h.tagName==='H3'?'journal-index-sub':'');
+   const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent.trim();a.className='journal-index-link '+(h.tagName!=='H2'?'journal-index-sub':'');
    box.appendChild(a);
  });
  if(!headings.length)box.hidden=true;

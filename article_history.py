@@ -163,5 +163,5 @@ def preview():
     content = request.form.get('content','')
     if len(content) > 400000:
         return jsonify(error='O texto excede o limite do editor.'), 400
-    from app import render_markdown
-    return jsonify(html=str(render_markdown(content)))
+    from app import render_article_markdown
+    return jsonify(html=str(render_article_markdown(content)))

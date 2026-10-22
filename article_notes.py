@@ -1,5 +1,6 @@
 """Scoped Markdown footnotes with narrowly allowed IDs and accessible backlinks."""
 import itertools
+import re
 from flask import g, has_request_context
 import markdown
 from markdown.extensions.footnotes import FootnoteExtension
@@ -9,7 +10,7 @@ _counter = itertools.count(1)
 _IMAGE_ATTRIBUTES = {'src','srcset','sizes','alt','title','loading','decoding','width','height'}
 
 
-def render_notes_markdown(source):
+def render_notes_markdown(source, *, strict_headings=False):
     if has_request_context():
         number = getattr(g, '_markdown_notes_counter', 0) + 1
         g._markdown_notes_counter = number
@@ -19,6 +20,11 @@ def render_notes_markdown(source):
     renderer = markdown.Markdown(extensions=['extra','sane_lists'], extension_configs={
         'extra': {'footnotes':{'SEPARATOR':f'-{namespace}-','USE_DEFINITION_ORDER':False,
                      'BACKLINK_TEXT':'Voltar ao texto','BACKLINK_TITLE':'Voltar à chamada %d'}}})
+    if strict_headings:
+        # Configure the existing block processor, after fenced-code handling.
+        # A hash run without a following space is literal text in articles.
+        renderer.parser.blockprocessors['hashheader'].RE = re.compile(
+            r'(?:^|\n)(?P<level>#{1,6}) +(?P<header>(?:\\.|[^\\])*?)#*(?:\n|$)')
     rendered = renderer.convert(source)
     extension = next(item for item in renderer.registeredExtensions if isinstance(item,FootnoteExtension))
     info = dict(namespace=namespace, notes={extension.makeFootnoteId(label) for label in extension.footnotes},
