@@ -102,6 +102,8 @@ def dispatch(action, entity, ident, detail='', key=None):
         flow=db.session.get(ArticleWorkflow,ident)
         subject='Artigo: '+article.title;body=EVENT_LABELS.get(action,action)+' · '+detail
         if flow:
+            if flow.primary_owned:
+                targets.update(founders())
             for member in [flow.owner,flow.reviewer,flow.editor]:
                 if member and member.admin_id and active_member(member) and mandates(member):targets.add(member.admin_id)
         permission='article.publish' if action=='article.approve' else 'article.approve' if action=='article.reviewed' else None
@@ -203,5 +205,3 @@ def summary(*,public=False):
     query=active_inbox(public=public)
     endpoint='submissions.open_internal_notice' if public else 'staff.open_notice'
     return dict(unread=query.filter(StaffNotice.read_at.is_(None)).count(),items=[dict(id=n.id,title=n.subject,description=n.body,date=n.created_at.strftime('%d/%m/%Y %H:%M')+' UTC',unread=not bool(n.read_at),url=url_for(endpoint,ident=n.id) if n.resource_type and resource_url(n,public=public) else None) for n in query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5)])
-
-

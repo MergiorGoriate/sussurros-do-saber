@@ -1525,6 +1525,9 @@ def seed_database():
         # existentes. As migrações leves precisam ocorrer antes de qualquer SELECT
         # ORM de Journal/Article que já inclua colunas recém-adicionadas.
         db.create_all()
+        from workflow_schema import upgrade_workflow_schema
+        upgrade_workflow_schema(db.session.connection())
+        db.session.commit()
         ensure_admin_columns()
         ensure_author_columns()
         ensure_journal_columns()
@@ -1602,12 +1605,3 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
-
-
-
-
-
-
-
-
-
