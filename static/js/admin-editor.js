@@ -22,31 +22,6 @@
     } catch {}
     return `<p><a href="${escape(rawUrl)}">Vídeo: ${title}</a></p>`;
   };
-  const tablePreview = (block) => {
-    const rows=block.trim().split('\n').map(line=>line.trim().replace(/^\||\|$/g,'').split('|').map(cell=>cell.trim()));
-    if(rows.length<2||!rows[1].every(cell=>/^:?-{3,}:?$/.test(cell)))return block;
-    const header='<thead><tr>'+rows[0].map(cell=>`<th>${cell}</th>`).join('')+'</tr></thead>';
-    const body='<tbody>'+rows.slice(2).map(row=>'<tr>'+rows[0].map((_,index)=>`<td>${row[index]||''}</td>`).join('')+'</tr>').join('')+'</tbody>';
-    return `<div class="preview-table-wrapper"><table>${header}${body}</table></div>`;
-  };
-  const chartPreview = (type,title,data) => {
-    const points=data.split(';').slice(0,12).map(item=>{const index=item.lastIndexOf('=');return index>0?{label:item.slice(0,index).trim(),value:Number(item.slice(index+1).trim().replace(',','.'))}:null}).filter(point=>point&&point.label&&Number.isFinite(point.value)&&point.value>=0);
-    const maximum=Math.max(...points.map(point=>point.value),0);
-    if(!points.length||maximum<=0)return '<p class="preview-error">Dados do gráfico inválidos.</p>';
-    const colours=['#087f72','#e85d4a','#2f6db0','#d69e2e','#805ad5','#319795','#c05621','#4a5568','#38a169','#b83280','#718096','#dd6b20'];
-    let shapes='';
-    if(type==='bar'){
-      const step=680/points.length,width=Math.min(58,step*.65);
-      points.forEach((point,index)=>{const height=260*point.value/maximum,x=80+index*step+(step-width)/2,y=315-height;shapes+=`<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="5" fill="${colours[index%colours.length]}"/><text x="${x+width/2}" y="${y-7}" text-anchor="middle">${point.value}</text><text x="${x+width/2}" y="342" text-anchor="middle">${point.label}</text>`;});
-    }else if(type==='line'){
-      const coords=points.map((point,index)=>({x:80+(680/Math.max(1,points.length-1))*index,y:315-260*point.value/maximum,...point}));
-      shapes=`<polyline points="${coords.map(point=>`${point.x},${point.y}`).join(' ')}" fill="none" stroke="#087f72" stroke-width="4"/>`+coords.map((point,index)=>`<circle cx="${point.x}" cy="${point.y}" r="6" fill="${colours[index%colours.length]}"/><text x="${point.x}" y="${point.y-12}" text-anchor="middle">${point.value}</text><text x="${point.x}" y="342" text-anchor="middle">${point.label}</text>`).join('');
-    }else{
-      const total=points.reduce((sum,point)=>sum+point.value,0);let offset=0;
-      shapes=points.map((point,index)=>{const part=point.value/total*100,current=offset;offset+=part;return `<circle cx="270" cy="210" r="125" fill="none" stroke="${colours[index%colours.length]}" stroke-width="250" pathLength="100" stroke-dasharray="${part} ${100-part}" stroke-dashoffset="${-current}" transform="rotate(-90 270 210)"/><rect x="500" y="${75+index*27}" width="16" height="16" rx="3" fill="${colours[index%colours.length]}"/><text x="525" y="${89+index*27}">${point.label}: ${point.value}</text>`;}).join('');
-    }
-    return `<figure class="preview-chart"><svg viewBox="0 0 800 390" role="img" aria-label="${title}"><line x1="80" y1="315" x2="760" y2="315" stroke="#94a3b8"/>${shapes}</svg><figcaption>${title}</figcaption></figure>`;
-  };
   let estimatedReadingMinutes = 1;
   const updateEditorStatistics = () => {
     const words = editor.value.replace(/^\[capitular\]\s*/gm, '').match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) || [];
@@ -58,36 +33,24 @@
   };
   const render = () => {
     updateEditorStatistics();
-    const html = escape(editor.value)
-      .replace(/^\[destaque:\s*([^\]\n]+)\]\s*$/gm, (_,details) => {
-        const [text,author='']=details.split('|');
-        return '<figure class="article-pullquote"><blockquote><p>'+text+'</p></blockquote><figcaption>'+author+'</figcaption></figure>';
-      })
-      .replace(/\[portrait:\s*([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_,details,url) => {
-        const [alt,caption='',credit='']=details.split('|');
-        return '<figure class="article-portrait"><img src="'+url+'" alt="'+alt+'" loading="lazy"><figcaption>'+caption+'<small>'+credit+'</small></figcaption></figure>';
-      })
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
-      .replace(/\[video:\s*([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, (_,title,url) => videoPreview(title,url))
-      .replace(/^\[chart:\s*(bar|line|pie)\|([^\]\n]+)\|([^\]\n]+)\]\s*$/gim, (_,type,title,data) => chartPreview(type.toLowerCase(),title,data))
-      .replace(/((?:^\|.*\|\s*$\n?){2,})/gm, (_,block) => tablePreview(block))
-      .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<figure><img src="$2" alt="$1" loading="lazy"></figure>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>')
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-      .split(/\n{2,}/)
-      .map((part) => {
-        if (/^\[capitular\]/.test(part)) return `<p class="article-dropcap">${part.replace(/^\[capitular\]\s*/, '').replace(/\n/g, '<br>')}</p>`;
-        return /^<(h|ul|blockquote|figure)/.test(part) ? part : `<p>${part.replace(/\n/g, '<br>')}</p>`;
-      })
-      .join('');
-    preview.innerHTML = html || '<p class="preview-empty">A pré-visualização aparecerá aqui.</p>';
     editor.dispatchEvent(new Event('editor:rendered'));
   };
+
+  document.querySelector('#headingLevel')?.addEventListener('change', (event) => {
+    const level = Number(event.target.value);
+    if (!Number.isInteger(level) || level < 2 || level > 6) return;
+    const start = editor.selectionStart === 0 ? 0 : editor.value.lastIndexOf('\n', editor.selectionStart - 1) + 1;
+    const last = editor.selectionEnd > editor.selectionStart && editor.value[editor.selectionEnd - 1] === '\n'
+      ? editor.selectionEnd - 1 : editor.selectionEnd;
+    const nextBreak = editor.value.indexOf('\n', last);
+    const end = nextBreak < 0 ? editor.value.length : nextBreak;
+    const lines = editor.value.slice(start, end).split('\n');
+    const replacement = lines.map(line => '#'.repeat(level) + ' ' + line.replace(/^ {0,3}#{1,6}[ \t]+/, '')).join('\n');
+    editor.setRangeText(replacement, start, end, 'end');
+    event.target.value = '';
+    editor.focus();
+    editor.dispatchEvent(new Event('input', {bubbles: true}));
+  });
 
   const dropcapButton = document.querySelector('#toggleDropcap');
   const dropcapStatus = document.querySelector('#dropcapStatus');
@@ -410,4 +373,5 @@
   renderCoverPreview();
 
 })();
+
 

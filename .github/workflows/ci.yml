@@ -63,6 +63,7 @@ jobs:
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_team_invitation_flow.py' -v
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_notification_inbox_ui.py' -v
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_site_integrity.py' -v
+          /tmp/drill/bin/python -m unittest discover -s tests -p 'test_article_headings.py' -v
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_newsletter.py' -v
           MAIL_TEST_DATABASE_URL="$DATABASE_URL" /tmp/drill/bin/python -m unittest discover -s tests -p 'test_mail_delivery.py' -v
       - name: Restore synthetic archive and verify production fixture is unchanged
@@ -217,6 +218,7 @@ jobs:
             /tmp/footnote-previews/
           if-no-files-found: ignore
           retention-days: 7
+
 
 
 

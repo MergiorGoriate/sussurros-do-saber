@@ -92,7 +92,7 @@ class SEOMaintenanceTests(unittest.TestCase):
         env = Environment(loader=DictLoader({'base.html': '<title>{% block title %}{% endblock %}</title><meta name="description" content="{% block meta_description %}{% endblock %}">',
             'partials/social_icons.html': '{% macro x_icon() %}{% endmacro %}'}), autoescape=True)
         # Other blocks are not rendered by this minimal base; all filters must compile.
-        for name in ('social_image', 'image_variant', 'image_srcset', 'safe_image_url', 'article_cover_video', 'markdown'):
+        for name in ('social_image', 'image_variant', 'image_srcset', 'safe_image_url', 'article_cover_video', 'markdown', 'article_markdown'):
             env.filters[name] = lambda value, *args: value
         template = env.from_string((ROOT / 'templates/article.html').read_text())
         for n in (20, 48, 49, 69):
@@ -224,3 +224,4 @@ class SEOMaintenanceTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
