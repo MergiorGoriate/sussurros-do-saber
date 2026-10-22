@@ -829,7 +829,7 @@ def article_form(article_id=None):
             article.cover_video = cover_video
             article.cover_mode = cover_mode
             article.title = title
-            base_slug = slugify(request.form.get("slug") or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
+            base_slug = slugify(request.form.get("slug") or article.slug or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
             candidate, number = base_slug, 2
             while Article.query.filter(Article.slug == candidate, Article.id != article.id).first():
                 candidate, number = f"{base_slug}-{number}", number + 1
@@ -1063,7 +1063,7 @@ def journal_form(journal_id=None):
         field = request.form.get("field", "").strip()
         description = request.form.get("description", "").strip()
         issn = request.form.get("issn", "").strip().upper()
-        base_slug = slugify(request.form.get("slug") or title)
+        base_slug = slugify(request.form.get("slug") or article.slug or title)
         duplicate = Journal.query.filter(Journal.slug == base_slug, Journal.id != journal.id).first()
         cover_url = request.form.get("cover_image", "").strip()
         cover_file = request.files.get("cover_file")
@@ -1340,6 +1340,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 

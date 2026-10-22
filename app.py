@@ -338,7 +338,7 @@ def render_markdown(value):
         safe_url = html_escape(responsive_image_url(source_url, 1200), quote=True)
         safe_small = html_escape(responsive_image_url(source_url, 480), quote=True)
         safe_medium = html_escape(responsive_image_url(source_url, 768), quote=True)
-        safe_alt = html_escape((match.group(1) or "Imagem do artigo").strip()[:180], quote=True)
+        safe_alt = html_escape((match.group(1) or "").strip(), quote=True)
         image = (
             '<figure class="article-inline-image">'
             f'<img src="{safe_url}" srcset="{safe_small} 480w, {safe_medium} 768w, {safe_url} 1200w" '
@@ -1594,6 +1594,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
