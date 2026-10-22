@@ -1,0 +1,173 @@
+{
+  "checked_at_utc": "2026-10-21T22:44:04.049630+00:00",
+  "resolver": "https://dns.google/resolve",
+  "queries": [
+    {
+      "name": "sussurrosdosaber.com",
+      "type": "TXT",
+      "response": {
+        "Status": 0,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": false,
+        "CD": false,
+        "Question": [
+          {
+            "name": "sussurrosdosaber.com.",
+            "type": 16
+          }
+        ],
+        "Answer": [
+          {
+            "name": "sussurrosdosaber.com.",
+            "type": 16,
+            "TTL": 300,
+            "data": "v=spf1 include:spf.spacemail.com ~all"
+          }
+        ],
+        "Comment": "Response from 108.162.193.202."
+      }
+    },
+    {
+      "name": "_dmarc.sussurrosdosaber.com",
+      "type": "TXT",
+      "response": {
+        "Status": 3,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": false,
+        "CD": false,
+        "Question": [
+          {
+            "name": "_dmarc.sussurrosdosaber.com.",
+            "type": 16
+          }
+        ],
+        "Authority": [
+          {
+            "name": "sussurrosdosaber.com.",
+            "type": 6,
+            "TTL": 1747,
+            "data": "marek.ns.cloudflare.com. dns.cloudflare.com. 2416732031 10000 2400 604800 1800"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sussurrosdosaber.com",
+      "type": "MX",
+      "response": {
+        "Status": 0,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": false,
+        "CD": false,
+        "Question": [
+          {
+            "name": "sussurrosdosaber.com.",
+            "type": 15
+          }
+        ],
+        "Answer": [
+          {
+            "name": "sussurrosdosaber.com.",
+            "type": 15,
+            "TTL": 300,
+            "data": "0 mx1.spacemail.com."
+          },
+          {
+            "name": "sussurrosdosaber.com.",
+            "type": 15,
+            "TTL": 300,
+            "data": "0 mx2.spacemail.com."
+          }
+        ],
+        "Comment": "Response from 172.64.33.202."
+      }
+    },
+    {
+      "name": "spf.spacemail.com",
+      "type": "TXT",
+      "response": {
+        "Status": 0,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": true,
+        "CD": false,
+        "Question": [
+          {
+            "name": "spf.spacemail.com.",
+            "type": 16
+          }
+        ],
+        "Answer": [
+          {
+            "name": "spf.spacemail.com.",
+            "type": 16,
+            "TTL": 18,
+            "data": "v=spf1 include:spf.jellyfish.systems ~all"
+          }
+        ]
+      }
+    },
+    {
+      "name": "spf.jellyfish.systems",
+      "type": "TXT",
+      "response": {
+        "Status": 0,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": true,
+        "CD": false,
+        "Question": [
+          {
+            "name": "spf.jellyfish.systems.",
+            "type": 16
+          }
+        ],
+        "Answer": [
+          {
+            "name": "spf.jellyfish.systems.",
+            "type": 16,
+            "TTL": 1200,
+            "data": "v=spf1 -ip4:198.177.127.200/30 ip4:63.250.43.78/31 ip4:63.250.43.80/28 ip4:63.250.43.96/27 ip4:104.207.68.0/24 ip4:198.54.122.64/29 ip4:198.54.122.72/31 ip4:198.54.127.64/27 ip4:198.54.127.128/26 ip4:198.177.127.128/28 ip4:198.177.127.192/27 ~all"
+          }
+        ],
+        "Comment": "Response from 2600:1480:800::43."
+      }
+    },
+    {
+      "name": "spacemail._domainkey.sussurrosdosaber.com",
+      "type": "TXT",
+      "selector_source": "https://www.spaceship.com/knowledgebase/setup-dkim-record-spacemail/ (provider documentation, not proof of actual signing selector)",
+      "response": {
+        "Status": 0,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": false,
+        "CD": false,
+        "Question": [
+          {
+            "name": "spacemail._domainkey.sussurrosdosaber.com.",
+            "type": 16
+          }
+        ],
+        "Answer": [
+          {
+            "name": "spacemail._domainkey.sussurrosdosaber.com.",
+            "type": 16,
+            "TTL": 300,
+            "data": "v=DKIM1;k=rsa;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmSC4xvohv/gYZTpD95YzgRJpQDNLNzmUMXAdFHW59xN2W+dUFTmXY/mzFjCpBdwnWvFJa8nxLNHZgS19v9k+Txou1ySgV3MephGgSjuzYeMTBjGTj3BtP49EvolpgiewenrmdQZq5/go06JobSz6Kd1w0QE/VlawK9Szcw8G7JvKpAp011Nb6+YKFWbgrfFppTM+FaoLN9V0g0fd3zFSkeBfWtrbay9bGl12E7Qs3xKxqWn1gAmA9fl8t0BxU0X3uIW2mGWAITFCFV3QxVz/5JV/gjAs3I+KKgn3kf/80AjgqFgjkRH2BjGXJRp0dUl5ibnHqsQytJ7Kfs0U2QgyzwIDAQAB"
+          }
+        ],
+        "Comment": "Response from 108.162.192.135."
+      }
+    }
+  ]
+}

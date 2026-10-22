@@ -85,6 +85,31 @@ class DeliveryTests(unittest.TestCase):
         p=policy();self.assertEqual((p.hourly_limit,p.daily_limit,p.edition_limit,p.max_retries),(100,500,2500,3))
         self.assertIsNone(p.provider_hourly);self.assertIsNone(p.provider_verified_on)
 
+    def test_message_date_and_optional_reply_to_preserve_private_envelope(self):
+        from email.utils import parsedate_to_datetime
+        row=self.mail()
+        with patch.dict(os.environ,{'SMTP_REPLY_TO':'editorial@example.test'}):
+            self.assertEqual(self.send(),1)
+        message=self.smtp.messages[0]
+        self.assertEqual(parsedate_to_datetime(message['Date']).replace(tzinfo=None),NOW)
+        self.assertEqual(str(message['Reply-To']),'editorial@example.test')
+        self.assertIsNone(message['Cc']);self.assertIsNone(message['Bcc'])
+        self.assertEqual(self.smtp.envelopes[0]['to_addrs'],[row.recipient])
+        self.assertEqual(self.smtp.envelopes[0]['from_addr'],SMTP['SMTP_FROM'])
+
+    def test_invalid_reply_to_never_reserves_attempt_or_connects(self):
+        row=self.mail()
+        for value in ['first@example.test,second@example.test','a@example.test\r\nBcc: b@example.test','missing-domain']:
+            with patch.dict(os.environ,{'SMTP_REPLY_TO':value}):
+                with self.assertRaisesRegex(ValueError,'SMTP_REPLY_TO'):self.send()
+        self.assertEqual(Attempt.query.count(),0)
+        self.assertEqual(row.status,'pending');self.assertEqual(self.smtp.messages,[])
+
+    def test_unconfigured_reply_to_uses_normal_from_reply_behaviour(self):
+        self.mail()
+        with patch.dict(os.environ,{'SMTP_REPLY_TO':''}):self.send()
+        self.assertIsNone(self.smtp.messages[0]['Reply-To'])
+
     def test_shared_hour_and_day_windows_keep_excess_pending(self):
         p=policy();p.hourly_limit=1;p.daily_limit=2;db.session.commit()
         rows=[self.mail() for _ in range(3)]
