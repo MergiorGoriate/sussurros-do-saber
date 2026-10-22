@@ -30,6 +30,10 @@ test('editor background controls and preview fit mobile, tablet and desktop in b
   for(const name of ['Papel antigo','Fundo padrão']){
    await page.getByRole('radio',{name,exact:true}).check();await fits(page);
    await expect(page.locator('#markdownPreview')).toBeVisible();
+   // The article preview now uses the authenticated asynchronous renderer.
+   for(const selector of ['blockquote','figcaption','figcaption small']){
+    await expect(page.locator('#markdownPreview').locator(selector).first()).toBeVisible();
+   }
    const ratios=await page.locator('#markdownPreview').evaluate(root=>{
     const luminance=s=>s.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
     return ['blockquote','figcaption','figcaption small'].map(selector=>{

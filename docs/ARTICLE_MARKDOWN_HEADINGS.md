@@ -69,6 +69,7 @@ Não se alteram título, slug, resumo, metadados ou dados estruturados.
 | `templates/article.html` | Aplica a política ao corpo e às referências; mantém o H1 do título. |
 | `tests/test_article_headings.py` | Conversão, código literal, segurança, âncoras, edição, autosave e publicação. |
 | `tests/test_article_seo_maintenance.py` | Regista o novo filtro no ambiente Jinja mínimo do teste de SEO existente. |
+| `tests/browser/article-backgrounds.spec.js` | Aguarda o conteúdo assíncrono antes de medir o contraste, mantendo o mínimo 4,5:1. |
 | `tests/browser/headings_fixture.py` | Conteúdo sintético isolado para testes de navegador. |
 | `tests/browser/headings.spec.js` | Teclas da barra, persistência, igualdade semântica, temas, larguras e respostas antigas. |
 | `docs/ARTICLE_MARKDOWN_HEADINGS.md` | Diagnóstico, decisões e validação. |

@@ -219,7 +219,7 @@
   const titleField=document.querySelector('#titleField');
   const surfacePreview=document.querySelector('#articleSurfacePreview');
   const backgroundInputs=document.querySelectorAll('input[name="background"]');
-  // Both the immediate renderer and the existing footnote renderer update this pane.
+  // Keep server-rendered tables inside the existing scrollable preview wrapper.
   const containPreviewTables=()=>{
     preview.querySelectorAll('table').forEach(table=>{
       if(table.parentElement?.matches('.preview-table-wrapper,.table-wrapper'))return;
