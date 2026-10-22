@@ -31,3 +31,11 @@
 .markdown-preview .article-chart .chart-line { fill: none; stroke: #1e4e8c; stroke-width: 4; }
 .markdown-preview .article-chart .chart-axis { stroke: #64748b; stroke-width: 1.5; }
 .markdown-preview .article-chart .chart-grid { stroke: #e2e8f0; stroke-width: 1; }
+
+/* Server tables and lists remain usable inside the existing editor surface. */
+.markdown-preview.article-headings :is(p,ul,ol,pre,blockquote) { margin-block: 1rem; }
+.markdown-preview.article-headings :is(ul,ol) { padding-left: 1.4rem; }
+.markdown-preview.article-headings ul { list-style-type: disc; }
+.markdown-preview.article-headings ol { list-style-type: decimal; }
+.markdown-preview.article-headings .table-wrapper { max-width: 100%; overflow-x: auto; }
+.markdown-preview.article-headings .table-wrapper:focus-visible { outline: 2px solid currentColor; }

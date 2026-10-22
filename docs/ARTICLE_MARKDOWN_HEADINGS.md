@@ -16,13 +16,13 @@ A fonte de verdade foi a branch `main` do repositório, no commit
   mas apenas quando havia chamadas de notas.
 - O template público já apresenta o campo de título como H1. Os H1 do corpo e
   das referências podiam criar outros H1.
-- Não foi encontrado índice automático de secções nos artigos. Não foi criado um segundo índice.
+- Não foi encontrado índice automático de secções nos artigos do portal. A revista tem um índice próprio em `templates/journal.html`; foi alargado de H2/H3 para H2–H6 sem criar um segundo índice.
 
 ## Alteração
 
 A pré-visualização de todo o corpo passa pelo endpoint existente
 `/admin/artigos/previsualizar`, com as mesmas permissões, CSRF, limite de tamanho,
-limitação de pedidos e política `no-store`. Mantêm-se o debounce, cancelamento,
+limitação de pedidos e política `no-store`. A apresentação inicial do formulário já contém o HTML produzido pelo servidor. Mantêm-se o debounce, cancelamento,
 controlo de respostas antigas e tratamento de falhas. O estado da pré-visualização
 identifica pedidos em curso e falhas sem alterar o conteúdo do editor.
 
@@ -49,8 +49,9 @@ colisões. Ligações como `[Introdução](#sec-introducao)` funcionam sem JavaS
 Alterar o texto de um cabeçalho altera o identificador; mudar a ordem de títulos
 iguais pode alterar o sufixo. Os identificadores das notas mantêm a sua lógica existente.
 
-A pré-visualização mantém também os estilos responsivos dos vídeos e gráficos
-ao receber as classes canónicas do servidor. A escala de cabeçalhos é partilhada pelo corpo e pela pré-visualização, com
+As tabelas produzidas pelo servidor recebem a mesma região de deslocamento horizontal acessível usada na página pública. Os estilos de pré-visualização aceitam as classes de vídeos e gráficos produzidas pelo servidor. Os auxiliares de vídeo usados pela capa externa foram preservados.
+
+A escala de cabeçalhos é partilhada pelo corpo e pela pré-visualização, com
 cores herdadas da superfície, quebras de palavras longas e adaptação móvel.
 Não se alteram título, slug, resumo, metadados ou dados estruturados.
 
@@ -64,14 +65,18 @@ Não se alteram título, slug, resumo, metadados ou dados estruturados.
 | `article_history.py` | Endpoint de pré-visualização chama o mesmo filtro usado na publicação. |
 | `static/js/admin-editor.js` | Remove a aproximação de Markdown em JavaScript; acrescenta controlos H2–H6. |
 | `static/js/article-footnotes.js` | Generaliza o pedido existente a todo o conteúdo. Mantém a inserção de notas. |
-| `static/css/article-headings.css` | Escala partilhada e comportamento responsivo. |
+| `static/css/article-headings.css` | Escala partilhada, listas e deslocamento horizontal de tabelas. |
 | `templates/admin/article_form.html` | Controlos, instruções acessíveis, classes e versões dos recursos. |
 | `templates/article.html` | Aplica a política ao corpo e às referências; mantém o H1 do título. |
+| `templates/journal.html` | O índice existente inclui H4–H6 e conserva os seus alvos e ligações. |
 | `tests/test_article_headings.py` | Conversão, código literal, segurança, âncoras, edição, autosave e publicação. |
+| `tests/test_article_heading_regressions.py` | Verifica o HTML inicial, a igualdade semântica, HTML antigo, persistência e isolamento do processador da revista. |
 | `tests/test_article_seo_maintenance.py` | Regista o novo filtro no ambiente Jinja mínimo do teste de SEO existente. |
 | `tests/browser/article-backgrounds.spec.js` | Aguarda o conteúdo assíncrono antes de medir o contraste, mantendo o mínimo 4,5:1. |
 | `tests/browser/headings_fixture.py` | Conteúdo sintético isolado para testes de navegador. |
 | `tests/browser/headings.spec.js` | Teclas da barra, persistência, igualdade semântica, temas, larguras e respostas antigas. |
+| `tests/browser/article-heading-regressions.spec.js` | Todos os botões H2–H6, índice da revista, falha e recuperação da rede, respostas atrasadas e temas. |
+| `tests/browser/heading_regression_fixture.py` | Conteúdo sintético adicional, incluindo a revista com cinco níveis de secções. |
 | `docs/ARTICLE_MARKDOWN_HEADINGS.md` | Diagnóstico, decisões e validação. |
 
 ## Validação
@@ -94,3 +99,23 @@ Não há migração de PostgreSQL, alteração de Coolify, ligação ao VPS, act
 de artigos da produção ou publicação em produção nesta alteração. Testes locais
 com SQLite não substituem uma execução sobre PostgreSQL; a CI existente contém
 verificações adicionais de PostgreSQL.
+
+### Resultados locais verificados
+
+- Bateria completa Python: `python -m unittest discover -s tests -p 'test_*.py' -v`, 422 testes aprovados, incluindo 19 específicos dos cabeçalhos e da sua integração.
+- Navegador: 37 cenários aprovados nos ficheiros `article-backgrounds`, `article-covers`, `article-heading-regressions`, `autosave`, `dropcap`, `footnotes`, `headings` e `editors`. Após consolidar os últimos ajustes, os 11 cenários de cabeçalhos e fundos foram repetidos com sucesso.
+- Um cenário adicional aprovado verifica a pré-visualização da capa externa no editor. Total: 38 cenários distintos de navegador aprovados.
+- `node --test tests/consent.test.cjs`: seis testes aprovados.
+- `npm run build:css`, verificação de sintaxe dos JavaScript alterados, compilação Python e `git diff --check`: concluídos sem erros.
+
+A transferência normal do Chromium pelo Playwright devolveu um arquivo inválido.
+A verificação local utilizou Chromium 153 e a instalação Playwright do projecto,
+com configuração temporária fora do repositório. Não foram alteradas dependências
+nem a configuração de navegador da CI. Os testes usaram bases SQLite isoladas,
+sem consultar ou modificar a base de dados de produção. A verificação PostgreSQL
+e o estado global da CI do commit final devem ser consultados no próprio PR.
+
+As funcionalidades não relacionadas foram preservadas: capas, vídeos, fundos,
+capitulares, notas, formulários, gravação automática, histórico, permissões e
+fluxos editoriais foram abrangidos pelas regressões. Não se declara publicação
+em produção nem validação visual na VPS.

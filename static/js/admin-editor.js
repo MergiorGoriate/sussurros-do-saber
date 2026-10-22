@@ -3,6 +3,25 @@
   const preview = document.querySelector('#markdownPreview');
   if (!editor || !preview) return;
 
+  const escape = (text) => text.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  const videoPreview = (title, rawUrl) => {
+    try {
+      const url = new URL(rawUrl.replace(/&amp;/g,'&'));
+      const host = url.hostname.toLowerCase().replace(/^www\./,'');
+      let embed = '';
+      if (['youtube.com','m.youtube.com','youtube-nocookie.com'].includes(host)) {
+        const id = url.pathname.includes('/embed/') ? url.pathname.split('/embed/')[1].split('/')[0] : url.searchParams.get('v');
+        if (/^[A-Za-z0-9_-]{6,20}$/.test(id||'')) embed = `https://www.youtube-nocookie.com/embed/${id}`;
+      } else if (host === 'youtu.be') {
+        const id=url.pathname.slice(1).split('/')[0]; if (/^[A-Za-z0-9_-]{6,20}$/.test(id)) embed=`https://www.youtube-nocookie.com/embed/${id}`;
+      } else if (['vimeo.com','player.vimeo.com'].includes(host)) {
+        const match=url.pathname.match(/(?:video\/)?(\d{5,12})/); if(match)embed=`https://player.vimeo.com/video/${match[1]}`;
+      }
+      if(embed)return `<figure class="preview-video"><div><iframe src="${embed}" title="${title}" loading="lazy"></iframe></div><figcaption>${title}</figcaption></figure>`;
+      if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) return `<figure class="preview-video"><video src="${escape(rawUrl)}" controls preload="metadata"></video><figcaption>${title}</figcaption></figure>`;
+    } catch {}
+    return `<p><a href="${escape(rawUrl)}">Vídeo: ${title}</a></p>`;
+  };
   let estimatedReadingMinutes = 1;
   const updateEditorStatistics = () => {
     const words = editor.value.replace(/^\[capitular\]\s*/gm, '').match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) || [];

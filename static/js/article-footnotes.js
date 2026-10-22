@@ -62,8 +62,6 @@
     preview.removeAttribute('aria-busy');
     previewStatus.textContent = '';
     const content = editor.value;
-    // Do not display stale content while a new version is being rendered.
-    preview.replaceChildren();
     previewStatus.textContent = 'A actualizar a pré-visualização…';
     preview.setAttribute('aria-busy', 'true');
     timer = setTimeout(async () => {
@@ -83,7 +81,10 @@
         preview.innerHTML = result.html;
         previewStatus.textContent = '';
       } catch (_) {
-        if (current === sequence) previewStatus.textContent = 'Não foi possível actualizar a pré-visualização. O texto mantém-se no editor.';
+        if (current === sequence) {
+          preview.replaceChildren();
+          previewStatus.textContent = 'Não foi possível actualizar a pré-visualização. O texto mantém-se no editor; volte a escrever para tentar novamente.';
+        }
       } finally {
         clearTimeout(timeout);
         if (current === sequence) preview.removeAttribute('aria-busy');
