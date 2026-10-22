@@ -8,12 +8,20 @@ for(const width of [320,1440]){
     await page.context().addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
     await page.setViewportSize({width,height:1000});
     const path='/admin/artigos/'+data.article_id+'/editar';
+    await page.route('https://example.org/**', route=>route.abort());
     await page.goto(path);
     const editor=page.locator('#bodyEditor'),preview=page.locator('#markdownPreview');
     await expect(preview.locator('h6')).toHaveCount(1);
     await expect(preview.locator('h1')).toHaveCount(0);
     expect((await headings(preview)).map(h=>h.tag)).toEqual(['H2','H2','H3','H4','H5','H6','H2','H4']);
     await expect(preview.locator('pre code')).toHaveText('# Código literal\n###### Código literal\n');
+    await expect(preview.locator('.article-chart svg')).toHaveCount(1);
+    await expect(preview.locator('.article-video video')).toHaveCount(1);
+    await expect(preview.locator('.chart-line')).toHaveCSS('fill','none');
+    const previewWidth=await preview.evaluate(el=>el.clientWidth);
+    for(const media of ['.article-chart svg','.article-video video']){
+      expect(await preview.locator(media).evaluate(el=>el.getBoundingClientRect().width)).toBeLessThanOrEqual(previewWidth);
+    }
     const rendered=await headings(preview);
     for(const mode of ['light','dark']){
       if(mode==='dark')await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();

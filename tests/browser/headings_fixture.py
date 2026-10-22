@@ -21,6 +21,7 @@ with app.app_context():
     body += '\n\n## Secção 2\n\n[Ir à secção](#sec-seccao-6)'
     body += '\n\n#### ' + 'Cabeçalhoextensosemespaços' * 8
     body += '\n\nParágrafo com **negrito**, *itálico* e $E=mc^2$.'
+    body += '\n\n[chart: line|Série de teste|A=1; B=2]\n\n[video: Vídeo de teste](https://example.org/demo.mp4)'
     draft = Article(title='Teste dos níveis de cabeçalhos', slug='headings-draft-' + token,
                     author_id=author.id, category_id=category.id, summary='Resumo para verificar a hierarquia de títulos.',
                     body=body, status='draft')

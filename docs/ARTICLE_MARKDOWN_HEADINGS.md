@@ -49,7 +49,8 @@ colisões. Ligações como `[Introdução](#sec-introducao)` funcionam sem JavaS
 Alterar o texto de um cabeçalho altera o identificador; mudar a ordem de títulos
 iguais pode alterar o sufixo. Os identificadores das notas mantêm a sua lógica existente.
 
-A escala de cabeçalhos é partilhada pelo corpo e pela pré-visualização, com
+A pré-visualização mantém também os estilos responsivos dos vídeos e gráficos
+ao receber as classes canónicas do servidor. A escala de cabeçalhos é partilhada pelo corpo e pela pré-visualização, com
 cores herdadas da superfície, quebras de palavras longas e adaptação móvel.
 Não se alteram título, slug, resumo, metadados ou dados estruturados.
 
