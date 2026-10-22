@@ -829,7 +829,7 @@ def article_form(article_id=None):
             article.cover_video = cover_video
             article.cover_mode = cover_mode
             article.title = title
-            base_slug = slugify(request.form.get("slug") or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
+            base_slug = slugify(request.form.get("slug") or article.slug or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
             candidate, number = base_slug, 2
             while Article.query.filter(Article.slug == candidate, Article.id != article.id).first():
                 candidate, number = f"{base_slug}-{number}", number + 1
@@ -1340,6 +1340,7 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
 
 
 

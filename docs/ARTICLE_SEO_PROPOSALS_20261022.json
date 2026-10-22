@@ -1,0 +1,191 @@
+{
+  "status": "Propostas editoriais baseadas nos títulos, descrições, introduções e secções observados publicamente; exigem confronto com os registos actuais e revisão final.",
+  "articles": [
+    {
+      "slug": "cancer-como-processo-evolutivo-selecao-natural-acontecendo-dentro-do-organismo",
+      "expected": {
+        "title": "Câncer como processo evolutivo: seleção natural acontecendo dentro do organismo",
+        "summary": "Tumores evoluem. Entenda como mutações, seleção clonal, microambiente, metástase e tratamentos moldam a evolução do câncer e a resistência terapêutica."
+      },
+      "after": {
+        "title": "Cancro: selecção natural e evolução das células tumorais"
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "o-cerebro-preditivo-como-construimos-a-percepcao",
+      "expected": {
+        "title": "O cérebro preditivo: como construímos a percepção",
+        "summary": "Explore como o cérebro combina sinais sensoriais, expectativas e aprendizagem para construir percepções, e conheça as evidências e os limites da teoria preditiva."
+      },
+      "after": {
+        "summary": "Como o cérebro combina sinais sensoriais, expectativas e aprendizagem para construir percepções, e quais são os limites da teoria preditiva."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "genomica-africana-por-que-a-diversidade-genetica-de-africa-pode-transformar-a-medicina",
+      "expected": {
+        "title": "Genómica africana: por que a diversidade genética de África pode transformar a medicina",
+        "summary": "África contém a maior diversidade genética humana. Entenda como genómica africana pode melhorar diagnóstico, farmacogenómica, risco poligénico, descoberta de fármacos e medicina de precisão."
+      },
+      "after": {
+        "title": "Genómica africana: diversidade genética e medicina de precisão",
+        "summary": "Como a diversidade genética das populações africanas pode contribuir para o diagnóstico, a farmacogenómica e a medicina de precisão."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "alphafold-resolveu-o-dobramento-de-proteinas-o-que-ainda-permanece-aberto",
+      "expected": {
+        "title": "AlphaFold resolveu o dobramento de proteínas? O que ainda permanece aberto",
+        "summary": "AlphaFold revolucionou a previsão de estruturas proteicas, mas folding, dinâmica, estabilidade, desordem e ensembles continuam desafios. Entenda o que foi realmente resolvido."
+      },
+      "after": {
+        "title": "AlphaFold e o dobramento de proteínas: avanços e limites",
+        "summary": "O que o AlphaFold permite prever sobre estruturas proteicas e quais os limites no estudo do dobramento, da dinâmica e da estabilidade das proteínas."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "xenotransplantes-orgaos-animais-geneticamente-modificados",
+      "expected": {
+        "title": "Xenotransplantes: avanços, riscos e futuro dos transplantes",
+        "summary": "Rins e corações de porcos geneticamente modificados já foram transplantados em humanos. Entenda CRISPR, rejeição, PERV, riscos, ensaios clínicos e os limites dos xenotransplantes."
+      },
+      "after": {
+        "summary": "Avanços e limites dos xenotransplantes com órgãos de porcos modificados geneticamente: rejeição, segurança infecciosa, ética e estudos em humanos."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "dna-nao-codificante-o-que-realmente-existe-nos-98-do-genoma-que-nao-codificam-proteinas",
+      "expected": {
+        "title": "DNA não codificante: o que realmente existe nos 98% do genoma que não codificam proteínas?",
+        "summary": "Apenas cerca de 1,5% do genoma humano codifica proteínas. Descubra o que existe no restante DNA: intrões, enhancers, RNAs, transposões, pseudogenes, telómeros e regiões ainda sem função conhecida."
+      },
+      "after": {
+        "title": "DNA não codificante: o que ocupa a maior parte do genoma?",
+        "summary": "O que existe no DNA humano não codificante: intrões, regiões reguladoras, RNAs, transposões e sequências cuja função permanece desconhecida."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "consciencia-como-materia-cerebral-produz-experiencia-subjetiva",
+      "expected": {
+        "title": "Consciência: como matéria cerebral produz experiência subjetiva?",
+        "summary": "Neste instante, milhares de milhões de neurónios estão electricamente activos no seu cérebro. Mas há algo extraordinário que não aparece directamente num eléctrodo: existe uma experiência de estar a ler estas palavras. Como processos físicos podem produzir um mundo vivido em primeira pessoa?"
+      },
+      "after": {
+        "summary": "Uma análise das relações entre actividade cerebral e experiência subjectiva, das teorias da consciência e dos limites da explicação neurocientífica."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "a-origem-da-vida-da-quimica-prebiotica-as-primeiras-celulas",
+      "expected": {
+        "title": "A origem da vida: da química prebiótica às primeiras células",
+        "summary": "A origem da vida não é apenas o problema de sintetizar moléculas orgânicas: é compreender como a química adquiriu organização, hereditariedade e capacidade de evolução."
+      },
+      "after": {
+        "summary": "Uma análise das hipóteses sobre a origem da vida: como a química pode ter adquirido organização, hereditariedade e capacidade de evolução."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "modelos-de-linguagem-de-grande-escala-como-os-llm-aprendem-raciocinam-erram-e-transformam-a-producao-do-conhecimento",
+      "expected": {
+        "title": "Modelos de Linguagem de Grande Escala: como os LLM aprendem, raciocinam, erram e transformam a produção do conhecimento",
+        "summary": "Os modelos de linguagem de grande escala (Large Language Models, LLM) constituem uma classe de redes neuronais treinadas em grandes colecções de texto para estimar a probabilidade de sequências linguísticas."
+      },
+      "after": {
+        "title": "Modelos de linguagem: aprendizagem, raciocínio e limites",
+        "summary": "Como os modelos de linguagem aprendem com grandes colecções de texto, quais as suas capacidades e onde surgem erros e limites de raciocínio."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "teoria-do-caos-e-efeito-borboleta-quando-leis-deterministicas-produzem-futuros-imprevisiveis",
+      "expected": {
+        "title": "Teoria do caos e efeito borboleta quando leis determinísticas produzem futuros imprevisíveis",
+        "summary": "A teoria do caos investiga sistemas dinâmicos determinísticos cujo comportamento a longo prazo pode tornar-se imprevisível devido à sensibilidade às condições iniciais."
+      },
+      "after": {
+        "title": "Teoria do caos: determinismo e efeito borboleta",
+        "summary": "Como sistemas determinísticos podem tornar-se imprevisíveis a longo prazo devido à sensibilidade às condições iniciais, segundo a teoria do caos."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "quando-os-dados-se-tornam-telescopios-a-nova-escala-da-descoberta-cientifica",
+      "expected": {
+        "title": "Big Data e investigação científica: como os dados transformam a descoberta",
+        "summary": "Entenda como o Big Data está a transformar a investigação científica, da genómica à astronomia, e conheça os desafios de qualidade, ética, desigualdade e reprodutibilidade."
+      },
+      "after": {
+        "title": "Big Data: como os dados transformam a investigação científica",
+        "summary": "Como o Big Data apoia a investigação, da genómica à astronomia, e quais os desafios de qualidade, ética e reprodutibilidade dos dados."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "a-neuroplasticidade-explica-por-que-aprender-transforma-o-cerebro-mas-tambem-por-que-nao-existem-atalhos-magicos-para-o-conhecimento",
+      "expected": {
+        "title": "Neuroplasticidade e aprendizagem: como o cérebro muda ao aprender",
+        "summary": "Descubra como a neuroplasticidade modifica sinapses e circuitos durante a aprendizagem, o papel do sono e do exercício e as estratégias de estudo apoiadas pela ciência."
+      },
+      "after": {
+        "summary": "Como a aprendizagem modifica sinapses e circuitos cerebrais, qual o papel do sono e do exercício e que estratégias de estudo têm apoio científico."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "python-na-investigacao-da-folha-de-calculo-a-analise-reprodutivel",
+      "expected": {
+        "title": "Python na investigação: da folha de cálculo à análise reprodutível",
+        "summary": "A folha de cálculo continuará a ser útil na investigação, sobretudo para observar tabelas, verificar pequenos conjuntos de dados e realizar cálculos rápidos."
+      },
+      "after": {
+        "summary": "Como o Python apoia a investigação: tratamento de dados, automação de análises, documentação de decisões e reprodutibilidade dos resultados."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "plantas-medicinais-de-nampula-e-o-futuro-da-investigacao-local",
+      "expected": {
+        "title": "Plantas medicinais de Nampula e o futuro da investigação local",
+        "summary": "O que sabemos sobre plantas medicinais de Nampula? Estudos etnobotânicos, fitoquímica, segurança, conservação e oportunidades para a investigação científica local."
+      },
+      "after": {
+        "summary": "Plantas medicinais de Nampula: evidências etnobotânicas, fitoquímica, segurança, conservação e oportunidades para a investigação local."
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    },
+    {
+      "slug": "bacterias-endofiticas-os-microrganismos-invisiveis-que-protegem-as-plantas",
+      "expected": {
+        "title": "Bactérias endofíticas: os microrganismos invisíveis que protegem as plantas",
+        "summary": "Dentro das plantas vivem comunidades capazes de produzir compostos com potencial antibacteriano."
+      },
+      "after": {
+        "title": "Bactérias endofíticas: como podem proteger as plantas"
+      },
+      "reason": "Concisão e especificidade, preservando o âmbito observado no artigo.",
+      "reviewed": false
+    }
+  ]
+}

@@ -338,7 +338,7 @@ def render_markdown(value):
         safe_url = html_escape(responsive_image_url(source_url, 1200), quote=True)
         safe_small = html_escape(responsive_image_url(source_url, 480), quote=True)
         safe_medium = html_escape(responsive_image_url(source_url, 768), quote=True)
-        safe_alt = html_escape((match.group(1) or "Imagem do artigo").strip()[:180], quote=True)
+        safe_alt = html_escape((match.group(1) or "").strip(), quote=True)
         image = (
             '<figure class="article-inline-image">'
             f'<img src="{safe_url}" srcset="{safe_small} 480w, {safe_medium} 768w, {safe_url} 1200w" '
@@ -412,7 +412,7 @@ def render_markdown(value):
             return f'<a href="{safe_url}" rel="noopener noreferrer">{safe_label}</a>{html_escape(suffix)}'
         parts[index] = url_pattern.sub(linkify, part)
     rendered = "".join(parts)
-    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img", "sup", "div"})
+    allowed = set(bleach.sanitizer.ALLOWED_TAGS).union({"p", "h1", "h2", "h3", "h4", "h5", "h6", "br", "blockquote", "pre", "code", "ul", "ol", "li", "hr", "table", "thead", "tbody", "tr", "th", "td", "img", "sup", "div"})
     cleaned = bleach.clean(
         rendered,
         tags=allowed,
@@ -1594,6 +1594,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
