@@ -33,24 +33,9 @@
   };
   const render = () => {
     updateEditorStatistics();
+    // The authenticated server preview uses the public Markdown renderer.
     editor.dispatchEvent(new Event('editor:rendered'));
   };
-
-  document.querySelector('#headingLevel')?.addEventListener('change', (event) => {
-    const level = Number(event.target.value);
-    if (!Number.isInteger(level) || level < 2 || level > 6) return;
-    const start = editor.selectionStart === 0 ? 0 : editor.value.lastIndexOf('\n', editor.selectionStart - 1) + 1;
-    const last = editor.selectionEnd > editor.selectionStart && editor.value[editor.selectionEnd - 1] === '\n'
-      ? editor.selectionEnd - 1 : editor.selectionEnd;
-    const nextBreak = editor.value.indexOf('\n', last);
-    const end = nextBreak < 0 ? editor.value.length : nextBreak;
-    const lines = editor.value.slice(start, end).split('\n');
-    const replacement = lines.map(line => '#'.repeat(level) + ' ' + line.replace(/^ {0,3}#{1,6}[ \t]+/, '')).join('\n');
-    editor.setRangeText(replacement, start, end, 'end');
-    event.target.value = '';
-    editor.focus();
-    editor.dispatchEvent(new Event('input', {bubbles: true}));
-  });
 
   const dropcapButton = document.querySelector('#toggleDropcap');
   const dropcapStatus = document.querySelector('#dropcapStatus');
@@ -88,6 +73,25 @@
     editor.focus();
     render();
   }));
+
+  const applyHeading = level => {
+    if (!Number.isInteger(level) || level < 2 || level > 6) return;
+    const start = editor.selectionStart === 0 ? 0 : editor.value.lastIndexOf('\n', editor.selectionStart - 1) + 1;
+    const selectedEnd = editor.selectionEnd > editor.selectionStart && editor.value[editor.selectionEnd - 1] === '\n' ? editor.selectionEnd - 1 : editor.selectionEnd;
+    const lineEnd = editor.value.indexOf('\n', selectedEnd);
+    const end = lineEnd < 0 ? editor.value.length : lineEnd;
+    const prefix = '#'.repeat(level) + ' ';
+    editor.setRangeText(editor.value.slice(start, end).split('\n').map(line => prefix + line.replace(/^ {0,3}#{1,6}[ \t]+/, '')).join('\n'), start, end, 'end');
+    editor.focus();
+    editor.dispatchEvent(new Event('input', {bubbles: true}));
+  };
+  document.querySelectorAll('.editor-toolbar button[data-heading]').forEach(button => {
+    button.addEventListener('click', () => applyHeading(Number(button.dataset.heading)));
+  });
+  document.querySelector('#headingLevel')?.addEventListener('change', event => {
+    applyHeading(Number(event.target.value));
+    event.target.value = '';
+  });
 
   const panel=document.querySelector('#inlineImagePanel');
   const openButton=document.querySelector('#openInlineImage');
@@ -239,7 +243,7 @@
   const titleField=document.querySelector('#titleField');
   const surfacePreview=document.querySelector('#articleSurfacePreview');
   const backgroundInputs=document.querySelectorAll('input[name="background"]');
-  // Both the immediate renderer and the existing footnote renderer update this pane.
+  // Keep server-rendered tables inside the existing scrollable preview wrapper.
   const containPreviewTables=()=>{
     preview.querySelectorAll('table').forEach(table=>{
       if(table.parentElement?.matches('.preview-table-wrapper,.table-wrapper'))return;
@@ -373,5 +377,4 @@
   renderCoverPreview();
 
 })();
-
 

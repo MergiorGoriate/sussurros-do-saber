@@ -24,3 +24,8 @@ class HeadingMarkerContractTests(unittest.TestCase):
     def test_non_article_consumers_keep_the_existing_parser_behaviour(self):
         soup = BeautifulSoup(str(render_markdown('#Titulo antigo')), 'html.parser')
         self.assertEqual(soup.h1.text, 'Titulo antigo')
+
+    def test_tabs_are_valid_heading_separators(self):
+        source = '\n\n'.join('#' * level + '\tSecção ' + str(level) for level in range(1, 7))
+        soup = BeautifulSoup(str(render_article_markdown(source)), 'html.parser')
+        self.assertEqual([h.name for h in soup.select('h2,h3,h4,h5,h6')], ['h2','h2','h3','h4','h5','h6'])

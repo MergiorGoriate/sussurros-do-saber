@@ -1,19 +1,45 @@
-/* Shared heading hierarchy for the article and its authenticated preview. */
-:is(.article-markdown, .markdown-preview) :is(h1, h2, h3, h4, h5, h6) {
-  clear: both;
-  color: inherit;
-  font-family: Georgia, serif;
+/* One heading scale for the article body and its authenticated preview. */
+.article-headings.article-markdown :is(h2,h3,h4,h5,h6) {
+  font-family: Inter, system-ui, sans-serif;
   font-weight: 700;
-  line-height: 1.3;
-  margin: 1.8em 0 .65em;
+  line-height: 1.35;
+  margin: 2em 0 .8em;
+  color: inherit;
   overflow-wrap: anywhere;
   scroll-margin-top: 6rem;
 }
-:is(.article-markdown, .markdown-preview) h2 { font-size: clamp(1.65rem, 4vw, 2.1rem); }
-:is(.article-markdown, .markdown-preview) h3 { font-size: clamp(1.4rem, 3.5vw, 1.75rem); }
-:is(.article-markdown, .markdown-preview) h4 { font-size: clamp(1.25rem, 3vw, 1.45rem); }
-:is(.article-markdown, .markdown-preview) h5 { font-size: clamp(1.1rem, 2.5vw, 1.2rem); }
-:is(.article-markdown, .markdown-preview) h6 { font-size: 1rem; font-style: italic; }
+.article-headings.article-markdown h2 { font-size: 1.65em; }
+.article-headings.article-markdown h3 { font-size: 1.3em; }
+.article-headings.article-markdown h4 { font-size: 1.2em; }
+.article-headings.article-markdown h5 { font-size: 1.1em; }
+.article-headings.article-markdown h6 { font-size: 1em; }
+.markdown-preview.article-headings.article-markdown :is(h2,h3,h4,h5,h6) {
+  font-family: Inter, system-ui, sans-serif;
+}
+@media (max-width: 640px) {
+  .article-headings.article-markdown h2 { font-size: 1.5em; }
+  .article-headings.article-markdown h3 { font-size: 1.25em; }
+}
+/* Preserve existing media layouts when the preview receives server HTML. */
+.markdown-preview .article-video { margin: 1.25rem 0; }
+.markdown-preview .article-video-frame { position: relative; aspect-ratio: 16/9; overflow: hidden; border-radius: 10px; background: #101820; }
+.markdown-preview .article-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.markdown-preview .article-video video { display: block; width: 100%; max-height: 420px; background: #101820; }
+.markdown-preview .article-chart { margin: 1.25rem 0; padding: 12px; border: 1px solid #d7e0df; border-radius: 12px; background: #fff; }
+.markdown-preview .article-chart svg { display: block; width: 100%; min-width: 0; max-width: 100%; height: auto; }
+.markdown-preview .article-chart text { font: 12px system-ui, sans-serif; fill: #334155; }
+.markdown-preview .article-chart .chart-line { fill: none; stroke: #1e4e8c; stroke-width: 4; }
+.markdown-preview .article-chart .chart-axis { stroke: #64748b; stroke-width: 1.5; }
+.markdown-preview .article-chart .chart-grid { stroke: #e2e8f0; stroke-width: 1; }
+
+/* Server tables and lists remain usable inside the existing editor surface. */
+.markdown-preview.article-headings :is(p,ul,ol,pre,blockquote) { margin-block: 1rem; }
+.markdown-preview.article-headings :is(ul,ol) { padding-left: 1.4rem; }
+.markdown-preview.article-headings ul { list-style-type: disc; }
+.markdown-preview.article-headings ol { list-style-type: decimal; }
+.markdown-preview.article-headings .table-wrapper { max-width: 100%; overflow-x: auto; }
+.markdown-preview.article-headings .table-wrapper:focus-visible { outline: 2px solid currentColor; }
+
 .editor-toolbar select { flex: 0 0 auto; min-width: 9rem; max-width: 100%; min-height: 42px; padding: 7px; border: 1px solid #cad9d7; border-radius: 7px; background: #fff; color: #1e4e8c; }
 .admin-dark .editor-toolbar select { background: #152235; color: #edf3fa; border-color: #52647c; }
 .journal-index-link[data-heading-level="4"] { padding-left: 1.25rem; }

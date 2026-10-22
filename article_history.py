@@ -165,4 +165,3 @@ def preview():
         return jsonify(error='O texto excede o limite do editor.'), 400
     from app import render_article_markdown
     return jsonify(html=str(render_article_markdown(content)))
-

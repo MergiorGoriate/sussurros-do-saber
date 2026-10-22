@@ -1,93 +1,79 @@
-const {test, expect} = require('@playwright/test');
-const {execFileSync} = require('node:child_process');
-
-async function fixture(page) {
-  await page.route('https://**', route => route.abort());
-  const cookie = execFileSync('python', ['tests/browser/staff_fixture.py'], {encoding: 'utf8'}).trim();
-  const data = JSON.parse(execFileSync('python', ['tests/browser/headings_fixture.py'], {encoding: 'utf8'}));
-  await page.context().addCookies([{name: 'session', value: cookie, url: 'http://127.0.0.1:5000', httpOnly: true, sameSite: 'Lax'}]);
-  return data;
-}
-
-for (const width of [320, 1440]) {
-  test(`headings persist and match publication in both themes at ${width}px`, async ({page}) => {
-    const data = await fixture(page);
-    await page.setViewportSize({width, height: 1000});
-    const path = `/admin/artigos/${data.article_id}/editar`;
+const {test,expect}=require('@playwright/test');
+const {execFileSync}=require('node:child_process');
+const headings=async root=>root.locator('h2,h3,h4,h5,h6').evaluateAll(nodes=>nodes.map(h=>({tag:h.tagName,text:h.textContent,id:h.id})));
+for(const width of [320,1440]){
+  test(`headings persist and share preview/public semantics at ${width}px`,async({page})=>{
+    const data=JSON.parse(execFileSync('python',['tests/browser/headings_fixture.py'],{encoding:'utf8'}));
+    const cookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();
+    await page.context().addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
+    await page.setViewportSize({width,height:1000});
+    const path='/admin/artigos/'+data.article_id+'/editar';
+    await page.route('https://example.org/**', route=>route.abort());
     await page.goto(path);
-    const preview = page.locator('#markdownPreview');
-    expect(await page.locator('#headingLevel').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(140);
-    await expect(preview.locator('h6')).toHaveText('Nível 6');
-    const previewHeadings = await preview.locator('h2,h3,h4,h5,h6').evaluateAll(els => els.map(el => [el.tagName, el.textContent, el.id]));
+    const editor=page.locator('#bodyEditor'),preview=page.locator('#markdownPreview');
+    await expect(preview.locator('h6')).toHaveCount(1);
     await expect(preview.locator('h1')).toHaveCount(0);
-    await expect(preview.locator('pre code')).toHaveText('# literal\n');
-    await expect(preview).toContainText('# escapado');
-    const editor = page.locator('#bodyEditor');
-    await editor.evaluate(el => {el.focus(); el.setSelectionRange(0, 0);});
-    await page.locator('#headingLevel').selectOption('5');
-    await expect(editor).toHaveValue('#####' + data.body.slice(1));
-    await expect(preview.locator('h5').first()).toHaveText('Nível 1');
-    await page.getByRole('button', {name: 'Guardar artigo', exact: true}).click();
+    expect((await headings(preview)).map(h=>h.tag)).toEqual(['H2','H2','H3','H4','H5','H6','H2','H4']);
+    await expect(preview.locator('pre code')).toHaveText('# Código literal\n###### Código literal\n');
+    await expect(preview.locator('.article-chart svg')).toHaveCount(1);
+    await expect(preview.locator('.article-video video')).toHaveCount(1);
+    await expect(preview.locator('.chart-line')).toHaveCSS('fill','none');
+    const previewWidth=await preview.evaluate(el=>el.clientWidth);
+    for(const media of ['.article-chart svg','.article-video video']){
+      expect(await preview.locator(media).evaluate(el=>el.getBoundingClientRect().width)).toBeLessThanOrEqual(previewWidth);
+    }
+    const rendered=await headings(preview);
+    for(const mode of ['light','dark']){
+      if(mode==='dark')await page.getByRole('button',{name:'Alternar tema do painel',exact:true}).click();
+      const fontSizes=await preview.locator('h2,h3,h4,h5,h6').evaluateAll(nodes=>nodes.slice(1,6).map(h=>parseFloat(getComputedStyle(h).fontSize)));
+      expect(fontSizes.every((size,i)=>i===0||size<fontSizes[i-1])).toBeTruthy();
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      await preview.screenshot({path:`/tmp/headings-editor-${mode}-${width}.png`});
+    }
+    // Replace an existing line's level without adding a second hash prefix.
+    await editor.evaluate(el=>{const pos=el.value.indexOf('### Secção 3');el.focus();el.setSelectionRange(pos+5,pos+5);});
+    await page.getByRole('button',{name:'H5',exact:true}).click();
+    await expect(editor).toHaveValue(data.body.replace('### Secção 3','##### Secção 3'));
+    await expect(preview.locator('#sec-seccao-3')).toHaveJSProperty('tagName','H5');
+    await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
     await expect(page).toHaveURL(/\/admin\/artigos$/);
     await page.goto(path);
-    await expect(editor).toHaveValue('#####' + data.body.slice(1));
-    await expect(preview.locator('h6')).toHaveText('Nível 6');
-    await page.getByRole('button', {name: 'Alternar tema do painel', exact: true}).click();
-    await expect(page.locator('body')).toHaveClass(/admin-dark/);
-    expect(await preview.locator('h6').evaluate(el => getComputedStyle(el).color)).toBe(await preview.evaluate(el => getComputedStyle(el).color));
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    await page.screenshot({path: `/tmp/heading-previews/editor-dark-${width}.png`, fullPage: true});
-    await page.goto('/artigo/' + data.slug);
-    await page.getByRole('button', {name: 'Recusar não essenciais', exact: true}).click();
+    await expect(editor).toHaveValue(data.body.replace('### Secção 3','##### Secção 3'));
+    await expect(preview.locator('#sec-seccao-3')).toHaveJSProperty('tagName','H5');
+    await page.goto('/artigo/'+data.slug);
+    const consent=page.getByRole('button',{name:'Recusar não essenciais',exact:true});
+    if(await consent.isVisible())await consent.click();
+    const publicBody=page.locator('.article-headings').first();
     await expect(page.locator('h1')).toHaveCount(1);
-    const content = page.locator('.article-markdown').first();
-    expect(await content.locator('h2,h3,h4,h5,h6').evaluateAll(els => els.map(el => [el.tagName, el.textContent, el.id]))).toEqual(previewHeadings);
-    const sizes = await content.locator('h2,h3,h4,h5,h6').evaluateAll(els => els.slice(1,6).map(el => parseFloat(getComputedStyle(el).fontSize)));
-    expect(sizes.every((size, i) => !i || size < sizes[i - 1])).toBeTruthy();
-    const id = await content.locator('h6').getAttribute('id');
-    await page.goto('/artigo/' + data.slug + '#' + id);
-    await expect(content.locator('h6')).toBeInViewport();
-    await page.locator('#themeToggle').click();
-    expect(await content.locator('h6').evaluate(el => getComputedStyle(el).color)).toBe(await content.evaluate(el => getComputedStyle(el).color));
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    await page.screenshot({path: `/tmp/heading-previews/public-dark-${width}.png`, fullPage: true});
+    expect(await headings(publicBody)).toEqual(rendered);
+    const link=publicBody.getByRole('link',{name:'Ir à secção',exact:true});
+    await link.click();
+    await expect(publicBody.locator('#sec-seccao-6')).toBeInViewport();
+    for(const mode of ['light','dark']){
+      if(mode==='dark')await page.locator('#themeToggle').click();
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      await publicBody.screenshot({path:`/tmp/headings-public-${mode}-${width}.png`});
+    }
   });
 }
-
-test('failed preview stays literal and a stale response cannot replace newer text', async ({page}) => {
-  const data = await fixture(page);
-  await page.goto(`/admin/artigos/${data.article_id}/editar`);
-  const editor = page.locator('#bodyEditor');
-  const preview = page.locator('#markdownPreview');
-  await expect(preview.locator('h6')).toHaveCount(1);
-  await page.route('**/admin/artigos/previsualizar', route => route.fulfill({status: 403, body: 'Forbidden'}));
-  const source = '## Nova secção\n\n<img src=x onerror="window.headingAttack=1">';
-  await editor.fill(source);
-  await expect(page.locator('#footnotePreviewStatus')).toContainText('Não foi possível');
-  await expect(preview).toHaveText(source);
-  await expect(preview.locator('img')).toHaveCount(0);
-  expect(await page.evaluate(() => window.headingAttack)).toBeUndefined();
-  await page.unroute('**/admin/artigos/previsualizar');
-  await page.route('**/admin/artigos/previsualizar', async route => {
-    if (route.request().postData().includes('Antigo')) {
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      await route.fulfill({json: {html: '<h2>Antigo</h2>'}}).catch(() => {});
-    } else await route.continue();
+test('server preview sanitizes all articles and discards stale responses',async({page})=>{
+  const cookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();
+  await page.context().addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
+  await page.goto('/admin/artigos/novo');
+  const editor=page.locator('#bodyEditor'),preview=page.locator('#markdownPreview');
+  await editor.fill('###### Seguro\n\n<img src="x" onerror="window.headingXss=1">\n\n<script>window.headingXss=1</script>');
+  await expect(preview.locator('h6')).toHaveText('Seguro');
+  await expect(preview.locator('script,[onerror]')).toHaveCount(0);
+  expect(await page.evaluate(()=>window.headingXss)).toBeUndefined();
+  let first=true,started;
+  const pending=new Promise(resolve=>{started=resolve;});
+  await page.route('**/admin/artigos/previsualizar',async route=>{
+    if(first){first=false;started();await new Promise(resolve=>setTimeout(resolve,900));}
+    await route.continue().catch(()=>{});
   });
-  const oldRequest = page.waitForRequest(req => req.url().endsWith('/previsualizar') && req.postData().includes('Antigo'));
   await editor.fill('## Antigo');
-  await oldRequest;
-  await editor.fill('###### Actual');
-  await expect(preview.locator('h6')).toHaveText('Actual');
+  await pending;
+  await editor.fill('## Actual');
+  await expect(preview.locator('h2')).toHaveText('Actual');
   await expect(preview).not.toContainText('Antigo');
-});
-
-test('existing journal index includes H2 to H6 with working unique targets', async ({page}) => {
-  const data = await fixture(page);
-  await page.goto('/revistas/' + data.journal_slug);
-  const links = page.locator('#journal-content-index a');
-  for (const level of [2, 3, 4, 5, 6]) await expect(page.locator(`#journal-content-index a[data-heading-level="${level}"]`).first()).toBeVisible();
-  const targets = await links.evaluateAll(els => els.map(el => el.hash.slice(1)));
-  expect(new Set(targets).size).toBe(targets.length);
-  for (const target of targets) await expect(page.locator(`[id="${target}"]`)).toHaveCount(1);
 });

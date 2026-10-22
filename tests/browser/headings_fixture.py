@@ -1,30 +1,33 @@
-"""Synthetic content shared by preview, save/reopen and public heading checks."""
+"""Disposable articles for heading persistence, preview and mobile layout."""
 import json
-import os
 import sys
 import uuid
 from pathlib import Path
-if not os.environ.get('DATABASE_URL', '').startswith('sqlite:') or os.environ.get('FLASK_ENV', '').lower() == 'production':
-    raise RuntimeError('Heading browser fixtures require isolated SQLite outside production')
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from app import app
-from models import db, Article, Author, Category, Journal, utcnow
+from models import db, Article, Author, Category, utcnow
 
 with app.app_context():
     token = uuid.uuid4().hex
-    author = Author(name='Autor de teste de títulos', slug='headings-' + token)
+    author = Author(name='Autor de teste de cabeçalhos', slug='headings-' + token)
     category = Category.query.first()
+    if not category:
+        category = Category(name='Teste de cabeçalhos', slug='headings-' + token)
+        db.session.add(category)
     db.session.add(author)
     db.session.flush()
-    body = '\n\n'.join('#' * n + f' Nível {n}' for n in range(1, 7))
-    body += '\n\n## Métodos\n\n## Métodos\n\n```python\n# literal\n```\n\n\\# escapado\n\nTexto **forte** e $E=mc^2$.'
-    values = dict(title='Artigo de teste de títulos', summary='Resumo isolado para testar os seis níveis de títulos.',
-                  body=body, author_id=author.id, category_id=category.id)
-    draft = Article(slug='headings-draft-' + token, status='draft', **values)
-    public = Article(slug='headings-public-' + token, status='published', published_at=utcnow(), **values)
-    journal = Journal(title='Revista de teste de títulos', slug='headings-journal-' + token,
-                      field='Biologia', description='Revista isolada para testar o índice existente.',
-                      content_markdown=body, published=True)
-    db.session.add_all([draft, public, journal])
+    body = '\n\n'.join('#' * n + ' Secção ' + str(n) for n in range(1, 7))
+    body += '\n\n```markdown\n# Código literal\n###### Código literal\n```\n\n\\# Texto literal'
+    body += '\n\n## Secção 2\n\n[Ir à secção](#sec-seccao-6)'
+    body += '\n\n#### ' + 'Cabeçalhoextensosemespaços' * 8
+    body += '\n\nParágrafo com **negrito**, *itálico* e $E=mc^2$.'
+    body += '\n\n[chart: line|Série de teste|A=1; B=2]\n\n[video: Vídeo de teste](https://example.org/demo.mp4)'
+    draft = Article(title='Teste dos níveis de cabeçalhos', slug='headings-draft-' + token,
+                    author_id=author.id, category_id=category.id, summary='Resumo para verificar a hierarquia de títulos.',
+                    body=body, status='draft')
+    public = Article(title=draft.title, slug='headings-public-' + token,
+                     author_id=author.id, category_id=category.id, summary=draft.summary,
+                     body=body, status='published', published_at=utcnow())
+    db.session.add_all([draft, public])
     db.session.commit()
-    print(json.dumps(dict(article_id=draft.id, slug=public.slug, journal_slug=journal.slug, body=body)))
+    print(json.dumps(dict(article_id=draft.id, slug=public.slug, body=body)))

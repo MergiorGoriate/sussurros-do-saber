@@ -76,4 +76,3 @@ def decorate_notes(cleaned, info):
         link['aria-label'] = link.get('title','Voltar à chamada no texto')
         link.string = 'Voltar ao texto'
     return str(soup)
-

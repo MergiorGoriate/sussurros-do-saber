@@ -62,7 +62,7 @@
     preview.removeAttribute('aria-busy');
     previewStatus.textContent = '';
     const content = editor.value;
-    previewStatus.textContent = 'A actualizar pré-visualização…';
+    previewStatus.textContent = 'A actualizar a pré-visualização…';
     preview.setAttribute('aria-busy', 'true');
     timer = setTimeout(async () => {
       const requestController = new AbortController();
@@ -82,9 +82,8 @@
         previewStatus.textContent = '';
       } catch (_) {
         if (current === sequence) {
-          // A failed/expired request must never activate a second HTML parser.
           preview.textContent = content;
-          previewStatus.textContent = 'Não foi possível actualizar a pré-visualização. O texto mantém-se no editor.';
+          previewStatus.textContent = 'Não foi possível actualizar a pré-visualização. O texto mantém-se no editor; volte a escrever para tentar novamente.';
         }
       } finally {
         clearTimeout(timeout);
@@ -95,4 +94,3 @@
   editor.addEventListener('editor:rendered', updatePreview);
   updatePreview();
 })();
-

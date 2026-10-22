@@ -3,7 +3,7 @@
 {% block title %}{{ journal.title }} — Sussurros do Saber{% endblock %}
 {% block meta_description %}{{ journal.description }}{% endblock %}
 {% block canonical %}{{ site_url }}{{ url_for('journal_detail', slug=journal.slug) }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-headings.css') }}">{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-headings.css', v='20261022-merge-headings') }}">{% endblock %}
 {% block content %}
 <article data-reader-journal="{{ journal.slug }}" class="journal-page max-w-6xl mx-auto px-4 py-14">
 <header class="journal-hero grid md:grid-cols-[300px_1fr] gap-10 items-start">
@@ -130,13 +130,13 @@ document.addEventListener('DOMContentLoaded',()=>{
  const box=document.getElementById('journal-content-index');
  const root=document.querySelector('#conteudo-revista .article-markdown');
  if(!box||!root)return;
- const headings=[...document.querySelectorAll('.journal-sections h2,.journal-sections h3,.journal-sections h4,.journal-sections h5,.journal-sections h6')];
+ const headings=[...document.querySelectorAll('.journal-sections :is(h2,h3,h4,h5,h6)')];
  const used=new Set();
  const slugify=s=>(s||'secao').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'secao';
  headings.forEach((h,i)=>{
    if(!h.id){let base=slugify(h.textContent),id=base,n=2;while(document.getElementById(id)||used.has(id))id=base+'-'+n++;h.id=id;}
    used.add(h.id);
-   const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent.trim();a.className='journal-index-link '+(h.tagName==='H3'?'journal-index-sub':'');
+   const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent.trim();a.className='journal-index-link '+(h.tagName!=='H2'?'journal-index-sub':'');
    a.dataset.headingLevel=h.tagName.slice(1);
    box.appendChild(a);
  });
@@ -188,7 +188,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/journal-details.js', v='20261003-1') }}" defer></script>
 {% endblock %}
-
 
 
 

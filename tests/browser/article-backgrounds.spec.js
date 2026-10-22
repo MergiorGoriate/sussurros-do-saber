@@ -1,9 +1,7 @@
 const {test,expect}=require('@playwright/test');
 const {execFileSync}=require('node:child_process');
 test.setTimeout(90000);
-test.beforeEach(async({page})=>{
- await page.addInitScript(()=>document.addEventListener('DOMContentLoaded',()=>{const style=document.createElement('style');style.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(style);}));
- await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/healthz');});
+test.beforeEach(async({page})=>{await page.addInitScript(()=>document.addEventListener('DOMContentLoaded',()=>{const style=document.createElement('style');style.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(style);}));await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/healthz');});
 function fixture(){return JSON.parse(execFileSync('python',['tests/browser/background_fixture.py'],{encoding:'utf8'}));}
 async function signin(context){const cookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();await context.addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);}
 const fits=async page=>expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(()=>innerWidth));
@@ -32,6 +30,10 @@ test('editor background controls and preview fit mobile, tablet and desktop in b
   for(const name of ['Papel antigo','Fundo padrão']){
    await page.getByRole('radio',{name,exact:true}).check();await fits(page);
    await expect(page.locator('#markdownPreview')).toBeVisible();
+   // The article preview now uses the authenticated asynchronous renderer.
+   for(const selector of ['blockquote','figcaption','figcaption small']){
+    await expect(page.locator('#markdownPreview').locator(selector).first()).toBeVisible();
+   }
    const ratios=await page.locator('#markdownPreview').evaluate(root=>{
     const luminance=s=>s.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
     return ['blockquote','figcaption','figcaption small'].map(selector=>{
@@ -69,4 +71,3 @@ test('public paper preserves global surfaces and readable content in both themes
   for(const item of contrast)expect(item.ratio,item.selector+' '+theme).toBeGreaterThanOrEqual(4.5);
  }
 });
-

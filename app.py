@@ -20,7 +20,6 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 import bleach
 import markdown
 from article_notes import render_notes_markdown, allowed_markdown_attribute, decorate_notes
-from article_headings import article_headings
 import math
 from markupsafe import Markup
 from sqlalchemy import case, inspect, or_, text
@@ -323,7 +322,7 @@ def safe_chart_embed(chart_type, title, raw_data):
 
 
 @app.template_filter("markdown")
-def render_markdown(value, *, strict_headings=False):
+def render_markdown(value, *, article=False, heading_prefix="sec"):
     embeds = {}
 
     def store_embed(prefix, embed):
@@ -382,7 +381,7 @@ def render_markdown(value, *, strict_headings=False):
     prepared = IMAGE_DIRECTIVE.sub(image_placeholder, prepared)
     prepared = VIDEO_DIRECTIVE.sub(video_placeholder, prepared)
     prepared = CHART_DIRECTIVE.sub(chart_placeholder, prepared)
-    rendered, note_info = render_notes_markdown(prepared, strict_headings=strict_headings)
+    rendered, note_info = render_notes_markdown(prepared, strict_headings=article)
     if note_info['notes']:
         rendered = rendered.replace('&#160;', '\u00a0').replace('&nbsp;', '\u00a0')
     # Torna URLs HTTP(S) escritas como texto em links clicáveis, sem alterar
@@ -425,14 +424,15 @@ def render_markdown(value, *, strict_headings=False):
     cleaned = re.sub(r"<p>\[capitular\]\s*", '<p class="article-dropcap">', cleaned)
     for token, embed in embeds.items():
         cleaned = cleaned.replace(f"<p>{token}</p>", embed).replace(token, embed)
+    if article:
+        from article_headings import prepare_article_headings
+        cleaned = prepare_article_headings(cleaned, prefix=heading_prefix)
     return Markup(cleaned)
 
 
 @app.template_filter("article_markdown")
-def render_article_markdown(value, namespace='article-section'):
-    # Reuse the existing parser, directives, footnotes and sanitizer.
-    # Only article bodies/references normalize H1; journals keep their own flow.
-    return Markup(article_headings(str(render_markdown(value, strict_headings=True)), namespace))
+def render_article_markdown(value, prefix="sec"):
+    return render_markdown(value, article=True, heading_prefix=prefix)
 
 
 @app.after_request
@@ -1602,7 +1602,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
-
 
 
 

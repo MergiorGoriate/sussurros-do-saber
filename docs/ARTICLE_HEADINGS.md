@@ -13,7 +13,7 @@ A página pública apresentava `Article.title` como H1, mas também permitia H1 
 - O processador Markdown existente continua a reconhecer os seis níveis. Não foi acrescentado outro interpretador. No corpo e nas referências dos artigos, os marcadores ATX exigem espaço ou tabulação depois de um a seis `#`; marcadores sem esse separador e sete ou mais `#` são texto literal. As revistas e outros consumidores do filtro genérico conservam a interpretação anterior.
 - O filtro `article_markdown` reutiliza esse processamento e o saneamento. Depois, `article_headings.py` apresenta H1 do corpo e das referências como H2 e acrescenta identificadores às secções. A fonte guardada não é reescrita. H2 a H6 conservam os seus níveis.
 - O campo Título permanece o H1 principal da página pública. Títulos, endereços, metadados e dados estruturados mantêm a lógica existente.
-- O corpo utiliza identificadores `article-section-…`; as referências utilizam `article-reference-…`. Textos repetidos recebem sufixos numéricos. Os identificadores são reproduzíveis enquanto se mantiverem o texto e a ordem dos cabeçalhos equivalentes; não são identificadores permanentes independentes das edições.
+- O corpo utiliza identificadores `sec-…`; as referências utilizam `ref-sec-…`. Textos repetidos recebem sufixos numéricos. Os identificadores são reproduzíveis enquanto se mantiverem o texto e a ordem dos cabeçalhos equivalentes; não são identificadores permanentes independentes das edições.
 - A pré-visualização inicial é renderizada pelo servidor no formulário. As actualizações reutilizam a rota autenticada `/admin/artigos/previsualizar`, com atraso de 500 ms, cancelamento de pedidos antigos e protecção contra respostas atrasadas. Em caso de falha, apresenta texto literal e uma mensagem, conservando o conteúdo editável.
 - A barra existente oferece H2 a H6. O selector substitui o marcador da linha seleccionada em vez de acrescentar marcadores sucessivos. O formulário recomenda H2 a H6 e explica a apresentação dos H1 do corpo como H2.
 - `article-headings.css` fornece a hierarquia partilhada, incluindo a mesma família, tamanho, peso e altura de linha na pré-visualização e na página pública a 320, 390, 768 e 1440 píxeis. A pré-visualização carrega os estilos existentes de conteúdo para conservar tabelas, vídeos e gráficos renderizados pelo servidor.
@@ -86,3 +86,16 @@ Resultados da verificação complementar em 22 de Outubro de 2026:
 - As novas comparações de tipografia passaram a 320, 390, 768 e 1440 píxeis, em ambos os temas. A pré-visualização externa de vídeo e a recuperação após falha de ligação também passaram.
 
 Esta verificação complementar utilizou Playwright 1.64.1 e Chromium Headless Shell 134.0.6998.35, por disponibilidade local. A CI deve confirmar a branch actualizada com o navegador fixado pelo projecto e com PostgreSQL. Não se executou nem se publicou a aplicação no ambiente de produção.
+
+
+## Resolução dos conflitos com o PR #259
+
+A integração conserva os identificadores `sec-` e `ref-sec-`, o filtro e os botões H2–H6 já presentes em `main`. O selector deste PR partilha a mesma transformação de linhas com esses botões. Os testes dos dois ramos são conservados em ficheiros distintos e usam fixtures independentes. A falha da pré-visualização apresenta o texto literal com `textContent`, sem interpretar HTML. A sintaxe dos artigos aceita espaço ou tabulação depois dos marcadores. Os estilos de paridade são acrescentados aos estilos existentes de vídeos, gráficos, tabelas e listas.
+
+Validação da resolução, em 22 de Outubro de 2026:
+
+- 434 testes Python aprovados na execução completa final, com SQLite. A primeira execução identificou assets em falta na cópia local e uma asserção que comparava classes do contentor em vez do HTML renderizado; a cópia foi completada com hashes verificados e a asserção passou a comparar o conteúdo interno, preservando as classes públicas existentes.
+- Seis testes JavaScript aprovados; Tailwind recompilado, sintaxe JavaScript e `git diff --check` verificados.
+- 44 cenários de navegador seleccionados: 42 passaram na execução alargada. Dois revelaram que carregar os estilos de conteúdo no editor introduzia uma largura mínima nos gráficos; foi aplicada uma correcção restrita ao SVG da pré-visualização. Os dois casos e o terceiro teste do mesmo ficheiro passaram na repetição final. Não se apresenta a execução inicial como integralmente aprovada.
+- Os testes de ambos os ramos permanecem: `tests/test_article_heading_parity.py` e `tests/browser/heading-persistence.spec.js` conservam os testes que colidiam com nomes já presentes em `main`, com a fixture independente `heading_persistence_fixture.py`. Os identificadores esperados seguem `sec-` e `ref-sec-`, já existentes em `main`.
+- Ambiente local: Playwright 1.64.1 com Chromium Headless Shell 134, em configuração temporária externa ao repositório; a configuração de navegador da CI não foi alterada. PostgreSQL será validado pela CI. Sem acesso ou alteração aos dados de produção.

@@ -96,4 +96,3 @@ for(const width of [320,1440])test(`homepage lead animation and independent navi
  await expect(root.locator('video')).not.toHaveAttribute('src');await expect(root.locator('.cover-poster')).toBeVisible();
  await root.locator('.home-cover-link').click({position:{x:30,y:30}});await expect(page).toHaveURL(new RegExp('/artigo/'+d.video_animated.slug+'$'));
 });
-
