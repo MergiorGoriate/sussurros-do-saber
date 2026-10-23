@@ -60,8 +60,7 @@ class PrimaryArticleWorkflowTests(unittest.TestCase):
         self.assertEqual(self.post(path, action='reviewed', note='Fontes verificadas e texto revisto.').status_code, 302)
         self.assertTrue(StaffNotice.query.filter_by(admin_id=self.primary.id, resource_type='article', resource_id=article.id).first())
         self.signin(self.primary)
-        self.assertNotIn('value="approve"', self.client.get(path).text)
-        self.assertEqual(self.post(path, action='approve').status_code, 403)
+        self.assertIn('Publicar directamente', self.client.get(path).text)
         self.signin(editor.admin)
         self.assertEqual(self.post(path, action='approve').status_code, 302)
         self.assertEqual(article.status, 'published')
@@ -85,7 +84,7 @@ class PrimaryArticleWorkflowTests(unittest.TestCase):
         self.assertIsNone(flow.approved_at)
         self.assertTrue(flow.primary_owned)
 
-    def test_editor_does_not_receive_primary_exception_and_removed_owner_stays_blocked(self):
+    def test_primary_can_manage_removed_owner_article_without_reactivating_member(self):
         article, path = self.unlinked_article()
         editor = self.member('portal_editor')
         self.signin(editor.admin)
@@ -96,7 +95,8 @@ class PrimaryArticleWorkflowTests(unittest.TestCase):
         removed.removed_at = utcnow()
         db.session.commit()
         self.signin(self.primary)
-        self.assertIn('Associação do autor', self.client.get(path).text)
+        self.assertIn('Publicar directamente', self.client.get(path).text)
+        self.assertIsNotNone(removed.removed_at)
 
     def test_matching_author_email_cannot_be_assigned_for_independent_review(self):
         article, path = self.unlinked_article()

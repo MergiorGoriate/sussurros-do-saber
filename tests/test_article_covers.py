@@ -131,9 +131,12 @@ class ArticleCoverTests(unittest.TestCase):
         self.signin(owner.admin)
         self.assertEqual(self.client.post(f'/admin/artigos/{article.id}/editar',data={'cover_mode':'image'}).status_code,400)
         self.assertEqual(self.edit(article,cover_mode='video_animated',cover_video=VIDEO,version_token='old').status_code,409)
-        flow=db.session.get(ArticleWorkflow,article.id);article.status=flow.stage='published';flow.approved_at=flow.reviewed_at=utcnow();db.session.commit();self.signin(self.primary)
-        self.assertEqual(self.edit(article,cover_mode='video_animated',cover_video=VIDEO).status_code,409)
+        flow=db.session.get(ArticleWorkflow,article.id);article.status=flow.stage='published';flow.approved_at=flow.reviewed_at=utcnow();db.session.commit();self.signin(self.member('portal_editor').admin)
+        self.assertEqual(self.edit(article,cover_mode='video_animated',cover_video=VIDEO).status_code,403)
         self.assertEqual(article.cover_video,'')
+        self.signin(self.primary)
+        self.assertEqual(self.edit(article,cover_mode='video_animated',cover_video=VIDEO).status_code,302)
+        self.assertEqual(article.cover_video,VIDEO)
 
     def test_history_autosave_and_scheduled_publication_preserve_cover(self):
         owner=self.member();article=self.article(owner);self.signin(self.primary)
@@ -190,3 +193,4 @@ class ArticleCoverTests(unittest.TestCase):
             self.assertEqual(self.edit(article,cover_mode='video_animated',cover_video_file=(io.BytesIO(payload),'cover.mp4')).status_code,302)
             self.assertEqual(upload.call_args.kwargs['resource_type'],'video')
         self.assertEqual((article.cover_mode,article.cover_video),('video_animated',OTHER))
+

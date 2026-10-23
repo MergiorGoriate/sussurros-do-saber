@@ -63,7 +63,7 @@ class AdminWorkflowRegressions(unittest.TestCase):
         response=self.post(f'/admin/fluxo-artigos/{article.id}', action='assign', reviewer_id=reviewer.id)
         self.assertEqual(response.status_code, 400)
 
-    def test_primary_can_use_unlinked_author_but_removed_author_stays_blocked(self):
+    def test_primary_can_select_any_author_without_reactivating_removed_member(self):
         owner=self.member()
         article=self.article(owner)
         unlinked=Author(name='Autor sem colaborador', slug='unlinked-'+self.token)
@@ -79,9 +79,10 @@ class AdminWorkflowRegressions(unittest.TestCase):
         removed=self.member()
         removed.removed_at=utcnow()
         db.session.commit()
-        self.assertEqual(self.change_author(article, removed.author_id).status_code, 409)
+        self.assertEqual(self.change_author(article, removed.author_id).status_code, 302)
         db.session.refresh(article)
-        self.assertEqual(article.author_id, unlinked.id)
+        self.assertEqual(article.author_id, removed.author_id)
+        self.assertIsNotNone(removed.removed_at)
 
     def test_ordinary_editor_still_requires_linked_nonremoved_author(self):
         owner=self.member()
