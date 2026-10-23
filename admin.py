@@ -782,7 +782,8 @@ def article_form(article_id=None):
                 author_id = database_id(request.form.get("author_id", ""))
                 category_id = database_id(request.form.get("category_id", ""))
                 read_minutes = max(1, min(120, int(request.form.get("read_minutes") or 5)))
-                scheduled_at = parse_datetime(request.form.get("scheduled_at"))
+                from article_scheduling import parse_schedule
+                scheduled_at = parse_schedule(request.form.get("scheduled_at"),request.form.get("schedule_timezone","UTC")) if status=="scheduled" else None
             except (TypeError, ValueError):
                 flash("Revise autor, categoria, tempo de leitura e data programada.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
@@ -797,7 +798,7 @@ def article_form(article_id=None):
                 flash("Um dos campos excede o limite permitido. Reduza o conteúdo e tente novamente.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if status == "scheduled" and (not scheduled_at or scheduled_at <= utcnow()):
-                flash("Informe uma data e hora futuras para a publicação programada (UTC).", "error")
+                flash("Indique uma data e hora futuras no fuso horário seleccionado.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
@@ -1351,3 +1352,17 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
+
+
+@admin_bp.app_template_filter('article_schedule_local')
+def article_schedule_local(value, zone='Africa/Maputo'):
+    from article_scheduling import schedule_local
+    return schedule_local(value,zone)
+
+
+@admin_bp.cli.command('publicar-programados')
+def publish_scheduled_command():
+    """Publica artigos vencidos; pode ser executado periodicamente sem tráfego HTTP."""
+    import click
+    count=Article.publish_due_scheduled()
+    click.echo(f'{count} artigo(s) publicado(s).')
