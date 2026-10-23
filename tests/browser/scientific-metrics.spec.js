@@ -47,6 +47,8 @@ test('scientific administration filters, export and scoped navigation',async({pa
   for(const dark of [false,true]){
    await page.evaluate(dark=>document.body.classList.toggle('admin-dark',dark),dark);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+   const chart=page.locator('.science-admin [data-chart]');
+   expect((await chart.boundingBox()).height).toBeLessThanOrEqual(230);
    await page.screenshot({path:`test-results/scientific-admin-${width}-${dark?'dark':'light'}.png`,fullPage:true});
   }
  }
