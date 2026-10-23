@@ -63,17 +63,35 @@ class AdminWorkflowRegressions(unittest.TestCase):
         response=self.post(f'/admin/fluxo-artigos/{article.id}', action='assign', reviewer_id=reviewer.id)
         self.assertEqual(response.status_code, 400)
 
-    def test_managed_article_requires_linked_nonremoved_author(self):
+    def test_primary_can_use_unlinked_author_but_removed_author_stays_blocked(self):
         owner=self.member()
         article=self.article(owner)
         unlinked=Author(name='Autor sem colaborador', slug='unlinked-'+self.token)
         db.session.add(unlinked)
         db.session.commit()
         self.signin(self.primary)
-        self.assertEqual(self.change_author(article, unlinked.id).status_code, 409)
+        self.assertEqual(self.change_author(article, unlinked.id).status_code, 302)
         db.session.refresh(article)
-        self.assertEqual(article.author_id, owner.author_id)
+        self.assertEqual(article.author_id, unlinked.id)
+        flow=db.session.get(ArticleWorkflow, article.id)
+        self.assertIsNone(flow.owner_id)
+        self.assertTrue(flow.primary_owned)
         removed=self.member()
         removed.removed_at=utcnow()
         db.session.commit()
         self.assertEqual(self.change_author(article, removed.author_id).status_code, 409)
+        db.session.refresh(article)
+        self.assertEqual(article.author_id, unlinked.id)
+
+    def test_ordinary_editor_still_requires_linked_nonremoved_author(self):
+        owner=self.member()
+        editor=self.member('portal_editor')
+        article=self.article(owner)
+        unlinked=Author(name='Autor sem colaborador', slug='editor-unlinked-'+self.token)
+        db.session.add(unlinked)
+        db.session.commit()
+        self.signin(editor.admin)
+        self.assertEqual(self.change_author(article, unlinked.id).status_code, 409)
+        db.session.refresh(article)
+        self.assertEqual(article.author_id, owner.author_id)
+
