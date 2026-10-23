@@ -131,6 +131,9 @@ app.register_blueprint(premium_admin_bp)
 from billing import billing_bp, finance_bp, install_billing_cli
 app.register_blueprint(billing_bp)
 app.register_blueprint(finance_bp)
+from scientific_metrics import metrics_bp, register_cli as register_metrics_cli
+app.register_blueprint(metrics_bp)
+register_metrics_cli(app)
 install_billing_cli(app)
 install_submission_cli(app)
 from google_auth import google_bp, install_google_cli
@@ -927,8 +930,10 @@ def journals():
             Journal.field, Journal.description, Journal.summary, Journal.abstract,
             Journal.keywords, Journal.abstract_keywords, Journal.authors_data,
             Journal.authors_orcid, Journal.doi, Journal.current_issue))
+    from scientific_metrics import catalogue_metrics
+    scientific_summary,scientific_issues=catalogue_metrics()
     return render_template(
-        "journals.html",
+        "journals.html", scientific_summary=scientific_summary,scientific_issues=scientific_issues,
         journals=results.order_by(Journal.title, Journal.id).all(),
         query=query,
     )
@@ -939,7 +944,8 @@ def journal_detail(slug):
     journal = Journal.query.filter_by(slug=slug, published=True).first()
     if not journal:
         return render_template("404.html"), 404
-    return render_journal(journal)
+    from scientific_metrics_collection import record
+    return record(journal, 'view', app.make_response(render_journal(journal)))
 
 
 @app.post("/admin/revistas/previsualizar-markdown")
@@ -984,7 +990,12 @@ def journal_article_content(journal):
 def render_journal(journal):
     g.google_cmp_public_content = request.endpoint == "journal_detail" and journal.published
     article_title, content = journal_article_content(journal)
-    return render_template("journal.html", journal=journal,
+    from scientific_metrics_collection import scientific
+    from scientific_metrics import article_metrics, SOURCES, STATES
+    eligible = request.endpoint == 'journal_detail' and scientific(journal)
+    metrics_data, metrics_options = article_metrics(journal) if eligible else (None, None)
+    return render_template("journal.html", metrics_data=metrics_data, metrics_options=metrics_options,
+                           metrics_sources=SOURCES, metrics_states=STATES, scientific_eligible=eligible, journal=journal,
                            article_title=article_title, journal_content=Markup(content), journal_authors=journal_authors(journal),
                            public_url=SITE_URL + url_for("journal_detail", slug=journal.slug))
 
@@ -994,7 +1005,8 @@ def journal_download_pdf(slug):
     journal = Journal.query.filter_by(slug=slug, published=True).first()
     if not journal:
         return render_template("404.html"), 404
-    return render_journal_pdf(journal)
+    from scientific_metrics_collection import record
+    return record(journal, 'download', app.make_response(render_journal_pdf(journal)))
 
 
 @app.get("/admin/revistas/<int:journal_id>/baixar.pdf")
@@ -1540,6 +1552,9 @@ def seed_database():
         db.session.commit()
         from workflow_schema import upgrade_workflow_schema
         upgrade_workflow_schema(db.session.connection())
+        db.session.commit()
+        from scientific_metrics_schema import upgrade_scientific_metrics
+        upgrade_scientific_metrics(db.session.connection())
         db.session.commit()
         ensure_admin_columns()
         ensure_author_columns()

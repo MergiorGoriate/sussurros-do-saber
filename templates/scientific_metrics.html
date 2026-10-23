@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% from 'metrics/panel.html' import panel with context %}
+{% block title %}Métricas científicas — Sussurros do Saber{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static',filename='css/scientific-metrics.css') }}">{% endblock %}
+{% block content %}<div class="science-page"><header class="science-page-heading"><p>Revista científica · acesso aberto</p><h1>{{ 'Métricas do artigo' if journal else 'Métricas da revista científica' }}</h1>{% if journal %}<h2>{{ journal.article_title or journal.title }}</h2><a href="{{ url_for('journal_detail',slug=journal.slug) }}">Voltar ao artigo</a>{% else %}<a href="{{ url_for('journals') }}">Voltar ao catálogo</a>{% endif %}</header>{% include 'metrics/filters.html' %}{{ panel(data,options,sources,states,'public-science') }}</div><script src="{{ url_for('static',filename='js/scientific-metrics.js') }}" nonce="{{ csp_nonce }}" defer></script>{% endblock %}

@@ -1,5 +1,7 @@
 # Sussurros do Saber
 
+**Métricas científicas:** recolha interna, painéis públicos/administrativos e adaptadores bibliográficos na migração `20261023_13`. [Implementação, operação, testes e limitações](docs/SCIENTIFIC_METRICS.md).
+
 **Premium — pagamentos:** a migração `20261023_11` acrescenta ClicPay (M-Pesa, e-Mola e checkout de cartões), Stripe recorrente condicionado à elegibilidade, histórico privado, cancelamento, reconciliação e diário financeiro. As cobranças ficam desactivadas por omissão; os artigos científicos e informativos continuam gratuitos. Configuração, limites, testes e operação: [Pagamentos Premium](docs/PREMIUM_PAYMENTS.md). Os registos de alterações anteriores abaixo descrevem fases históricas.
 
 Plataforma de divulgação científica e publicação editorial em português, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.

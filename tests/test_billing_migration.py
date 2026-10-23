@@ -25,7 +25,7 @@ class BillingMigrationTests(unittest.TestCase):
                 with engine.begin() as connection:
                     self.assertEqual(connection.scalar(text('SELECT body FROM premium_content WHERE id=7')),'Corpo preservado')
                     self.assertEqual(connection.scalar(text('SELECT open_access_required FROM premium_content WHERE id=7')),0)
-                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261023_12')
+                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261023_13')
                     connection.execute(text("INSERT INTO billing_event (event_key,kind,object_ref,digest,created_at) VALUES ('fixture','test','ref','hash','2026-10-23')"))
                 with engine.begin() as connection:
                     with self.assertRaises(Exception):connection.execute(text("DELETE FROM billing_event WHERE event_key='fixture'"))
