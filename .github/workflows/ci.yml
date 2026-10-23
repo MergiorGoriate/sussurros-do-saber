@@ -119,7 +119,8 @@ jobs:
   browser:
     name: Browser and JavaScript tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Browser installation and the serial regression suite need independent budgets.
+    timeout-minutes: 30
     env:
       DATABASE_URL: sqlite:////tmp/sussurros-browser-ci.db
       CLOUDINARY_CLOUD_NAME: cover-fixture
@@ -151,7 +152,9 @@ jobs:
           name: compiled-tailwind-css
           path: static/css/tailwind.css
           retention-days: 7
-      - run: npx playwright install --with-deps chromium
+      - name: Install Chromium headless shell and system dependencies
+        timeout-minutes: 15
+        run: npx playwright install --with-deps --only-shell chromium
       - name: Create browser journal fixture
         run: |
           python - <<'PY'
@@ -178,7 +181,9 @@ jobs:
           cat /tmp/sussurros-server.log
           exit 1
       - run: node --test tests/consent.test.cjs
-      - run: npm run test:e2e
+      - name: Run browser regression suite
+        timeout-minutes: 15
+        run: npm run test:e2e
       - name: Test Google CMP with mocked Google services
         env:
           GOOGLE_CMP_ENABLED: 'true'
@@ -198,7 +203,7 @@ jobs:
           done
           npx playwright test google-cmp.spec.js
       - name: Show isolated server failures
-        if: failure()
+        if: failure() || cancelled()
         run: tail -n 120 /tmp/sussurros-server.log
       - name: Upload browser diagnostics
         if: always()
