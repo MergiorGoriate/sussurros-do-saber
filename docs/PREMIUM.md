@@ -107,3 +107,9 @@ Os testes Premium cobrem visitantes anónimos, leitores gratuitos, assinantes v�
 `tests/browser/premium.spec.js` acrescenta cinco cenários Playwright: apresentação a 320/768/1440 px e nos temas claro/escuro, navegação por teclado, recusa/entrega de conteúdos e concessão/cancelamento administrativo com duas sessões. Usa dados isolados de `premium_fixture.py` e será incluído na descoberta existente do CI. **Não foi executado localmente**: o descarregamento do Chromium devolveu ficheiros truncados. Não há capturas visuais verificadas nem certificação de acessibilidade ou de funcionamento em dispositivos físicos.
 
 O CI existente descobre `test_premium.py` e `premium.spec.js` sem alteração do workflow. Confirmar os resultados desse CI e fazer a revisão visual antes da publicação. PostgreSQL, fornecedores reais, migração em produção e cobranças recorrentes não foram ensaiados nesta sessão.
+
+## Correcção após a primeira execução do CI
+
+A primeira execução do CI aprovou a suite Python, a auditoria de dependências, o ensaio PostgreSQL e a construção Docker. Nos testes de navegador, 133 cenários passaram e quatro falharam: três verificavam a URL imediatamente após submeter o filtro e um não encontrava o selector pelo nome acessível exacto «Plano».
+
+O teste do filtro passa a confirmar a selecção e a aguardar a navegação com uma asserção Playwright que volta a verificar a URL até ao limite previsto. Os selectores de plano e estado passam a referenciar explicitamente etiquetas de texto próprias, mantendo os controlos nativos e a utilização por teclado. As verificações de acesso e a lógica de assinaturas não são alteradas. A aprovação desta correcção depende da nova execução do CI.

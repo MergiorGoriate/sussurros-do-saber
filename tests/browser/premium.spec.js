@@ -16,10 +16,12 @@ for(const width of [320,768,1440]){
   }
   await page.goto('/premium/biblioteca');
   await page.locator('#premium-kind').focus();
-  await page.keyboard.press('ArrowDown');await page.keyboard.press('Tab');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#premium-kind')).toHaveValue('course');
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('button',{name:'Filtrar',exact:true})).toBeFocused();
   await page.keyboard.press('Enter');
-  expect(page.url()).toContain('tipo=course');
+  await expect(page).toHaveURL(/\/premium\/biblioteca\?tipo=course$/);
  });
 }
 test('anonymous, free reader and subscriber access are distinct',async({page,context})=>{
