@@ -23,7 +23,7 @@ with app.app_context():
     admin = AdminUser(username='premium-admin-'+token, display_name='Gestor Premium', password_hash='unused',
                       is_superadmin=True, two_factor_enabled=True, totp_secret='JBSWY3DPEHPK3PXP')
     plan = PremiumPlan(name='Plano de teste '+token, interval='monthly', price_minor=15000, currency='MZN', active=True)
-    content = PremiumContent(title='Curso de teste '+token, summary='Descrição pública de um curso especializado.', kind='course',
+    content = PremiumContent(title='Curso de teste '+token, summary='Descrição pública de um curso especializado.', kind='course', category='Investigação de teste',
                              body='CONTEUDO-RESERVADO-'+token+'\n\n## Aprender\n\nExplicação de teste.', published=True)
     db.session.add_all([account, free, admin, plan, content]); db.session.flush()
     db.session.add(PremiumSubscription(owner_id=account.id, plan_id=plan.id, starts_at=utcnow()-timedelta(days=1),

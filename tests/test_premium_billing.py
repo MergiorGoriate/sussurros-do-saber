@@ -86,6 +86,7 @@ class BillingTests(unittest.TestCase):
         self.assertEqual(BillingOrder.query.filter_by(owner_id=self.owner.id).count(),0)
 
     def test_local_initiation_snapshots_and_duplicate_submission_do_not_charge_twice(self):
+        self.plan.benefits=['Condição contratada'];db.session.commit()
         form=self.purchase_form();path='/premium/aderir/'+str(self.plan.id)
         with patch('billing.create_clicpay',return_value={'clicpay_reference':'CPAY'+secrets.token_hex(10),'status':'pending'}) as api:
             first=self.client.post(path,data=form);second=self.client.post(path,data=form)
@@ -93,6 +94,9 @@ class BillingTests(unittest.TestCase):
         order=BillingOrder.query.filter_by(owner_id=self.owner.id).one()
         self.assertEqual(order.amount_minor,50000);self.assertEqual(order.state,'pending')
         self.assertNotIn('phone',order.snapshot)
+        self.assertEqual(order.snapshot['benefits'],['Condição contratada'])
+        self.plan.benefits=['Novas condições'];db.session.commit()
+        self.assertEqual(order.snapshot['benefits'],['Condição contratada'])
         self.assertIsNone(PremiumSubscription.query.filter_by(owner_id=self.owner.id).first())
 
     def test_uncertain_initiation_reserves_slot_without_automatic_retry(self):

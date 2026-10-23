@@ -210,11 +210,13 @@ class PremiumTests(unittest.TestCase):
         self.assertEqual(PremiumSubscription.query.count(),0)
 
     def test_grant_is_complimentary_audited_and_cannot_be_duplicated(self):
+        self.plan.benefits=['Benefício de oferta'];db.session.commit()
         self.admin()
         self.assertEqual(self.client.post('/admin/premium/assinaturas/nova',data=self.grant_form()).status_code,302)
         self.assertEqual(self.client.post('/admin/premium/assinaturas/nova',data=self.grant_form()).status_code,400)
         sub = PremiumSubscription.query.one()
         self.assertEqual(sub.source,'complimentary')
+        self.assertEqual(sub.plan_snapshot['benefits'],['Benefício de oferta'])
         self.assertEqual(PremiumAudit.query.one().action,'subscription.grant')
         self.login();self.assertEqual(self.client.get(self.path()).status_code,200)
 
@@ -286,7 +288,7 @@ class PremiumMigrationTests(unittest.TestCase):
                     self.assertEqual([c['name'] for c in before_columns],[c['name'] for c in inspect(connection).get_columns('article')])
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM premium_plan')),2)
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM premium_plan WHERE active')),0)
-                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261023_11')
+                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261023_12')
                     for table in ['premium_content','premium_subscription','premium_audit']:
                         self.assertIn(table,inspect(connection).get_table_names())
                 engine.dispose()

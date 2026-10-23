@@ -125,3 +125,7 @@ A navegação identifica a página actual. Os quatro formatos têm cartões liga
 Os estilos ficam limitados à área Premium, incluindo as cores dos temas claro/escuro, grelhas responsivas, foco visível, controlos de 44 px e redução das transições para quem prefere movimento reduzido. Não foram alteradas rotas, permissões, formulários administrativos, dados ou pagamentos.
 
 Validação desta alteração: os 23 testes Python do Premium passaram. A renderização HTTP/Jinja confirmou um único título principal, os quatro filtros ligados aos cartões, os planos mensal/anual e o estado sem planos. A suite Playwright existente inclui capturas a 320/768/1440 px e nos dois temas; a execução local continua impedida pelo descarregamento truncado do Chromium. A revisão visual no navegador e os resultados do novo CI devem ser confirmados antes da publicação.
+
+## Aperfeiçoamento incremental dos planos e da biblioteca
+
+Consultar [PREMIUM_UX_PLANS.md](PREMIUM_UX_PLANS.md) para a auditoria da versão integrada, benefícios configuráveis, categorias, pesquisa, área pessoal e validação da migração `20261023_12`. As cobranças reais continuam desactivadas por omissão.

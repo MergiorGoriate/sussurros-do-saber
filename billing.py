@@ -121,7 +121,7 @@ def checkout(ident):
             if previous and previous.status=='active' and previous.source=='complimentary' and previous.ends_at>utcnow():
                 raise ValueError('Já dispõe de um acesso de oferta válido. Pode aderir depois do seu término.')
             order=BillingOrder(id=quote['nonce'],owner_id=account.id,plan_id=plan.id,
-                snapshot={k:getattr(plan,k) for k in ('name','interval','price_minor','currency','version')},
+                snapshot={k:getattr(plan,k) for k in ('name','interval','price_minor','currency','version','benefits')},
                 amount_minor=plan.price_minor,currency=plan.currency,method=method,
                 provider='stripe' if method=='stripe' else 'clicpay',live=live_mode(),recurring=method=='stripe',
                 record_kind='checkout' if method=='stripe' else 'payment',expires_at=utcnow()+timedelta(hours=24))
@@ -166,11 +166,16 @@ def owned(ident):
 @reader_required
 def history():
     from request_values import pagination_page
-    account=db.session.get(BillingAccount,(researcher().id,live_mode()))
-    orders=BillingOrder.query.filter_by(owner_id=researcher().id).order_by(BillingOrder.created_at.desc()).paginate(
-        page=pagination_page(),per_page=20,error_out=False)
-    sub=PremiumSubscription.query.filter_by(owner_id=researcher().id).first()
-    return render_template('premium/payments.html',orders=orders,agreement=account,subscription=sub)
+    from premium import subscription_label, entitled, subscription_for
+    owner = researcher()
+    account = db.session.get(BillingAccount, (owner.id, live_mode()))
+    orders = BillingOrder.query.filter_by(owner_id=owner.id).order_by(BillingOrder.created_at.desc()).paginate(
+        page=pagination_page(), per_page=20, error_out=False)
+    sub = PremiumSubscription.query.filter_by(owner_id=owner.id).first()
+    effective = subscription_for(owner)
+    state = subscription_label(sub) if not sub or effective else 'Acesso suspenso para verificação'
+    return render_template('premium/payments.html', orders=orders, agreement=account, subscription=sub,
+                           subscription_state=state, has_access=entitled(effective))
 
 
 @billing_bp.get('/pagamentos/<ident>')

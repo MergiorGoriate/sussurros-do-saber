@@ -1,4 +1,4 @@
 {% extends 'premium/base.html' %}
 {% block robots %}noindex,nofollow,noarchive{% endblock %}
 {% block title %}{{ item.title }} — Premium{% endblock %}
-{% block premium_content %}<article class="premium-reading"><p class="premium-eyebrow">{{ kinds[item.kind] }} · {{ 'Acesso aberto' if item.open_access_required else 'Exclusivo Premium' }}</p><h1>{{ item.title }}</h1><p>{{ item.summary }}</p><div class="premium-body">{{ item.body|markdown }}</div></article>{% endblock %}
+{% block premium_content %}<nav class="premium-nav" aria-label="Navegação do conteúdo"><a href="{{ url_for('premium.library') }}">← Biblioteca</a></nav><article class="premium-reading"><p class="premium-eyebrow">{{ kinds[item.kind] }} · {{ 'Acesso aberto' if item.open_access_required else 'Exclusivo Premium' }}</p><h1>{{ item.title }}</h1>{% if item.category %}<p class="premium-badge">{{ item.category }}</p>{% endif %}<p>{{ item.summary }}</p><div class="premium-body">{{ item.body|markdown }}</div></article>{% endblock %}

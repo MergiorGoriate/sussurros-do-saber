@@ -14,6 +14,7 @@ class PremiumPlan(db.Model):
     price_minor = db.Column(db.Integer, nullable=False, default=0)
     currency = db.Column(db.String(3), nullable=False, default='MZN')
     description = db.Column(db.Text, nullable=False, default='')
+    benefits = db.Column(db.JSON, nullable=False, default=list, server_default='[]')
     active = db.Column(db.Boolean, nullable=False, default=False)
     version = db.Column(db.Integer, nullable=False, default=1)
     __mapper_args__ = {'version_id_col': version}
@@ -46,6 +47,7 @@ class PremiumContent(db.Model):
     title = db.Column(db.String(180), nullable=False)
     kind = db.Column(db.String(15), nullable=False)
     summary = db.Column(db.String(1000), nullable=False)
+    category = db.Column(db.String(80), nullable=False, default='', server_default='')
     body = db.Column(db.Text, nullable=False)
     published = db.Column(db.Boolean, nullable=False, default=False, index=True)
     open_access_required = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
