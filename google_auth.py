@@ -144,13 +144,15 @@ def login():
     except IntegrityError:
         db.session.rollback()
         return jsonify(ok=False, message='Tente novamente para concluir a entrada.'), 409
+    from premium_return import preserve_intent, resume_url
+    premium_token=preserve_intent() if request.form.get('premium_return') else None
     session.clear()
     session.permanent = True
     session['researcher_id'], session['researcher_nonce'] = account.id, account.token_nonce
     picture = profile_picture(claims.get('picture'))
     if picture:
         session['google_picture'] = picture
-    return jsonify(ok=True, verified=account.verified, csrf=csrf_token())
+    return jsonify(ok=True, verified=account.verified, csrf=csrf_token(),redirect_to=resume_url(account,premium_token))
 
 
 def install_google_cli(app):

@@ -10,7 +10,7 @@
       <a href="{{ url_for('premium.library') }}" {% if request.endpoint=='premium.library' %}aria-current="page"{% endif %}>Biblioteca exclusiva</a>
       <a href="/artigos">Artigos gratuitos</a>
       <a href="/revistas">Revista científica</a>
-      {% if researcher %}<a href="{{ url_for('billing.history') }}">Assinatura e pagamentos</a>{% endif %}
+      {% if researcher %}<a href="{{ url_for('billing.history') }}">A minha assinatura</a>{% endif %}
     </div>
   </nav>
   {% block premium_content %}{% endblock %}

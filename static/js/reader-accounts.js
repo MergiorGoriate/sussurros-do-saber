@@ -37,6 +37,8 @@
   };
   const post = (path, fields = {}) => {
     const data = new FormData(); data.set('csrf_token', csrf);
+    const premiumIntent=document.querySelector('input[name="premium_return"]')?.value;
+    if(premiumIntent && ['/conta/entrar','/conta/google/entrar'].includes(path))data.set('premium_return',premiumIntent);
     for (const [key, value] of Object.entries(fields)) data.set(key, String(value));
     return api(path, data);
   };
@@ -119,6 +121,7 @@
   };
   const finishLogin = async result => {
     csrf = result.csrf;
+    if(result.redirect_to && /^\/(?:premium\/aderir\/\d+|submissoes\/confirmacao)(?:\?|$)/.test(result.redirect_to)){location.assign(result.redirect_to);return;}
     try {await importLegacy();} catch {status.textContent = 'A conta está activa. Os favoritos antigos serão importados na próxima visita.';}
     await refresh();
     const callback = pending; pending = null;
