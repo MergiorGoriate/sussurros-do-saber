@@ -128,6 +128,10 @@ app.register_blueprint(reader_bp)
 from premium import premium_bp, premium_admin_bp
 app.register_blueprint(premium_bp)
 app.register_blueprint(premium_admin_bp)
+from billing import billing_bp, finance_bp, install_billing_cli
+app.register_blueprint(billing_bp)
+app.register_blueprint(finance_bp)
+install_billing_cli(app)
 install_submission_cli(app)
 from google_auth import google_bp, install_google_cli
 app.register_blueprint(google_bp)
@@ -1528,6 +1532,9 @@ def seed_database():
         # existentes. As migrações leves precisam ocorrer antes de qualquer SELECT
         # ORM de Journal/Article que já inclua colunas recém-adicionadas.
         db.create_all()
+        from billing_schema import upgrade_billing_schema
+        upgrade_billing_schema(db.session.connection())
+        db.session.commit()
         from premium_schema import upgrade_premium_schema
         upgrade_premium_schema(db.session.connection())
         db.session.commit()

@@ -48,6 +48,7 @@ class PremiumContent(db.Model):
     summary = db.Column(db.String(1000), nullable=False)
     body = db.Column(db.Text, nullable=False)
     published = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    open_access_required = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
     version = db.Column(db.Integer, nullable=False, default=1)
     __mapper_args__ = {'version_id_col': version}

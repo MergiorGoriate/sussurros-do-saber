@@ -1,4 +1,4 @@
-"""Premium phase one: no checkout, payment callbacks or automatic debits."""
+"""Premium catalogue and complimentary access; payments live in billing.py."""
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
@@ -23,7 +23,13 @@ INTERVALS = {'monthly': 'Mensal', 'annual': 'Anual'}
 def subscription_for(account):
     if not account or not account.active or not account.verified:
         return None
-    return PremiumSubscription.query.filter_by(owner_id=account.id).first()
+    subscription = PremiumSubscription.query.filter_by(owner_id=account.id).first()
+    if subscription and subscription.source == 'billing':
+        from billing_models import BillingAccount
+        billing_account = db.session.get(BillingAccount, (account.id, True))
+        if billing_account and (billing_account.suspended or billing_account.risk_hold):
+            return None
+    return subscription
 
 
 def entitled(subscription, now=None):
@@ -69,7 +75,7 @@ def library():
     if kind and kind not in KINDS:
         abort(400)
     query = PremiumContent.query.options(load_only(PremiumContent.id, PremiumContent.title, PremiumContent.kind,
-                                                   PremiumContent.summary)).filter_by(published=True)
+                                                   PremiumContent.summary, PremiumContent.open_access_required)).filter_by(published=True)
     if kind:
         query = query.filter_by(kind=kind)
     page = request.args.get('page', '1')
@@ -84,8 +90,8 @@ def library():
 def content(ident):
     # Load no protected body before checking identity, verification and dates.
     item = PremiumContent.query.options(load_only(PremiumContent.id, PremiumContent.title, PremiumContent.kind,
-                                                   PremiumContent.summary)).filter_by(id=ident, published=True).first_or_404()
-    if not entitled(subscription_for(researcher())):
+                                                   PremiumContent.summary, PremiumContent.open_access_required)).filter_by(id=ident, published=True).first_or_404()
+    if not item.open_access_required and not entitled(subscription_for(researcher())):
         return render_template('premium/locked.html', item=item), 403
     return render_template('premium/content.html', item=item, kinds=KINDS)
 
@@ -198,7 +204,7 @@ def edit_content(ident):
         try:
             values = dict(title=text_field('title', 180), kind=choice('kind', KINDS),
                           summary=text_field('summary', 1000), body=text_field('body', 200000),
-                          published=request.form.get('published') == 'on')
+                          published=request.form.get('published') == 'on', open_access_required=request.form.get('open_access_required') == 'on')
             if record is None:
                 record = PremiumContent()
                 db.session.add(record)
@@ -269,6 +275,8 @@ def grant():
 @limiter.limit('30 per hour', methods=['POST'])
 def subscription(ident):
     record = db.get_or_404(PremiumSubscription, ident)
+    if record.source == 'billing':
+        return redirect(url_for('premium_finance.dashboard'))
     error = None
     if request.method == 'POST':
         validate_csrf()
