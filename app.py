@@ -1116,7 +1116,7 @@ def api_articles():
             "author": article.author,
             "date": article.date,
             "read_time": article.read_time,
-            "image": article.image,
+            "image": article.cover_poster,
         }
         for article in articles
     ])
@@ -1159,7 +1159,7 @@ def sitemap():
     article_entries = []
     for article in public_articles:
         article_url = escape(SITE_URL + url_for("article", slug=article.slug))
-        cover_url = safe_image_url(article.image)
+        cover_url = safe_image_url(article.cover_poster)
         image_xml = ""
         if cover_url:
             image_xml = (
