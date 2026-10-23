@@ -1,5 +1,7 @@
 # Sussurros do Saber Premium: implementação e relatório
 
+**Continuação do desenvolvimento:** esta página conserva o relatório histórico da primeira fase. A implementação de pagamentos, a configuração actual e o relatório da segunda fase estão em [PREMIUM_PAYMENTS.md](PREMIUM_PAYMENTS.md). As cobranças reais continuam dependentes de activação e credenciais.
+
 Data: 23 de Outubro de 2026. Base analisada: `37973d1fcef1d2c8ce9bec08b136a54e67eab8c2`, ramo `main` de `MergiorGoriate/sussurros-do-saber`.
 
 ## Resultado e âmbito desta entrega
