@@ -872,7 +872,7 @@ def primary_publish_article(article, workflow):
     audit('article.publish', 'article', article.id, detail)
 
 
-def article_saved(article):
+def article_saved(article, *, content_changed=False):
     member=current_member()
     workflow=db.session.get(ArticleWorkflow,article.id)
     if not workflow:
@@ -886,7 +886,7 @@ def article_saved(article):
             db.session.add(workflow)
     if session.get('admin_superuser') and article.status in {'approved','published'}:
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
-        if getattr(article, '_primary_author_changed', False) or workflow.owner_id != (owner.id if owner else None):
+        if content_changed or getattr(article, '_primary_author_changed', False) or workflow.owner_id != (owner.id if owner else None):
             workflow.owner=owner
             workflow.reviewer=workflow.editor=None
             workflow.reviewed_at=None

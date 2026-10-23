@@ -6,6 +6,18 @@ from werkzeug.routing import IntegerConverter
 MAX_DATABASE_ID = 2147483647
 
 
+def database_id(value, *, optional=False):
+    """Reject malformed or overflowing form IDs before binding SQL parameters."""
+    if optional and value in (None, ''):
+        return None
+    if not isinstance(value, str) or not re.fullmatch(r'[0-9]{1,10}', value):
+        raise ValueError('Identificador inválido.')
+    result = int(value)
+    if not 1 <= result <= MAX_DATABASE_ID:
+        raise ValueError('Identificador inválido.')
+    return result
+
+
 class DatabaseIdConverter(IntegerConverter):
     # Numeric routes use INTEGER identifiers and positive submission steps.
     regex = r'[0-9]{1,10}'

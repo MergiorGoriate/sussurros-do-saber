@@ -10,7 +10,7 @@ import secrets
 import struct
 import time
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import quote
 import requests
@@ -21,6 +21,7 @@ from extensions import limiter
 from journal_article import ARTICLE_FIELD_LIMITS
 from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
 from models import AdminUser, Article, Author, Category, Comment, ContactMessage, Journal, Subscriber, EditorialPolicy, db, utcnow
+from request_values import database_id, MAX_DATABASE_ID
 from storage import VideoUploadError, upload_article_video, ImageUploadError, upload_article_image, upload_author_photo, upload_journal_cover
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -719,7 +720,10 @@ def articles():
 
 
 def parse_datetime(value):
-    return datetime.fromisoformat(value) if value else None
+    result = datetime.fromisoformat(value) if value else None
+    if result and result.tzinfo:
+        result = result.astimezone(timezone.utc).replace(tzinfo=None)
+    return result
 
 
 @admin_bp.post("/api/videos")
@@ -775,8 +779,8 @@ def article_form(article_id=None):
             body = request.form.get("body", "")
             status = request.form.get("status", "draft")
             try:
-                author_id = int(request.form.get("author_id", ""))
-                category_id = int(request.form.get("category_id", ""))
+                author_id = database_id(request.form.get("author_id", ""))
+                category_id = database_id(request.form.get("category_id", ""))
                 read_minutes = max(1, min(120, int(request.form.get("read_minutes") or 5)))
                 scheduled_at = parse_datetime(request.form.get("scheduled_at"))
             except (TypeError, ValueError):
@@ -788,12 +792,12 @@ def article_form(article_id=None):
             if status in {"approved", "published", "scheduled"} and len(body.strip()) < 50:
                 flash("Artigos aprovados, publicados ou programados precisam de conteúdo completo.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
-            limits = {"body": 400000, "references": 100000, "keywords": 500, "doi": 180, "slug": 260}
+            limits = {"body": 400000, "references": 100000, "keywords": 500, "doi": 180, "slug": 260, "image": 600}
             if any(len(request.form.get(name, "")) > maximum for name, maximum in limits.items()):
                 flash("Um dos campos excede o limite permitido. Reduza o conteúdo e tente novamente.", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
-            if status == "scheduled" and not scheduled_at:
-                flash("Informe a data e hora da publicação programada.", "error")
+            if status == "scheduled" and (not scheduled_at or scheduled_at <= utcnow()):
+                flash("Informe uma data e hora futuras para a publicação programada (UTC).", "error")
                 return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
@@ -832,7 +836,8 @@ def article_form(article_id=None):
             base_slug = slugify(request.form.get("slug") or article.slug or title) or f"artigo-{article.id or int(datetime.now().timestamp())}"
             candidate, number = base_slug, 2
             while Article.query.filter(Article.slug == candidate, Article.id != article.id).first():
-                candidate, number = f"{base_slug}-{number}", number + 1
+                suffix = f"-{number}"
+                candidate, number = base_slug[:260-len(suffix)] + suffix, number + 1
             article.slug = candidate
             article.background = Article.normalize_background(request.form.get("background"))
             article.summary = summary
@@ -860,7 +865,7 @@ def article_form(article_id=None):
             if not article.id:
                 db.session.add(article)
             db.session.flush()
-            article_saved(article)
+            article_saved(article, content_changed=previous_content is not None and previous_content != snapshot(article))
             if previous_content and not ArticleRevision.query.with_entities(ArticleRevision.id).filter_by(article_id=article.id).first():
                 record_revision(article, content=previous_content, baseline=True,
                                 reason='Conteúdo anterior ao primeiro registo', created_at=previous_updated_at)
@@ -900,7 +905,7 @@ def authors():
         name = request.form.get("name", "").strip()
         author_id = request.form.get("author_id")
         try:
-            parsed_author_id = int(author_id) if author_id else None
+            parsed_author_id = database_id(author_id, optional=True)
         except (TypeError, ValueError):
             flash("Identificador de autor inválido.", "error")
             return redirect(url_for("admin.authors"))
@@ -909,7 +914,7 @@ def authors():
             abort(404)
 
         requested_slug = slugify(request.form.get("slug", "").strip() or name)
-        email = request.form.get("email", "").strip() or None
+        email = request.form.get("email", "").strip().lower() or None
         headline = request.form.get("headline", "").strip()
         role = request.form.get("role", "").strip()
         institution = request.form.get("institution", "").strip()
@@ -921,25 +926,25 @@ def authors():
         photo_url = request.form.get("photo_url", "").strip()
         photo_file = request.files.get("photo_file")
         duplicate_slug = Author.query.filter(Author.slug == requested_slug, Author.id != author.id).first()
-        duplicate_email = email and Author.query.filter(Author.email == email, Author.id != author.id).first()
+        duplicate_email = email and Author.query.filter(db.func.lower(Author.email) == email, Author.id != author.id).first()
 
-        if not name:
-            flash("Informe o nome do autor.", "error")
-        elif not requested_slug:
-            flash("Informe uma URL válida para o perfil.", "error")
+        if not 1 <= len(name) <= 120:
+            flash("O nome do autor deve ter entre 1 e 120 caracteres.", "error")
+        elif not requested_slug or len(requested_slug) > 160:
+            flash("Informe uma URL válida para o perfil, com até 160 caracteres.", "error")
         elif duplicate_slug:
             flash("Esta URL de autor já está em uso.", "error")
         elif duplicate_email:
             flash("Este e-mail já pertence a outro autor.", "error")
-        elif email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        elif email and (len(email) > 180 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)):
             flash("Informe um e-mail válido.", "error")
-        elif orcid and not re.fullmatch(r"\d{4}-\d{4}-\d{4}-[\dX]{4}", orcid, re.I):
+        elif orcid and not re.fullmatch(r"[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]", orcid, re.I):
             flash("Informe o ORCID no formato 0000-0000-0000-0000.", "error")
-        elif google_scholar and not re.fullmatch(r"https?://[^\s]+", google_scholar, re.I):
+        elif google_scholar and (len(google_scholar) > 600 or not re.fullmatch(r"https?://[^\s]+", google_scholar, re.I)):
             flash("Informe um endereço válido do Google Scholar.", "error")
-        elif researchgate and not re.fullmatch(r"https?://[^\s]+", researchgate, re.I):
+        elif researchgate and (len(researchgate) > 600 or not re.fullmatch(r"https?://[^\s]+", researchgate, re.I)):
             flash("Informe um endereço válido do ResearchGate.", "error")
-        elif photo_url and not re.fullmatch(r"https?://[^\s]+", photo_url, re.I):
+        elif photo_url and (len(photo_url) > 600 or not re.fullmatch(r"https?://[^\s]+", photo_url, re.I)):
             flash("Informe um endereço válido para a fotografia.", "error")
         else:
             try:
@@ -968,7 +973,7 @@ def authors():
             author.researchgate = researchgate
             author.publications = request.form.get("publications", "").strip()
             author.editorial_experience = request.form.get("editorial_experience", "").strip()
-            author.display_order = max(0, request.form.get("display_order", 100, type=int) or 100)
+            author.display_order = min(MAX_DATABASE_ID, max(0, request.form.get("display_order", 100, type=int) or 100))
             if request.form.get("active_present") == "1":
                 author.active = request.form.get("active") == "on"
             elif not author.id:
@@ -1002,7 +1007,7 @@ def categories():
         name = request.form.get("name", "").strip()
         category_id = request.form.get("category_id")
         try:
-            parsed_category_id = int(category_id) if category_id else None
+            parsed_category_id = database_id(category_id, optional=True)
         except (TypeError, ValueError):
             flash("Identificador de categoria inválido.", "error")
             return redirect(url_for("admin.categories"))
@@ -1010,8 +1015,14 @@ def categories():
         if parsed_category_id and not category:
             abort(404)
         duplicate = Category.query.filter(Category.name == name, Category.id != category.id).first()
-        if name and not duplicate:
-            category.name = name; category.slug = slugify(name)
+        slug = slugify(name)
+        duplicate_slug = Category.query.filter(Category.slug == slug, Category.id != category.id).first()
+        if not 1 <= len(name) <= 80 or not slug:
+            flash("Informe uma categoria com até 80 caracteres e um endereço válido.", "error")
+        elif duplicate or duplicate_slug:
+            flash("Já existe uma categoria com este nome ou endereço.", "error")
+        else:
+            category.name = name; category.slug = slug
             if not category.id:
                 db.session.add(category)
             db.session.commit(); flash("Categoria guardada.", "success")
@@ -1340,14 +1351,3 @@ def export_contacts():
 def export_subscribers():
     rows = Subscriber.query.order_by(Subscriber.created_at.desc()).all()
     return csv_download("subscritores.csv", ["E-mail", "Ativo", "Data"], ((x.email, "sim" if x.active else "não", x.created_at.isoformat()) for x in rows))
-
-
-
-
-
-
-
-
-
-
-
