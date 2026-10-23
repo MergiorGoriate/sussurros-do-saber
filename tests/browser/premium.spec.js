@@ -7,6 +7,8 @@ for(const width of [320,768,1440]){
  test(`Premium layout and keyboard at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:900});
   await page.goto('/premium');
+  const reject=page.getByRole('button',{name:'Recusar não essenciais',exact:true});
+  if(await reject.isVisible())await reject.click();
   await expect(page.getByRole('heading',{level:1})).toHaveText('Mais espaço para aprender.');
   await expect(page.getByText('O conhecimento científico continua aberto')).toBeVisible();
   for(const dark of [false,true]){
@@ -78,4 +80,32 @@ test('library combines search and category without exposing reserved body',async
  await page.getByLabel('Pesquisar recursos',{exact:true}).fill('sem-resultado-inexistente');
  await page.getByRole('button',{name:'Filtrar',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Sem resultados para estes filtros'})).toBeVisible();
+});
+
+for(const width of [320,768,1440]){
+ test(`Premium administration layout at ${width}px`,async({page,context})=>{
+  await cookie(context,fixture.admin_cookie);
+  await page.setViewportSize({width,height:1000});
+  await page.goto('/admin/premium/');
+  await expect(page.getByRole('navigation',{name:'Gestão Premium'}).getByRole('link',{name:'Visão geral',exact:true})).toHaveAttribute('aria-current','page');
+  await expect(page.getByRole('heading',{name:'Planos Premium',exact:true})).toBeVisible();
+  for(const dark of [false,true]){
+   await page.evaluate(dark=>document.body.classList.toggle('admin-dark',dark),dark);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+   await page.screenshot({path:`test-results/admin-premium-${width}-${dark?'dark':'light'}.png`,fullPage:true});
+  }
+ });
+}
+test('a single configured plan stays readable on desktop',async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto('/premium');
+ const reject=page.getByRole('button',{name:'Recusar não essenciais',exact:true});
+ if(await reject.isVisible())await reject.click();
+ // Exercise the one-card layout without changing configured products or prices.
+ await page.locator('.premium-plan-card').evaluateAll(cards=>cards.slice(1).forEach(card=>card.remove()));
+ const card=page.locator('.premium-plan-card');
+ await expect(card).toHaveCount(1);
+ const box=await card.boundingBox();
+ expect(box.width).toBeLessThanOrEqual(541);
+ await card.screenshot({path:'test-results/premium-single-plan.png'});
 });
