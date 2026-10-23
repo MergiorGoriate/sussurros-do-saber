@@ -35,6 +35,7 @@
  });
  document.querySelectorAll('[data-metrics-target]').forEach(button=>{
   const panel=document.getElementById(button.dataset.metricsTarget);if(!panel)return;
+  panel.dataset.metricsEnhanced="true";
   button.hidden=false;
   button.addEventListener('click',()=>{panel.open=!panel.open;button.setAttribute('aria-expanded',String(panel.open));if(panel.open){panel.scrollIntoView({block:'start',behavior:'auto'});panel.querySelector('summary').focus();}});
   panel.addEventListener('toggle',()=>button.setAttribute('aria-expanded',String(panel.open)));

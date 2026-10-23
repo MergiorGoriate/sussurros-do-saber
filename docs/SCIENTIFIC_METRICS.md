@@ -67,7 +67,7 @@ A instalação inicial regista a data de início para os registos existentes; n�
 python -m alembic upgrade head
 ```
 
-Usar a configuração e cópia de segurança habituais da plataforma antes da migração. O caminho de desenvolvimento com actualização automática de esquema também regista as tabelas; produção deve utilizar Alembic.
+Usar a configuração e cópia de segurança habituais da plataforma antes da migração. Reiniciar os trabalhadores com código e templates da mesma versão. SQLite necessita de suporte a `RETURNING`; PostgreSQL usa confirmação explícita por `RETURNING`. O caminho de desenvolvimento com actualização automática de esquema também regista as tabelas; produção deve utilizar Alembic.
 
 ## Fontes, significado e actualização
 
@@ -133,15 +133,19 @@ Resultados locais executados:
 | `python -m unittest discover -s tests -p 'test_*.py'` | 564 testes descobertos: 563 aprovados e 1 omitido por exigir PostgreSQL isolado; 126,253 s |
 | `PYTHONPATH=tests python -m unittest test_scientific_metrics test_scientific_metrics_migration` | 28 aprovados; inclui migração e conflitos de chaves estrangeiras em SQLite |
 | Testes específicos de métricas em Chromium | 6 aprovados, incluindo PDF real, filtros, 320/768/1440 px e uso sem JavaScript |
+| Regressão alargada local de Chromium, sem repetições automáticas | 157 cenários: 151 aprovados, 4 CMP omitidos intencionalmente e 2 falhas; ver resolução abaixo |
+| Reexecução após correcção do espaço na leitura (`scientific-metrics.spec.js` e `site.spec.js`) | 32 aprovados; inclui os seis cenários de métricas e o espaçamento de 16–24 px preservado |
+| Reexecução de `article-backgrounds.spec.js` | 3 aprovados; a medição de contraste do portal falhou intermitentemente na execução alargada e passou sem modificar essa página |
+| PostgreSQL 18 no CI, após correcção de `RETURNING` | Migração repetida, teste concorrente de 32 pedidos, chaves estrangeiras e restauro aprovados; [execução 39984251711](https://github.com/MergiorGoriate/sussurros-do-saber/actions/runs/39984251711) |
 | `node --test tests/consent.test.cjs` | 6 aprovados |
 | CMP em Chromium, serviços Google simulados e opção activada | 4 aprovados |
 | Compilação dos cinco módulos Python e `node --check` do JavaScript | Sem erros |
 
-A regressão alargada em navegador e o teste PostgreSQL do CI são registados após conclusão. A execução local de Chromium utilizou o binário headless `@sparticuz/chromium` num ambiente temporário, sem acrescentar dependências ao projecto. Foram inspeccionadas capturas dos painéis público e administrativo; dados das capturas são sintéticos. As integrações externas são testadas com respostas simuladas identificadas, sem publicar dados de teste ou pedir credenciais reais. As fixtures em navegador exigem SQLite isolado e recusam ambiente de produção.
+A verificação integral do commit final no CI é acompanhada no [PR #274](https://github.com/MergiorGoriate/sussurros-do-saber/pull/274); o resumo final do PR identifica o resultado dessa execução. As duas falhas locais descritas acima não foram ocultadas: o espaço foi corrigido e retestado, e o contraste transitório foi reexecutado sem alterações alheias ao módulo. A execução local de Chromium utilizou o binário headless `@sparticuz/chromium` num ambiente temporário, sem acrescentar dependências ao projecto. Foram inspeccionadas capturas dos painéis público e administrativo; dados das capturas são sintéticos. As integrações externas são testadas com respostas simuladas identificadas, sem publicar dados de teste ou pedir credenciais reais. As fixtures em navegador exigem SQLite isolado e recusam ambiente de produção.
 
 Cobertura específica: deduplicação e viragem do dia; distinção HTML/PDF; status HTTP; robots, prefetch, DNT/GPC; falsificação de proxy/país; confiança explícita no proxy; artigos do portal, apresentações e rascunhos excluídos; indisponibilidade da base; períodos, edição/autor/ano/artigo; agregações; DOI duplicado; valores desconhecidos/zero; antiguidade; fontes separadas; licenças; autenticação, âmbito e revogação; CSV; 429/erros/limites de fornecedor; correspondência assistida; migração preservando conteúdos; eliminação editorial com chaves estrangeiras.
 
-Problemas encontrados e corrigidos durante a validação: restrição de chave estrangeira que impediria eliminações permitidas; compatibilidade da migração com esquemas históricos parciais; texto sem dados a quebrar de forma pouco legível nos cartões; selectores dos testes em navegador ajustados aos papéis acessíveis efectivos.
+Problemas encontrados e corrigidos durante a validação: restrição de chave estrangeira que impediria eliminações permitidas; compatibilidade da migração com esquemas históricos parciais; deduplicação e leases corrigidos com `RETURNING`, porque o driver PostgreSQL não garante um `rowcount` utilizável nestas instruções; painel fechado que aumentava o espaço antes do texto científico, agora ocultado progressivamente quando o botão JavaScript está disponível (o resumo nativo continua disponível sem JavaScript); texto sem dados a quebrar de forma pouco legível nos cartões; selectores dos testes em navegador ajustados aos papéis acessíveis efectivos.
 
 ## Activação e limitações conhecidas
 

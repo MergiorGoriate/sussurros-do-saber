@@ -27,3 +27,5 @@
 .journal-page .journal-article-actions .science-metrics-open{width:auto;min-width:110px;height:auto;min-height:44px;border:1px solid #c3cfdd;border-radius:9px;padding:10px 14px;font:600 13px/1.5 Inter,Arial,sans-serif}
 
 .science-stat strong.science-unavailable{font-size:1rem;line-height:1.5;overflow-wrap:normal;word-break:normal}
+
+.science-panel[data-metrics-enhanced]:not([open]){display:none}
