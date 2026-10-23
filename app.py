@@ -930,10 +930,8 @@ def journals():
             Journal.field, Journal.description, Journal.summary, Journal.abstract,
             Journal.keywords, Journal.abstract_keywords, Journal.authors_data,
             Journal.authors_orcid, Journal.doi, Journal.current_issue))
-    from scientific_metrics import catalogue_metrics
-    scientific_summary,scientific_issues=catalogue_metrics()
     return render_template(
-        "journals.html", scientific_summary=scientific_summary,scientific_issues=scientific_issues,
+        "journals.html",
         journals=results.order_by(Journal.title, Journal.id).all(),
         query=query,
     )
