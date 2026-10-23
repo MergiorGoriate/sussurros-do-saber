@@ -132,9 +132,15 @@ class ScientificMetricsTests(unittest.TestCase):
         if portal:self.assertEqual(self.client.get('/artigo/'+portal.slug,headers=self.headers).status_code,200)
         self.assertEqual(self.client.get(self.path(self.draft),headers=self.headers).status_code,404)
         self.assertEqual(self.client.get(self.path(self.venue),headers=self.headers).status_code,200)
-        self.primary();self.client.get(f'/admin/revistas/{self.j.id}/previsualizar',headers=self.headers)
+        self.primary()
+        for item in (self.j,self.draft):
+            preview=self.client.get(f'/admin/revistas/{item.id}/previsualizar',headers=self.headers)
+            self.assertEqual(preview.status_code,200)
+            self.assertIn('Métricas Científicas',preview.text)
+            self.assertIn('scientific-metrics-dialog',preview.text)
+        self.assertIn('após a publicação',preview.text)
         self.assertEqual(self.total(),0)
-        self.assertNotIn('Ver métricas',self.client.get(self.path(self.venue)).text)
+        self.assertNotIn('Métricas Científicas',self.client.get(self.path(self.venue)).text)
 
     def test_day_boundary_receipt_rotation(self):
         now=utcnow()
@@ -153,7 +159,7 @@ class ScientificMetricsTests(unittest.TestCase):
             for path in [self.path(),self.path()+'/metricas','/metricas-cientificas','/revistas']:
                 response=self.client.get(path)
                 self.assertEqual(response.status_code,200)
-        self.assertIn('Ver métricas',self.client.get(self.path()).text)
+        self.assertIn('Métricas Científicas',self.client.get(self.path()).text)
         self.assertEqual(self.client.get(self.path(self.draft)+'/metricas').status_code,404)
         self.assertEqual(self.client.get(self.path(self.venue)+'/metricas').status_code,404)
 

@@ -34,10 +34,23 @@
   root.querySelectorAll('[data-series]').forEach(button=>button.addEventListener('click',()=>{root.querySelectorAll('[data-series]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));draw(button.dataset.series);}));draw('views');
  });
  document.querySelectorAll('[data-metrics-target]').forEach(button=>{
-  const panel=document.getElementById(button.dataset.metricsTarget);if(!panel)return;
-  panel.dataset.metricsEnhanced="true";
-  button.hidden=false;
-  button.addEventListener('click',()=>{panel.open=!panel.open;button.setAttribute('aria-expanded',String(panel.open));if(panel.open){panel.scrollIntoView({block:'start',behavior:'auto'});panel.querySelector('summary').focus();}});
-  panel.addEventListener('toggle',()=>button.setAttribute('aria-expanded',String(panel.open)));
+  const panel=document.getElementById(button.dataset.metricsTarget);
+  const dialog=document.getElementById(button.getAttribute('aria-controls'));
+  if(!panel||!dialog||typeof dialog.showModal!=='function')return;
+  dialog.querySelector('[data-metrics-body]').append(panel);
+  panel.open=true;
+  button.setAttribute('role','button');
+  button.addEventListener('keydown',event=>{if(event.key===' '){event.preventDefault();button.click();}});
+  button.addEventListener('click',event=>{
+   event.preventDefault();
+   if(!dialog.open){dialog.showModal();document.documentElement.classList.add('science-modal-open');}
+  });
+  dialog.querySelector('[data-metrics-close]').addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('click',event=>{
+   if(event.target!==dialog)return;
+   const bounds=dialog.getBoundingClientRect();
+   if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)dialog.close();
+  });
+  dialog.addEventListener('close',()=>{if(dialog.open)return;document.documentElement.classList.remove('science-modal-open');button.focus();});
  });
 })();

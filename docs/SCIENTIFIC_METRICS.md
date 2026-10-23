@@ -156,3 +156,13 @@ As APIs reais não foram certificadas em produção; são necessários configura
 Para grande volume, mover agregações do relatório para SQL/materializações e exportação para streaming/tarefa assíncrona: actualmente a tabela visível é paginada, mas o relatório agrega os registos seleccionados em memória. Recolha faz transacção curta e não consulta APIs externas. Avaliar retenção e capacidade a partir de tráfego real; não foram inventados benchmarks.
 
 Recomendação: activar primeiro as métricas internas e confirmar qualidade da classificação e da recolha. Depois validar cobertura DOI por fornecedor e activar a actualização agendada. Só disponibilizar indicadores altmétricos após licença e comunicação clara dos limites. Um futuro programa de parcerias universitárias pode apoiar a normalização de DOI/ORCID e a revisão da qualidade dos indicadores, sem condicionar o acesso aberto.
+
+## Actualização: janela de métricas no artigo
+
+O botão circular «Métricas Científicas», junto das acções do artigo, abre um `dialog` nativo com os indicadores, gráficos e fontes já existentes. O conteúdo é reutilizado, sem novos endpoints ou tabelas. A janela adapta-se ao ecrã e aos temas claro/escuro, mantém o foco no seu interior, permite fechar pelo botão, Escape ou clique no fundo e devolve o foco ao botão de origem. A deslocação vertical da página fica suspensa enquanto a janela está aberta.
+
+O botão também aparece na pré-visualização administrativa autorizada. Rascunhos mostram uma mensagem de disponibilidade após publicação; não há link público para um rascunho nem contagens simuladas. As pré-visualizações continuam excluídas das visualizações contabilizadas. Sem JavaScript, o botão de artigos publicados mantém a ligação à página pública de métricas e conserva-se o resumo expansível nativo.
+
+Alterados: `app.py`, `templates/journal.html`, `static/css/scientific-metrics.css`, `static/js/scientific-metrics.js`, os testes `tests/test_scientific_metrics.py` e `tests/browser/scientific-metrics.spec.js`, e este documento. Não há migração adicional.
+
+Validação desta alteração: `PYTHONPATH=tests python -m unittest test_scientific_metrics test_platform` — 102 aprovados; Playwright em Chromium, `scientific-metrics.spec.js` e `site.spec.js` — 34 aprovados. Inclui 320/768/1440 px, ambos os temas, navegação por Tab/Enter/Espaço, foco dentro da janela e devolvido ao botão, fecho por Escape/botão/fundo, botão de fechar visível durante a deslocação, ausência de transbordo horizontal, pré-visualização sem novas contagens, acesso sem JavaScript, citações e espaçamento de leitura. `node --check static/js/scientific-metrics.js` sem erros. Não foram testados Safari/Firefox nesta alteração.

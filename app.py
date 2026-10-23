@@ -992,8 +992,8 @@ def render_journal(journal):
     article_title, content = journal_article_content(journal)
     from scientific_metrics_collection import scientific
     from scientific_metrics import article_metrics, SOURCES, STATES
-    eligible = request.endpoint == 'journal_detail' and scientific(journal)
-    metrics_data, metrics_options = article_metrics(journal) if eligible else (None, None)
+    eligible = request.endpoint in {'journal_detail', 'journal_preview'} and bool((journal.content_markdown or '').strip())
+    metrics_data, metrics_options = article_metrics(journal) if eligible and scientific(journal) else (None, None)
     return render_template("journal.html", metrics_data=metrics_data, metrics_options=metrics_options,
                            metrics_sources=SOURCES, metrics_states=STATES, scientific_eligible=eligible, journal=journal,
                            article_title=article_title, journal_content=Markup(content), journal_authors=journal_authors(journal),

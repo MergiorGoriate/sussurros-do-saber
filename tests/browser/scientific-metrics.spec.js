@@ -7,19 +7,31 @@ for(const width of [320,768,1440]){
  test(`public scientific metrics and charts at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:1000});
   await page.goto(`/revistas/${fixture.slug}`);await rejectCookies(page);
-  const button=page.getByRole('button',{name:'Ver métricas',exact:true});await expect(button).toBeVisible();
+  const button=page.getByRole('button',{name:'Métricas Científicas',exact:true});await expect(button).toBeVisible();
   await button.focus();await page.keyboard.press('Enter');
-  await expect(page.locator('#scientific-metrics-panel')).toHaveAttribute('open','');
+  await expect(page.getByRole('dialog',{name:'Métricas do artigo',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Fechar métricas',exact:true})).toBeFocused();
+  expect(await page.locator('#scientific-metrics-dialog').evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBeTruthy();
+  for(let i=0;i<6;i++){await page.keyboard.press('Tab');expect(await page.locator('#scientific-metrics-dialog').evaluate(node=>node.contains(document.activeElement))).toBeTruthy();}
   await expect(page.locator('#scientific-metrics-panel .science-stat').filter({hasText:'Citações'}).locator('strong')).toHaveText('2');
   await expect(page.locator('#scientific-metrics-panel').getByRole('rowheader',{name:'MZ',exact:true})).toBeVisible();
   await expect(page.locator('#scientific-metrics-panel').getByRole('rowheader',{name:'ZA',exact:true})).toHaveCount(0);
   await page.locator('#scientific-metrics-panel').getByRole('button',{name:'Downloads',exact:true}).click();
   await expect(page.locator('#scientific-metrics-panel [data-chart-status]')).toContainText('downloads');
+  await expect(page.getByRole('button',{name:'Fechar métricas',exact:true})).toBeInViewport();
   for(const dark of [false,true]){
    await page.evaluate(dark=>document.documentElement.classList.toggle('dark',dark),dark);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
-   await page.locator('#scientific-metrics-panel').screenshot({path:`test-results/scientific-public-${width}-${dark?'dark':'light'}.png`});
+   await page.locator('#scientific-metrics-dialog').screenshot({path:`test-results/scientific-public-${width}-${dark?'dark':'light'}.png`});
   }
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog',{name:'Métricas do artigo',exact:true})).not.toBeVisible();
+  await expect(button).toBeFocused();
+  await page.keyboard.press('Space');await page.getByRole('button',{name:'Fechar métricas',exact:true}).click();
+  await expect(button).toBeFocused();
+  await button.click();await page.mouse.click(1,1);
+  await expect(page.getByRole('dialog',{name:'Métricas do artigo',exact:true})).not.toBeVisible();
+  await expect(page.locator('html')).not.toHaveClass(/science-modal-open/);
  });
 }
 test('scientific administration filters, export and scoped navigation',async({page,context})=>{
@@ -61,4 +73,19 @@ test('scientific metrics are usable without JavaScript',async({browser})=>{
  await expect(page.getByText('Consultar dados do gráfico',{exact:true})).toBeVisible();
  await page.getByText('Consultar dados do gráfico',{exact:true}).click();
  await expect(page.getByRole('table').first()).toBeVisible();await context.close();
+});
+
+test('administrative preview opens scientific metrics without counting a visit',async({page,context})=>{
+ await context.addCookies([{name:'session',value:fixture.admin_cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
+ await page.goto(`/admin/revistas/${fixture.id}/previsualizar`);
+ await page.getByRole('button',{name:'Métricas Científicas',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Métricas do artigo',exact:true})).toBeVisible();
+ await expect(page.locator('#scientific-metrics-panel .science-stat').filter({hasText:'Visualizações'}).locator('strong')).toHaveText('10');
+});
+test('article metrics link works without JavaScript',async({browser})=>{
+ const context=await browser.newContext({javaScriptEnabled:false});const page=await context.newPage();
+ await page.goto(`/revistas/${fixture.slug}`);
+ await page.getByRole('link',{name:'Métricas Científicas',exact:true}).click();
+ await expect(page).toHaveURL(new RegExp(`/revistas/${fixture.slug}/metricas$`));
+ await expect(page.getByRole('heading',{name:'Métricas do artigo',exact:true})).toBeVisible();await context.close();
 });
