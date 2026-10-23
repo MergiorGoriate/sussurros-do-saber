@@ -807,20 +807,25 @@ def article_editable(article):
 
 
 def article_statuses(article):
-    # Approval belongs to the workflow; publication has its own route.
-    # Approval and publication are workflow transitions, not form status changes.
-    # Offering these values to superusers causes a 409 for unapproved articles.
+    if session.get('admin_superuser'):
+        return ['draft','review','published']
+    # Secondary accounts must use the existing review and approval workflow.
     return ['draft','review'] if article_editable(article) else []
 
 
 def article_save_guard(article,status,author_id):
     article_edit_access(article)
+    if session.get('admin_superuser') and status in {'approved','published'}:
+        # Authentication refreshes this flag from the live principal account.
+        # Content validation and uploads still run in the existing form handler.
+        article._primary_author_changed = bool(article.id and author_id != article.author_id)
+        return
     if not has_permission('article.edit') and author_id!=current_member().author_id:
         abort(403)
     workflow=db.session.get(ArticleWorkflow,article.id) if article.id else None
     if workflow and author_id != article.author_id:
         owner=TeamMember.query.filter_by(author_id=author_id).first()
-        if (owner and owner.removed_at) or (not owner and not session.get('admin_superuser')):
+        if not session.get('admin_superuser') and (not owner or owner.removed_at):
             abort(409,description='Associe o novo autor a um colaborador antes de alterar a autoria.')
         if status in {'approved','published','scheduled'}:
             abort(409,description='Alterar a autoria exige nova revisão. Guarde como rascunho.')
@@ -848,14 +853,46 @@ def article_save_guard(article,status,author_id):
         workflow.stage=status
 
 
+def primary_publish_article(article, workflow):
+    """Publish by an explicit principal decision without inventing a review."""
+    if not session.get('admin_superuser'):
+        abort(403)
+    if len((article.body or '').strip()) < 50:
+        abort(400, description='A publicação exige conteúdo completo.')
+    now = utcnow()
+    workflow.stage = article.status = 'published'
+    workflow.approved_at = now
+    workflow.editor = current_member()
+    article.scheduled_at = None
+    article.published_at = article.published_at or now
+    article.updated_at = now
+    db.session.add(workflow)
+    detail = 'Decisão directa do administrador principal; revisão dispensada.'
+    audit('article.approve', 'article', article.id, detail)
+    audit('article.publish', 'article', article.id, detail)
+
+
 def article_saved(article):
     member=current_member()
     workflow=db.session.get(ArticleWorkflow,article.id)
     if not workflow:
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
-        primary_owned = not owner and session.get('admin_superuser') and article.status in {'draft','review'}
+        primary_owned = not owner and session.get('admin_superuser') and article.status in {'draft','review','approved','published'}
         if (owner and not owner.removed_at) or primary_owned:
-            db.session.add(ArticleWorkflow(article_id=article.id,owner=owner,primary_owned=bool(primary_owned),stage='submitted' if article.status=='review' else article.status))
+            workflow=ArticleWorkflow(article_id=article.id,owner=owner,primary_owned=bool(primary_owned),stage='submitted' if article.status=='review' else article.status)
+            db.session.add(workflow)
+        elif session.get('admin_superuser') and article.status in {'approved','published'}:
+            workflow=ArticleWorkflow(article_id=article.id,owner=owner,primary_owned=False)
+            db.session.add(workflow)
+    if session.get('admin_superuser') and article.status in {'approved','published'}:
+        owner=TeamMember.query.filter_by(author_id=article.author_id).first()
+        if getattr(article, '_primary_author_changed', False) or workflow.owner_id != (owner.id if owner else None):
+            workflow.owner=owner
+            workflow.reviewer=workflow.editor=None
+            workflow.reviewed_at=None
+        workflow.primary_owned=owner is None
+        primary_publish_article(article, workflow)
+        article.__dict__.pop('_primary_author_changed', None)
     audit('article.saved','article',article.id,article.status)
 
 
@@ -870,7 +907,7 @@ def article_workflow(ident):
         if not has_permission('article.edit') and not (has_permission('article.write') and current_member() and current_member().author_id==article.author_id):
             abort(409,description='O editor deve iniciar o fluxo deste artigo.')
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
-        if (owner and owner.removed_at) or (not owner and not session.get('admin_superuser')):
+        if not session.get('admin_superuser') and (not owner or owner.removed_at):
             # Missing authorship configuration is recoverable in the admin panel.
             # Do not invent membership or grant permissions to start a workflow.
             if request.method == 'POST':
@@ -889,7 +926,13 @@ def article_workflow(ident):
         action_permission={'assign':'article.edit','reviewed':'article.review','changes':'article.review','approve':'article.approve','publish':'article.publish','schedule':'article.publish','reopen':'article.edit'}
         if action in action_permission:require(action_permission[action])
         member=current_member()
-        if action=='submit' and item.stage in {'draft','changes'}:
+        if session.get('admin_superuser') and action in {'approve','publish'}:
+            if article.status=='published' and item.stage=='published' and item.approved_at:
+                return redirect(url_for('staff.article_workflow',ident=ident))
+            primary_publish_article(article, item)
+            db.session.commit()
+            return redirect(url_for('staff.article_workflow',ident=ident))
+        elif action=='submit' and item.stage in {'draft','changes'}:
             if not has_permission('article.edit') and (not member or member.id!=item.owner_id or not has_permission('article.write')):
                 abort(403)
             item.stage,article.status='submitted','review'

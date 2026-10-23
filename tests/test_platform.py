@@ -58,7 +58,7 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("CMP", client.get("/politica-de-privacidade").get_data(as_text=True))
 
 
-    def test_managed_review_article_cannot_bypass_approval_via_form(self):
+    def test_primary_can_publish_managed_article_directly_via_form(self):
         client = app.test_client()
         with app.app_context():
             author = Author.query.first()
@@ -80,18 +80,21 @@ class PlatformTests(unittest.TestCase):
             article = Article.query.filter_by(title=form["title"]).one()
             identifier, slug = article.id, article.slug
             self.assertEqual(article.status, "review")
-        for state, expected_status in [("review", 302), ("approved", 409), ("published", 409)]:
+        for state, expected_status in [("review", 302)]:
             response = client.post(f"/admin/artigos/{identifier}/editar", data=dict(form, status=state))
             self.assertEqual(response.status_code, expected_status)
             self.assertEqual(client.get(f"/artigo/{slug}").status_code, 404)
             self.assertNotIn(slug.encode(), client.get("/sitemap.xml").data)
             self.assertNotIn(slug.encode(), client.get("/feed.xml").data)
+        self.assertEqual(client.post(f"/admin/artigos/{identifier}/editar", data=dict(form, status="published")).status_code, 302)
+        self.assertEqual(client.get(f"/artigo/{slug}").status_code, 200)
         with app.app_context():
             from governance_models import ArticleWorkflow
             flow=db.session.get(ArticleWorkflow, identifier)
             self.assertTrue(flow.primary_owned)
-            self.assertEqual(flow.stage, 'submitted')
-            self.assertIsNone(flow.approved_at)
+            self.assertEqual(flow.stage, 'published')
+            self.assertIsNotNone(flow.approved_at)
+            self.assertIsNone(flow.reviewed_at)
             db.session.delete(flow)
             db.session.delete(db.session.get(Article, identifier))
             db.session.commit()

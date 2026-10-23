@@ -85,7 +85,7 @@
   </section>
   <aside class="editor-side">
     {% if article.id %}<a href="{{ url_for('article_history.history',ident=article.id) }}">Histórico de versões e recuperação</a>{% endif %}
-    <label>Estado<select name="status">{% for code in staff_article_statuses(article) %}<option value="{{ code }}" {% if request.form.get('status',article.status)==code %}selected{% endif %}>{{ 'Submeter para revisão' if code=='review' else article_stages[code] }}</option>{% endfor %}</select></label><p>A revisão, aprovação e publicação são realizadas no fluxo editorial.</p>
+    <label>Estado<select name="status">{% for code in staff_article_statuses(article) %}<option value="{{ code }}" {% if request.form.get('status',article.status)==code %}selected{% endif %}>{{ 'Submeter para revisão' if code=='review' else article_stages[code] }}</option>{% endfor %}</select></label><p>{% if current_admin_is_primary %}Pode publicar directamente, sem revisão obrigatória, seleccionando Publicado.{% else %}A revisão, aprovação e publicação são realizadas no fluxo editorial.{% endif %}</p>
     <label>Programar para<input name="scheduled_at" type="datetime-local" value="{{ request.form.get('scheduled_at', article.scheduled_at.strftime('%Y-%m-%dT%H:%M') if article.scheduled_at else '') }}"></label>
     <label>Autor<select name="author_id" required>{% for author in authors if staff_can('article.edit') or (staff_member and author.id==staff_member.author_id) %}<option value="{{ author.id }}" {% if request.form.get('author_id', article.author_id)|string==author.id|string %}selected{% endif %}>{{ author.name }}</option>{% endfor %}</select></label>
     <label>Categoria<select name="category_id" required>{% for category in categories %}<option value="{{ category.id }}" {% if request.form.get('category_id', article.category_id)|string==category.id|string %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
@@ -111,6 +111,3 @@
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-autosave.js', v='20261019-autosave-v1') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/article-cover-player.js',v='20261021-v1') }}" defer></script>
 {% endblock %}
-
-
-
