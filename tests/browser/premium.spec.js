@@ -19,9 +19,16 @@ for(const width of [320,768,1440]){
   await page.keyboard.press('ArrowDown');
   await expect(page.locator('#premium-kind')).toHaveValue('course');
   await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Categoria',{exact:true})).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('button',{name:'Filtrar',exact:true})).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/premium\/biblioteca\?tipo=course$/);
+  await expect(page).toHaveURL(url=>url.pathname==='/premium/biblioteca' && url.searchParams.get('tipo')==='course');
+  for(const dark of [false,true]){
+   await page.evaluate(dark=>document.documentElement.classList.toggle('dark',dark),dark);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+   await page.screenshot({path:`test-results/library-${width}-${dark?'dark':'light'}.png`,fullPage:true});
+  }
  });
 }
 test('anonymous, free reader and subscriber access are distinct',async({page,context})=>{
@@ -59,4 +66,16 @@ test('primary admin grants and cancels complimentary access',async({page,context
  await page.getByRole('button',{name:'Guardar alteração'}).click();
  expect((await readerPage.goto(`/premium/conteudos/${fixture.content_id}`)).status()).toBe(403);
  await reader.close();
+});
+
+test('library combines search and category without exposing reserved body',async({page})=>{
+ await page.goto('/premium/biblioteca');
+ await page.getByLabel('Pesquisar recursos',{exact:true}).fill(fixture.title);
+ await page.getByLabel('Categoria',{exact:true}).selectOption('Investigação de teste');
+ await page.getByRole('button',{name:'Filtrar',exact:true}).click();
+ await expect(page.getByRole('heading',{name:fixture.title})).toBeVisible();
+ expect(await page.content()).not.toContain(fixture.secret);
+ await page.getByLabel('Pesquisar recursos',{exact:true}).fill('sem-resultado-inexistente');
+ await page.getByRole('button',{name:'Filtrar',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Sem resultados para estes filtros'})).toBeVisible();
 });

@@ -2,6 +2,7 @@
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import load_only
 from sqlalchemy.orm.exc import StaleDataError
@@ -74,23 +75,34 @@ def library():
     kind = request.args.get('tipo', '')
     if kind and kind not in KINDS:
         abort(400)
+    search = request.args.get('q', '').strip()
+    category = request.args.get('categoria', '').strip()
+    if len(search) > 120 or len(category) > 80:
+        abort(400)
+    categories = [value for (value,) in db.session.query(PremiumContent.category).filter(
+        PremiumContent.published.is_(True), PremiumContent.category != '').distinct().order_by(PremiumContent.category).all()]
     query = PremiumContent.query.options(load_only(PremiumContent.id, PremiumContent.title, PremiumContent.kind,
-                                                   PremiumContent.summary, PremiumContent.open_access_required)).filter_by(published=True)
+                                                   PremiumContent.summary, PremiumContent.category, PremiumContent.open_access_required)).filter_by(published=True)
     if kind:
         query = query.filter_by(kind=kind)
+    if search:
+        query = query.filter(or_(PremiumContent.title.icontains(search, autoescape=True),
+                                 PremiumContent.summary.icontains(search, autoescape=True)))
+    if category:
+        query = query.filter_by(category=category)
     page = request.args.get('page', '1')
     if not page.isascii() or not page.isdigit() or len(page) > 6 or int(page) < 1:
         abort(400)
     results = query.order_by(PremiumContent.id.desc()).paginate(page=int(page), per_page=12, error_out=False)
     return render_template('premium/library.html', results=results, kinds=KINDS, kind=kind,
-                           has_access=entitled(sub))
+                           has_access=entitled(sub), search=search, category=category, categories=categories)
 
 
 @premium_bp.get('/conteudos/<int:ident>')
 def content(ident):
     # Load no protected body before checking identity, verification and dates.
     item = PremiumContent.query.options(load_only(PremiumContent.id, PremiumContent.title, PremiumContent.kind,
-                                                   PremiumContent.summary, PremiumContent.open_access_required)).filter_by(id=ident, published=True).first_or_404()
+                                                   PremiumContent.summary, PremiumContent.category, PremiumContent.open_access_required)).filter_by(id=ident, published=True).first_or_404()
     if not item.open_access_required and not entitled(subscription_for(researcher())):
         return render_template('premium/locked.html', item=item), 403
     return render_template('premium/content.html', item=item, kinds=KINDS)
@@ -142,7 +154,7 @@ def dashboard():
         page=pagination_page(), per_page=25, error_out=False)
     return render_template('admin/premium.html', plans=PremiumPlan.query.order_by(PremiumPlan.id).all(),
                            subscriptions=subscriptions, contents=PremiumContent.query.options(load_only(
-                               PremiumContent.id, PremiumContent.title, PremiumContent.kind, PremiumContent.published))
+                               PremiumContent.id, PremiumContent.title, PremiumContent.kind, PremiumContent.category, PremiumContent.open_access_required, PremiumContent.published))
                                .order_by(PremiumContent.id.desc()).paginate(page=pagination_page('content_page'), per_page=25, error_out=False),
                            audits=PremiumAudit.query.order_by(PremiumAudit.id.desc()).limit(30).all(),
                            kinds=KINDS, intervals=INTERVALS, subscription_label=subscription_label)
@@ -173,7 +185,12 @@ def plan(ident):
             active = request.form.get('active') == 'on'
             if active and amount <= 0:
                 raise ValueError('Defina um preço positivo antes de apresentar o plano.')
-            values = dict(name=name, interval=interval, currency=currency, price_minor=int(amount * 100),
+            benefits = [line.strip() for line in request.form.get('benefits', '').splitlines() if line.strip()]
+            if len(benefits) > 20 or any(len(line) > 180 for line in benefits):
+                raise ValueError('Indique até 20 benefícios, com até 180 caracteres por linha.')
+            if len(set(benefits)) != len(benefits):
+                raise ValueError('Não repita benefícios.')
+            values = dict(benefits=benefits, name=name, interval=interval, currency=currency, price_minor=int(amount * 100),
                           active=active, description=text_field('description', 2000, 0))
             before = {key: getattr(record, key) for key in values} if record else {}
             if record is None:
@@ -203,7 +220,7 @@ def edit_content(ident):
             check_version(record)
         try:
             values = dict(title=text_field('title', 180), kind=choice('kind', KINDS),
-                          summary=text_field('summary', 1000), body=text_field('body', 200000),
+                          summary=text_field('summary', 1000), category=text_field('category', 80, 0), body=text_field('body', 200000),
                           published=request.form.get('published') == 'on', open_access_required=request.form.get('open_access_required') == 'on')
             if record is None:
                 record = PremiumContent()
@@ -254,7 +271,7 @@ def grant():
                 raise ValueError('Esta conta já tem um registo. Altere a assinatura existente.')
             record = PremiumSubscription(owner_id=account.id, plan_id=plan_record.id, starts_at=start, ends_at=end,
                 reason=reason, source='complimentary', plan_snapshot={key: getattr(plan_record, key) for key in
-                    ('name', 'interval', 'currency', 'price_minor')})
+                    ('name', 'interval', 'currency', 'price_minor', 'benefits')})
             db.session.add(record)
             audit('subscription.grant', record, {'owner_id': account.id, 'plan': record.plan_snapshot,
                 'starts_at': start.isoformat(), 'ends_at': end.isoformat(), 'reason': reason, 'source': 'complimentary'})
