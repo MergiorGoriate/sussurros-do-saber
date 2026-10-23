@@ -181,3 +181,82 @@
 .premium-shell .premium-library-grid {grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:900px){.premium-shell .premium-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.premium-shell .premium-library-grid{grid-template-columns:1fr}}
+
+/* Premium home: formats, plan comparison and account entry. */
+.premium-shell .premium-formats {margin:48px 0}
+.premium-shell .premium-formats-heading {align-items:end;gap:24px;margin-bottom:24px}
+.public-site .premium-shell .premium-formats-heading h2 {max-width:24ch;font-size:clamp(26px,3vw,34px);margin-top:10px}
+.premium-shell .premium-formats-heading>p {font-size:14px;max-width:30ch;margin:0 0 4px}
+.premium-shell .premium-format-card {padding:24px;border-radius:16px;position:relative;box-shadow:0 4px 20px #102c4904}
+.premium-shell .premium-format-top {margin-bottom:20px}
+.premium-shell .premium-format-icon {width:46px;height:46px;border-radius:12px}
+.premium-shell .premium-format-number {font-size:12px;border:1px solid var(--pm-line);border-radius:50%;width:28px;height:28px;display:grid;place-items:center}
+.public-site .premium-shell .premium-format-card h3 {font-size:17px;line-height:1.4;margin:0 0 10px}
+.premium-shell .premium-format-card p {font-size:14px;line-height:1.7;margin:0}
+.premium-shell .premium-format-card:first-child {background:#142f4d;border-color:#142f4d}
+.public-site .premium-shell .premium-format-card:first-child h3 a {color:#fff}
+.premium-shell .premium-format-card:first-child p {color:#d0dce9}
+.premium-shell .premium-format-card:first-child :is(.premium-format-icon,.premium-format-number) {background:#ffffff0d;color:#f0d498;border-color:#ffffff40}
+.premium-shell .premium-format-card:first-child h3 a>span {color:#f0d498}
+.premium-shell .premium-format-card:first-child:focus-within {outline:3px solid var(--pm-accent);outline-offset:4px}
+.premium-shell .premium-format-card:first-child a:focus-visible {outline-color:#f0d498}
+.premium-shell .premium-plans-redesign {
+  padding:30px;border-radius:20px;background:var(--pm-card);border:1px solid var(--pm-line);margin:48px 0;
+}
+.premium-plans-overview {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px 28px;align-items:start}
+.public-site .premium-shell .premium-plans-overview h2 {font-size:clamp(28px,3.2vw,40px);margin:10px 0}
+.premium-shell .premium-plans-lead {font-size:15px;line-height:1.7;margin:0}
+.premium-shell .premium-availability {margin-top:4px;padding:7px 11px;font-size:12px;justify-self:start;background:var(--pm-bg)}
+.premium-plans-notice {display:flex;align-items:start;gap:12px;grid-column:1/-1;max-width:78ch;padding:16px 18px;border:1px solid var(--pm-line);border-left:3px solid #c9a357;border-radius:10px;background:var(--pm-bg)}
+.premium-plans-notice>svg {width:20px;height:20px;flex-shrink:0;color:var(--pm-accent);margin-top:2px}
+.premium-shell .premium-plans-notice .premium-plans-intro {font-size:13px;line-height:1.75;margin:0}
+.premium-plans-library {display:inline-flex;align-items:center;gap:24px;min-height:44px;justify-self:start;font-size:14px;font-weight:600}
+.premium-shell .premium-plans-redesign .premium-plans-grid {margin:24px 0 0;gap:22px}
+.premium-shell .premium-plans-redesign .premium-plan-card {padding:28px;border:1px solid var(--pm-line);border-top:3px solid #c9a357;background:var(--pm-bg);box-shadow:0 8px 24px #102c4906}
+.premium-shell .premium-plans-single {display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1fr);gap:38px;align-items:center}
+.premium-plans-single .premium-plans-overview {display:flex;flex-direction:column;gap:18px;min-width:0}
+.premium-shell .premium-plans-single .premium-plans-grid {display:block;margin:0;min-width:0}
+.premium-shell .premium-plans-single .premium-plan-card:only-child {max-width:540px;margin-left:auto}
+.premium-shell .premium-period-chip {font-size:12px;font-weight:500;color:var(--pm-muted);border:1px solid var(--pm-line);background:var(--pm-card);border-radius:7px;padding:5px 9px}
+.premium-shell .premium-plans-redesign .premium-plan-card h3 {font-size:23px;margin:20px 0 0}
+.premium-shell .premium-plans-redesign .premium-price {font-size:42px;margin:16px 0;line-height:1.15}
+.premium-shell .premium-plans-redesign .premium-plan-card>.premium-plan-description {font-size:14px;line-height:1.7;margin:0 0 18px}
+.premium-plan-benefits {padding:16px 0;border-top:1px solid var(--pm-line)}
+.premium-shell .premium-plan-benefits .premium-plan-inclusion {border:0;padding:0;margin:0;font-size:14px;line-height:1.7}
+.premium-shell .premium-plan-benefits .premium-benefits {margin:10px 0 0;font-size:14px}
+.premium-plan-conditions {border-top:1px solid var(--pm-line);border-bottom:1px solid var(--pm-line);padding:4px 0;margin-bottom:18px}
+.premium-shell .premium-plan-conditions summary {font-size:13px;min-height:44px;font-weight:600;padding:10px 0}
+.premium-shell .premium-plan-conditions .premium-plan-terms {font-size:13px;line-height:1.7;margin:6px 0 12px}
+.premium-shell .premium-plans-redesign .premium-plan-status {display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;margin-top:auto;min-height:48px;border-radius:9px;padding:12px}
+.premium-plan-status>svg {width:18px;height:18px;flex-shrink:0}
+.premium-shell .premium-plans-redesign .premium-plan-card>.premium-button {margin-top:auto;min-height:48px;display:flex;justify-content:space-between}
+.premium-shell .premium-login {border:1px solid var(--pm-line);border-radius:16px;padding:24px;gap:18px;background:var(--pm-bg);margin:32px 0}
+.premium-login-symbol {display:grid;place-items:center;width:48px;height:48px;border:1px solid var(--pm-line);border-radius:13px;color:var(--pm-accent);background:var(--pm-card);flex-shrink:0}
+.premium-login-symbol svg {width:24px;height:24px}
+.premium-login>div {flex:1;min-width:0}
+.public-site .premium-shell .premium-login h2 {font-size:20px;line-height:1.3}
+.premium-shell .premium-login p {font-size:14px;line-height:1.6}
+.premium-shell .premium-faq {grid-template-columns:minmax(200px,1fr) minmax(0,2fr);gap:28px;margin:38px 0 0;padding-top:28px;border-top:1px solid var(--pm-line)}
+.public-site .premium-shell .premium-faq-heading h2 {font-size:24px;margin:8px 0}
+.premium-shell .premium-faq .premium-card {padding:8px 20px;border:1px solid var(--pm-line);border-radius:12px;margin:0}
+.premium-shell .premium-faq summary {font-size:14px;line-height:1.6}
+.premium-shell .premium-faq .premium-card p {font-size:14px}
+@media(max-width:1023px){.premium-shell .premium-plans-single{gap:24px}.premium-shell .premium-plans-redesign{padding:24px}}
+@media(max-width:760px){
+ .premium-shell .premium-plans-single{grid-template-columns:1fr;gap:24px}
+ .premium-shell .premium-plans-single .premium-plan-card:only-child{max-width:none;margin:0}
+ .premium-plans-overview{grid-template-columns:1fr;gap:16px}
+ .premium-shell .premium-availability{grid-row:auto}
+ .premium-shell .premium-faq{grid-template-columns:1fr;gap:18px}
+ .premium-shell .premium-formats-heading{align-items:start}
+}
+@media(max-width:540px){
+ .premium-shell .premium-plans-redesign{padding:18px;border-radius:16px}
+ .premium-shell .premium-plans-redesign .premium-plan-card{padding:20px}
+ .premium-shell .premium-formats-grid{grid-template-columns:1fr}
+ .premium-shell .premium-format-card{padding:22px}
+ .premium-shell .premium-login{padding:20px;align-items:start;gap:14px}
+ .premium-login>.premium-secondary{width:100%;justify-content:space-between}
+ .premium-shell .premium-plans-redesign .premium-price{font-size:36px}
+ .premium-shell .premium-plans-notice{padding:14px;gap:10px}
+}
