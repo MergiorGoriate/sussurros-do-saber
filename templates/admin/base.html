@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="same-origin">
   <title>{% block title %}Administração{% endblock %} — Sussurros do Saber</title>
-  <link rel="icon" href="{{ url_for('static',filename='img/favicon.png') }}">
+  {% include 'partials/site_icons.html' %}
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261020-dark-contrast-v3') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css',v='20261018-dark-panel-v2') }}">
   {% block extra_head %}{% endblock %}
@@ -63,6 +63,7 @@
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-dark-panel-v2') }}" defer></script>
 </body>
 </html>
+
 
 
 
