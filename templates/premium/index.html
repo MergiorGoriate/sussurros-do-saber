@@ -1,9 +1,53 @@
 {% extends 'premium/base.html' %}
 {% block premium_content %}
-<section class="premium-hero" aria-labelledby="premium-title"><p class="premium-eyebrow">Sussurros do Saber · Premium</p><h1 id="premium-title">Mais espaço para aprender.</h1><p>Cursos especializados, séries educativas, eventos e entrevistas para aprofundar os seus interesses científicos.</p><a class="premium-button" href="{{ url_for('premium.library') }}">Explorar a biblioteca</a><a class="premium-secondary" href="#planos">Conhecer os planos</a></section>
-<aside class="premium-promise"><h2>O conhecimento científico continua aberto</h2><p>Todos os artigos informativos do portal e todos os artigos científicos da revista semestral, incluindo investigações originais e revisões, continuam gratuitos. O Premium reúne conteúdos adicionais.</p></aside>
-<section aria-labelledby="formats-title"><h2 id="formats-title">Aprender com tempo e profundidade</h2><div class="premium-grid">{% for title, text in [('Cursos especializados', 'Percursos de aprendizagem organizados por temas.'), ('Séries educativas', 'Sequências de conteúdos para explorar uma área.'), ('Eventos', 'Encontros e sessões de formação.'), ('Entrevistas', 'Conversas aprofundadas sobre ciência e investigação.')] %}<article class="premium-card"><h3>{{ title }}</h3><p>{{ text }}</p></article>{% endfor %}</div></section>
-<section id="planos" aria-labelledby="plans-title"><h2 id="plans-title">Planos Premium</h2><p>Estamos a preparar o Premium. A contratação e os pagamentos ainda não estão disponíveis. Os preços apresentados são informativos; não é efectuada qualquer cobrança.</p><div class="premium-grid">{% for plan in plans %}<article class="premium-card"><p class="premium-eyebrow">{{ intervals[plan.interval] }}</p><h3>{{ plan.name }}</h3><p class="premium-price">{{ '%.2f'|format(plan.price_minor / 100) }} {{ plan.currency }}<small> / {{ 'mês' if plan.interval == 'monthly' else 'ano' }}</small></p><p>{{ plan.description }}</p><p>Inclui os conteúdos publicados na biblioteca Premium.</p><span class="premium-badge">Contratação em preparação</span></article>{% else %}<p>Os planos mensal e anual serão apresentados depois de definidos os preços e as condições de acesso.</p>{% endfor %}</div></section>
-{% if researcher %}<section class="premium-card"><h2>O seu acesso</h2><p>{{ state }}.</p>{% if subscription %}<p>Válido de {{ subscription.starts_at.strftime('%d/%m/%Y %H:%M') }} até {{ subscription.ends_at.strftime('%d/%m/%Y %H:%M') }} UTC. Acesso de oferta, sem cobrança ou renovação automática.</p>{% endif %}{% if has_access %}<a class="premium-button" href="{{ url_for('premium.library') }}">Abrir conteúdos exclusivos</a>{% elif not researcher.verified %}<p>Confirme o seu e-mail para poder utilizar um acesso Premium.</p>{% endif %}</section>{% else %}<p>Já recebeu um acesso? <a href="{{ url_for('submissions.login') }}">Entre na sua conta</a>.</p>{% endif %}
-<details class="premium-card"><summary>É necessário pagar para ler a revista?</summary><p>Não. A assinatura Premium não condiciona a leitura dos artigos científicos nem dos artigos informativos do portal.</p></details>
+<section class="premium-hero" aria-labelledby="premium-title">
+  <div class="premium-hero-copy">
+    <p class="premium-eyebrow"><span class="premium-dot" aria-hidden="true"></span> Uma nova forma de explorar a ciência</p>
+    <h1 id="premium-title">Mais espaço para <em>aprender.</em></h1>
+    <p class="premium-hero-lead">Cursos especializados, séries educativas, eventos e entrevistas para aprofundar os seus interesses científicos.</p>
+    <div class="premium-actions"><a class="premium-button" href="{{ url_for('premium.library') }}">Explorar a biblioteca <span aria-hidden="true">↗</span></a><a class="premium-secondary" href="#planos">Conhecer os planos <span aria-hidden="true">↓</span></a></div>
+    <p class="premium-hero-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg> Conteúdos adicionais. Ciência sempre aberta.</p>
+  </div>
+  <div class="premium-hero-visual" aria-hidden="true">
+    <div class="premium-orbit"></div>
+    <div class="premium-feature-note"><span class="premium-note-mark">S<span>+</span></span><span>Curiosidade que<br>vai mais longe.</span></div>
+    <div class="premium-editorial-card"><div class="premium-editorial-top"><span>Aprendizagem</span><span>01 / 04</span></div><svg class="premium-book-symbol" viewBox="0 0 100 80" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M50 18C36 9 20 9 7 14v51c14-5 29-4 43 5 14-9 29-10 43-5V14c-13-5-29-5-43 4Zm0 0v52M18 25c7-2 15-1 22 2M18 35c7-2 15-1 22 2M18 45c7-2 15-1 22 2M60 27c7-3 15-4 22-2M60 37c7-3 15-4 22-2M60 47c7-3 15-4 22-2"/></svg><p>Percursos para<br><em>aprofundar.</em></p><div class="premium-editorial-bottom"><span>Cursos e séries educativas</span><span>↗</span></div></div>
+    <div class="premium-conversation-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v12H9l-5 4V4Z M8 8h8 M8 12h5"/></svg><div>Ciência em conversa<small>Eventos e entrevistas</small></div></div>
+  </div>
+</section>
+<aside class="premium-promise">
+  <span class="premium-promise-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 10V7a5 5 0 0 1 9-3M5 10h14v11H5z M12 14v3"/></svg></span>
+  <div><h2>O conhecimento científico continua aberto</h2><p>Todos os artigos informativos do portal e todos os artigos científicos da revista semestral, incluindo investigações originais e revisões, continuam gratuitos.</p></div>
+  <a href="/artigos">Ler artigos <span aria-hidden="true">↗</span></a>
+</aside>
+<section class="premium-formats" aria-labelledby="formats-title">
+  <header class="premium-section-heading"><div><p class="premium-eyebrow">O que pode explorar</p><h2 id="formats-title">Aprender com tempo e profundidade</h2></div><p>Escolha como quer aproximar-se da ciência.</p></header>
+  <div class="premium-formats-grid">
+    {% for kind, number, title, text, path in [
+      ('course','01','Cursos especializados','Percursos de aprendizagem organizados por temas.','M4 5h7v15H4z M11 8h9v12h-9 M7 9v6 M15 12h2 M15 16h2'),
+      ('series','02','Séries educativas','Sequências de conteúdos para explorar uma área.','M4 4h13v13H4z M8 20h12V8 M8 8h5 M8 12h5'),
+      ('event','03','Eventos','Encontros e sessões de formação.','M4 5h16v16H4z M8 2v6 M16 2v6 M4 11h16 M8 15h2 M14 15h2'),
+      ('interview','04','Entrevistas','Conversas aprofundadas sobre ciência e investigação.','M4 4h16v12H9l-5 4V4z M8 8h8 M8 12h5')
+    ] %}
+    <article class="premium-format-card"><div class="premium-format-top"><span class="premium-format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ path }}"/></svg></span><span class="premium-format-number">{{ number }}</span></div><h3><a href="{{ url_for('premium.library', tipo=kind) }}">{{ title }}<span aria-hidden="true">↗</span></a></h3><p>{{ text }}</p></article>
+    {% endfor %}
+  </div>
+</section>
+<section id="planos" class="premium-plans-section" aria-labelledby="plans-title">
+  <header class="premium-section-heading"><div><p class="premium-eyebrow">O seu próximo passo</p><h2 id="plans-title">Planos Premium</h2></div><span class="premium-badge"><span class="premium-dot" aria-hidden="true"></span> Em preparação</span></header>
+  <p class="premium-plans-intro">Estamos a preparar o Premium. A contratação e os pagamentos ainda não estão disponíveis. Os preços apresentados são informativos; não é efectuada qualquer cobrança.</p>
+  <div class="premium-grid premium-plans-grid">
+    {% for plan in plans %}
+    <article class="premium-card premium-plan-card {% if plan.interval=='annual' %}premium-plan-annual{% endif %}"><div class="premium-plan-top"><p class="premium-eyebrow">{{ intervals[plan.interval] }}</p><span aria-hidden="true">{{ '12' if plan.interval=='annual' else '01' }}<small> {{ 'meses' if plan.interval=='annual' else 'mês' }}</small></span></div><h3>{{ plan.name }}</h3><p class="premium-price">{{ '%.2f'|format(plan.price_minor / 100) }} <span>{{ plan.currency }}</span><small> / {{ 'mês' if plan.interval == 'monthly' else 'ano' }}</small></p><p>{{ plan.description }}</p><p class="premium-plan-inclusion"><span aria-hidden="true">✓</span> Inclui os conteúdos publicados na biblioteca Premium.</p><span class="premium-plan-status">Contratação em preparação</span></article>
+    {% else %}
+    <div class="premium-plans-empty"><div class="premium-plans-empty-mark" aria-hidden="true">S<span>+</span></div><div><h3>Mensal ou anual. Ao seu ritmo.</h3><p>Os planos mensal e anual serão apresentados depois de definidos os preços e as condições de acesso.</p></div><a href="{{ url_for('premium.library') }}">Conhecer a biblioteca <span aria-hidden="true">↗</span></a></div>
+    {% endfor %}
+  </div>
+</section>
+{% if researcher %}
+<section class="premium-card premium-account"><div><p class="premium-eyebrow">A sua conta</p><h2>O seu acesso</h2><p class="premium-account-state">{{ state }}.</p>{% if subscription %}<p>Válido de {{ subscription.starts_at.strftime('%d/%m/%Y %H:%M') }} até {{ subscription.ends_at.strftime('%d/%m/%Y %H:%M') }} UTC. Acesso de oferta, sem cobrança ou renovação automática.</p>{% endif %}{% if not researcher.verified %}<p>Confirme o seu e-mail para poder utilizar um acesso Premium.</p>{% endif %}</div>{% if has_access %}<a class="premium-button" href="{{ url_for('premium.library') }}">Abrir conteúdos exclusivos <span aria-hidden="true">↗</span></a>{% endif %}</section>
+{% else %}
+<div class="premium-login"><div><h2>Já recebeu um acesso?</h2><p>A sua biblioteca começa na sua conta.</p></div><a class="premium-secondary" href="{{ url_for('submissions.login') }}">Entrar na minha conta <span aria-hidden="true">↗</span></a></div>
+{% endif %}
+<section class="premium-faq" aria-labelledby="premium-faq-title"><h2 id="premium-faq-title">Antes de começar</h2><details class="premium-card"><summary>É necessário pagar para ler a revista?</summary><p>Não. A assinatura Premium não condiciona a leitura dos artigos científicos nem dos artigos informativos do portal.</p></details></section>
 {% endblock %}

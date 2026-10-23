@@ -113,3 +113,13 @@ O CI existente descobre `test_premium.py` e `premium.spec.js` sem alteração do
 A primeira execução do CI aprovou a suite Python, a auditoria de dependências, o ensaio PostgreSQL e a construção Docker. Nos testes de navegador, 133 cenários passaram e quatro falharam: três verificavam a URL imediatamente após submeter o filtro e um não encontrava o selector pelo nome acessível exacto «Plano».
 
 O teste do filtro passa a confirmar a selecção e a aguardar a navegação com uma asserção Playwright que volta a verificar a URL até ao limite previsto. Os selectores de plano e estado passam a referenciar explicitamente etiquetas de texto próprias, mantendo os controlos nativos e a utilização por teclado. As verificações de acesso e a lógica de assinaturas não são alteradas. A aprovação desta correcção depende da nova execução do CI.
+
+## Actualização visual da página Premium
+
+A página passa a usar uma composição editorial em azul profundo e tons de papel, com destaque dourado, introdução em duas colunas no computador e uma ilustração tipográfica feita em HTML/CSS/SVG. Os elementos ilustrativos estão ocultos da árvore de acessibilidade e não representam conteúdos publicados. Não há novos ficheiros de imagem, fontes, scripts ou dependências externas.
+
+A navegação identifica a página actual. Os quatro formatos têm cartões ligados ao filtro correspondente da biblioteca; os planos, o estado de preparação, o acesso da conta e a pergunta sobre a revista têm áreas próprias. Os preços e a disponibilidade continuam a vir dos dados existentes; não são inventados preços, descontos, contagens, testemunhos ou conteúdos. Há tratamento para planos ainda não definidos, plano mensal/anual, conta autenticada e visitantes sem conta.
+
+Os estilos ficam limitados à área Premium, incluindo as cores dos temas claro/escuro, grelhas responsivas, foco visível, controlos de 44 px e redução das transições para quem prefere movimento reduzido. Não foram alteradas rotas, permissões, formulários administrativos, dados ou pagamentos.
+
+Validação desta alteração: os 23 testes Python do Premium passaram. A renderização HTTP/Jinja confirmou um único título principal, os quatro filtros ligados aos cartões, os planos mensal/anual e o estado sem planos. A suite Playwright existente inclui capturas a 320/768/1440 px e nos dois temas; a execução local continua impedida pelo descarregamento truncado do Chromium. A revisão visual no navegador e os resultados do novo CI devem ser confirmados antes da publicação.
