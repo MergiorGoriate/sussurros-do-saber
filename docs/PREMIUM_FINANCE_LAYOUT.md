@@ -34,3 +34,12 @@ As verificações de navegador utilizaram dados sintéticos e cobranças desacti
 Modificados: `templates/admin/premium_finance.html`, `templates/admin/premium_base.html`, `static/css/premium-admin.css`.
 
 Criados: `tests/browser/finance.spec.js`, `docs/PREMIUM_FINANCE_LAYOUT.md`.
+
+
+## Correcção do orçamento de execução do CI
+
+O job de navegador do run `39961915809` foi cancelado ao atingir 15 minutos. A instalação com dependências consumiu 512 segundos, sobretudo em transferências do espelho Ubuntu; sobraram cerca de seis minutos para 151 cenários. Os cenários financeiros e Premium passaram antes do cancelamento. O registo não mostra uma falha de asserção antes da interrupção.
+
+O job passa a ter 30 minutos, com limites próprios de 15 minutos para instalação e 15 para a suíte. O limite individual de 30 segundos por cenário, a repetição de testes falhados, a execução sequencial e todos os cenários são preservados. A instalação usa `--only-shell`, suficiente para os testes headless actuais, evitando descarregar também o Chromium completo. Os registos do servidor passam a ser apresentados também em caso de cancelamento.
+
+Validação da configuração: YAML interpretado e limites verificados; opção `--only-shell` confirmada pelo CLI instalado e pelo comando `install --only-shell chromium --dry-run`. O resultado da nova execução de CI deve ser consultado no PR; estas verificações locais não substituem a conclusão do job remoto.
