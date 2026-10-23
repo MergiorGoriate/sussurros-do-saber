@@ -8,6 +8,7 @@ import submission_models
 import governance_models
 import premium_models
 import billing_models
+import scientific_metrics_models
 
 url = os.environ.get("DATABASE_URL", "")
 if not url:
