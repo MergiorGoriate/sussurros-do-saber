@@ -103,9 +103,20 @@ test('a single configured plan stays readable on desktop',async({page})=>{
  if(await reject.isVisible())await reject.click();
  // Exercise the one-card layout without changing configured products or prices.
  await page.locator('.premium-plan-card').evaluateAll(cards=>cards.slice(1).forEach(card=>card.remove()));
+ await page.locator('#planos').evaluate(section=>section.classList.add('premium-plans-single'));
  const card=page.locator('.premium-plan-card');
  await expect(card).toHaveCount(1);
  const box=await card.boundingBox();
  expect(box.width).toBeLessThanOrEqual(541);
+ await card.getByText('Renovação e cancelamento',{exact:true}).focus();
+ await page.keyboard.press('Enter');
+ await expect(card.locator('.premium-plan-terms')).toBeVisible();
+ await page.keyboard.press('Enter');
  await card.screenshot({path:'test-results/premium-single-plan.png'});
+ for(const dark of [false,true]){
+  await page.evaluate(dark=>document.documentElement.classList.toggle('dark',dark),dark);
+  await page.locator('#planos').screenshot({path:`test-results/premium-plan-section-${dark?'dark':'light'}.png`});
+ }
+ await page.locator('.premium-formats').screenshot({path:'test-results/premium-formats-redesign.png'});
+ await page.locator('.premium-login').screenshot({path:'test-results/premium-login-redesign.png'});
 });

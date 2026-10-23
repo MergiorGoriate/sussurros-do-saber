@@ -21,7 +21,7 @@
   <a href="/artigos">Ler artigos <span aria-hidden="true">↗</span></a>
 </aside>
 <section class="premium-formats" aria-labelledby="formats-title">
-  <header class="premium-section-heading"><div><p class="premium-eyebrow">O que pode explorar</p><h2 id="formats-title">Aprender com tempo e profundidade</h2></div><p>Escolha como quer aproximar-se da ciência.</p></header>
+  <header class="premium-section-heading premium-formats-heading"><div><p class="premium-eyebrow">O que pode explorar</p><h2 id="formats-title">Aprender com tempo e profundidade</h2></div><p>Escolha como quer aproximar-se da ciência.</p></header>
   <div class="premium-formats-grid">
     {% for kind, number, title, text, path in [
       ('course','01','Cursos especializados','Percursos de aprendizagem organizados por temas.','M4 5h7v15H4z M11 8h9v12h-9 M7 9v6 M15 12h2 M15 16h2'),
@@ -33,21 +33,33 @@
     {% endfor %}
   </div>
 </section>
-<section id="planos" class="premium-plans-section" aria-labelledby="plans-title">
-  <header class="premium-section-heading"><div><p class="premium-eyebrow">O seu próximo passo</p><h2 id="plans-title">Planos Premium</h2></div><span class="premium-badge"><span class="premium-dot" aria-hidden="true"></span> {{ ('Pagamentos disponíveis' if billing_live else 'Ambiente de testes') if billing_available else 'Em preparação' }}</span></header>
-  <p class="premium-plans-intro">{% if billing_available %}Escolha um plano e consulte os meios de pagamento disponíveis. Nas carteiras móveis a renovação é manual; no cartão Stripe exige autorização para renovação automática.{% else %}Estamos a preparar o Premium. A contratação e os pagamentos ainda não estão disponíveis. Os preços apresentados são informativos; não é efectuada qualquer cobrança.{% endif %}</p>
+<section id="planos" class="premium-plans-section premium-plans-redesign{% if plans|length==1 %} premium-plans-single{% endif %}" aria-labelledby="plans-title">
+  <div class="premium-plans-overview">
+    <header><p class="premium-eyebrow">O seu próximo passo</p><h2 id="plans-title">Planos Premium</h2><p class="premium-plans-lead">Escolha como quer continuar a aprender.</p></header>
+    <span class="premium-badge premium-availability"><span class="premium-dot" aria-hidden="true"></span> {{ ('Pagamentos disponíveis' if billing_live else 'Ambiente de testes') if billing_available else 'Em preparação' }}</span>
+    <div class="premium-plans-notice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v7 M12 6v1"/></svg><p class="premium-plans-intro">{% if billing_available %}Escolha um plano e consulte os meios de pagamento disponíveis. Nas carteiras móveis a renovação é manual; no cartão Stripe exige autorização para renovação automática.{% else %}Estamos a preparar o Premium. A contratação e os pagamentos ainda não estão disponíveis. Os preços apresentados são informativos; não é efectuada qualquer cobrança.{% endif %}</p></div>
+    <a class="premium-plans-library" href="{{ url_for('premium.library') }}">Conhecer a biblioteca <span aria-hidden="true">↗</span></a>
+  </div>
   <div class="premium-grid premium-plans-grid">
     {% for plan in plans %}
-    <article class="premium-card premium-plan-card {% if plan.interval=='annual' %}premium-plan-annual{% endif %}"><div class="premium-plan-top"><p class="premium-eyebrow">{{ intervals[plan.interval] }}</p><span aria-hidden="true">{{ '12' if plan.interval=='annual' else '01' }}<small> {{ 'meses' if plan.interval=='annual' else 'mês' }}</small></span></div><h3>{{ plan.name }}</h3><p class="premium-price">{{ '%.2f'|format(plan.price_minor / 100) }} <span>{{ plan.currency }}</span><small> / {{ 'mês' if plan.interval == 'monthly' else 'ano' }}</small></p><p>{{ plan.description }}</p>{% if plan.benefits %}<ul class="premium-benefits">{% for benefit in plan.benefits %}<li>{{ benefit }}</li>{% endfor %}</ul>{% endif %}<p class="premium-plan-terms">{{ '12 meses por período' if plan.interval == 'annual' else '1 mês por período' }}. Renovação automática apenas com autorização e confirmação do fornecedor; pode cancelá-la na sua conta, mantendo o período já pago.</p><p class="premium-plan-inclusion"><span aria-hidden="true">✓</span> Inclui os conteúdos publicados na biblioteca Premium.</p>{% if billing_available %}<a class="premium-button" href="{{ url_for('billing.checkout', ident=plan.id) }}">Consultar condições e aderir</a>{% else %}<span class="premium-plan-status">Contratação em preparação</span>{% endif %}</article>
+    <article class="premium-card premium-plan-card {% if plan.interval=='annual' %}premium-plan-annual{% endif %}" aria-labelledby="premium-plan-{{ plan.id }}">
+      <div class="premium-plan-top"><p class="premium-eyebrow">{{ intervals[plan.interval] }}</p><span class="premium-period-chip">{{ '12 meses' if plan.interval=='annual' else '1 mês' }}</span></div>
+      <h3 id="premium-plan-{{ plan.id }}">{{ plan.name }}</h3>
+      <p class="premium-price">{{ '%.2f'|format(plan.price_minor / 100) }} <span>{{ plan.currency }}</span><small> / {{ 'mês' if plan.interval == 'monthly' else 'ano' }}</small></p>
+      {% if plan.description %}<p class="premium-plan-description">{{ plan.description }}</p>{% endif %}
+      <div class="premium-plan-benefits"><p class="premium-plan-inclusion"><span aria-hidden="true">✓</span> Inclui os conteúdos publicados na biblioteca Premium.</p>{% if plan.benefits %}<ul class="premium-benefits">{% for benefit in plan.benefits %}<li>{{ benefit }}</li>{% endfor %}</ul>{% endif %}</div>
+      <details class="premium-plan-conditions"><summary>Renovação e cancelamento</summary><p class="premium-plan-terms">{{ '12 meses por período' if plan.interval == 'annual' else '1 mês por período' }}. Renovação automática apenas com autorização e confirmação do fornecedor; pode cancelá-la na sua conta, mantendo o período já pago.</p></details>
+      {% if billing_available %}<a class="premium-button" href="{{ url_for('billing.checkout', ident=plan.id) }}">Consultar condições e aderir <span aria-hidden="true">↗</span></a>{% else %}<div class="premium-plan-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Contratação em preparação</span></div>{% endif %}
+    </article>
     {% else %}
-    <div class="premium-plans-empty"><div class="premium-plans-empty-mark" aria-hidden="true">S<span>+</span></div><div><h3>Mensal ou anual. Ao seu ritmo.</h3><p>Os planos mensal e anual serão apresentados depois de definidos os preços e as condições de acesso.</p></div><a href="{{ url_for('premium.library') }}">Conhecer a biblioteca <span aria-hidden="true">↗</span></a></div>
+    <div class="premium-plans-empty"><div class="premium-plans-empty-mark" aria-hidden="true">S<span>+</span></div><div><h3>Mensal ou anual. Ao seu ritmo.</h3><p>Os planos mensal e anual serão apresentados depois de definidos os preços e as condições de acesso.</p></div></div>
     {% endfor %}
   </div>
 </section>
 {% if researcher %}
 <section class="premium-card premium-account"><div><p class="premium-eyebrow">A sua conta</p><h2>O seu acesso</h2><p class="premium-account-state">{{ state }}.</p>{% if subscription %}<p>Válido de {{ subscription.starts_at.strftime('%d/%m/%Y %H:%M') }} até {{ subscription.ends_at.strftime('%d/%m/%Y %H:%M') }} UTC. {% if subscription.source == 'complimentary' %}Acesso de oferta, sem cobrança ou renovação automática.{% else %}<a href="{{ url_for('billing.history') }}">Gerir assinatura e pagamentos</a>.{% endif %}</p>{% endif %}{% if not researcher.verified %}<p>Confirme o seu e-mail para poder utilizar um acesso Premium.</p>{% endif %}</div>{% if has_access %}<a class="premium-button" href="{{ url_for('premium.library') }}">Abrir conteúdos exclusivos <span aria-hidden="true">↗</span></a>{% endif %}</section>
 {% else %}
-<div class="premium-login"><div><h2>Já recebeu um acesso?</h2><p>A sua biblioteca começa na sua conta.</p></div><a class="premium-secondary" href="{{ url_for('submissions.login') }}">Entrar na minha conta <span aria-hidden="true">↗</span></a></div>
+<div class="premium-login"><span class="premium-login-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21v-3a8 8 0 0 1 16 0v3"/></svg></span><div><h2>Já recebeu um acesso?</h2><p>A sua biblioteca começa na sua conta.</p></div><a class="premium-secondary" href="{{ url_for('submissions.login') }}">Entrar na minha conta <span aria-hidden="true">↗</span></a></div>
 {% endif %}
-<section class="premium-faq" aria-labelledby="premium-faq-title"><h2 id="premium-faq-title">Antes de começar</h2><details class="premium-card"><summary>É necessário pagar para ler a revista?</summary><p>Não. A assinatura Premium não condiciona a leitura dos artigos científicos nem dos artigos informativos do portal.</p></details></section>
+<section class="premium-faq" aria-labelledby="premium-faq-title"><div class="premium-faq-heading"><p class="premium-eyebrow">Acesso aberto</p><h2 id="premium-faq-title">Antes de começar</h2></div><details class="premium-card"><summary>É necessário pagar para ler a revista?</summary><p>Não. A assinatura Premium não condiciona a leitura dos artigos científicos nem dos artigos informativos do portal.</p></details></section>
 {% endblock %}
