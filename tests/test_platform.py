@@ -92,6 +92,7 @@ class PlatformTests(unittest.TestCase):
             self.assertTrue(flow.primary_owned)
             self.assertEqual(flow.stage, 'submitted')
             self.assertIsNone(flow.approved_at)
+            db.session.delete(flow)
             db.session.delete(db.session.get(Article, identifier))
             db.session.commit()
 
