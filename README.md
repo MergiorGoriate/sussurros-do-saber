@@ -32,6 +32,8 @@ Este README descreve a implementação revista em **20 de outubro de 2026**, com
 
 ## Actualizações recentes
 
+- **Premium — primeira fase:** página `/premium`, planos mensal/anual configuráveis, biblioteca de conteúdos adicionais e acessos de oferta com validade, geridos pelo administrador principal. Todos os artigos da revista e do portal continuam gratuitos. Pagamentos reais e renovação automática ainda não estão implementados. Migração `20261023_10`; [relatório, operação e plano de pagamentos](docs/PREMIUM.md).
+
 - **Pesquisa científica e DOI:** a pesquisa existente inclui identificadores e palavras-chave; o catálogo de revistas pesquisa também títulos científicos e autores, com formulário GET na mesma barra. As ligações DOI usam um normalizador comum, sem alterar dados nem comprovar registo externo. Ver [âmbito, testes e limitações](docs/SCIENTIFIC_SEARCH.md).
 
 As funcionalidades abaixo estão integradas na `main`; a sua disponibilidade em produção depende de um deploy bem-sucedido e da configuração dos serviços externos.
@@ -1102,3 +1104,4 @@ A fila EditorialNotification passa a ter campanhas aprovadas/agendadas, estados 
 Reutiliza enviar-notificacoes periódico no Coolify, com bloqueio coordenado PostgreSQL. Aceitações são guardadas antes de QUIT; resultados incertos e claims abandonados não são reenviados automaticamente. A reconciliação exige evidência registada pelo responsável. Não existe garantia distribuída de entrega exactamente uma vez.
 
 **Migração:** parar trabalhadores antigos, fazer backup e ensaiar a migração antes de executar `python -m alembic upgrade head` com a nova versão. O head desta revisão é 20261021_08. A migração preserva a fila e coloca campanhas legadas em preparação sem autorização de envio. Não executar o worker antigo sobre o esquema novo. Não há novas variáveis de ambiente, serviço pago ou mudança ao Dockerfile. Procedimento, limites, recuperação e testes: [docs/NEWSLETTER_DELIVERY.md](docs/NEWSLETTER_DELIVERY.md).
+

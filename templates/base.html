@@ -126,6 +126,7 @@ window.dataLayer.push({event:'default_consent'});
 <a href="/revistas">Revistas</a>
 <a href="/recursos" class="nav-feature">Recursos</a>
 <a href="/servicos">Serviços</a>
+<a href="{{ url_for('premium.index') }}">Premium</a>
 <a href="/conta/biblioteca">Os meus favoritos</a>
 <a href="/equipa">Equipa</a><a href="/sobre">Sobre Nós</a>
 </nav>
@@ -179,7 +180,8 @@ window.dataLayer.push({event:'default_consent'});
 <nav class="footer-column" aria-labelledby="footer-institutional">
 <h2 id="footer-institutional">Institucional</h2>
 <a href="/sobre">Sobre nós</a><a href="/equipa">Equipa</a>
-<a href="/servicos">Serviços</a><a href="/contacto">Contacto</a>
+<a href="/servicos">Serviços</a>
+<a href="{{ url_for('premium.index') }}">Premium</a><a href="/contacto">Contacto</a>
 <a href="/contacto?assunto=Proposta%20de%20parceria">Propor uma parceria</a>
 </nav>
 <nav class="footer-column" aria-labelledby="footer-policies">
@@ -244,6 +246,7 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-favorite-cards-v7') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-notice-layout') }}" defer></script></body>
 </html>
+
 
 
 

@@ -1,0 +1,9 @@
+{% extends 'admin/premium_base.html' %}
+{% block premium_heading %}{{ 'Editar plano' if item else 'Novo plano' }}{% endblock %}
+{% block premium_admin_content %}<form method="post" class="premium-admin-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if item %}<input type="hidden" name="version" value="{{ item.version }}">{% endif %}
+<label>Nome<input name="name" maxlength="100" required value="{{ request.form.get('name', item.name if item else '') }}"></label>
+<label>Periodicidade<select name="interval">{% for value,label in intervals.items() %}<option value="{{ value }}" {% if request.form.get('interval', item.interval if item else 'monthly')==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>Preço por período<input type="number" name="price" min="0" max="10000000" step="0.01" required value="{{ request.form.get('price', '%.2f'|format(item.price_minor / 100) if item else '0.00') }}"></label>
+<label>Moeda<select name="currency">{% for currency in ['MZN','USD','EUR','ZAR'] %}<option {% if request.form.get('currency', item.currency if item else 'MZN')==currency %}selected{% endif %}>{{ currency }}</option>{% endfor %}</select></label>
+<label>Descrição<textarea name="description" maxlength="2000" rows="4">{{ request.form.get('description', item.description if item else '') }}</textarea></label>
+<label class="premium-admin-check"><input type="checkbox" name="active" {% if (request.method=='POST' and request.form.get('active')=='on') or (request.method=='GET' and item and item.active) %}checked{% endif %}> Apresentar plano no site (exige preço positivo)</label><p>O plano pode ser apresentado antes de activar pagamentos. Ocultá-lo não revoga acessos existentes. Não há cobrança nem renovação automática nesta fase.</p><button class="admin-primary">Guardar plano</button></form>{% endblock %}

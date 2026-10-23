@@ -43,6 +43,7 @@
       <a href="{{ url_for('admin.docs') }}" title="Docs"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 3h16v18H4z M8 7h8 M8 11h8 M8 15h4"/></svg><span class="admin-menu-label">Docs</span></a>
       <a href="{{ url_for('admin.two_factor_settings') }}" title="Segurança e 2FA"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 10V7a6 6 0 0 1 12 0v3 M4 10h16v11H4z M12 14v3"/></svg><span class="admin-menu-label">Segurança e 2FA</span></a>
       <a href="/" target="_blank" rel="noopener" title="Ver site"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3h7v7 M21 3l-9 9 M10 3H3v18h18v-7"/></svg><span class="admin-menu-label">Ver site ↗</span></a>
+      {% if current_admin_is_primary %}<a href="{{ url_for('premium_admin.dashboard') }}" title="Premium"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18v14H3z M7 3v6 M17 3v6 M7 13h10"/></svg><span class="admin-menu-label">Premium</span></a>{% endif %}
     </nav>
     <form action="{{ url_for('admin.logout') }}" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -63,6 +64,7 @@
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-dark-panel-v2') }}" defer></script>
 </body>
 </html>
+
 
 
 
