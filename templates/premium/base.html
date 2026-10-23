@@ -2,4 +2,16 @@
 {% block title %}Sussurros do Saber Premium{% endblock %}
 {% block meta_description %}Cursos, séries educativas, eventos e entrevistas. Os artigos do portal e da revista científica continuam gratuitos.{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/premium.css') }}">{% endblock %}
-{% block content %}<div class="premium-shell"><nav class="premium-nav" aria-label="Premium"><a href="{{ url_for('premium.index') }}">Premium</a><a href="{{ url_for('premium.library') }}">Biblioteca exclusiva</a><a href="/artigos">Artigos gratuitos</a><a href="/revistas">Revista científica</a></nav>{% block premium_content %}{% endblock %}</div>{% endblock %}
+{% block content %}
+<div class="premium-shell">
+  <nav class="premium-nav" aria-label="Premium">
+    <a class="premium-nav-brand" href="{{ url_for('premium.index') }}" {% if request.endpoint=='premium.index' %}aria-current="page"{% endif %}>Sussurros <span>Premium</span></a>
+    <div class="premium-nav-links">
+      <a href="{{ url_for('premium.library') }}" {% if request.endpoint=='premium.library' %}aria-current="page"{% endif %}>Biblioteca exclusiva</a>
+      <a href="/artigos">Artigos gratuitos</a>
+      <a href="/revistas">Revista científica</a>
+    </div>
+  </nav>
+  {% block premium_content %}{% endblock %}
+</div>
+{% endblock %}
