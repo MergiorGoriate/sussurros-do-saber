@@ -226,9 +226,9 @@ def register_cli(app):
                 try:db.session.commit()
                 except IntegrityError:db.session.rollback();continue
             lease=db.session.execute(update(ScientificMetricProvider).where(ScientificMetricProvider.source==provider,
-                ScientificMetricProvider.next_attempt<=now).values(next_attempt=now+timedelta(seconds=limit*60+300)))
+                ScientificMetricProvider.next_attempt<=now).values(next_attempt=now+timedelta(seconds=limit*60+300)).returning(ScientificMetricProvider.source)).scalar_one_or_none()
             db.session.commit()
-            if not lease.rowcount:
+            if lease is None:
                 click.echo(f'{provider}: aguarda disponibilidade/limite do fornecedor');continue
             done=0
             backoff=60
@@ -246,9 +246,9 @@ def register_cli(app):
                 # An atomic lease also prevents two schedulers refreshing the same item.
                 leased=db.session.execute(update(ScientificMetricSource).where(ScientificMetricSource.id==row.id,
                     db.or_(ScientificMetricSource.next_attempt.is_(None),ScientificMetricSource.next_attempt<=now))
-                    .values(next_attempt=now+timedelta(days=1)))
+                    .values(next_attempt=now+timedelta(days=1)).returning(ScientificMetricSource.id)).scalar_one_or_none()
                 db.session.commit()
-                if not leased.rowcount:continue
+                if leased is None:continue
                 outcome=lookup(provider,doi)
                 row.state=outcome['state'];row.checked_at=now
                 if row.state=='ok':

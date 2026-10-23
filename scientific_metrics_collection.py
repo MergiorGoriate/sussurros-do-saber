@@ -60,7 +60,7 @@ def record(journal, kind, response):
         with db.engine.begin() as connection:
             # The unique receipt and aggregate increment commit together across workers.
             receipt = insert(ScientificMetricReceipt).values(digest=digest, day=day).on_conflict_do_nothing()
-            if connection.execute(receipt).rowcount:
+            if connection.execute(receipt.returning(ScientificMetricReceipt.digest)).scalar_one_or_none() is not None:
                 start = insert(ScientificMetricStart).values(journal_id=journal.id, started_at=now).on_conflict_do_nothing()
                 connection.execute(start)
                 table = ScientificMetricDay.__table__
