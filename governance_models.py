@@ -112,7 +112,8 @@ class GovernanceAudit(db.Model):
 
 class ArticleWorkflow(db.Model):
     article_id = db.Column(db.Integer, db.ForeignKey('article.id', ondelete='CASCADE'), primary_key=True)
-    owner_id = db.Column(db.Integer, db.ForeignKey('team_member.id'), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('team_member.id'), nullable=True)
+    primary_owned = db.Column(db.Boolean, default=False, server_default=db.false(), nullable=False)
     reviewer_id = db.Column(db.Integer, db.ForeignKey('team_member.id'))
     editor_id = db.Column(db.Integer, db.ForeignKey('team_member.id'))
     stage = db.Column(db.String(30), default='draft', nullable=False)

@@ -91,7 +91,10 @@ class MigrationTests(unittest.TestCase):
             engine = create_engine(url)
             with engine.connect() as connection:
                 self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message"}.issubset(inspect(connection).get_table_names()))
-                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261021_08")
+                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261022_09")
+                columns={column['name']:column for column in inspect(connection).get_columns('article_workflow')}
+                self.assertTrue(columns['owner_id']['nullable'])
+                self.assertFalse(columns['primary_owned']['nullable'])
             engine.dispose()
 
     def test_existing_schema_and_content_are_preserved(self):
@@ -162,6 +165,7 @@ class MigrationTests(unittest.TestCase):
                 self.assertTrue(sa.inspect(conn).get_columns('staff_notice')[1] is not None)
                 self.assertTrue(next(c['nullable'] for c in sa.inspect(conn).get_columns('staff_notice') if c['name']=='admin_id'))
             engine.dispose()
+
 
 
 

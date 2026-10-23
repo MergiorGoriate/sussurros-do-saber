@@ -760,7 +760,29 @@ def article_scope(query):
 
 
 def independent_article_reviewer(member, article, owner_id):
-    return bool(member and member.id != owner_id and member.author_id != article.author_id)
+    if not member or member.id == owner_id or member.author_id == article.author_id:
+        return False
+    # Authorship remains independent of staff membership, including unlinked accounts.
+    author_email = (article.author_rel.email or '').strip().casefold() if article.author_rel else ''
+    emails = {(member.email or '').strip().casefold()}
+    if member.admin:
+        emails.add((member.admin.email or '').strip().casefold())
+    if author_email and author_email in emails:
+        return False
+    flow = db.session.get(ArticleWorkflow, article.id) if article.id else None
+    return not (flow and flow.primary_owned and member.admin and member.admin.is_superadmin)
+
+
+def independent_article_approver(article, workflow):
+    member = current_member()
+    if workflow.primary_owned and session.get('admin_superuser'):
+        return False
+    if member:
+        return (member.id != workflow.reviewer_id
+                and independent_article_reviewer(member, article, workflow.owner_id))
+    account = db.session.get(AdminUser, session.get('admin_id')) if session.get('admin_id') else None
+    author_email = (article.author_rel.email or '').strip().casefold() if article.author_rel else ''
+    return not (account and author_email and (account.email or '').strip().casefold() == author_email)
 
 
 def article_edit_access(article):
@@ -798,11 +820,12 @@ def article_save_guard(article,status,author_id):
     workflow=db.session.get(ArticleWorkflow,article.id) if article.id else None
     if workflow and author_id != article.author_id:
         owner=TeamMember.query.filter_by(author_id=author_id).first()
-        if not owner or owner.removed_at:
+        if (owner and owner.removed_at) or (not owner and not session.get('admin_superuser')):
             abort(409,description='Associe o novo autor a um colaborador antes de alterar a autoria.')
         if status in {'approved','published','scheduled'}:
             abort(409,description='Alterar a autoria exige nova revisão. Guarde como rascunho.')
         workflow.owner=owner
+        workflow.primary_owned = owner is None
         workflow.reviewer=workflow.editor=None
         workflow.reviewed_at=workflow.approved_at=None
     if status in {'approved','published','scheduled'}:
@@ -830,8 +853,9 @@ def article_saved(article):
     workflow=db.session.get(ArticleWorkflow,article.id)
     if not workflow:
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
-        if owner:
-            db.session.add(ArticleWorkflow(article_id=article.id,owner_id=owner.id,stage='submitted' if article.status=='review' else article.status))
+        primary_owned = not owner and session.get('admin_superuser') and article.status in {'draft','review'}
+        if (owner and not owner.removed_at) or primary_owned:
+            db.session.add(ArticleWorkflow(article_id=article.id,owner=owner,primary_owned=bool(primary_owned),stage='submitted' if article.status=='review' else article.status))
     audit('article.saved','article',article.id,article.status)
 
 
@@ -846,7 +870,7 @@ def article_workflow(ident):
         if not has_permission('article.edit') and not (has_permission('article.write') and current_member() and current_member().author_id==article.author_id):
             abort(409,description='O editor deve iniciar o fluxo deste artigo.')
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
-        if not owner or owner.removed_at:
+        if (owner and owner.removed_at) or (not owner and not session.get('admin_superuser')):
             # Missing authorship configuration is recoverable in the admin panel.
             # Do not invent membership or grant permissions to start a workflow.
             if request.method == 'POST':
@@ -856,10 +880,9 @@ def article_workflow(ident):
             return render_template('admin/article_workflow_setup.html',
                                    article=article, author=db.session.get(Author, article.author_id),
                                    linked_member=owner)
-        item=ArticleWorkflow(article_id=ident,owner_id=owner.id,owner=owner,
-                             stage=article.status if article.status in ARTICLE_STAGES else 'submitted')
-        if request.method=='POST':
-            db.session.add(item)
+        item=ArticleWorkflow(article_id=ident,owner=owner,owner_id=owner.id if owner else None,
+                             primary_owned=owner is None,
+                             stage='submitted' if article.status=='review' else article.status if article.status in ARTICLE_STAGES else 'submitted')
     if request.method=='POST':
         validate_csrf()
         action=request.form.get('action')
@@ -896,7 +919,7 @@ def article_workflow(ident):
                 item.reviewed_at=item.approved_at=None
         elif action=='approve' and item.stage=='review' and item.reviewed_at:
             require('article.approve')
-            if member and (member.id in {item.owner_id,item.reviewer_id} or member.author_id==article.author_id):
+            if not independent_article_approver(article, item):
                 abort(403,description='A aprovação exige um responsável diferente do autor e do revisor.')
             if not independent_article_reviewer(item.reviewer,article,item.owner_id):
                 abort(409,description='A associação do revisor ao autor mudou. Atribua uma revisão independente.')
@@ -938,11 +961,13 @@ def article_workflow(ident):
             article.scheduled_at=None
         else:
             abort(409,description='Transição editorial indisponível.')
+        db.session.add(item)
         audit('article.'+action,'article',ident,field('note',20000)[:1000])
         db.session.commit()
         return redirect(url_for('staff.article_workflow',ident=ident))
     # GET does not persist a newly initialised workflow.
     return render_template('admin/article_workflow.html',article=article,workflow=item,
+                           approver_independent=independent_article_approver(article,item),
                            reviewers=[m for m in eligible('article.review') if m.admin_id and m.admin and m.admin.active and m.available and independent_article_reviewer(m,article,item.owner_id)],
                            member=current_member(),reviewer_independent=independent_article_reviewer(item.reviewer,article,item.owner_id),
                            reviews=PortalReview.query.filter_by(article_id=ident).order_by(PortalReview.id).all())
@@ -1139,8 +1164,3 @@ def notification_context():
         return dict(notice_unread=0,notice_recent=[])
     query=active_inbox()
     return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())
-
-
-
-
-
