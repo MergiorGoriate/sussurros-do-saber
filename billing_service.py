@@ -47,13 +47,13 @@ def event_record(key, kind, ref, payload):
     return True
 
 
-def change_state(order, state):
+def change_state(order, state, *, cancelled=False):
     if order.state==state or order.state in {'paid','refunded'}:return
     order.state=state
     if state in {'failed','expired'}:
         account=lock_account(order.owner_id,live=order.live)
         if account.open_order_id==order.id:account.open_order_id=None
-        note(order,{'failed':'pagamento recusado','expired':'pedido expirado'}[state],'O pagamento não foi confirmado. Não foi concedido um novo período de acesso.')
+        note(order,'pagamento cancelado' if cancelled else {'failed':'pagamento recusado','expired':'pedido expirado'}[state],'O pagamento não foi confirmado. Não foi concedido um novo período de acesso.')
 
 
 def recompute_access(owner_id):
@@ -137,7 +137,7 @@ def reconcile_clicpay(order):
     if state=='SUCCESSFUL':
         post_receipt(order,account)
     elif state in {'FAILED','CANCELLED','REJECTED'}:
-        change_state(order,'failed')
+        change_state(order,'failed',cancelled=state=='CANCELLED')
     elif state=='REFUNDED':
         if not BillingJournal.query.filter_by(event_key='receipt:'+order.id).first():post_receipt(order,account)
         post_refund(order,order.amount_minor,{'reference':order.provider_ref,'status':state})

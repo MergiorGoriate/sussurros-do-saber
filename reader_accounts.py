@@ -75,10 +75,12 @@ def login():
     valid = check_password_hash(account.password_hash if account and account.password_hash else DUMMY_PASSWORD_HASH, password)
     if not account or not account.password_hash or not valid:
         return jsonify(ok=False, message='E-mail ou palavra-passe incorrectos.'), 400
+    from premium_return import preserve_intent, resume_url
+    premium_token=preserve_intent() if request.form.get('premium_return') else None
     session.clear()
     session.permanent = True
     session['researcher_id'], session['researcher_nonce'] = account.id, account.token_nonce
-    return jsonify(ok=True, verified=account.verified, csrf=csrf_token())
+    return jsonify(ok=True, verified=account.verified, csrf=csrf_token(),redirect_to=resume_url(account,premium_token))
 
 
 @reader_bp.post('/criar-conta')

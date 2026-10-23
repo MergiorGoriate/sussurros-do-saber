@@ -7,11 +7,11 @@ import json
 import re
 import secrets
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import wraps
 from urllib.parse import urlsplit
 import click
-from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for, send_file
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
@@ -31,7 +31,7 @@ billing_bp=Blueprint('billing',__name__,url_prefix='/premium')
 finance_bp=Blueprint('premium_finance',__name__,url_prefix='/admin/premium/financeiro')
 finance_bp.after_request(protect_admin_responses)
 STATES={'initiating':'A iniciar','pending':'Pendente','paid':'Confirmado','failed':'Recusado',
-        'expired':'Expirado','review':'A reconciliar','refunded':'Reembolsado'}
+        'expired':'Expirado','cancelled':'Cancelado','review':'A reconciliar','refunded':'Reembolsado'}
 
 
 @billing_bp.after_request
@@ -44,15 +44,41 @@ def private(response):
 
 @billing_bp.app_context_processor
 def context():
-    return dict(billing_available=bool(available_methods()),billing_live=live_mode(),billing_states=STATES)
+    return dict(billing_available=bool(available_methods()),billing_live=live_mode(),billing_states=STATES,billing_plan_methods=plan_methods,billing_order_state=payment_state)
+
+
+def plan_methods(plan):
+    if not plan.active or plan.price_minor<=0:return {}
+    methods=available_methods(plan.currency)
+    if not 100<=plan.price_minor<=15000000:
+        methods={k:v for k,v in methods.items() if k=='stripe'}
+    return methods
+
+
+def cancelled_evidence():
+    return db.exists(db.select(BillingEvent.id).where(BillingEvent.event_key=='poll:'+BillingOrder.id+':CANCELLED'))
+
+
+def payment_state(order):
+    if order.state=='failed' and BillingEvent.query.filter_by(event_key='poll:'+order.id+':CANCELLED').first():return 'cancelled'
+    return order.state
 
 
 def reader_required(view):
     @wraps(view)
     def wrapped(*args,**kwargs):
+        from premium_return import remember_plan, auth_url
+        if request.endpoint=='billing.checkout':
+            ident=kwargs.get('ident')
+            if not isinstance(ident,int) or not 0<ident<=2147483647:abort(404)
+            plan=db.get_or_404(PremiumPlan,ident)
+            if not plan.active:abort(404)
+            remember_plan(ident)
         account=researcher()
-        if not account:return redirect(url_for('submissions.login'))
-        if not account.verified:abort(403,description='Confirme o seu e-mail antes de efectuar um pagamento.')
+        if not account:return redirect(auth_url('submissions.login'))
+        if not account.verified:
+            if request.endpoint=='billing.checkout':return redirect(auth_url('submissions.verify_notice'))
+            abort(403,description='Confirme o seu e-mail antes de efectuar um pagamento.')
         return view(*args,**kwargs)
     return wrapped
 
@@ -86,7 +112,8 @@ def origin():
 def checkout(ident):
     plan=db.get_or_404(PremiumPlan,ident)
     account=researcher()
-    methods=available_methods(plan.currency) if plan.active else {}
+    methods=plan_methods(plan)
+    session.pop('premium_return',None)
     error=None
     if request.method=='POST':
         validate_csrf()
@@ -120,6 +147,8 @@ def checkout(ident):
             previous=PremiumSubscription.query.filter_by(owner_id=account.id).first()
             if previous and previous.status=='active' and previous.source=='complimentary' and previous.ends_at>utcnow():
                 raise ValueError('Já dispõe de um acesso de oferta válido. Pode aderir depois do seu término.')
+            if previous and previous.status=='active' and previous.ends_at>utcnow() and previous.plan_id!=plan.id:
+                raise ValueError('Pode alterar o plano depois de terminar o período já contratado. A renovação do mesmo plano mantém-se disponível.')
             order=BillingOrder(id=quote['nonce'],owner_id=account.id,plan_id=plan.id,
                 snapshot={k:getattr(plan,k) for k in ('name','interval','price_minor','currency','version','benefits')},
                 amount_minor=plan.price_minor,currency=plan.currency,method=method,
@@ -149,6 +178,8 @@ def checkout(ident):
                 order=db.session.get(BillingOrder,order.id);order.state='review'
                 note(order,'reconciliação necessária','Não foi possível confirmar a iniciação. Não repita a cobrança; contacte a equipa com a referência do pedido.')
                 db.session.commit()
+            if order.state=='pending' and order.checkout_url:
+                return redirect(order.checkout_url,code=303)
             return redirect(url_for('billing.order_detail',ident=order.id))
         except (ValueError,BadSignature,SignatureExpired,ProviderError) as exc:
             db.session.rollback()
@@ -183,6 +214,18 @@ def history():
 def order_detail(ident):
     order=owned(ident)
     return render_template('premium/payment.html',order=order,entries=BillingJournal.query.filter_by(order_id=order.id).all())
+
+
+@billing_bp.get('/pagamentos/<ident>/comprovativo.pdf')
+@reader_required
+@limiter.limit('10 per minute')
+def receipt(ident):
+    from billing_receipts import render_receipt
+    order=owned(ident)
+    entries=BillingJournal.query.filter_by(order_id=order.id).order_by(BillingJournal.id).all()
+    if not any(row.kind=='receipt' for row in entries):abort(404)
+    return send_file(render_receipt(order,entries),mimetype='application/pdf',as_attachment=True,
+                     download_name='comprovativo-'+order.id+'.pdf',max_age=0)
 
 
 @billing_bp.post('/pagamentos/<ident>/verificar')
@@ -325,12 +368,55 @@ def stripe_webhook():
         db.session.rollback();return jsonify(received=False,retry=True),503
 
 
+def filtered_orders():
+    """Only whitelisted, validated filters; shared by history and immutable ledger export."""
+    query=BillingOrder.query
+    filters={key:request.args.get(key,'').strip() for key in ('q','state','mode','plan','from','to')}
+    if len(filters['q'])>120:abort(400)
+    if filters['state'] and filters['state'] not in STATES:abort(400)
+    if filters['mode'] not in ('','live','test'):abort(400)
+    if filters['mode']:query=query.filter(BillingOrder.live.is_(filters['mode']=='live'))
+    if filters['state']=='cancelled':query=query.filter(BillingOrder.state=='failed',cancelled_evidence())
+    elif filters['state']:
+        query=query.filter(BillingOrder.state==filters['state'])
+        if filters['state']=='failed':query=query.filter(~cancelled_evidence())
+    if filters['q']:
+        from submission_models import Researcher
+        value=filters['q']
+        query=query.join(Researcher,BillingOrder.owner_id==Researcher.id).filter(db.or_(
+            BillingOrder.id.contains(value,autoescape=True),BillingOrder.provider_ref.contains(value,autoescape=True),
+            Researcher.email.contains(value,autoescape=True)))
+    if filters['plan']:
+        try:
+            ident=int(filters['plan'])
+            if not 0<ident<=2147483647:raise ValueError()
+        except ValueError:abort(400)
+        query=query.filter(BillingOrder.plan_id==ident)
+    dates={}
+    for key in ('from','to'):
+        if filters[key]:
+            try:dates[key]=datetime.strptime(filters[key],'%Y-%m-%d')
+            except ValueError:abort(400)
+    if len(dates)==2 and dates['from']>dates['to']:abort(400)
+    if 'from' in dates:query=query.filter(BillingOrder.created_at>=dates['from'])
+    if 'to' in dates:
+        try:end=dates['to']+timedelta(days=1)
+        except OverflowError:abort(400)
+        query=query.filter(BillingOrder.created_at<end)
+    return query,{key:value for key,value in filters.items() if value}
+
+
 @finance_bp.get('')
 @superadmin_required
 def dashboard():
     from request_values import pagination_page
-    orders=BillingOrder.query.order_by(BillingOrder.created_at.desc()).paginate(page=pagination_page(),per_page=30,error_out=False)
-    return render_template('admin/premium_finance.html',orders=orders,report=audit_finance(),
+    query,filters=filtered_orders()
+    orders=query.order_by(BillingOrder.created_at.desc()).paginate(page=pagination_page(),per_page=30,error_out=False)
+    now=utcnow()
+    subscriptions=PremiumSubscription.query.filter_by(source='billing')
+    summary=dict(total=subscriptions.count(),active=subscriptions.filter(PremiumSubscription.status=='active',PremiumSubscription.starts_at<=now,PremiumSubscription.ends_at>now).count(),expired=subscriptions.filter(PremiumSubscription.ends_at<=now).count(),pending=query.filter(BillingOrder.state.in_(['initiating','pending','review'])).count(),confirmed=query.filter(BillingOrder.state.in_(['paid','refunded']),BillingOrder.record_kind=='payment').count())
+    popular=db.session.query(PremiumPlan.name,db.func.count(BillingJournal.id)).join(BillingOrder,BillingOrder.plan_id==PremiumPlan.id).join(BillingJournal,BillingJournal.order_id==BillingOrder.id).filter(BillingJournal.kind=='receipt',BillingJournal.live.is_(True)).group_by(PremiumPlan.id,PremiumPlan.name).order_by(db.func.count(BillingJournal.id).desc()).limit(5).all()
+    return render_template('admin/premium_finance.html',orders=orders,report=audit_finance(),filters=filters,summary=summary,popular=popular,plans=PremiumPlan.query.order_by(PremiumPlan.name).all(),
         accounts=BillingAccount.query.filter(db.or_(BillingAccount.cancel_requested.is_(True),BillingAccount.risk_hold.is_(True),BillingAccount.suspended.is_(True))).limit(100).all())
 
 
@@ -371,7 +457,8 @@ def suspension(ident):
 def export():
     output=io.StringIO();writer=csv.writer(output)
     writer.writerow(['id','pedido','tipo','debito','credito','unidades_minimas','moeda','ambiente','data_utc'])
-    for row in BillingJournal.query.order_by(BillingJournal.id).yield_per(500):
+    query,_=filtered_orders()
+    for row in BillingJournal.query.filter(BillingJournal.order_id.in_(query.with_entities(BillingOrder.id))).order_by(BillingJournal.id).yield_per(500):
         writer.writerow([csv_safe_cell(v) for v in [row.id,row.order_id,row.kind,row.debit,row.credit,row.amount_minor,row.currency,'live' if row.live else 'test',row.created_at.isoformat()]])
     return current_app.response_class(output.getvalue(),mimetype='text/csv',headers={'Content-Disposition':'attachment; filename=premium-financeiro.csv'})
 

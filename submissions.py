@@ -1,4 +1,5 @@
 """Authenticated submission workflow and editorial administration."""
+from premium_return import auth_url
 import io
 import json
 import os
@@ -76,7 +77,7 @@ def author_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not researcher():
-            return redirect(url_for('submissions.login'))
+            return redirect(auth_url('submissions.login'))
         if not researcher().verified:
             return redirect(url_for('submissions.verify_notice'))
         return view(*args, **kwargs)
@@ -92,7 +93,9 @@ def private_headers(response):
 
 @submissions_bp.app_context_processor
 def context():
-    return dict(researcher=researcher(), states=STATES, steps=STEPS, author_fields=AUTHOR_FIELDS,
+    from premium_return import selected_plan, auth_url
+    premium_intent=selected_plan()
+    return dict(premium_auth_url=auth_url,premium_auth_token=session.get('premium_return') if premium_intent else None,researcher=researcher(), states=STATES, steps=STEPS, author_fields=AUTHOR_FIELDS,
                 info_fields=INFO_FIELDS, scientific_fields=SCIENTIFIC_FIELDS, required_declarations=REQUIRED_DECLARATIONS,
                 optional_declarations=OPTIONAL_DECLARATIONS, file_kinds=KINDS)
 
@@ -120,7 +123,8 @@ def token_account(token, purpose):
 def account_link(account, purpose):
     origin = os.getenv('SITE_URL', 'https://www.sussurrosdosaber.com').rstrip('/')
     endpoint = 'submissions.verify' if purpose == 'verify' else 'submissions.reset_password'
-    return origin + url_for(endpoint, token=account_token(account, purpose))
+    from premium_return import auth_url
+    return origin + auth_url(endpoint, token=account_token(account, purpose))
 
 
 @submissions_bp.route('/criar-conta', methods=['GET', 'POST'])
@@ -142,7 +146,7 @@ def register():
             except IntegrityError:
                 db.session.rollback()
             flash('Se este e-mail puder ser registado, receberá uma ligação de confirmação. Se já tem conta, entre ou recupere a palavra-passe.', 'success')
-            return redirect(url_for('submissions.login'))
+            return redirect(auth_url('submissions.login'))
     return render_template('submissions/auth.html', mode='register')
 
 
@@ -157,11 +161,13 @@ def login():
         # Fixed cost for unknown users reduces account-enumeration timing differences.
         valid = check_password_hash(account.password_hash if account and account.password_hash else DUMMY_PASSWORD_HASH, password)
         if account and account.password_hash and valid:
+            from premium_return import preserve_intent, resume_url
+            premium_token=preserve_intent()
             session.clear()
             session.permanent = True
             session['researcher_id'] = account.id
             session['researcher_nonce'] = account.token_nonce
-            return redirect(url_for('submissions.mine' if account.verified else 'submissions.verify_notice'))
+            return redirect(resume_url(account,premium_token) or url_for('submissions.mine' if account.verified else 'submissions.verify_notice'))
         flash('E-mail ou palavra-passe incorretos.', 'error')
     return render_template('submissions/auth.html', mode='login')
 
@@ -179,7 +185,7 @@ def logout():
 def verify_notice():
     account = researcher()
     if not account:
-        return redirect(url_for('submissions.login'))
+        return redirect(auth_url('submissions.login'))
     if request.method == 'POST':
         validate_csrf()
         notify(account.email, 'Confirme a conta de autor', 'Confirme a sua conta:\n' + account_link(account, 'verify'))
@@ -196,7 +202,7 @@ def verify(token):
         account.verified = True
         db.session.commit()
         flash('Conta confirmada. Pode entrar e submeter o manuscrito.', 'success')
-        return redirect(url_for('submissions.login'))
+        return redirect(auth_url('submissions.login'))
     return render_template('submissions/auth.html', mode='confirm')
 
 
@@ -210,7 +216,7 @@ def forgot_password():
             notify(account.email, 'Recuperar palavra-passe', 'Ligação válida por uma hora:\n' + account_link(account, 'reset'))
             db.session.commit()
         flash('Se existir uma conta, receberá uma ligação de recuperação.', 'success')
-        return redirect(url_for('submissions.login'))
+        return redirect(auth_url('submissions.login'))
     return render_template('submissions/auth.html', mode='forgot')
 
 
@@ -229,9 +235,12 @@ def reset_password(token):
             account.password_hash = generate_password_hash(password)
             account.token_nonce = secrets.token_hex(24)
             db.session.commit()
+            from premium_return import preserve_intent
+            premium_token=preserve_intent()
             session.clear()
+            if premium_token:session['premium_return']=premium_token
             flash('Palavra-passe atualizada. Entre novamente.', 'success')
-            return redirect(url_for('submissions.login'))
+            return redirect(auth_url('submissions.login'))
     return render_template('submissions/auth.html', mode='reset')
 
 

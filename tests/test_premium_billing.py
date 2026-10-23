@@ -71,7 +71,7 @@ class BillingTests(unittest.TestCase):
 
     def test_quote_requires_verified_authenticated_owner(self):
         self.owner.verified=False;db.session.commit()
-        self.assertEqual(self.client.get('/premium/aderir/'+str(self.plan.id)).status_code,403)
+        self.assertEqual(self.client.get('/premium/aderir/'+str(self.plan.id)).status_code,302)
         with self.client.session_transaction() as session:session.clear()
         self.assertEqual(self.client.get('/premium/pagamentos').status_code,302)
 
