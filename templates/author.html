@@ -62,7 +62,7 @@
         {% for article in articles %}
         <article class="author-article-card">
           <a href="{{ url_for('article', slug=article.slug) }}">
-            {% if article.image %}<img src="{{ article.image|safe_image_url }}" alt="{{ article.image_alt or ('Imagem de capa: ' ~ article.title) }}" loading="lazy" decoding="async">{% endif %}
+            {% if article.cover_poster %}<img src="{{ article.cover_poster|safe_image_url }}" alt="{{ article.image_alt or ('Imagem de capa: ' ~ article.title) }}" loading="lazy" decoding="async">{% endif %}
             <div><span class="eyebrow">{{ article.category }}</span><h3>{{ article.title }}</h3><p>{{ article.summary }}</p><span class="modern-link">Ler artigo →</span></div>
           </a>
         </article>

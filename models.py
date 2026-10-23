@@ -173,6 +173,11 @@ class Article(db.Model):
     comments = db.relationship("Comment", back_populates="article", cascade="all, delete-orphan")
 
     @property
+    def cover_poster(self):
+        from cover_media import cover_poster_url
+        return cover_poster_url(self.image, self.cover_video)
+
+    @property
     def cover_format(self):
         from cover_media import effective_cover_mode
         return effective_cover_mode(self.cover_mode, self.cover_video)
@@ -265,7 +270,7 @@ class Article(db.Model):
         """Consulta leve para listas: evita carregar corpo e referências extensos."""
         return cls.public_query().options(
             load_only(
-                cls.id, cls.title, cls.slug, cls.summary, cls.image, cls.status,
+                cls.id, cls.title, cls.slug, cls.summary, cls.image, cls.cover_video, cls.status,
                 cls.read_minutes, cls.featured, cls.published_at, cls.scheduled_at,
                 cls.created_at, cls.updated_at, cls.author_id, cls.category_id,
             ),
@@ -300,9 +305,3 @@ class Subscriber(db.Model):
     email = db.Column(db.String(180), unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
-
-
-
-
-
-

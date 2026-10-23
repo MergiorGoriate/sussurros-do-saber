@@ -25,7 +25,7 @@
   <ul class="reader-favorites-grid" data-reader-library>
     {% if not notifications %}
       {% for row in reader_articles|default([]) %}
-        {{ favorite_card(url_for('article', slug=row.article.slug), row.article.title, row.article.image, row.article.category, row.article.summary, row.article.date, id=row.article_id) }}
+        {{ favorite_card(url_for('article', slug=row.article.slug), row.article.title, row.article.cover_poster, row.article.category, row.article.summary, row.article.date, id=row.article_id) }}
       {% endfor %}
       {% for row in reader_rows %}
         {{ favorite_card(url_for('journal_detail', slug=row.journal.slug), row.journal|reader_article_title, row.journal.cover_image, row.journal.field, row.journal.description, row.journal.updated_at.strftime('%d/%m/%Y'), slug=row.journal.slug) }}
@@ -46,4 +46,3 @@
   {% endif %}
 </section>
 {% endblock %}
-

@@ -82,7 +82,8 @@ class ArticleCoverTests(unittest.TestCase):
         self.assertEqual(data['@type'],'Article');self.assertNotIn('VideoObject',str(data))
         self.assertTrue(soup.select_one('link[rel=canonical]')['href'].endswith('/artigo/'+article.slug))
         article.image='';db.session.commit()
-        self.assertIn('/static/img/image-fallback.svg',BeautifulSoup(self.public(article).data,'html.parser').select_one('.cover-poster')['src'])
+        self.assertIn('/video/upload/',BeautifulSoup(self.public(article).data,'html.parser').select_one('.cover-poster')['src'])
+        self.assertTrue(article.cover_poster.endswith('.jpg'))
         for path in ['/','/artigos']:
             page=app.test_client().get(path);self.assertEqual(page.status_code,200)
             self.assertFalse(BeautifulSoup(page.data,'html.parser').select('video.cover-video,[data-article-cover]'))
