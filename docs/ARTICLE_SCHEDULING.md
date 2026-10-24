@@ -41,3 +41,11 @@ Criados: `article_scheduling.py`, `static/js/article-scheduling.js`, `static/css
 
 Os testes usam SQLite isolada, contas e artigos sintéticos. Não foram programados artigos de produção nem alteradas credenciais ou configurações de alojamento. Os ensaios locais não certificam concorrência PostgreSQL ou compatibilidade Safari/Firefox.
 - Suite completa: `PYTHONPATH=tests python -m unittest discover -s tests -p 'test_*.py'` — 579 casos, 578 aprovados e um ignorado por exigir PostgreSQL isolado; sem falhas. Execução em 109 segundos. A repetição final dos quatro testes de navegador também passou.
+
+## Correcção após a validação contínua
+
+A execução completa dos testes de navegador na PR #280 detectou seis falhas na gravação automática. O controlo de programação desactivava os campos de data/fuso dos rascunhos depois de a gravação automática ter calculado a referência do formulário. Essa diferença era correctamente tratada como alteração de opções protegidas, pausando a gravação.
+
+A ordem dos scripts foi corrigida: `article-scheduling.js` inicializa os controlos antes de `article-autosave.js` registar a referência. Não se alteraram as verificações de segurança da gravação automática, a protecção contra alterações concorrentes ou as regras de publicação. A falha original foi reproduzida localmente antes da correcção.
+
+Após a correcção: 13 testes Python de programação e gravação automática aprovados. Repetidos também os testes reais de navegador da gravação automática juntamente com os da programação, sem remover verificações ou aumentar os limites de tempo.
