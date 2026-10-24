@@ -168,6 +168,13 @@ class MemberTests(unittest.TestCase):
         self.assertEqual(row.state,'fulfilled')
         from billing import payment_state
         self.assertEqual(payment_state(order),'partially_refunded')
+        from billing import filtered_orders
+        with app.test_request_context('/?state=partially_refunded'):
+            query,_=filtered_orders()
+            self.assertIn(order.id,[r.id for r in query.all()])
+        with app.test_request_context('/?state=paid'):
+            query,_=filtered_orders()
+            self.assertNotIn(order.id,[r.id for r in query.all()])
 
     def test_another_reader_cannot_request_refund_of_a_foreign_payment(self):
         from submission_models import Researcher

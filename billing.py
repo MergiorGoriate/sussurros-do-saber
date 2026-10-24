@@ -385,9 +385,12 @@ def filtered_orders():
     if filters['mode'] not in ('','live','test'):abort(400)
     if filters['mode']:query=query.filter(BillingOrder.live.is_(filters['mode']=='live'))
     if filters['state']=='cancelled':query=query.filter(BillingOrder.state=='failed',cancelled_evidence())
+    elif filters['state']=='partially_refunded':
+        query=query.filter(BillingOrder.refund_minor>0,BillingOrder.refund_minor<BillingOrder.amount_minor)
     elif filters['state']:
         query=query.filter(BillingOrder.state==filters['state'])
         if filters['state']=='failed':query=query.filter(~cancelled_evidence())
+        if filters['state']=='paid':query=query.filter(BillingOrder.refund_minor==0)
     if filters['q']:
         from submission_models import Researcher
         value=filters['q']
