@@ -1547,6 +1547,8 @@ def seed_database():
         db.session.commit()
         from premium_schema import upgrade_premium_schema
         upgrade_premium_schema(db.session.connection())
+        from premium_commercial_schema import upgrade_commercial_schema
+        upgrade_commercial_schema(db.session.connection())
         db.session.commit()
         from workflow_schema import upgrade_workflow_schema
         upgrade_workflow_schema(db.session.connection())
@@ -1631,4 +1633,5 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 

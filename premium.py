@@ -46,7 +46,8 @@ def subscription_label(subscription):
     if subscription.status != 'active':
         return STATES[subscription.status]
     if subscription.ends_at <= utcnow():
-        return 'Expirada'
+        from premium_members import in_grace
+        return 'Em tolerância' if in_grace(subscription) else 'Expirada'
     return 'Activa' if subscription.starts_at <= utcnow() else 'Por iniciar'
 
 
@@ -118,11 +119,12 @@ def library():
 @premium_bp.get('/conteudos/<int:ident>')
 def content(ident):
     from premium_resources import require_access, detail, record_usage
-    from premium_models import (PremiumFile,PremiumLesson,PremiumProgress,PremiumCollectionItem,PremiumEvent,PremiumRegistration)
+    from premium_models import (PremiumFile,PremiumLesson,PremiumProgress,PremiumCollectionItem,PremiumEvent,PremiumRegistration,PremiumEnrollment)
     # Load no protected body before checking identity, verification and dates.
     item = PremiumContent.query.options(load_only(PremiumContent.id, PremiumContent.title, PremiumContent.kind,
                                                    PremiumContent.summary, PremiumContent.category, PremiumContent.open_access_required)).filter_by(id=ident, published=True).first_or_404()
-    if not item.open_access_required and not entitled(subscription_for(researcher())):
+    from premium_members import can_access
+    if not can_access(subscription_for(researcher()),item,detail(item)):
         return render_template('premium/locked.html', item=item), 403
     resource=require_access(item)
     account=researcher()
@@ -139,7 +141,8 @@ def content(ident):
     return render_template('premium/content.html', item=item, kinds=KINDS,resource=resource,
         files=PremiumFile.query.filter_by(content_id=ident).all(),lessons=lessons,completed=completed,progress=progress,
         collection=collection,event=db.session.get(PremiumEvent,ident),
-        registration=db.session.get(PremiumRegistration,(ident,account.id)) if account else None)
+        registration=db.session.get(PremiumRegistration,(ident,account.id)) if account else None,
+        enrollment=db.session.get(PremiumEnrollment,(account.id,ident)) if account else None)
 
 
 def text_field(name, maximum, minimum=1):
@@ -224,15 +227,21 @@ def plan(ident):
             if not amount.is_finite() or amount < 0 or amount > Decimal('10000000') or amount != amount.quantize(Decimal('.01')):
                 raise ValueError('Preço inválido; use até duas casas decimais.')
             active = request.form.get('active') == 'on'
-            if active and amount <= 0:
+            if active and amount <= 0 and not (request.form.get('tier') in {'pro','max'} and interval=='annual'):
                 raise ValueError('Defina um preço positivo antes de apresentar o plano.')
             benefits = [line.strip() for line in request.form.get('benefits', '').splitlines() if line.strip()]
             if len(benefits) > 20 or any(len(line) > 180 for line in benefits):
                 raise ValueError('Indique até 20 benefícios, com até 180 caracteres por linha.')
             if len(set(benefits)) != len(benefits):
                 raise ValueError('Não repita benefícios.')
-            values = dict(benefits=benefits, name=name, interval=interval, currency=currency, price_minor=int(amount * 100),
+            values = dict(tier=request.form.get('tier', record.tier if record else 'legacy'), benefits=benefits, name=name, interval=interval, currency=currency, price_minor=int(amount * 100),
                           active=active, description=text_field('description', 2000, 0))
+            if 'course_limit' in request.form:
+                from premium_resources import integer
+                raw_limit=request.form.get('course_limit','').strip()
+                values['course_limit']=integer(raw_limit,1,100000) if raw_limit else None
+            from premium_commercial import apply_price, update_annual
+            apply_price(values, record)
             before = {key: getattr(record, key) for key in values} if record else {}
             if record is None:
                 record = PremiumPlan()
@@ -251,6 +260,7 @@ def plan(ident):
                 # Contract-only edits also invalidate outstanding signed quotes.
                 if ident:record.version+=1
             audit('plan.save', record, {'before': before, 'after': values})
+            update_annual(record)
             commit()
             flash('Plano guardado. As condições dos acessos já concedidos são preservadas.', 'success')
             return redirect(url_for('premium_admin.dashboard'))
@@ -346,7 +356,7 @@ def grant():
                 raise ValueError('Esta conta já tem um registo. Altere a assinatura existente.')
             record = PremiumSubscription(owner_id=account.id, plan_id=plan_record.id, starts_at=start, ends_at=end,
                 reason=reason, source='complimentary', plan_snapshot={key: getattr(plan_record, key) for key in
-                    ('name', 'interval', 'currency', 'price_minor', 'benefits')})
+                    ('name', 'tier', 'interval', 'currency', 'price_minor', 'benefits', 'course_limit')})
             db.session.add(record)
             audit('subscription.grant', record, {'owner_id': account.id, 'plan': record.plan_snapshot,
                 'starts_at': start.isoformat(), 'ends_at': end.isoformat(), 'reason': reason, 'source': 'complimentary'})
@@ -394,3 +404,5 @@ def subscription(ident):
 from premium_features import install_features
 install_features(premium_bp, premium_admin_bp)
 
+from premium_members import install_members
+install_members(premium_bp, premium_admin_bp)

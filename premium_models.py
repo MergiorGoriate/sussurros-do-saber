@@ -9,6 +9,8 @@ class PremiumPlan(db.Model):
         db.CheckConstraint('NOT active OR price_minor > 0', name='premium_plan_published_price'),
     )
     id = db.Column(db.Integer, primary_key=True)
+    tier = db.Column(db.String(8), nullable=False, default='legacy', server_default='legacy')
+    course_limit = db.Column(db.Integer)
     name = db.Column(db.String(100), nullable=False)
     interval = db.Column(db.String(10), nullable=False)
     price_minor = db.Column(db.Integer, nullable=False, default=0)
@@ -191,3 +193,46 @@ class PremiumUsage(db.Model):
     action = db.Column(db.String(30), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)
 
+
+
+class PremiumAccessHistory(db.Model):
+    """First authorised access, retained independently of later progress updates."""
+    owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), primary_key=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id'), primary_key=True)
+    first_access_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class PremiumEnrollment(db.Model):
+    owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), primary_key=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id'), primary_key=True)
+    enrolled_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    deadline = db.Column(db.DateTime)
+    state = db.Column(db.String(16), nullable=False, default='active')
+    version = db.Column(db.Integer, nullable=False, default=1)
+    __mapper_args__ = {'version_id_col': version}
+    __table_args__ = (db.CheckConstraint("state IN ('active','completed','suspended')", name='premium_enrollment_state'),)
+
+
+class PremiumServiceRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), nullable=False, index=True)
+    kind = db.Column(db.String(16), nullable=False)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id'))
+    order_id = db.Column(db.String(32), db.ForeignKey('billing_order.id'))
+    reason = db.Column(db.String(2000), nullable=False)
+    state = db.Column(db.String(16), nullable=False, default='pending')
+    decision = db.Column(db.String(2000), nullable=False, default='')
+    amount_minor = db.Column(db.Integer)
+    extension_until = db.Column(db.DateTime)
+    decided_by = db.Column(db.String(100))
+    decided_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    owner = db.relationship('Researcher')
+    order = db.relationship('BillingOrder')
+    __mapper_args__ = {'version_id_col': version}
+    __table_args__ = (
+        db.CheckConstraint("kind IN ('refund','extension','reactivation','assistance')", name='premium_request_kind'),
+        db.CheckConstraint("state IN ('pending','review','approved','rejected','fulfilled')", name='premium_request_state'),
+        db.CheckConstraint('amount_minor IS NULL OR amount_minor > 0', name='premium_request_amount'),
+    )

@@ -33,7 +33,7 @@ billing_bp=Blueprint('billing',__name__,url_prefix='/premium')
 finance_bp=Blueprint('premium_finance',__name__,url_prefix='/admin/premium/financeiro')
 finance_bp.after_request(protect_admin_responses)
 STATES={'initiating':'A iniciar','pending':'Pendente','paid':'Confirmado','failed':'Recusado',
-        'expired':'Expirado','cancelled':'Cancelado','review':'A reconciliar','refunded':'Reembolsado'}
+        'expired':'Expirado','cancelled':'Cancelado','review':'A reconciliar','refunded':'Reembolsado','partially_refunded':'Parcialmente reembolsado'}
 
 
 @billing_bp.after_request
@@ -51,6 +51,8 @@ def context():
 
 def plan_methods(plan):
     if not plan.active or plan.price_minor<=0:return {}
+    from premium_commercial import annual_saving
+    if plan.tier in {'pro','max'} and plan.interval=='annual' and annual_saving(plan) is None:return {}
     methods=available_methods(plan.currency)
     if not 100<=plan.price_minor<=15000000:
         methods={k:v for k,v in methods.items() if k=='stripe'}
@@ -62,6 +64,7 @@ def cancelled_evidence():
 
 
 def payment_state(order):
+    if 0 < order.refund_minor < order.amount_minor:return 'partially_refunded'
     if order.state=='failed' and BillingEvent.query.filter_by(event_key='poll:'+order.id+':CANCELLED').first():return 'cancelled'
     return order.state
 
@@ -114,6 +117,8 @@ def origin():
 def checkout(ident):
     plan=db.get_or_404(PremiumPlan,ident)
     account=researcher()
+    from premium_commercial import validate_price
+    validate_price(plan)
     methods=plan_methods(plan)
     session.pop('premium_return',None)
     error=None
@@ -152,7 +157,7 @@ def checkout(ident):
             if previous and previous.status=='active' and previous.ends_at>utcnow() and previous.plan_id!=plan.id:
                 raise ValueError('Pode alterar o plano depois de terminar o período já contratado. A renovação do mesmo plano mantém-se disponível.')
             order=BillingOrder(id=quote['nonce'],owner_id=account.id,plan_id=plan.id,
-                snapshot={**{k:getattr(plan,k) for k in ('name','interval','price_minor','currency','version','benefits')},
+                snapshot={**{k:getattr(plan,k) for k in ('name','tier','interval','price_minor','currency','version','benefits','course_limit')},
                           'terms':plan_terms(plan)},
                 amount_minor=plan.price_minor,currency=plan.currency,method=method,
                 provider='stripe' if method=='stripe' else 'clicpay',live=live_mode(),recurring=method=='stripe',
@@ -494,12 +499,8 @@ def install_billing_cli(app):
                 if root and root.live==live_mode():reconcile_agreement(account)
                 db.session.commit()
             except (ProviderError,IntegrityError,StaleDataError):db.session.rollback();failures+=1
-        # Durable in-site expiry notices, deduplicated by subscription and end date.
-        for sub in PremiumSubscription.query.filter_by(source='billing').filter(PremiumSubscription.ends_at<=utcnow()+timedelta(days=3)).limit(limit):
-            order=BillingOrder.query.filter_by(owner_id=sub.owner_id,live=True,state='paid',record_kind='payment').order_by(BillingOrder.created_at.desc()).first()
-            if order:
-                text='O acesso terminou.' if sub.ends_at<=utcnow() else 'O período de acesso termina dentro de três dias. Consulte a sua assinatura e a modalidade de renovação.'
-                note(order,'validade '+sub.ends_at.isoformat()+(' expired' if sub.ends_at<=utcnow() else ' reminder'),text)
+        from premium_members import process_membership_notices
+        process_membership_notices(limit)
         db.session.commit()
         # Retry durable cancellation requests even when sales are disabled.
         owners=[a.owner_id for a in BillingAccount.query.filter_by(live=live_mode(),cancel_requested=True,cancel_confirmed=False).limit(limit)]
@@ -564,4 +565,5 @@ def install_billing_cli(app):
     def audit_command():
         report=audit_finance();click.echo(json.dumps(report))
         if report['errors']:raise click.exceptions.Exit(1)
+
 

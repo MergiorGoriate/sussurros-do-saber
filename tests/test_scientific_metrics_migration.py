@@ -27,5 +27,6 @@ class ScientificMetricsMigrationTests(unittest.TestCase):
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM scientific_metric_day')),0)
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM scientific_metric_source')),0)
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM scientific_metric_start WHERE journal_id=731')),1)
-                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261024_15')
+                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261024_16')
                 engine.dispose()
+
