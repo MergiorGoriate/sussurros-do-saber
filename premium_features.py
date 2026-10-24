@@ -239,7 +239,8 @@ def install_features(public, admin):
         if action=='delete':
             if request.form.get('confirm')!='on':abort(400)
             # Learning/attendance history remains auditable: archive used resources.
-            used=any(model.query.filter_by(content_id=ident).first() for model in (PremiumProgress,PremiumRegistration,PremiumCertificate))
+            from premium_models import PremiumEnrollment, PremiumAccessHistory, PremiumServiceRequest
+            used=any(model.query.filter_by(content_id=ident).first() for model in (PremiumProgress,PremiumRegistration,PremiumCertificate,PremiumEnrollment,PremiumAccessHistory,PremiumServiceRequest))
             if used:abort(409,description='Este recurso tem histórico de utilização. Arquive-o para preservar os registos.')
             PremiumCollectionItem.query.filter(or_(PremiumCollectionItem.content_id==ident,PremiumCollectionItem.collection_id==ident)).delete(synchronize_session=False)
             PremiumLesson.query.filter_by(content_id=ident).delete(synchronize_session=False)
@@ -337,7 +338,7 @@ def install_features(public, admin):
 
     @public.post('/conteudos/<int:ident>/favorito')
     def favourite(ident):
-        validate_csrf();item=db.get_or_404(PremiumContent,ident);require_access(item)
+        validate_csrf();item=db.get_or_404(PremiumContent,ident);require_access(item,allow_grace=False)
         progress=progress_for(reader(),item)
         progress.favourite=not progress.favourite
         try:db.session.commit()
@@ -400,7 +401,16 @@ def install_features(public, admin):
     @public.route('/aulas/<int:ident>',methods=['GET','POST'])
     def lesson(ident):
         row=PremiumLesson.query.filter_by(id=ident,published=True).first_or_404()
-        item=db.get_or_404(PremiumContent,row.content_id);require_access(item);account=reader()
+        item=db.get_or_404(PremiumContent,row.content_id);resource=require_access(item);account=reader()
+        if resource.resource_type=='course':
+            from premium import subscription_for
+            from premium_members import enrollment_for
+            if not item.open_access_required:
+                from premium_models import PremiumEnrollment
+                sub=subscription_for(account)
+                if sub and sub.plan.tier in {'pro','max'} and not db.session.get(PremiumEnrollment,(account.id,item.id)):
+                    abort(403,description='Inscreva-se no curso antes de iniciar as aulas.')
+                enrollment_for(account,item,resource,sub)
         progress=progress_for(account,item);feedback=None
         if request.method=='POST':
             validate_csrf()
@@ -425,6 +435,9 @@ def install_features(public, admin):
         lessons,completed=completion(item,account)
         if resource.resource_type!='course' or not resource.certificate_enabled or not lessons or len(completed)!=len(lessons):abort(403)
         certificate=PremiumCertificate.query.filter_by(owner_id=account.id,content_id=ident,content_version=item.version).first()
+        from premium_models import PremiumEnrollment
+        enrollment=db.session.get(PremiumEnrollment,(account.id,ident))
+        if enrollment:enrollment.state='completed'
         if not certificate:
             certificate=PremiumCertificate(id=secrets.token_hex(16),owner_id=account.id,content_id=ident,content_version=item.version,
                 snapshot={'name':account.name,'title':item.title,'instructor':resource.metadata_fields.get('instructor',''),'lessons':len(lessons)})
@@ -438,6 +451,7 @@ def install_features(public, admin):
     def certificate_download(token):
         account=reader()
         certificate=PremiumCertificate.query.filter_by(id=token,owner_id=account.id).first_or_404()
+        from app import SITE_URL
         from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer
         from reportlab.lib.styles import getSampleStyleSheet
         output=io.BytesIO();styles=getSampleStyleSheet()
@@ -445,13 +459,14 @@ def install_features(public, admin):
         doc.build([Paragraph('Sussurros do Saber',styles['Title']),Spacer(1,30),Paragraph('Certificado de conclusão',styles['Heading1']),
             Paragraph(escape(certificate.snapshot['name']),styles['Heading2']),Paragraph('Concluiu o percurso educativo '+escape(certificate.snapshot['title'])+'.',styles['BodyText']),
             Paragraph('Aulas concluídas: '+str(certificate.snapshot['lessons'])+'. Este documento certifica a conclusão do percurso na plataforma; não atribui um grau académico.',styles['BodyText']),
-            Spacer(1,30),Paragraph('Emitido em '+certificate.issued_at.strftime('%d/%m/%Y')+' · Referência '+certificate.id,styles['BodyText'])])
+            Spacer(1,30),Paragraph('Emitido em '+certificate.issued_at.strftime('%d/%m/%Y')+' · Referência '+certificate.id,styles['BodyText']),
+            Paragraph('Verificar autenticidade: '+escape(SITE_URL.rstrip('/')+url_for('premium.verify_certificate',token=certificate.id)),styles['BodyText'])])
         output.seek(0)
         return send_file(output,mimetype='application/pdf',as_attachment=True,download_name='certificado.pdf',max_age=0)
 
     @public.post('/eventos/<int:ident>/inscricao')
     def register_event(ident):
-        validate_csrf();item=db.get_or_404(PremiumContent,ident);require_access(item);account=reader()
+        validate_csrf();item=db.get_or_404(PremiumContent,ident);require_access(item,allow_grace=request.form.get('action')=='cancel');account=reader()
         event=db.session.execute(select(PremiumEvent).where(PremiumEvent.content_id==ident).with_for_update()).scalar_one_or_none()
         if not event:abort(404)
         row=db.session.get(PremiumRegistration,(ident,account.id))
@@ -523,3 +538,4 @@ def install_features(public, admin):
         """Publish due Premium resources and process bounded in-site notices."""
         count=process_publications(limit)
         click.echo(f'{count} recursos publicados; notificações processadas por lotes.')
+

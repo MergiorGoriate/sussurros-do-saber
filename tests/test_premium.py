@@ -10,7 +10,8 @@ from app import app
 from extensions import limiter
 from models import db, utcnow, Article, Journal, AdminUser
 from submission_models import Researcher
-from premium_models import PremiumPlan, PremiumContent, PremiumSubscription, PremiumAudit
+from premium_models import (PremiumPlan, PremiumContent, PremiumSubscription, PremiumAudit,
+    PremiumServiceRequest, PremiumEnrollment, PremiumAccessHistory)
 from premium import entitled
 from security_test_support import authenticate_test_session
 
@@ -21,7 +22,7 @@ class PremiumTests(unittest.TestCase):
         self.context.push()
         self.old_limiter = limiter.enabled
         limiter.enabled = False
-        for model in (PremiumAudit, PremiumSubscription, PremiumContent, PremiumPlan):
+        for model in (PremiumServiceRequest, PremiumEnrollment, PremiumAccessHistory, PremiumAudit, PremiumSubscription, PremiumContent, PremiumPlan):
             model.query.delete()
         self.account = Researcher.query.filter_by(email='premium@example.test').first()
         if self.account is None:
@@ -286,9 +287,10 @@ class PremiumMigrationTests(unittest.TestCase):
                 with engine.connect() as connection:
                     self.assertEqual(connection.scalar(text('SELECT name FROM category WHERE id=123')),'Preservada')
                     self.assertEqual([c['name'] for c in before_columns],[c['name'] for c in inspect(connection).get_columns('article')])
-                    self.assertEqual(connection.scalar(text('SELECT count(*) FROM premium_plan')),2)
+                    self.assertEqual(connection.scalar(text('SELECT count(*) FROM premium_plan')),6)
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM premium_plan WHERE active')),0)
-                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261024_15')
+                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261024_16')
                     for table in ['premium_content','premium_subscription','premium_audit']:
                         self.assertIn(table,inspect(connection).get_table_names())
                 engine.dispose()
+

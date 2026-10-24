@@ -40,15 +40,20 @@ def visible_clause():
     return ~PremiumContent.id.in_(blocked)
 
 
-def require_access(item):
-    from premium import entitled, subscription_for
+def require_access(item, *, allow_grace=True):
+    from premium import subscription_for
     from submissions import researcher
     resource = detail(item)
     if not item.published or resource.state != 'published': abort(404)
     if item.open_access_required: return resource
     sub = subscription_for(researcher())
-    if not entitled(sub) or resource.plan_ids and sub.plan_id not in resource.plan_ids:
+    from premium_members import can_access
+    if not can_access(sub,item,resource,allow_grace=allow_grace):
         abort(403, description='Este recurso exige uma subscrição válida de um dos planos autorizados.')
+    from premium_models import PremiumEnrollment
+    enrollment=db.session.get(PremiumEnrollment,(sub.owner_id,item.id))
+    if enrollment and (enrollment.state=='suspended' or enrollment.deadline and utcnow()>=enrollment.deadline):
+        abort(403,description='O prazo deste curso terminou. Pode solicitar prorrogação ou reactivação na área de pedidos.')
     return resource
 
 
@@ -64,6 +69,11 @@ def record_usage(item, action):
     account = researcher()
     if not account: return  # Anonymous catalogue browsing is not fabricated as member usage.
     now = utcnow()
+    from premium import entitled, subscription_for
+    from premium_models import PremiumAccessHistory
+    if entitled(subscription_for(account)):
+        history_insert=postgres_insert if db.engine.dialect.name == 'postgresql' else sqlite_insert
+        db.session.execute(history_insert(PremiumAccessHistory).values(owner_id=account.id,content_id=item.id,first_access_at=now).on_conflict_do_nothing())
     values = dict(event_key=f'{account.id}:{item.id}:{action}:{now.date()}',content_id=item.id,
                   action=action,created_at=now)
     insert = postgres_insert if db.engine.dialect.name == 'postgresql' else sqlite_insert
@@ -217,6 +227,11 @@ def save_details(item):
         if len(value)>limit:raise ValueError('Campo demasiado extenso: '+field)
         data[field]=value
     if data['year']:integer(data['year'],1000,9999)
+    for field in ('completion_days',):
+        if field in request.form:
+            raw=request.form.get(field,'').strip()
+            if raw:data[field]=integer(raw,1,3650)
+        elif field in resource.metadata_fields:data[field]=resource.metadata_fields[field]
     ids=[]
     for value in request.form.getlist('allowed_plan'):
         ident=integer(value)
@@ -264,3 +279,4 @@ def save_details(item):
         occupied=PremiumRegistration.query.filter_by(content_id=item.id).filter(PremiumRegistration.state!='cancelled').count()
         if event.capacity<occupied:raise ValueError('A capacidade não pode ser inferior ao número de inscrições activas.')
         db.session.add(event)
+

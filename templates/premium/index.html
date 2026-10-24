@@ -46,6 +46,7 @@
       <div class="premium-plan-top"><p class="premium-eyebrow">{{ intervals[plan.interval] }}</p><span class="premium-period-chip">{{ '12 meses' if plan.interval=='annual' else '1 mês' }}</span></div>
       <h3 id="premium-plan-{{ plan.id }}">{{ plan.name }}</h3>
       <p class="premium-price">{{ '%.2f'|format(plan.price_minor / 100) }} <span>{{ plan.currency }}</span><small> / {{ 'mês' if plan.interval == 'monthly' else 'ano' }}</small></p>
+      {% set saving=premium_annual_saving(plan) %}{% if saving is not none %}<p class="premium-badge">Poupe 20%: {{ '%.2f'|format(saving/100) }} {{ plan.currency }} por ano</p>{% endif %}
       {% if plan.description %}<p class="premium-plan-description">{{ plan.description }}</p>{% endif %}
       <div class="premium-plan-benefits"><p class="premium-plan-inclusion"><span aria-hidden="true">✓</span> Acesso aos recursos autorizados para este plano na Biblioteca Exclusiva.</p>{% if plan.benefits %}<ul class="premium-benefits">{% for benefit in plan.benefits %}<li>{{ benefit }}</li>{% endfor %}</ul>{% endif %}</div>
       <details class="premium-plan-conditions"><summary>Renovação e cancelamento</summary><p class="premium-plan-terms">{{ '12 meses por período' if plan.interval == 'annual' else '1 mês por período' }}. Renovação automática apenas com autorização e confirmação do fornecedor; pode cancelá-la na sua conta, mantendo o período já pago.</p></details>
@@ -63,4 +64,5 @@
 {% endif %}
 <section class="premium-faq" aria-labelledby="premium-faq-title"><div class="premium-faq-heading"><p class="premium-eyebrow">Acesso aberto</p><h2 id="premium-faq-title">Antes de começar</h2></div><details class="premium-card"><summary>É necessário pagar para ler a revista?</summary><p>Não. A assinatura Premium não condiciona a leitura dos artigos científicos nem dos artigos informativos do portal.</p></details></section>
 {% endblock %}
+
 
