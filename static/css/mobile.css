@@ -99,3 +99,8 @@
   .public-site .site-footer .footer-column > a::after { content: none; }
   .public-site .site-footer .social-links a { width: 44px; height: 44px; }
 }
+
+/* Keep the secondary links together at the right edge on desktop. */
+@media (min-width: 1024px) {
+  .public-site #mainNav .nav-secondary-start { margin-inline-start: auto; }
+}
