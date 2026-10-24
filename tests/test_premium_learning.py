@@ -28,8 +28,13 @@ MODELS=(PremiumUsage,PremiumCertificate,PremiumRegistration,PremiumProgress,Prem
         PremiumLesson,PremiumFile,PremiumEvent,PremiumResource,PremiumPlanTerms,PremiumStaff,PremiumSetting,PremiumCategory)
 
 
-def pdf_bytes():
+def pdf_bytes(named=False):
     output=io.BytesIO();canvas=Canvas(output);canvas.drawString(40,700,'Documento educativo');canvas.save()
+    if named:
+        from pypdf import PdfReader,PdfWriter
+        writer=PdfWriter();writer.append(PdfReader(io.BytesIO(output.getvalue())))
+        writer.add_named_destination('seccao',0)
+        result=io.BytesIO();writer.write(result);return result.getvalue()
     return output.getvalue()
 
 
@@ -340,7 +345,8 @@ class PremiumLearningTests(unittest.TestCase):
 
     def test_private_range_request_and_enabled_download(self):
         self.make_resource(download_allowed=True);self.grant();self.login()
-        file=save_file(self.item,FileStorage(stream=io.BytesIO(pdf_bytes()),filename='manual.pdf'),'attachment');db.session.commit()
+        # A names dictionary with ordinary destinations is not executable JavaScript.
+        file=save_file(self.item,FileStorage(stream=io.BytesIO(pdf_bytes(named=True)),filename='manual.pdf'),'attachment');db.session.commit()
         response=self.client.get(f'/premium/ficheiros/{file.id}',headers={'Range':'bytes=0-9'})
         self.assertEqual(response.status_code,206)
         self.assertEqual(len(response.data),10)

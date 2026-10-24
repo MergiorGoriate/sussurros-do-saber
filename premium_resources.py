@@ -175,7 +175,9 @@ def save_file(item, upload, role, replace_id=None):
             pdf=PdfReader(io.BytesIO(payload))
             if pdf.is_encrypted or not len(pdf.pages):raise ValueError()
             root=pdf.trailer['/Root']
-            if '/OpenAction' in root or '/AA' in root or '/JavaScript' in root.get('/Names',{}):raise ValueError()
+            names=root.get('/Names')
+            names=names.get_object() if names is not None else {}
+            if '/OpenAction' in root or '/AA' in root or '/JavaScript' in names:raise ValueError()
             if any('/AA' in page for page in pdf.pages):raise ValueError()
         except Exception:
             raise ValueError('PDF inválido, cifrado ou com acções automáticas não permitidas.') from None
