@@ -1,4 +1,16 @@
 /* Only Premium administration: leave the global sidebar and editorial UI intact. */
+.premium-admin .premium-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.premium-admin .premium-admin-form fieldset{min-width:0;border:1px solid var(--pa-line);border-radius:12px;padding:20px;margin:0 0 20px}
+.premium-admin .premium-admin-form legend{font-weight:700;padding:0 8px;font-size:14px}
+.premium-admin .premium-admin-form details{margin-block:16px}
+.premium-admin summary{min-height:44px;padding:12px 0;cursor:pointer;font-weight:600}
+.premium-admin .premium-admin-form input[type=file]{padding:10px;min-height:44px}
+.premium-admin .premium-admin-form button{min-height:44px;margin:6px 6px 6px 0;padding:10px 16px;border:1px solid var(--pa-line);border-radius:8px;background:var(--pa-tint);color:var(--pa-ink);cursor:pointer}
+.premium-admin .premium-admin-form button.admin-primary{background:#1e4e8c;color:#fff}
+.premium-admin [hidden]{display:none!important}
+.premium-collection-picker{max-height:420px;overflow:auto;border:1px solid var(--pa-line);padding:12px;border-radius:8px}
+.premium-collection-choice{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:12px;border-bottom:1px solid var(--pa-line);padding:10px 0}
+@media(max-width:650px){.premium-admin .premium-field-grid{grid-template-columns:minmax(0,1fr)}.premium-admin .premium-admin-form fieldset{padding:14px}}
 .premium-admin {
   --pa-surface:#fff;--pa-tint:#edf3fa;--pa-ink:#172d48;--pa-muted:#53657b;
   --pa-line:#dce4ee;--pa-link:#1e4e8c;

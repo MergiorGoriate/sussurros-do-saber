@@ -48,7 +48,7 @@ def provider_request(method, url, **kwargs):
         raise ProviderError('Provider unavailable; do not repeat this charge') from None
 
 
-def available_methods(currency=None):
+def available_methods(currency=None, *, configured=True):
     if not enabled('PREMIUM_PAYMENTS_ENABLED'):
         return {}
     if os.getenv('PREMIUM_PAYMENTS_MODE','test') not in {'test','live'}:
@@ -65,6 +65,9 @@ def available_methods(currency=None):
     if (secret.startswith('sk_live_' if live_mode() else 'sk_test_') and os.getenv('STRIPE_WEBHOOK_SECRET')
             and enabled('STRIPE_MERCHANT_APPROVED') and os.getenv('STRIPE_PORTAL_CONFIGURATION','').startswith('bpc_') and currency in {None,'MZN','USD','EUR','ZAR'}):
         methods['stripe']='Cartão · Stripe · renovação automática'
+    if configured:
+        from premium_settings import filter_methods
+        return filter_methods(methods,currency)
     return methods
 
 
@@ -131,3 +134,4 @@ def create_stripe(order, origin):
     if not re.fullmatch(r'cs_[A-Za-z0-9_]+',result.get('id','')):
         raise ProviderError('Invalid session')
     return result
+

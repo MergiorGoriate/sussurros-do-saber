@@ -13,7 +13,10 @@ from app import app
 from admin import admin_security_stamp
 from models import db, AdminUser, utcnow
 from submission_models import Researcher
-from premium_models import PremiumPlan, PremiumSubscription, PremiumContent
+from premium_models import PremiumPlan, PremiumSubscription, PremiumContent, PremiumResource, PremiumFile
+from io import BytesIO
+from reportlab.pdfgen.canvas import Canvas
+import hashlib
 with app.app_context():
     token = secrets.token_hex(8)
     account = Researcher(name='Leitor Premium de teste', email=token+'@example.test', password_hash='unused',
@@ -29,9 +32,14 @@ with app.app_context():
     db.session.add(PremiumSubscription(owner_id=account.id, plan_id=plan.id, starts_at=utcnow()-timedelta(days=1),
         ends_at=utcnow()+timedelta(days=30), status='active', source='complimentary', reason='Oferta de teste isolado',
         plan_snapshot=dict(name=plan.name,interval='monthly',currency='MZN',price_minor=15000)))
-    db.session.commit()
+    book=PremiumContent(title='Livro de teste '+token,kind='course',summary='Descrição do livro',body='Material privado',published=True)
+    db.session.add(book);db.session.flush()
+    db.session.add(PremiumResource(content_id=book.id,resource_type='ebook',state='published',metadata_fields={'rights_confirmed':True},plan_ids=[plan.id],download_allowed=False))
+    output=BytesIO();canvas=Canvas(output);canvas.drawString(40,700,'Livro educativo de teste');canvas.save();payload=output.getvalue()
+    pdf=PremiumFile(content_id=book.id,role='attachment',name='livro.pdf',mime='application/pdf',size=len(payload),digest=hashlib.sha256(payload).hexdigest(),payload=payload)
+    db.session.add(pdf);db.session.commit()
     serializer=app.session_interface.get_signing_serializer(app)
-    print(json.dumps(dict(content_id=content.id, title=content.title, secret='CONTEUDO-RESERVADO-'+token,
+    print(json.dumps(dict(book_id=book.id,book_title=book.title,pdf_id=pdf.id,content_id=content.id, title=content.title, secret='CONTEUDO-RESERVADO-'+token,
         owner_id=free.id, plan_name=plan.name, plan_id=plan.id,
         member_cookie=serializer.dumps(dict(researcher_id=account.id,researcher_nonce=token)),
         free_cookie=serializer.dumps(dict(researcher_id=free.id,researcher_nonce=token)),

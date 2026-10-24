@@ -17,6 +17,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 from admin import validate_csrf, superadmin_required, protect_admin_responses, csv_safe_cell
 from extensions import limiter
+from premium_access import required as premium_required
+from premium_settings import terms as plan_terms
 from models import db, utcnow
 from submissions import researcher
 from premium_models import PremiumPlan, PremiumSubscription, PremiumAudit
@@ -150,7 +152,8 @@ def checkout(ident):
             if previous and previous.status=='active' and previous.ends_at>utcnow() and previous.plan_id!=plan.id:
                 raise ValueError('Pode alterar o plano depois de terminar o período já contratado. A renovação do mesmo plano mantém-se disponível.')
             order=BillingOrder(id=quote['nonce'],owner_id=account.id,plan_id=plan.id,
-                snapshot={k:getattr(plan,k) for k in ('name','interval','price_minor','currency','version','benefits')},
+                snapshot={**{k:getattr(plan,k) for k in ('name','interval','price_minor','currency','version','benefits')},
+                          'terms':plan_terms(plan)},
                 amount_minor=plan.price_minor,currency=plan.currency,method=method,
                 provider='stripe' if method=='stripe' else 'clicpay',live=live_mode(),recurring=method=='stripe',
                 record_kind='checkout' if method=='stripe' else 'payment',expires_at=utcnow()+timedelta(hours=24))
@@ -407,7 +410,7 @@ def filtered_orders():
 
 
 @finance_bp.get('')
-@superadmin_required
+@premium_required('finance')
 def dashboard():
     from request_values import pagination_page
     query,filters=filtered_orders()
@@ -421,7 +424,7 @@ def dashboard():
 
 
 @finance_bp.post('/<ident>/reconciliar')
-@superadmin_required
+@premium_required('finance')
 @limiter.limit('30 per hour')
 @financial_transaction
 def reconcile_admin(ident):
@@ -437,7 +440,7 @@ def reconcile_admin(ident):
 
 
 @finance_bp.post('/contas/<int:ident>/suspensao')
-@superadmin_required
+@premium_required('finance')
 @financial_transaction
 def suspension(ident):
     validate_csrf();reason=request.form.get('reason','').strip()
@@ -453,7 +456,7 @@ def suspension(ident):
 
 
 @finance_bp.get('/exportar.csv')
-@superadmin_required
+@premium_required('finance')
 def export():
     output=io.StringIO();writer=csv.writer(output)
     writer.writerow(['id','pedido','tipo','debito','credito','unidades_minimas','moeda','ambiente','data_utc'])
@@ -504,7 +507,9 @@ def install_billing_cli(app):
             try:
                 account=lock_account(owner);sync_cancellation(account);db.session.commit()
             except (ProviderError,IntegrityError,StaleDataError):db.session.rollback();failures+=1
-        click.echo(json.dumps({'examined':len(ids),'needs_review':failures}))
+        from premium_features import process_publications
+        published=process_publications(limit)
+        click.echo(json.dumps({'examined':len(ids),'needs_review':failures,'published_resources':published}))
         if failures:raise click.exceptions.Exit(1)
 
     @app.cli.command('premium-recuperar-stripe')
@@ -559,3 +564,4 @@ def install_billing_cli(app):
     def audit_command():
         report=audit_finance();click.echo(json.dumps(report))
         if report['errors']:raise click.exceptions.Exit(1)
+

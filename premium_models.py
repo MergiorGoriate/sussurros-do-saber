@@ -63,3 +63,131 @@ class PremiumAudit(db.Model):
     entity_id = db.Column(db.Integer, nullable=False)
     detail = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class PremiumResource(db.Model):
+    """Additional metadata for the existing catalogue, without duplicating content."""
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), primary_key=True)
+    resource_type = db.Column(db.String(20), nullable=False, default='document')
+    metadata_fields = db.Column(db.JSON, nullable=False, default=dict)
+    state = db.Column(db.String(16), nullable=False, default='draft', index=True)
+    publish_at = db.Column(db.DateTime, index=True)
+    plan_ids = db.Column(db.JSON, nullable=False, default=list)
+    download_allowed = db.Column(db.Boolean, nullable=False, default=False)
+    featured = db.Column(db.Boolean, nullable=False, default=False)
+    certificate_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    notification_cursor = db.Column(db.Integer, nullable=False, default=0)
+    notification_done = db.Column(db.Boolean, nullable=False, default=True)
+    content = db.relationship('PremiumContent')
+
+
+class PremiumFile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), nullable=False, index=True)
+    role = db.Column(db.String(12), nullable=False)
+    name = db.Column(db.String(180), nullable=False)
+    mime = db.Column(db.String(100), nullable=False)
+    size = db.Column(db.Integer, nullable=False)
+    digest = db.Column(db.String(64), nullable=False)
+    payload = db.deferred(db.Column(db.LargeBinary, nullable=False))
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class PremiumLesson(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), nullable=False, index=True)
+    module = db.Column(db.String(120), nullable=False, default='')
+    title = db.Column(db.String(180), nullable=False)
+    body = db.Column(db.Text, nullable=False, default='')
+    position = db.Column(db.Integer, nullable=False, default=1)
+    video_file_id = db.Column(db.Integer, db.ForeignKey('premium_file.id'))
+    document_file_id = db.Column(db.Integer, db.ForeignKey('premium_file.id'))
+    questions = db.Column(db.JSON, nullable=False, default=list)
+    published = db.Column(db.Boolean, nullable=False, default=False)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    __mapper_args__ = {'version_id_col': version}
+
+
+class PremiumProgress(db.Model):
+    owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), primary_key=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), primary_key=True)
+    favourite = db.Column(db.Boolean, nullable=False, default=False)
+    position = db.Column(db.Integer, nullable=False, default=1)
+    bookmark = db.Column(db.String(500), nullable=False, default='')
+    results = db.Column(db.JSON, nullable=False, default=dict)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow, index=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    __mapper_args__ = {'version_id_col': version}
+
+
+class PremiumEvent(db.Model):
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), primary_key=True)
+    starts_at = db.Column(db.DateTime, nullable=False)
+    ends_at = db.Column(db.DateTime, nullable=False)
+    mode = db.Column(db.String(12), nullable=False, default='virtual')
+    capacity = db.Column(db.Integer, nullable=False, default=100)
+    speakers = db.Column(db.String(1000), nullable=False, default='')
+    venue = db.Column(db.String(500), nullable=False, default='')
+    meeting_url = db.Column(db.String(1000), nullable=False, default='')
+    version = db.Column(db.Integer, nullable=False, default=1)
+    __mapper_args__ = {'version_id_col': version}
+    __table_args__ = (db.CheckConstraint('ends_at > starts_at AND capacity > 0', name='premium_event_valid'),)
+
+
+class PremiumRegistration(db.Model):
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), primary_key=True)
+    state = db.Column(db.String(16), nullable=False, default='registered')
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    owner = db.relationship('Researcher')
+
+
+class PremiumCollectionItem(db.Model):
+    collection_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), primary_key=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), primary_key=True)
+    position = db.Column(db.Integer, nullable=False)
+
+
+class PremiumCertificate(db.Model):
+    id = db.Column(db.String(32), primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('researcher.id'), nullable=False)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), nullable=False)
+    content_version = db.Column(db.Integer, nullable=False)
+    snapshot = db.Column(db.JSON, nullable=False)
+    issued_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    __table_args__ = (db.UniqueConstraint('owner_id','content_id','content_version', name='premium_certificate_once'),)
+
+
+class PremiumSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    values = db.Column(db.JSON, nullable=False, default=dict)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    __mapper_args__ = {'version_id_col': version}
+
+
+class PremiumStaff(db.Model):
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), primary_key=True)
+    permissions = db.Column(db.JSON, nullable=False, default=list)
+
+
+class PremiumPlanTerms(db.Model):
+    plan_id = db.Column(db.Integer, db.ForeignKey('premium_plan.id'), primary_key=True)
+    renewal = db.Column(db.String(2000), nullable=False, default='')
+    cancellation = db.Column(db.String(2000), nullable=False, default='')
+    refund = db.Column(db.String(2000), nullable=False, default='')
+    limitations = db.Column(db.String(2000), nullable=False, default='')
+
+
+class PremiumCategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False, unique=True)
+    description = db.Column(db.String(500), nullable=False, default='')
+
+
+class PremiumUsage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_key = db.Column(db.String(180), nullable=False, unique=True)
+    content_id = db.Column(db.Integer, db.ForeignKey('premium_content.id', ondelete='CASCADE'), nullable=False, index=True)
+    action = db.Column(db.String(30), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)
+

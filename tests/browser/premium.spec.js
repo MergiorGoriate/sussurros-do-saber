@@ -23,6 +23,10 @@ for(const width of [320,768,1440]){
   await page.keyboard.press('Tab');
   await expect(page.getByLabel('Categoria',{exact:true})).toBeFocused();
   await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Recurso',{exact:true})).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Formato',{exact:true})).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('button',{name:'Filtrar',exact:true})).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(url=>url.pathname==='/premium/biblioteca' && url.searchParams.get('tipo')==='course');
@@ -119,4 +123,31 @@ test('a single configured plan stays readable on desktop',async({page})=>{
  }
  await page.locator('.premium-formats').screenshot({path:'test-results/premium-formats-redesign.png'});
  await page.locator('.premium-login').screenshot({path:'test-results/premium-login-redesign.png'});
+});
+
+test('private PDF and integrated reader require a valid member',async({page,context})=>{
+ let response=await page.goto('/premium/ficheiros/'+fixture.pdf_id);
+ expect(response.status()).toBe(403);
+ await cookie(context,fixture.member_cookie);
+ response=await page.goto('/premium/conteudos/'+fixture.book_id+'/leitor');
+ expect(response.status()).toBe(200);
+ await expect(page.getByRole('heading',{name:fixture.book_title,exact:true})).toBeVisible();
+ await expect(page.locator('iframe.premium-document-frame')).toHaveAttribute('src',new RegExp('/premium/ficheiros/'+fixture.pdf_id));
+ await page.getByLabel('Marcador de leitura',{exact:true}).fill('Retomar esta leitura');
+ await page.getByRole('button',{name:'Guardar posição e marcador',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Marcadores guardados'})).toBeVisible();
+});
+test('resource editor adapts event fields and stays within the screen',async({page,context})=>{
+ await cookie(context,fixture.admin_cookie);
+ for(const width of [320,768,1440]){
+  await page.setViewportSize({width,height:1000});
+  await page.goto('/admin/premium/conteudos/novo');
+  await expect(page.getByRole('heading',{name:'Adicionar recurso',exact:true})).toBeVisible();
+  await page.getByLabel('Tipo de recurso',{exact:true}).selectOption('event');
+  await expect(page.getByLabel('Capacidade',{exact:true})).toBeVisible();
+  await page.getByLabel('Tipo de recurso',{exact:true}).selectOption('ebook');
+  await expect(page.getByLabel('Capacidade',{exact:true})).toBeHidden();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+  await page.screenshot({path:'test-results/premium-resource-editor-'+width+'.png',fullPage:true});
+ }
 });

@@ -34,10 +34,9 @@ def lock_account(owner_id, *, live=None):
 
 
 def note(order, state, text):
-    from internal_notices import emit
+    from premium_settings import notify
     mode='' if order.live else '[TESTE] '
-    emit(None,mode+'Premium: '+state,text,researcher_id=order.owner_id,
-         key='billing:'+order.id+':'+state)
+    notify(order.owner_id,'payment',mode+state,text,'billing:'+order.id+':'+state)
 
 
 def event_record(key, kind, ref, payload):
@@ -327,3 +326,4 @@ def record_dispute(order, dispute):
     db.session.flush()
     account.risk_hold=BillingRisk.query.filter_by(owner_id=order.owner_id,live=order.live,resolved=False).first() is not None
     note(order,'contestação '+risk.status,'A contestação foi actualizada. A equipa financeira acompanha os valores em disputa.')
+
