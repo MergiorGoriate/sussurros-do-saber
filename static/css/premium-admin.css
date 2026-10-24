@@ -2,6 +2,7 @@
 .premium-admin .premium-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .premium-admin .premium-admin-form fieldset{min-width:0;border:1px solid var(--pa-line);border-radius:12px;padding:20px;margin:0 0 20px}
 .premium-admin .premium-admin-form legend{font-weight:700;padding:0 8px;font-size:14px}
+.premium-admin .premium-admin-form fieldset>label{margin-block:12px}
 .premium-admin .premium-admin-form details{margin-block:16px}
 .premium-admin summary{min-height:44px;padding:12px 0;cursor:pointer;font-weight:600}
 .premium-admin .premium-admin-form input[type=file]{padding:10px;min-height:44px}

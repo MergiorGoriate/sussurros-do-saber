@@ -78,17 +78,17 @@ A tarefa deve ser configurada no servidor, por exemplo a cada minuto. O painel n
 
 Foram executados os testes existentes de planos, contratação, pagamentos, catálogo e subscrições, bem como novos testes de recursos privados, ficheiros inválidos, permissões por plano, arquivo e eliminação, publicação programada, estrutura e sanitização EPUB, leitura PDF, progresso, avaliações, certificados, capacidade de eventos, colecções, categorias, favoritos, métricas, permissões delegadas, notificações e CSRF.
 
-Também foram preparados testes Playwright para os novos filtros, o leitor PDF privado e o formulário de recursos a 320, 768 e 1440 píxeis. Foram mantidas as verificações anteriores de acesso e de modos claro e escuro. A execução local do navegador não está disponível neste ambiente; os resultados destes testes devem ser confirmados no CI.
+Também foram preparados testes Playwright para os novos filtros, o leitor PDF privado e o formulário de recursos a 320, 768 e 1440 píxeis. Foram mantidas as verificações anteriores de acesso e de modos claro e escuro. Foi também executada uma verificação local automatizada com Chromium isolado: formulário a 320, 768 e 1440 píxeis, alternância dos campos de eventos, ausência de transbordo horizontal no editor e no painel, gravação de marcadores e entrega parcial de PDF privado com resposta 206. Foram geradas capturas, mas a revisão manual dessas imagens não ficou concluída. A bateria Playwright completa continua sujeita ao resultado do CI.
 
 ## 8. Resultados e evidência
 
 A bateria completa local executou 633 testes Python, com sucesso e um teste ignorado por depender de PostgreSQL dedicado. Não foram utilizadas contas de clientes nem enviados pedidos reais aos prestadores. Os testes financeiros simulam as respostas externas, mantendo reais as operações da aplicação e da base de dados.
 
-Os templates Jinja, a sintaxe JavaScript e as declarações CSS próprias foram analisados. A aprovação dos testes locais não é equivalente à validação de pagamentos em produção ou à aprovação visual num navegador.
+Os templates Jinja, a sintaxe JavaScript e as declarações CSS próprias foram analisados. A aprovação dos testes locais não é equivalente à validação de pagamentos em produção ou à revisão visual manual de todas as interfaces.
 
 ## 9. Problemas identificados e tratados
 
-Foi acrescentada uma excepção de segurança de enquadramento limitada ao leitor privado, porque a política geral do portal bloqueia enquadramentos locais. Os restantes ecrãs mantêm a política existente.
+Os selectores do editor têm etiquetas explicitamente associadas, verificadas no navegador. Foi acrescentada uma excepção de segurança de enquadramento limitada ao leitor privado, porque a política geral do portal bloqueia enquadramentos locais. Os restantes ecrãs mantêm a política existente.
 
 As versões do catálogo e das aulas detectam alterações concorrentes. A programação usa o bloqueio do conteúdo antes dos metadados, e as inscrições têm controlo transaccional de capacidade. As notificações têm chaves de deduplicação; o processamento de novidades tem cursor persistente por recurso. Os resultados das avaliações e a elegibilidade do certificado são calculados no servidor, sem aceitar pontuações ou permissões declaradas pelo navegador.
 
