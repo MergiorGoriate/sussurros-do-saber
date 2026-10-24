@@ -1,0 +1,4 @@
+.editor-scheduling{display:grid;gap:12px;min-width:0;margin:12px 0;padding:16px;border:1px solid #dbe3ed;border-radius:12px;background:#f3f6fb;color:#18324e}
+.editor-scheduling legend{padding:0 6px;font-size:13px;font-weight:700}.editor-scheduling .field-help{margin:0;line-height:1.6;font-size:12px}.editor-scheduling label{min-width:0}.editor-scheduling :is(input,select){max-width:100%;min-width:0}.editor-scheduling :disabled{opacity:.65}.editor-scheduling :focus-visible{outline:3px solid #1e4e8c;outline-offset:3px}
+.admin-dark .editor-scheduling{background:#152438;color:#edf3fa;border-color:#40526a}.admin-dark .editor-scheduling :focus-visible{outline-color:#b4d6ff}
+.editor-scheduling :is(input,select){font-size:13px;padding:10px 8px}

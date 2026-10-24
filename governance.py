@@ -808,14 +808,14 @@ def article_editable(article):
 
 def article_statuses(article):
     if session.get('admin_superuser'):
-        return ['draft','review','published']
+        return ['draft','review','scheduled','published']
     # Secondary accounts must use the existing review and approval workflow.
     return ['draft','review'] if article_editable(article) else []
 
 
 def article_save_guard(article,status,author_id):
     article_edit_access(article)
-    if session.get('admin_superuser') and status in {'approved','published'}:
+    if session.get('admin_superuser') and status in {'approved','published','scheduled'}:
         # Authentication refreshes this flag from the live principal account.
         # Content validation and uploads still run in the existing form handler.
         article._primary_author_changed = bool(article.id and author_id != article.author_id)
@@ -877,21 +877,31 @@ def article_saved(article, *, content_changed=False):
     workflow=db.session.get(ArticleWorkflow,article.id)
     if not workflow:
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
-        primary_owned = not owner and session.get('admin_superuser') and article.status in {'draft','review','approved','published'}
+        primary_owned = not owner and session.get('admin_superuser') and article.status in {'draft','review','approved','published','scheduled'}
         if (owner and not owner.removed_at) or primary_owned:
             workflow=ArticleWorkflow(article_id=article.id,owner=owner,primary_owned=bool(primary_owned),stage='submitted' if article.status=='review' else article.status)
             db.session.add(workflow)
-        elif session.get('admin_superuser') and article.status in {'approved','published'}:
+        elif session.get('admin_superuser') and article.status in {'approved','published','scheduled'}:
             workflow=ArticleWorkflow(article_id=article.id,owner=owner,primary_owned=False)
             db.session.add(workflow)
-    if session.get('admin_superuser') and article.status in {'approved','published'}:
+    if session.get('admin_superuser') and article.status in {'approved','published','scheduled'}:
         owner=TeamMember.query.filter_by(author_id=article.author_id).first()
         if content_changed or getattr(article, '_primary_author_changed', False) or workflow.owner_id != (owner.id if owner else None):
             workflow.owner=owner
             workflow.reviewer=workflow.editor=None
             workflow.reviewed_at=None
         workflow.primary_owned=owner is None
-        primary_publish_article(article, workflow)
+        if article.status=='scheduled':
+            # An explicit principal decision permits scheduling, never early publication.
+            # No independent review is invented and secondary permissions are unchanged.
+            workflow.stage='scheduled'
+            workflow.approved_at=utcnow()
+            workflow.editor=current_member()
+            db.session.add(workflow)
+            audit('article.schedule','article',article.id,
+                  'Programação pelo administrador principal; revisão dispensada. Data UTC: '+article.scheduled_at.isoformat())
+        else:
+            primary_publish_article(article, workflow)
         article.__dict__.pop('_primary_author_changed', None)
     audit('article.saved','article',article.id,article.status)
 
