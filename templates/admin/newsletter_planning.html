@@ -1,0 +1,41 @@
+<section class="admin-panel newsletter-planning" aria-labelledby="newsletter-planning-title">
+  <div class="subscriber-section-head"><div><span class="subscriber-eyebrow">Configuração editorial</span><h2 id="newsletter-planning-title">Escolher artigos e programar o boletim</h2><p class="newsletter-caption">Guarde a configuração e reveja a edição antes de autorizar o envio.</p></div><span class="subscriber-status {{ 'is-active' if newsletter_plan.automatic_enabled else 'is-inactive' }}">{{ 'Automatização activa' if newsletter_plan.automatic_enabled else 'Controlo manual do envio' }}</span></div>
+  {% if newsletter_next_local %}<p class="newsletter-connection is-ready">Próxima execução: {{ newsletter_next_local.strftime('%d/%m/%Y às %H:%M') }}, hora de Moçambique.</p>{% endif %}
+  {% if newsletter_plan.last_result %}<p class="newsletter-caption" role="status">{{ newsletter_plan.last_result }}</p>{% endif %}
+  <form method="get" class="newsletter-article-search" action="{{ url_for('admin.subscribers') }}#newsletter-planning-title">
+    <label class="newsletter-field" for="newsletter-article-search">Pesquisar artigos publicados<input id="newsletter-article-search" type="search" name="article_search" value="{{ newsletter_search }}" maxlength="200" placeholder="Título do artigo"></label><button class="subscriber-toggle" type="submit">Pesquisar</button>
+  </form>
+  <form method="post" class="newsletter-plan-form" action="{{ url_for('admin.subscribers') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save_newsletter_plan">
+    <div class="newsletter-plan-grid">
+      <div>
+        <fieldset class="newsletter-plan-modes"><legend>Origem dos artigos</legend>
+          <label class="newsletter-option"><input type="radio" name="selection_mode" value="manual" {{ 'checked' if newsletter_plan.selection_mode == 'manual' else '' }}><span><strong>Escolha editorial</strong><small>Seleccione até 20 artigos publicados, incluindo artigos antigos.</small></span></label>
+          <label class="newsletter-option"><input type="radio" name="selection_mode" value="automatic" {{ 'checked' if newsletter_plan.selection_mode == 'automatic' else '' }}><span><strong>Selecção automática</strong><small>Utiliza os artigos mais recentes da última semana completa.</small></span></label>
+        </fieldset>
+        <p class="newsletter-caption">Guarde as escolhas antes de pesquisar ou mudar de página. Os artigos já guardados aparecem primeiro e podem ser desmarcados.</p>
+        <fieldset class="newsletter-picker"><legend>Artigos disponíveis</legend>
+          {% for article in newsletter_chosen %}<label class="newsletter-pick"><input type="checkbox" name="article_ids" value="{{ article.id }}" checked><span><strong>{{ article.title }}</strong><small>Na selecção guardada{% if article.published_at %} · {{ article.published_at.strftime('%d/%m/%Y') }}{% endif %}</small></span></label>{% endfor %}
+          {% for article in newsletter_candidates.items if article.id not in newsletter_chosen_ids %}<label class="newsletter-pick"><input type="checkbox" name="article_ids" value="{{ article.id }}"><span><strong>{{ article.title }}</strong><small>{{ article.published_at.strftime('%d/%m/%Y') if article.published_at else 'Publicado' }} · {{ article.category }}</small></span></label>{% else %}{% if not newsletter_chosen %}<p class="newsletter-caption">Nenhum artigo publicado encontrado.</p>{% endif %}{% endfor %}
+        </fieldset>
+        <nav class="mail-actions" aria-label="Páginas de artigos para o boletim">
+          {% if newsletter_candidates.has_prev %}<a href="{{ url_for('admin.subscribers', article_search=newsletter_search, article_page=newsletter_candidates.prev_num) }}#newsletter-planning-title">Anterior</a>{% endif %}
+          <span class="newsletter-caption">Página {{ newsletter_candidates.page }} de {{ [newsletter_candidates.pages,1]|max }}</span>
+          {% if newsletter_candidates.has_next %}<a href="{{ url_for('admin.subscribers', article_search=newsletter_search, article_page=newsletter_candidates.next_num) }}#newsletter-planning-title">Seguinte</a>{% endif %}
+        </nav>
+      </div>
+      <div class="newsletter-plan-settings">
+        <label class="newsletter-field">Máximo de artigos na selecção automática<input type="number" name="max_articles" min="1" max="20" value="{{ newsletter_plan.max_articles }}" required></label>
+        <fieldset class="newsletter-plan-modes"><legend>Envio automático semanal</legend>
+          <label class="newsletter-option"><input type="checkbox" name="automatic_enabled" {{ 'checked' if newsletter_plan.automatic_enabled else '' }}><span><strong>Activar o envio semanal</strong><small>Prepara, aprova e coloca o boletim na fila no horário definido.</small></span></label>
+          <label class="newsletter-field">Dia da semana<select name="weekday">{% for day in newsletter_weekdays %}<option value="{{ loop.index0 }}" {{ 'selected' if newsletter_plan.weekday == loop.index0 else '' }}>{{ day }}</option>{% endfor %}</select></label>
+          <label class="newsletter-field">Hora de Moçambique<input type="time" name="send_time" value="{{ newsletter_plan.send_time }}" required><small>Africa/Maputo, UTC+2. A fila guarda os horários em UTC.</small></label>
+          <label class="newsletter-confirm"><input type="checkbox" name="confirm_automation"><span>Autorizo a preparação, aprovação e envio semanais sem nova confirmação. Com escolha editorial, os mesmos artigos mantêm-se até eu alterar a selecção.</span></label>
+        </fieldset>
+        <p class="newsletter-caption">Para parar a recorrência, desmarque «Activar o envio semanal» e guarde. As campanhas já autorizadas continuam no histórico e podem ser pausadas ou canceladas.</p>
+        <button type="submit" class="admin-primary">Guardar configuração e rever edição</button>
+        <p class="newsletter-caption">Guardar não envia mensagens imediatamente. O envio automático usa o comando periódico existente e respeita a pausa global, as quotas e os cancelamentos de inscrição.</p>
+      </div>
+    </div>
+  </form>
+</section>

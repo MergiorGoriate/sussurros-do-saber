@@ -1,4 +1,28 @@
 /* Scoped to subscriber management; reuse the administrator theme and navigation. */
+.subscribers-page .newsletter-planning{margin-bottom:24px}
+.newsletter-plan-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:24px;align-items:start}
+.newsletter-plan-grid>*{min-width:0}
+.newsletter-plan-form fieldset{min-width:0;padding:16px;margin:0 0 16px;border:1px solid var(--line);border-radius:12px}
+.newsletter-plan-form legend{padding:0 6px;color:var(--sub-text);font-size:13px;font-weight:700}
+.newsletter-field{display:grid;gap:8px;margin:0 0 16px;font-size:13px;font-weight:600;color:var(--sub-text)}
+.newsletter-field :is(input,select){box-sizing:border-box;min-width:0;width:100%;min-height:44px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--sub-surface);color:var(--sub-text);font:inherit}
+.newsletter-field small,.newsletter-option small,.newsletter-pick small{display:block;font-size:12px;font-weight:400;line-height:1.6;color:var(--sub-muted)}
+.newsletter-option,.newsletter-pick{display:flex;align-items:flex-start;gap:12px;padding:12px 0;font-size:13px;line-height:1.6;cursor:pointer}
+.newsletter-option>span,.newsletter-pick>span{min-width:0;overflow-wrap:anywhere}
+.subscribers-page :is(.newsletter-option,.newsletter-pick) input{appearance:auto;flex:0 0 18px;width:18px;height:18px;min-height:18px;margin:2px 0 0;padding:0;accent-color:var(--sub-accent)}
+.newsletter-pick+.newsletter-pick{border-top:1px solid var(--line)}
+.newsletter-picker{max-height:440px;overflow:auto;scrollbar-width:thin}
+.newsletter-plan-settings{padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--sub-soft)}
+.newsletter-plan-settings>.admin-primary{width:100%;min-height:44px;white-space:normal}
+.newsletter-article-search{display:flex;align-items:end;gap:12px;margin:20px 0}
+.newsletter-article-search .newsletter-field{flex:1;margin:0}
+.newsletter-article-search button{min-height:44px}
+.newsletter-planning .subscriber-section-head{flex-wrap:wrap}
+.newsletter-plan-form .mail-actions>a{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--sub-accent);text-decoration:none;font-size:13px}
+.newsletter-plan-form .mail-actions>.newsletter-caption{margin:0}
+.subscribers-page summary:focus-visible{outline:3px solid var(--sub-accent);outline-offset:3px}
+@media(max-width:1050px){.newsletter-plan-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.newsletter-article-search{flex-direction:column;align-items:stretch}.newsletter-plan-settings{padding:14px}.newsletter-plan-form fieldset{padding:12px}}
 .subscribers-page{--sub-surface:#fff;--sub-soft:#f3f6fb;--sub-text:#152c44;--sub-muted:#53667a;--sub-accent:#24558c;--sub-positive:#176349;--sub-positive-bg:#eaf6ef;--sub-warning:#80560e;--sub-warning-bg:#fff5df;color:var(--sub-text)}
 .admin-dark .subscribers-page{--sub-surface:#1b283a;--sub-soft:#23354b;--sub-text:#edf3fa;--sub-muted:#b5c5d8;--sub-accent:#9acbff;--sub-positive:#bcebd0;--sub-positive-bg:#1b4239;--sub-warning:#f4d592;--sub-warning-bg:#473b25}
 .subscribers-page>*{min-width:0}
@@ -160,3 +184,4 @@
  .mail-delivery .mail-schedule>button{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.mail-delivery *{scroll-behavior:auto}}
+

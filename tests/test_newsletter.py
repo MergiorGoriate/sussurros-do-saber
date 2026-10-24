@@ -274,10 +274,10 @@ class NewsletterPermissionsTests(unittest.TestCase):
     def test_confirmation_uses_preview_hash_before_queueing(self):
         self.signin(self.primary)
         edition=digest()
-        with patch('newsletter_service.queue_digest',return_value=3) as queue:
+        with patch('newsletter_planning.prepare_plan',return_value=3) as queue:
             response=self.post('/admin/subscritores',action='prepare_newsletter',confirm='on',fingerprint=edition['fingerprint'])
             self.assertEqual(response.status_code,303)
-            queue.assert_called_once_with(expected_hash=edition['fingerprint'])
+            queue.assert_called_once_with(edition['fingerprint'],'review','')
 
     def test_every_delivery_action_requires_current_permission_and_csrf(self):
         author=self.member('author');self.signin(author.admin)
@@ -290,4 +290,5 @@ class NewsletterPermissionsTests(unittest.TestCase):
         self.assertEqual(self.post('/admin/subscritores',action='resume_all').status_code,303)
         self.assertFalse(policy().paused)
         self.assertIn('Limites e entrega',self.client.get('/admin/subscritores').get_data(as_text=True))
+
 

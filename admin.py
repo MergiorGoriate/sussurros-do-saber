@@ -17,6 +17,7 @@ import requests
 from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.exceptions import BadRequest
+from sqlalchemy import or_
 from extensions import limiter
 from journal_article import ARTICLE_FIELD_LIMITS
 from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
@@ -1261,18 +1262,24 @@ def contacts():
 @admin_bp.route("/subscritores", methods=["GET", "POST"])
 @login_required
 def subscribers():
-    from newsletter_service import digest, queue_digest, smtp_ready
+    from newsletter_service import digest, smtp_ready
+    from newsletter_planning import (plan, save_plan, edition_for, prepare_plan,
+                                     selected_articles, local_time, WEEKDAYS)
     from mail_delivery import dashboard, update_policy, policy, campaign_action, reconcile, retry, audit, record_id
     if request.method == 'POST':
         validate_csrf()
         action=request.form.get('action','')
         try:
-            if action=='prepare_newsletter':
+            if action=='save_newsletter_plan':
+                save_plan(request.form)
+                flash('Configuração do boletim guardada. Reveja a selecção antes de preparar uma campanha.', 'success')
+            elif action=='prepare_newsletter':
                 if request.form.get('confirm')!='on':abort(400)
                 fingerprint=request.form.get('fingerprint','')
                 if not re.fullmatch(r'[0-9a-f]{64}',fingerprint):abort(400)
-                count=queue_digest(expected_hash=fingerprint)
-                flash(f'{count} boletins preparados. Reveja a campanha, aprove e autorize o envio separadamente.','success')
+                mode=request.form.get('delivery_mode','review')
+                count=prepare_plan(fingerprint,mode,request.form.get('scheduled_at',''))
+                flash(f'{count} boletins preparados. '+('Reveja a campanha, aprove e autorize o envio separadamente.' if mode=='review' else 'Envio autorizado na fila; serão respeitados os limites e a data definidos.'),'success')
             elif action=='update_limits':
                 update_policy(request.form);flash('Limites guardados. Contagem em UTC e quotas partilhadas por toda a fila.','success')
             elif action in ('pause_all','resume_all'):
@@ -1292,9 +1299,29 @@ def subscribers():
             db.session.rollback()
             flash(str(error), 'error')
         return redirect(url_for('admin.subscribers'), code=303)
+    settings=plan()
+    selection_error=''
+    try:
+        edition=edition_for(settings)
+        chosen=selected_articles(settings.article_ids) if settings.article_ids else []
+    except ValueError as error:
+        selection_error=str(error)
+        edition=digest()
+        edition['articles']=[]
+        chosen=[]
+    search=request.args.get('article_search','').strip()[:200]
+    candidates=Article.public_card_query().filter(or_(Article.published_at.is_(None),Article.published_at<=utcnow()))
+    if search:
+        candidates=candidates.filter(Article.title.ilike('%'+search.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')+'%',escape='\\'))
+    candidates=candidates.order_by(Article.published_at.desc(),Article.id.desc()).paginate(
+        page=max(1,min(request.args.get('article_page',1,type=int),100000)),per_page=20,error_out=False)
+    chosen_ids={article.id for article in chosen}
     return render_template("admin/subscribers.html",
         subscribers=Subscriber.query.order_by(Subscriber.created_at.desc()).all(),
-        newsletter_edition=digest(), newsletter_smtp_ready=smtp_ready(),
+        newsletter_edition=edition, newsletter_smtp_ready=smtp_ready(),
+        newsletter_plan=settings,newsletter_candidates=candidates,newsletter_chosen=chosen,
+        newsletter_chosen_ids=chosen_ids,newsletter_search=search,newsletter_selection_error=selection_error,
+        newsletter_weekdays=WEEKDAYS,newsletter_next_local=local_time(settings.next_run_at),
         delivery=dashboard(request.args.get('campaign_page',1,type=int),request.args.get('failure_page',1,type=int),request.args.get('campaign',type=int)))
 
 
@@ -1366,3 +1393,4 @@ def publish_scheduled_command():
     import click
     count=Article.publish_due_scheduled()
     click.echo(f'{count} artigo(s) publicado(s).')
+
