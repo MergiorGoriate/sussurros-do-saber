@@ -342,6 +342,10 @@ class PremiumLearningTests(unittest.TestCase):
         db.session.commit()
         self.assertNotEqual(first.id,second.id)
         self.assertEqual(PremiumFile.query.count(),2)
+        self.grant();self.login();self.csrf()
+        self.assertEqual(PremiumUsage.query.filter_by(action='video_start').count(),0)
+        for _ in range(2):self.assertEqual(self.client.post(f'/premium/ficheiros/{first.id}/reproducao',data={'csrf_token':'premium-csrf'}).status_code,204)
+        self.assertEqual(PremiumUsage.query.filter_by(action='video_start').count(),1)
 
     def test_private_range_request_and_enabled_download(self):
         self.make_resource(download_allowed=True);self.grant();self.login()
@@ -372,6 +376,9 @@ class PremiumLearningTests(unittest.TestCase):
         response=self.client.post(f'/admin/premium/conteudos/{self.item.id}',data=values)
         self.assertEqual(response.status_code,302,response.text)
         self.assertEqual([r.content_id for r in PremiumCollectionItem.query.order_by(PremiumCollectionItem.position)],[second.id,first.id])
+        response=self.client.get('/admin/premium/coleccoes/recursos?q=Primeiro')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json['items'],[{'id':first.id,'title':first.title}])
 
 
 class PremiumLearningMigrationTests(unittest.TestCase):

@@ -214,6 +214,20 @@ def install_features(public, admin):
         except (ValueError,IntegrityError):db.session.rollback();flash('Não foi possível guardar: confirme os campos e as associações da categoria.','error')
         return redirect(url_for('premium_admin.manage',section='catalogo'))
 
+    @admin.get('/coleccoes/recursos')
+    @required('content')
+    def collection_search():
+        search=request.args.get('q','').strip()
+        if len(search)>180:abort(400)
+        if len(search)<2:return {'items':[]}
+        query=PremiumContent.query.filter(PremiumContent.title.icontains(search,autoescape=True)).outerjoin(
+            PremiumResource,PremiumResource.content_id==PremiumContent.id).filter(or_(
+                PremiumResource.content_id.is_(None),PremiumResource.resource_type!='collection'))
+        if request.args.get('exclude'):
+            try:query=query.filter(PremiumContent.id!=integer(request.args['exclude']))
+            except ValueError:abort(400)
+        return {'items':[{'id':item.id,'title':item.title} for item in query.order_by(PremiumContent.id.desc()).limit(20)]}
+
     @admin.post('/conteudos/<int:ident>/estado')
     @required('content')
     def resource_state(ident):
@@ -262,6 +276,15 @@ def install_features(public, admin):
         response.headers['Cache-Control']='private, no-store'
         response.headers['X-Content-Type-Options']='nosniff'
         return response
+
+    @public.post('/ficheiros/<int:ident>/reproducao')
+    def video_started(ident):
+        validate_csrf();reader()
+        file=db.get_or_404(PremiumFile,ident)
+        if not file.mime.startswith('video/'):abort(400)
+        item=db.get_or_404(PremiumContent,file.content_id);require_access(item)
+        record_usage(item,'video_start');db.session.commit()
+        return '',204
 
     @admin.get('/ficheiros/<int:ident>/verificar')
     @required('content')

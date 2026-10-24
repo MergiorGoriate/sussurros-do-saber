@@ -20,7 +20,7 @@ Os documentos PDF, EPUB, DOCX e PPTX, as capas e os vídeos MP4/WebM são guarda
 
 O leitor integra o visualizador PDF do navegador e uma leitura de capítulos EPUB na ordem indicada pelo livro. Permite guardar posição, notas e até vinte marcadores por recurso. O conteúdo EPUB é sanitizado, sem scripts, formulários, CSS ou pedidos remotos. Pesquisa e ampliação de PDFs dependem do visualizador do navegador; nos capítulos EPUB usa-se também a pesquisa do navegador. Recursos com obrigação de acesso aberto continuam legíveis gratuitamente, incluindo sem conta; guardar progresso exige uma conta confirmada.
 
-O catálogo tem pesquisa por título, descrição e autoria, filtros por categoria, tipo e formato, destaques, favoritos e histórico pessoal. Os materiais individuais mantêm as permissões ao serem incluídos numa colecção.
+As colecções têm pesquisa de recursos pelo título, incluindo materiais anteriores aos inicialmente apresentados no selector. O catálogo tem pesquisa por título, descrição e autoria, filtros por categoria, tipo e formato, destaques, favoritos e histórico pessoal. Os materiais individuais mantêm as permissões ao serem incluídos numa colecção.
 
 Os cursos e séries têm módulos ou temporadas, aulas ou episódios, ordenação, publicação, vídeos privados, documentos e avaliações de escolha múltipla. A avaliação é corrigida no servidor. É necessário acertar todas as perguntas de cada aula para a concluir; aulas sem avaliação têm confirmação de conclusão pelo participante. A alteração de uma aula invalida a conclusão dessa versão. O certificado, quando activado pelo administrador, exige a conclusão de todas as aulas publicadas. O PDF é pessoal e não representa atribuição de grau académico.
 
@@ -100,7 +100,7 @@ O leitor EPUB apresenta texto e estrutura sanitizados; não reproduz todos os es
 
 O controlo de descarregamento gere as opções oferecidas pelo portal e o acesso no servidor; não é DRM. A entrega para leitura ou reprodução permite tecnicamente que o dispositivo conserve dados. A emissão de certificado verifica a conclusão registada na plataforma; não constitui fiscalização da presença física nem acreditação académica.
 
-As métricas de utilização contam eventos efectivamente registados e são limitadas a uma ocorrência por conta, recurso, acção e dia. Uma abertura de ficheiro não comprova leitura integral ou visualização completa. As receitas continuam a resultar dos registos financeiros existentes, separadas de ofertas e testes.
+As métricas de utilização contam eventos efectivamente registados e são limitadas a uma ocorrência por conta, recurso, acção e dia. As reproduções iniciadas são registadas a partir do evento de reprodução do leitor, separadamente das aberturas de ficheiros. Uma abertura de ficheiro não comprova leitura integral ou visualização completa. As receitas continuam a resultar dos registos financeiros existentes, separadas de ofertas e testes.
 
 Os ficheiros ficam na base de dados, com os limites indicados. A infra-estrutura deve ser dimensionada para estes volumes e incluir os ficheiros privados nas cópias de segurança. Os certificados e o histórico de participação são preservados através do arquivo dos recursos usados.
 
