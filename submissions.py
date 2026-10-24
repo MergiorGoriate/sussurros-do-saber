@@ -788,6 +788,8 @@ def install_submission_cli(app):
         """Deliver the transactional outbox; run every minute in a single worker."""
         from mail_delivery import deliver_batch
         try:
+            from newsletter_planning import run_due_plan
+            run_due_plan()
             accepted = deliver_batch(limit)
         except ValueError as error:
             db.session.rollback()
@@ -872,6 +874,7 @@ def internal_notice_summary():
     from flask import jsonify
     from internal_notices import summary
     return jsonify(summary(public=True))
+
 
 
 

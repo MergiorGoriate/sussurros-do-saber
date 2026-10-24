@@ -67,31 +67,41 @@ def render_digest_html(edition, subscriber):
         edition=edition, site_url=origin(), cancellation_url=unsubscribe_url(subscriber))
 
 
-def digest(now=None):
+def digest(now=None, article_ids=None, max_articles=5):
     """The last complete Monday-to-Monday week, measured in UTC."""
     now = now or utcnow()
     end = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     start = end - timedelta(days=7)
     year, week, _ = start.isocalendar()
     issue = f'{year}-W{week:02d}'
-    articles = Article.public_card_query().filter(
-        Article.published_at >= start, Article.published_at < end,
-    ).order_by(Article.published_at.desc(), Article.id.desc()).limit(5).all()
+    if article_ids is None:
+        articles = Article.public_card_query().filter(
+            Article.published_at >= start, Article.published_at < end,
+        ).order_by(Article.published_at.desc(), Article.id.desc()).limit(max_articles).all()
+    else:
+        from newsletter_planning import selected_articles
+        articles = selected_articles(article_ids, now)
     subject = 'Sussurros do Saber — Boletim ' + issue
     cards = [{'title':a.title, 'summary':a.summary[:1000], 'category':a.category,
               'url':origin()+'/artigo/'+quote(a.slug, safe=''),
               'image':newsletter_image_url(a.image)} for a in articles]
     content = '\n\n'.join(f"{card['title']}\n{card['summary']}\n{card['url']}" for card in cards)
-    fingerprint = hashlib.sha256((subject+'\n'+json.dumps(cards,ensure_ascii=False,sort_keys=True)).encode()).hexdigest()
-    period = start.strftime('%d/%m/%Y') + ' a ' + (end-timedelta(days=1)).strftime('%d/%m/%Y')
+    fingerprint = hashlib.sha256((subject+'\n'+json.dumps(cards,ensure_ascii=False,sort_keys=True)
+                                  + ('\nSelecção editorial' if article_ids is not None else '')).encode()).hexdigest()
+    period = ('Selecção editorial' if article_ids is not None else
+              start.strftime('%d/%m/%Y') + ' a ' + (end-timedelta(days=1)).strftime('%d/%m/%Y'))
     return {'issue':issue, 'subject':subject, 'start':start, 'end':end,
             'articles':articles, 'cards':cards, 'period':period,
             'content':content, 'fingerprint':fingerprint}
 
 
-def queue_digest(limit=2500, expected_hash=None, now=None):
+def queue_digest(limit=2500, expected_hash=None, now=None, article_ids=None,
+                 max_articles=5, commit=True):
     if not smtp_ready():
         raise ValueError('Configure SMTP seguro e active NEWSLETTER_ENABLED antes de preparar o envio.')
+    from mail_delivery import policy, audit
+    # Always acquire the shared gate before the preparation lock (also used by planners).
+    settings=policy(lock=True)
     # Preserve the existing preparation lock and outbox; preparation never authorizes SMTP.
     if db.engine.dialect.name == 'postgresql':
         db.session.execute(text('SELECT pg_advisory_xact_lock(1936949612)'))
@@ -99,26 +109,25 @@ def queue_digest(limit=2500, expected_hash=None, now=None):
         connection = db.session.connection().connection.driver_connection
         if not connection.in_transaction:
             db.session.execute(text('BEGIN IMMEDIATE'))
-    edition = digest(now)
+    edition = digest(now, article_ids=article_ids, max_articles=max_articles)
     if expected_hash is not None and expected_hash != edition['fingerprint']:
         raise ValueError('A selecção mudou. Reveja o boletim antes de o preparar.')
     if not edition['articles']:
-        db.session.commit()
+        if commit: db.session.commit()
         return 0
-    from mail_delivery import policy, audit
-    settings=policy(lock=True)
     campaign=NewsletterCampaign.query.filter_by(issue=edition['issue']).first()
     if campaign is None:
         campaign=NewsletterCampaign(issue=edition['issue'],subject=edition['subject'],fingerprint=edition['fingerprint'])
         db.session.add(campaign);db.session.flush()
     elif campaign.status!='prepared':
-        db.session.commit()
+        if commit: db.session.commit()
         return 0  # A repeated scheduled preparation never reopens an approved edition.
     elif campaign.fingerprint!=edition['fingerprint']:
         raise ValueError('A edição já tem conteúdo preparado diferente. Reveja a campanha guardada antes de prosseguir.')
     remaining=settings.edition_limit-EditorialNotification.query.filter_by(campaign_id=campaign.id).count()
     if remaining<=0:
-        db.session.commit();return 0
+        if commit: db.session.commit()
+        return 0
     already_queued = exists(select(EditorialNotification.id).where(
         EditorialNotification.recipient == Subscriber.email,
         EditorialNotification.subject == edition['subject'],
@@ -127,8 +136,7 @@ def queue_digest(limit=2500, expected_hash=None, now=None):
         Subscriber.id).limit(min(remaining,max(1,min(100000,limit)))).all()
     for subscriber in subscribers:
         body = ('Boletim científico — Sussurros do Saber\n'
-                + edition['start'].strftime('%d/%m/%Y') + ' a '
-                + (edition['end']-timedelta(days=1)).strftime('%d/%m/%Y')
+                + edition['period']
                 + '\n\n' + edition['content']
                 + '\n\nRecebe este boletim porque subscreveu o Sussurros do Saber.'
                 + '\nCancelar a inscrição: ' + unsubscribe_url(subscriber))
@@ -136,7 +144,7 @@ def queue_digest(limit=2500, expected_hash=None, now=None):
             subject=edition['subject'], body=body, html_body=render_digest_html(edition, subscriber),
             campaign_id=campaign.id,subscriber_id=subscriber.id))
     audit('campaign.prepared',campaign.id,str(len(subscribers))+' destinatários adicionados; sem autorização de envio.','newsletter_campaign')
-    db.session.commit()
+    if commit: db.session.commit()
     return len(subscribers)
 
 
@@ -175,15 +183,23 @@ def install_newsletter(app):
     @click.option('--limit', default=2500, type=click.IntRange(1, 100000))
     @click.option('--dry-run', is_flag=True, help='Mostrar a edição sem criar mensagens.')
     def prepare(limit, dry_run):
-        """Queue the previous complete week's public articles, once per recipient."""
+        """Prepare the saved selection without authorising delivery."""
+        from newsletter_planning import plan, edition_for
+        settings = plan()
         if dry_run:
-            edition = digest()
+            try:
+                edition = edition_for(settings)
+            except ValueError as error:
+                raise click.ClickException(str(error)) from error
             click.echo(f"{edition['issue']}: {len(edition['articles'])} artigos; SMTP configurado: {smtp_ready()}.")
             return
         try:
-            queued = queue_digest(limit)
+            queued = queue_digest(limit,
+                article_ids=settings.article_ids if settings.selection_mode == 'manual' else None,
+                max_articles=settings.max_articles)
         except ValueError as error:
             db.session.rollback()
             raise click.ClickException(str(error)) from error
         click.echo(f'{queued} boletins preparados. Reveja, aprove e autorize/agende a campanha no painel antes da entrega.')
+
 

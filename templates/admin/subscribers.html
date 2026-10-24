@@ -1,7 +1,7 @@
 {% extends 'admin/base.html' %}
 {% block title %}Subscritores{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-subscribers.css', v='20261024-delivery-v2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-subscribers.css', v='20261024-planning-v1') }}">
 {% endblock %}
 {% block content %}
 {% set total = subscribers|length %}
@@ -16,11 +16,13 @@
     <div><dt><i class="subscriber-dot" aria-hidden="true"></i>Activos</dt><dd>{{ active }}</dd><p>Podem receber o boletim</p></div>
     <div><dt>Inactivos</dt><dd>{{ total - active }}</dd><p>Fora dos próximos envios</p></div>
   </dl>
+  {% include 'admin/newsletter_planning.html' %}
   <div class="newsletter-layout">
     <section class="admin-panel newsletter-preview" aria-labelledby="newsletter-title">
       <div class="subscriber-section-head"><div><span class="subscriber-eyebrow">Selecção semanal</span><h2 id="newsletter-title">Boletim científico</h2></div><span class="subscriber-edition">{{ newsletter_edition.issue }}</span></div>
-      <p class="newsletter-period">{{ newsletter_edition.start.strftime('%d/%m/%Y') }} até {{ newsletter_edition.end.strftime('%d/%m/%Y') }} <span>· fim exclusivo, UTC</span></p>
-      <div class="newsletter-selection-heading"><h3>Artigos desta edição</h3><span>{{ newsletter_edition.articles|length }} de até 5</span></div>
+      <p class="newsletter-period">{{ newsletter_edition.period }}{% if newsletter_plan.selection_mode == 'automatic' %} <span>· semana completa, UTC</span>{% endif %}</p>
+      <div class="newsletter-selection-heading"><h3>Artigos desta edição</h3><span>{{ newsletter_edition.articles|length }} de até {{ newsletter_plan.max_articles if newsletter_plan.selection_mode == 'automatic' else 20 }}</span></div>
+      {% if newsletter_selection_error %}<p class="mail-warning" role="alert">{{ newsletter_selection_error }}</p>{% endif %}
       {% if newsletter_edition.articles %}
       <ol class="newsletter-articles">
         {% for article in newsletter_edition.articles %}
@@ -28,9 +30,9 @@
         {% endfor %}
       </ol>
       {% else %}
-      <div class="subscriber-empty"><h3>Nenhum artigo nesta edição</h3><p>Não há artigos publicados na última semana completa. Nenhum boletim vazio será preparado.</p></div>
+      <div class="subscriber-empty"><h3>Nenhum artigo nesta edição</h3><p>Reveja a selecção guardada. Nenhum boletim vazio será preparado.</p></div>
       {% endif %}
-      <p class="newsletter-caption">Selecção de artigos publicados na última semana completa.</p>
+      <p class="newsletter-caption">{{ 'Artigos escolhidos pelo administrador, pela ordem apresentada.' if newsletter_plan.selection_mode == 'manual' else 'Selecção dos artigos mais recentes da última semana completa.' }} Uma campanha já preparada conserva o conteúdo guardado.</p>
     </section>
     <aside class="admin-panel newsletter-controls" aria-labelledby="newsletter-prepare-title">
       <span class="subscriber-eyebrow">Preparação</span><h2 id="newsletter-prepare-title">Rever e preparar</h2>
@@ -43,9 +45,11 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="action" value="prepare_newsletter">
         <input type="hidden" name="fingerprint" value="{{ newsletter_edition.fingerprint }}">
-        <label class="newsletter-confirm"><input type="checkbox" name="confirm" required><span>Revi esta selecção e confirmo a preparação do envio aos subscritores activos.</span></label>
-        <button type="submit" class="admin-primary">Preparar envio do boletim</button>
-        <p class="newsletter-caption">A preparação guarda as mensagens sem enviar. Reveja a campanha em Limites e entrega, aprove e autorize ou agende o processamento.</p>
+        <label class="newsletter-field">Acção após a revisão<select name="delivery_mode"><option value="review">Só preparar para revisão</option><option value="now">Aprovar e enviar agora</option><option value="schedule">Aprovar e programar envio</option></select></label>
+        <label class="newsletter-field">Data e hora de envio em Moçambique<input type="datetime-local" name="scheduled_at"><small>Preencha apenas para programar. Africa/Maputo, UTC+2.</small></label>
+        <label class="newsletter-confirm"><input type="checkbox" name="confirm" required><span>Revi os artigos apresentados e confirmo a acção escolhida para os subscritores activos.</span></label>
+        <button type="submit" class="admin-primary">Confirmar preparação e acção</button>
+        <p class="newsletter-caption">O envio depende da execução periódica da fila e respeita os limites definidos. A opção «Só preparar» exige aprovação posterior no histórico.</p>
       </form>
       {% endif %}
     </aside>
@@ -65,4 +69,5 @@
   </section>
 </div>
 {% endblock %}
+
 

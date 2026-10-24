@@ -150,6 +150,21 @@ class NewsletterCampaign(db.Model):
     suspension_reason = db.Column(db.String(120), default='', nullable=False)
 
 
+class NewsletterPlan(db.Model):
+    """Saved editorial selection and explicit weekly automation authorisation."""
+    id = db.Column(db.Integer, primary_key=True)
+    selection_mode = db.Column(db.String(16), default='automatic', nullable=False)
+    article_ids = db.Column(db.JSON, default=list, nullable=False)
+    max_articles = db.Column(db.Integer, default=5, nullable=False)
+    automatic_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    weekday = db.Column(db.Integer, default=0, nullable=False)
+    send_time = db.Column(db.String(5), default='09:00', nullable=False)
+    next_run_at = db.Column(db.DateTime)
+    last_run_at = db.Column(db.DateTime)
+    last_result = db.Column(db.String(300), default='', nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+
 class MailDeliveryPolicy(db.Model):
     """One shared row; limits count reservations for the entire SMTP outbox in UTC."""
     id = db.Column(db.Integer, primary_key=True)
@@ -189,6 +204,7 @@ class PublicationAsset(db.Model):
     journal_id = db.Column(db.Integer, db.ForeignKey('journal.id'), nullable=False, index=True)
     name = db.Column(db.String(180), nullable=False)
     payload = db.Column(db.LargeBinary, nullable=False)
+
 
 
 
