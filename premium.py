@@ -1,7 +1,7 @@
 """Premium catalogue and complimentary access; payments live in billing.py."""
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for, has_request_context
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import load_only
@@ -12,6 +12,7 @@ from models import db, utcnow
 from submission_models import Researcher
 from submissions import researcher
 from premium_models import PremiumPlan, PremiumSubscription, PremiumContent, PremiumAudit
+from premium_access import required as premium_required, can as premium_can
 
 premium_bp = Blueprint('premium', __name__, url_prefix='/premium')
 premium_admin_bp = Blueprint('premium_admin', __name__, url_prefix='/admin/premium')
@@ -70,6 +71,7 @@ def index():
 
 @premium_bp.get('/biblioteca')
 def library():
+    from premium_resources import PremiumResource, visible_clause
     account = researcher()
     sub = subscription_for(account)
     kind = request.args.get('tipo', '')
@@ -80,32 +82,64 @@ def library():
     if len(search) > 120 or len(category) > 80:
         abort(400)
     categories = [value for (value,) in db.session.query(PremiumContent.category).filter(
-        PremiumContent.published.is_(True), PremiumContent.category != '').distinct().order_by(PremiumContent.category).all()]
+        PremiumContent.published.is_(True), visible_clause(), PremiumContent.category != '').distinct().order_by(PremiumContent.category).all()]
     query = PremiumContent.query.options(load_only(PremiumContent.id, PremiumContent.title, PremiumContent.kind,
-                                                   PremiumContent.summary, PremiumContent.category, PremiumContent.open_access_required)).filter_by(published=True)
+                                                   PremiumContent.summary, PremiumContent.category, PremiumContent.open_access_required)).filter_by(published=True).filter(visible_clause())
     if kind:
-        query = query.filter_by(kind=kind)
+        query = query.filter_by(kind=kind).filter(or_(
+            ~db.exists(db.select(PremiumResource.content_id).where(PremiumResource.content_id==PremiumContent.id)),
+            PremiumContent.id.in_(db.select(PremiumResource.content_id).where(PremiumResource.resource_type==kind))))
     if search:
+        author_matches=db.select(PremiumResource.content_id).where(PremiumResource.metadata_fields['author'].as_string().icontains(search,autoescape=True))
         query = query.filter(or_(PremiumContent.title.icontains(search, autoescape=True),
-                                 PremiumContent.summary.icontains(search, autoescape=True)))
+                                 PremiumContent.summary.icontains(search, autoescape=True),PremiumContent.id.in_(author_matches)))
+    resource_type=request.args.get('recurso','')
+    file_format=request.args.get('formato','')
+    from premium_resources import TYPES, FORMATS
+    from premium_models import PremiumFile
+    if resource_type:
+        if resource_type not in TYPES:abort(400)
+        query=query.filter(PremiumContent.id.in_(db.select(PremiumResource.content_id).where(PremiumResource.resource_type==resource_type)))
+    if file_format:
+        if file_format not in FORMATS:abort(400)
+        query=query.filter(PremiumContent.id.in_(db.select(PremiumFile.content_id).where(PremiumFile.name.iendswith('.'+file_format))))
     if category:
         query = query.filter_by(category=category)
     page = request.args.get('page', '1')
     if not page.isascii() or not page.isdigit() or len(page) > 6 or int(page) < 1:
         abort(400)
-    results = query.order_by(PremiumContent.id.desc()).paginate(page=int(page), per_page=12, error_out=False)
+    featured=db.exists(db.select(PremiumResource.content_id).where(PremiumResource.content_id==PremiumContent.id,PremiumResource.featured.is_(True)))
+    results = query.order_by(featured.desc(),PremiumContent.id.desc()).paginate(page=int(page), per_page=12, error_out=False)
     return render_template('premium/library.html', results=results, kinds=KINDS, kind=kind,
-                           has_access=entitled(sub), search=search, category=category, categories=categories)
+                           has_access=entitled(sub), search=search, category=category, categories=categories,
+                           resource_type=resource_type,file_format=file_format,formats=FORMATS)
 
 
 @premium_bp.get('/conteudos/<int:ident>')
 def content(ident):
+    from premium_resources import require_access, detail, record_usage
+    from premium_models import (PremiumFile,PremiumLesson,PremiumProgress,PremiumCollectionItem,PremiumEvent,PremiumRegistration)
     # Load no protected body before checking identity, verification and dates.
     item = PremiumContent.query.options(load_only(PremiumContent.id, PremiumContent.title, PremiumContent.kind,
                                                    PremiumContent.summary, PremiumContent.category, PremiumContent.open_access_required)).filter_by(id=ident, published=True).first_or_404()
     if not item.open_access_required and not entitled(subscription_for(researcher())):
         return render_template('premium/locked.html', item=item), 403
-    return render_template('premium/content.html', item=item, kinds=KINDS)
+    resource=require_access(item)
+    account=researcher()
+    if account:
+        from premium_features import progress_for,completion
+        progress=progress_for(account,item);progress.updated_at=utcnow()
+        lessons,completed=completion(item,account)
+    else:
+        progress=None;completed=[]
+        lessons=PremiumLesson.query.filter_by(content_id=ident,published=True).order_by(PremiumLesson.position,PremiumLesson.id).all()
+    record_usage(item,'content_view');db.session.commit()
+    collection=PremiumContent.query.join(PremiumCollectionItem,PremiumCollectionItem.content_id==PremiumContent.id).filter(
+        PremiumCollectionItem.collection_id==ident,PremiumContent.published.is_(True)).order_by(PremiumCollectionItem.position).all()
+    return render_template('premium/content.html', item=item, kinds=KINDS,resource=resource,
+        files=PremiumFile.query.filter_by(content_id=ident).all(),lessons=lessons,completed=completed,progress=progress,
+        collection=collection,event=db.session.get(PremiumEvent,ident),
+        registration=db.session.get(PremiumRegistration,(ident,account.id)) if account else None)
 
 
 def text_field(name, maximum, minimum=1):
@@ -133,7 +167,7 @@ def audit(action, record, detail):
     except (StaleDataError, IntegrityError):
         db.session.rollback()
         abort(409, description='Alteração concorrente. Reabra a página antes de guardar.')
-    db.session.add(PremiumAudit(actor=str(session.get('admin_id') or 'primary-environment'),
+    db.session.add(PremiumAudit(actor=str(session.get('admin_id') or 'primary-environment') if has_request_context() else 'premium-worker',
                                action=action, entity_id=record.id, detail=detail))
 
 
@@ -147,8 +181,15 @@ def commit():
 
 @premium_admin_bp.get('')
 @premium_admin_bp.get('/')
-@superadmin_required
+@premium_required('any')
 def dashboard():
+    if not session.get('admin_superuser'):
+        if premium_can('content'):return redirect(url_for('premium_admin.manage',section='catalogo'))
+        if premium_can('events'):return redirect(url_for('premium_admin.manage',section='eventos'))
+        if premium_can('finance'):return redirect(url_for('premium_finance.dashboard'))
+        if premium_can('plans'):return redirect(url_for('premium_admin.manage',section='planos'))
+        if premium_can('members'):return redirect(url_for('premium_admin.manage',section='membros'))
+        return redirect(url_for('premium_admin.reports'))
     from request_values import pagination_page
     subscriptions = PremiumSubscription.query.order_by(PremiumSubscription.id.desc()).paginate(
         page=pagination_page(), per_page=25, error_out=False)
@@ -162,7 +203,7 @@ def dashboard():
 
 @premium_admin_bp.route('/planos/novo', methods=['GET', 'POST'], defaults={'ident': None})
 @premium_admin_bp.route('/planos/<int:ident>', methods=['GET', 'POST'])
-@superadmin_required
+@premium_required('plans')
 @limiter.limit('60 per hour', methods=['POST'])
 def plan(ident):
     record = db.get_or_404(PremiumPlan, ident) if ident else None
@@ -198,18 +239,31 @@ def plan(ident):
                 db.session.add(record)
             for key, value in values.items():
                 setattr(record, key, value)
+            if 'renewal' in request.form:
+                from premium_models import PremiumPlanTerms
+                db.session.flush()
+                contract=db.session.get(PremiumPlanTerms,record.id) or PremiumPlanTerms(plan_id=record.id)
+                for field in ('renewal','cancellation','refund','limitations'):
+                    value=request.form.get(field,'').strip()
+                    if len(value)>2000:raise ValueError('Condição contratual demasiado extensa.')
+                    setattr(contract,field,value)
+                db.session.add(contract)
+                # Contract-only edits also invalidate outstanding signed quotes.
+                if ident:record.version+=1
             audit('plan.save', record, {'before': before, 'after': values})
             commit()
             flash('Plano guardado. As condições dos acessos já concedidos são preservadas.', 'success')
             return redirect(url_for('premium_admin.dashboard'))
         except (ValueError, InvalidOperation) as exc:
+            db.session.rollback()
+            record=db.session.get(PremiumPlan,ident) if ident else None
             error = str(exc) if isinstance(exc, ValueError) else 'Preço inválido.'
     return render_template('admin/premium_plan.html', item=record, error=error, intervals=INTERVALS), 400 if error else 200
 
 
 @premium_admin_bp.route('/conteudos/novo', methods=['GET', 'POST'], defaults={'ident': None})
 @premium_admin_bp.route('/conteudos/<int:ident>', methods=['GET', 'POST'])
-@superadmin_required
+@premium_required('content')
 @limiter.limit('60 per hour', methods=['POST'])
 def edit_content(ident):
     record = db.get_or_404(PremiumContent, ident) if ident else None
@@ -221,19 +275,40 @@ def edit_content(ident):
         try:
             values = dict(title=text_field('title', 180), kind=choice('kind', KINDS),
                           summary=text_field('summary', 1000), category=text_field('category', 80, 0), body=text_field('body', 200000),
-                          published=request.form.get('published') == 'on', open_access_required=request.form.get('open_access_required') == 'on')
+                          published=(request.form.get('resource_state')=='published' if 'resource_type' in request.form else request.form.get('published') == 'on'), open_access_required=request.form.get('open_access_required') == 'on')
+            if request.form.get('resource_type') in {'course','series','event','interview'}:
+                values['kind']=request.form['resource_type']
             if record is None:
                 record = PremiumContent()
                 db.session.add(record)
             for key, value in values.items():
                 setattr(record, key, value)
+            if ident and 'resource_type' in request.form:record.version+=1
+            db.session.flush()
+            from premium_resources import save_details
+            save_details(record)
             audit('content.save', record, {'title': record.title, 'published': record.published, 'version': record.version})
             commit()
             flash('Conteúdo Premium guardado.', 'success')
             return redirect(url_for('premium_admin.dashboard'))
         except ValueError as exc:
+            db.session.rollback()
+            record=db.session.get(PremiumContent,ident) if ident else None
             error = str(exc)
-    return render_template('admin/premium_content.html', item=record, kinds=KINDS, error=error), 400 if error else 200
+    from premium_resources import detail, TYPES, STATES
+    from premium_models import PremiumFile,PremiumEvent,PremiumCollectionItem,PremiumCategory
+    collection_positions={r.content_id:r.position for r in PremiumCollectionItem.query.filter_by(collection_id=ident)} if ident else {}
+    collection_choices=PremiumContent.query.options(load_only(PremiumContent.id,PremiumContent.title,PremiumContent.kind)).filter(PremiumContent.id!=ident).order_by(PremiumContent.id.desc()).limit(200).all()
+    if collection_positions:
+        existing={row.id for row in collection_choices}
+        collection_choices.extend(PremiumContent.query.filter(PremiumContent.id.in_(set(collection_positions)-existing)).all())
+    return render_template('admin/premium_content.html', item=record, kinds=KINDS, error=error,
+        resource=detail(record) if record else None,resource_types=TYPES,resource_states=STATES,
+        files=PremiumFile.query.filter_by(content_id=ident).all() if ident else [],
+        event=db.session.get(PremiumEvent,ident) if ident else None,
+        collection_ids=','.join(str(r.content_id) for r in PremiumCollectionItem.query.filter_by(collection_id=ident).order_by(PremiumCollectionItem.position)) if ident else '',
+        collection_choices=collection_choices,collection_positions=collection_positions,
+        available_plans=PremiumPlan.query.order_by(PremiumPlan.id).all(),categories=PremiumCategory.query.order_by(PremiumCategory.name).all()), 400 if error else 200
 
 
 def utc_date(name):
@@ -245,7 +320,7 @@ def utc_date(name):
 
 
 @premium_admin_bp.route('/assinaturas/nova', methods=['GET', 'POST'])
-@superadmin_required
+@premium_required('members')
 @limiter.limit('30 per hour', methods=['POST'])
 def grant():
     error = None
@@ -288,7 +363,7 @@ def grant():
 
 
 @premium_admin_bp.route('/assinaturas/<int:ident>', methods=['GET', 'POST'])
-@superadmin_required
+@premium_required('members')
 @limiter.limit('30 per hour', methods=['POST'])
 def subscription(ident):
     record = db.get_or_404(PremiumSubscription, ident)
@@ -314,3 +389,8 @@ def subscription(ident):
         except ValueError as exc:
             error = str(exc)
     return render_template('admin/premium_subscription.html', item=record, states=STATES, error=error), 400 if error else 200
+
+
+from premium_features import install_features
+install_features(premium_bp, premium_admin_bp)
+

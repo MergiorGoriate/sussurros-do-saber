@@ -47,9 +47,9 @@
       <h3 id="premium-plan-{{ plan.id }}">{{ plan.name }}</h3>
       <p class="premium-price">{{ '%.2f'|format(plan.price_minor / 100) }} <span>{{ plan.currency }}</span><small> / {{ 'mês' if plan.interval == 'monthly' else 'ano' }}</small></p>
       {% if plan.description %}<p class="premium-plan-description">{{ plan.description }}</p>{% endif %}
-      <div class="premium-plan-benefits"><p class="premium-plan-inclusion"><span aria-hidden="true">✓</span> Inclui os conteúdos publicados na biblioteca Premium.</p>{% if plan.benefits %}<ul class="premium-benefits">{% for benefit in plan.benefits %}<li>{{ benefit }}</li>{% endfor %}</ul>{% endif %}</div>
+      <div class="premium-plan-benefits"><p class="premium-plan-inclusion"><span aria-hidden="true">✓</span> Acesso aos recursos autorizados para este plano na Biblioteca Exclusiva.</p>{% if plan.benefits %}<ul class="premium-benefits">{% for benefit in plan.benefits %}<li>{{ benefit }}</li>{% endfor %}</ul>{% endif %}</div>
       <details class="premium-plan-conditions"><summary>Renovação e cancelamento</summary><p class="premium-plan-terms">{{ '12 meses por período' if plan.interval == 'annual' else '1 mês por período' }}. Renovação automática apenas com autorização e confirmação do fornecedor; pode cancelá-la na sua conta, mantendo o período já pago.</p></details>
-      <a class="premium-button" href="{{ url_for('billing.checkout', ident=plan.id) }}">{{ ('Subscrever agora' if billing_live else 'Testar subscrição') if billing_plan_methods(plan) else 'Consultar condições' }} <span aria-hidden="true">↗</span></a>
+      <a class="premium-button" href="{{ url_for('billing.checkout', ident=plan.id) if billing_plan_methods(plan) else url_for('premium.conditions', ident=plan.id) }}">{{ ('Subscrever agora' if billing_live else 'Testar subscrição') if billing_plan_methods(plan) else 'Consultar condições' }} <span aria-hidden="true">↗</span></a><a class="premium-secondary" href="{{ url_for('premium.conditions',ident=plan.id) }}">Condições do plano</a>
     </article>
     {% else %}
     <div class="premium-plans-empty"><div class="premium-plans-empty-mark" aria-hidden="true">S<span>+</span></div><div><h3>Mensal ou anual. Ao seu ritmo.</h3><p>Os planos mensal e anual serão apresentados depois de definidos os preços e as condições de acesso.</p></div></div>
@@ -63,3 +63,4 @@
 {% endif %}
 <section class="premium-faq" aria-labelledby="premium-faq-title"><div class="premium-faq-heading"><p class="premium-eyebrow">Acesso aberto</p><h2 id="premium-faq-title">Antes de começar</h2></div><details class="premium-card"><summary>É necessário pagar para ler a revista?</summary><p>Não. A assinatura Premium não condiciona a leitura dos artigos científicos nem dos artigos informativos do portal.</p></details></section>
 {% endblock %}
+
