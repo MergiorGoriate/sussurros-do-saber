@@ -38,7 +38,16 @@ def integer_setting(name, default=None):
 
 
 def snapshot(kind, ident):
-    if kind == 'portal':
+    if kind == 'portal_en':
+        from translation_service import published, stale
+        translation,row=published('article',ident)
+        item=Article.public_query().filter_by(id=ident).first()
+        if not item or not row or stale(translation,row):
+            raise GenerationError('A versão inglesa não está publicada ou precisa de actualização.')
+        source=dict(kind=kind,id=item.id,title=row.content['title'],
+            body=row.content['summary']+'\n'+row.content['body'],references=row.content['references'],
+            path='/en/artigo/'+quote(item.slug,safe=''),language='en',translation_version=row.number)
+    elif kind == 'portal':
         item = Article.public_query().populate_existing().filter_by(id=ident).first()
         if not item:
             raise GenerationError('O artigo de origem deixou de estar publicado.')
@@ -290,6 +299,8 @@ def process_one():
             art = read_asset(previous.assets[0]) if previous.assets and previous.assets[0].get('role') == 'illustration' else None
         else:
             payload = ai.generate(source, material.network, material.kind, job.instruction)
+            if source.get('language')=='en':
+                payload['language']='en'
             validate_payload(payload, source, material)
             art = ai.illustration(payload['illustration']) if material.kind != 'text' else None
         images = compose(payload, material.network, art, current_app.static_folder) if material.kind != 'text' else []

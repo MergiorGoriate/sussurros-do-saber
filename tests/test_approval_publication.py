@@ -51,7 +51,7 @@ class ApprovalPublicationTests(unittest.TestCase):
         for url in ['/', '/artigos', '/feed.xml', '/sitemap.xml', '/autor/'+flow.owner.author.slug]:
             response=public.get(url)
             self.assertIn(article.slug,response.text,url)
-            self.assertIn('must-revalidate',response.headers['Cache-Control'],url)
+            self.assertIn('no-store' if url=='/' else 'must-revalidate',response.headers['Cache-Control'],url)
         self.assertIn(article.id,[a['id'] for a in public.get('/api/artigos').json])
         self.assertIn('Ver artigo publicado',self.client.get(path).text)
         published_at=article.published_at
@@ -83,3 +83,4 @@ class ApprovalPublicationTests(unittest.TestCase):
         self.assertEqual(app.test_client().get('/artigo/'+article.slug).status_code,404)
         flow.reviewer=owner;flow.reviewed_at=utcnow();db.session.commit()
         self.assertEqual(app.test_client().get('/artigo/'+article.slug).status_code,404)
+

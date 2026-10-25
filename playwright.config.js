@@ -7,9 +7,11 @@ module.exports = defineConfig({
   workers: 1,
   use: {
     baseURL: 'http://127.0.0.1:5000',
+    locale: 'pt-MZ',
     headless: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure'
   },
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
 });
+

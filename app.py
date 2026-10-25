@@ -135,10 +135,16 @@ from scientific_metrics import metrics_bp, register_cli as register_metrics_cli
 app.register_blueprint(metrics_bp)
 register_metrics_cli(app)
 from dissemination import centre_bp, tracking_bp, register_cli as register_dissemination_cli
+from dissemination import access as dissemination_access, can as dissemination_can
+from dissemination_video import install as install_video
 app.config['DISSEMINATION_SITE_URL'] = SITE_URL
+install_video(app,centre_bp,dissemination_access,dissemination_can)
 app.register_blueprint(centre_bp)
 app.register_blueprint(tracking_bp)
 register_dissemination_cli(app)
+from translation_admin import translations_bp, register_cli as register_translation_cli
+app.register_blueprint(translations_bp)
+register_translation_cli(app)
 install_billing_cli(app)
 install_submission_cli(app)
 from google_auth import google_bp, install_google_cli
@@ -481,6 +487,9 @@ def security_headers(response):
         # comentários e nunca podem ser guardadas por caches partilhadas.
         private_response = (
             request.method != "GET"
+            or getattr(g, 'language', 'pt') == 'en'
+            or request.path in {'/', '/idioma/pt', '/idioma/en'}
+            or bool(response.headers.get('Set-Cookie'))
             or request.path.startswith(("/admin", "/api/", "/artigo/", "/submissoes"))
             or response.status_code >= 400
         )
@@ -729,14 +738,21 @@ def home():
 @app.get("/artigos")
 def articles():
     category = request.args.get("categoria", "").strip().lower()
+    if getattr(g,'language','pt')=='en':
+        from i18n_catalog import EN
+        category=next((pt.lower() for pt,en in EN.items() if en.lower()==category),category)
     query = request.args.get("q", "").strip().lower()
     results = Article.public_card_query()
     if category:
         results = results.join(Category).filter(db.func.lower(Category.name) == category)
     if query:
-        results = results.join(Author).filter(metadata_match(query,
+        match = metadata_match(query,
             Article.title, Article.summary, Article.body, Article.keywords,
-            Article.doi, Author.name, Author.orcid))
+            Article.doi, Author.name, Author.orcid)
+        if getattr(g,'language','pt')=='en':
+            from internationalization import translated_match
+            match=db.or_(match,translated_match('article',query,Article.id))
+        results = results.join(Author).filter(match)
     page = pagination_page()
     pagination = results.order_by(Article.published_at.desc()).paginate(page=page, per_page=12, error_out=False)
     return render_template(
@@ -763,6 +779,10 @@ def article(slug):
         if legacy:
             return redirect(url_for("article", slug=legacy.slug), code=301)
         return render_template("404.html"), 404
+    if getattr(g, 'language', 'pt') == 'en':
+        from translation_service import published
+        if not published('article', selected.id)[1]:
+            return render_template('i18n/unavailable.html', original=selected), 404
     g.google_cmp_public_content = True
     related = (
         Article.public_card_query()
@@ -1155,6 +1175,7 @@ def feed():
 
 @app.get("/sitemap.xml")
 def sitemap():
+    from internationalization import alternate_links, sitemap_extras, path_alternates
     public_articles = Article.public_card_query().order_by(Article.updated_at.desc()).all()
     public_journals = Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).all()
     public_authors = Author.query.filter_by(active=True).order_by(Author.name).all()
@@ -1166,12 +1187,12 @@ def sitemap():
         url_for("scientific_editing"), url_for("journals"), url_for("author_guidelines"),
     ]
     static_urls = "".join(
-        f"<url><loc>{escape(SITE_URL + path)}</loc></url>"
+        f"<url><loc>{escape(SITE_URL + path)}</loc>{path_alternates(path)}</url>"
         for path in static_paths
     )
     journal_urls = "".join(
         f"<url><loc>{escape(SITE_URL + url_for('journal_detail', slug=journal.slug))}</loc>"
-        f"<lastmod>{journal.updated_at.strftime('%Y-%m-%d')}</lastmod></url>"
+        f"<lastmod>{journal.updated_at.strftime('%Y-%m-%d')}</lastmod>{alternate_links('journal_detail',slug=journal.slug)}</url>"
         for journal in public_journals
     )
     author_urls = "".join(
@@ -1191,13 +1212,14 @@ def sitemap():
         article_entries.append(
             f"<url><loc>{article_url}</loc>"
             f"<lastmod>{article.updated_at.strftime('%Y-%m-%d')}</lastmod>"
-            f"{image_xml}</url>"
+            f"{alternate_links('article',slug=article.slug)}{image_xml}</url>"
         )
     response = Response(
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
-        'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">'
-        + static_urls + journal_urls + author_urls + "".join(article_entries) + "</urlset>",
+        'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" '
+        'xmlns:xhtml="http://www.w3.org/1999/xhtml">'
+        + static_urls + journal_urls + author_urls + "".join(article_entries) + sitemap_extras(static_paths) + "</urlset>",
         mimetype="application/xml",
     )
     response.headers["Cache-Control"] = "public, max-age=3600"
@@ -1628,6 +1650,9 @@ def seed_database():
         ))
     db.session.commit()
 
+
+from internationalization import install as install_internationalization
+install_internationalization(app)
 
 with app.app_context():
     seed_database()

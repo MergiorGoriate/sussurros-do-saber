@@ -404,7 +404,7 @@ class PlatformTests(unittest.TestCase):
 
     def test_cache_policy_separates_public_pages_from_comment_tokens(self):
         homepage = self.client.get("/")
-        self.assertIn("public", homepage.headers.get("Cache-Control", ""))
+        self.assertIn("no-store", homepage.headers.get("Cache-Control", ""))
         with app.app_context():
             slug = Article.public_query().first().slug
         article = self.client.get(f"/artigo/{slug}")
@@ -1373,6 +1373,7 @@ class PlatformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
