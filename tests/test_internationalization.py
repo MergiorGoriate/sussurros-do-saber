@@ -171,6 +171,32 @@ class InternationalizationTests(unittest.TestCase):
         self.assertIn('&lt;script&gt;',page.text);self.assertNotIn('<script>alert(1)</script>',page.text)
         self.assertIn('noindex',page.headers.get('X-Robots-Tag',''))
 
+    def test_article_listing_translates_headings_categories_and_search_labels(self):
+        from bs4 import BeautifulSoup
+        page=self.client.get('/en/artigos')
+        soup=BeautifulSoup(page.text,'html.parser')
+        self.assertEqual(soup.select_one('h1').get_text(strip=True),'All articles')
+        self.assertEqual(soup.select_one('.section-rule span').get_text(strip=True),'Explore content')
+        self.assertEqual([a.get_text(strip=True) for a in soup.select('.filter-row a')],
+                         ['All','Biology','Health','Environment','Education','Technology','Space'])
+        links=soup.select('.filter-row a')
+        self.assertTrue(all('/en/artigos' in a['href'] for a in links))
+        page=self.client.get('/en/artigos',query_string={'q':'<science>'})
+        self.assertIn('Results for',page.text)
+        self.assertIn('&lt;science&gt;',page.text)
+        original=self.client.get('/artigos')
+        self.assertIn('Todos os artigos',original.text)
+        self.assertIn('Explorar conteúdos',original.text)
+
+    def test_missing_translation_notice_links_to_portuguese_original(self):
+        from bs4 import BeautifulSoup
+        page=self.client.get('/en/artigos',query_string={'original':self.article.slug})
+        soup=BeautifulSoup(page.text,'html.parser')
+        link=soup.select_one('.translation-notice a')
+        self.assertIsNotNone(link)
+        self.assertEqual(link['href'],'/artigo/'+self.article.slug)
+        self.assertIn('not yet published',soup.select_one('.translation-notice').get_text())
+
     def test_english_query_matches_published_translated_content(self):
         self.make(publish=True)
         page=self.client.get('/en/artigos?q=sunlight')
