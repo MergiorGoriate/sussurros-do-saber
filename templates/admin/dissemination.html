@@ -1,0 +1,20 @@
+{% extends 'admin/base.html' %}
+{% block title %}Centro de Divulgação Científica{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dissemination.css') }}">{% endblock %}
+{% block content %}
+<div class="dc"><header class="admin-header"><div><p class="dc-eyebrow">Sussurros do Saber · Divulgação</p><h1>Centro de Divulgação Científica</h1><p>Transforme artigos publicados em materiais educativos, com revisão e aprovação antes da divulgação.</p></div></header>
+<p class="dc-notice">A IA prepara os materiais. A aprovação científica, linguística e visual pertence ao administrador autorizado. Nesta fase, a publicação nas redes é manual.</p>
+<p><a href="{{ url_for('dissemination.documentation') }}">Descarregar documentação e instruções de configuração</a></p>
+{% if not configured %}<p class="dc-warning" role="status">A geração está indisponível até concluir a configuração dos modelos, da chave de API e dos limites de utilização.</p>{% endif %}
+{% if budget %}<p>Hoje, em UTC: {{ budget.jobs }} tarefas reservadas · {{ budget.units }} unidades de orçamento. Estas reservas administrativas não representam custos facturados pelo fornecedor.</p>{% endif %}
+{% if dissemination_can('manage') %}<section class="dc-panel"><h2>Preparar novo material</h2>
+<form method="get" class="dc-search"><label for="source-search">Pesquisar artigo publicado<input id="source-search" name="q" value="{{ search }}" maxlength="120" type="search" placeholder="Título do artigo"></label><button>Pesquisar</button></form>
+<form method="post" action="{{ url_for('dissemination.generate') }}" class="dc-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<label>Artigo de origem<select name="source" required><option value="">Seleccione um artigo publicado</option><optgroup label="Portal científico">{% for item in portal %}<option value="portal:{{ item.id }}">{{ item.title }}</option>{% endfor %}</optgroup><optgroup label="Revista científica">{% for item in journals %}<option value="journal:{{ item.id }}">{{ item.article_title or item.title }}</option>{% endfor %}</optgroup></select><small>Até 40 resultados por origem. Pesquise para encontrar artigos anteriores.</small></label>
+<div class="dc-fields"><label>Rede social<select name="network">{% for code,label in networks.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label><label>Tipo de material<select name="kind">{% for code,label in kinds.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label></div>
+<button class="dc-primary" {% if not configured %}disabled{% endif %}>Gerar conteúdo com IA</button><small>A tarefa decorre em segundo plano. Nenhum conteúdo é aprovado ou publicado automaticamente.</small>
+</form></section>{% endif %}
+<section class="dc-panel"><h2>Materiais e decisões editoriais</h2><div class="dc-cards">{% for material in materials.items %}<article class="dc-card"><span class="dc-state">{{ states[material.status] }}</span><h3><a href="{{ url_for('dissemination.detail', ident=material.id) }}">{{ kinds[material.kind] }} #{{ material.id }}</a></h3><p>{{ networks[material.network] }} · Versão {{ material.version }} · {{ dissemination_time(material.created_at) }}</p>{% if material.error %}<p class="dc-warning">{{ material.error }}</p>{% endif %}<a href="{{ url_for('dissemination.detail', ident=material.id) }}">Abrir material e histórico</a></article>{% else %}<p>Nenhum material gerado. Comece por seleccionar um artigo publicado.</p>{% endfor %}</div>
+<nav class="dc-actions" aria-label="Páginas dos materiais">{% if materials.has_prev %}<a href="{{ url_for('dissemination.dashboard', page=materials.prev_num, q=search) }}">Anterior</a>{% endif %}<span>Página {{ materials.page }} de {{ [materials.pages,1]|max }}</span>{% if materials.has_next %}<a href="{{ url_for('dissemination.dashboard', page=materials.next_num, q=search) }}">Seguinte</a>{% endif %}</nav></section></div>
+{% endblock %}

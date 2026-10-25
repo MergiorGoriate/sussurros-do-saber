@@ -29,6 +29,22 @@ class PermissionMatrixTests(unittest.TestCase):
 
     def operation(self, permission, member):
         """Return GET UI, POST/GET action, payload, and persisted outcome check."""
+        if permission.startswith('dissemination.'):
+            from dissemination_models import DisseminationMaterial, DisseminationVersion
+            from dissemination_service import snapshot
+            article=self.article(self.member());article.status='published';db.session.commit()
+            item=DisseminationMaterial(source_kind='portal',source_id=article.id,network='facebook',kind='text',
+                token=secrets.token_urlsafe(24),version=1,status='review')
+            db.session.add(item);db.session.flush()
+            db.session.add(DisseminationVersion(material_id=item.id,number=1,source=snapshot('portal',article.id),
+                payload={'title':'Teste sintético','caption':'Texto de teste'},report={'ready':True},assets=[]))
+            operation={'dissemination.manage':'correct','dissemination.approve':'reject','dissemination.publish':'published'}[permission]
+            if operation=='published':
+                item.status='approved';item.approved_version=1;item.approved_at=utcnow();item.approved_by=self.primary.id
+            db.session.commit()
+            data=dict(action=operation,version=1,note='Decisão sintética para verificar permissões.',publication_url='https://www.facebook.com/posts/123')
+            state={'correct':'correction','reject':'rejected','published':'published'}[operation]
+            return '/admin/divulgacao/',f'/admin/divulgacao/{item.id}/accao',data,lambda: item.status==state
         if permission=='team.manage':
             name='Novo membro '+secrets.token_hex(4)
             return '/admin/equipa','/admin/equipa',dict(name=name,email=name.split()[-1]+'@example.org',status='invited',group='support'),lambda: TeamMember.query.filter_by(name=name).count()==1
@@ -272,3 +288,4 @@ class PermissionMatrixTests(unittest.TestCase):
         self.assertEqual(article.status,'scheduled');self.assertEqual(article.scheduled_at.hour,10)
         publisher.appointments[0].role.permissions=[];db.session.commit()
         self.assertEqual(self.post(path,action='publish').status_code,404)
+

@@ -134,6 +134,11 @@ app.register_blueprint(finance_bp)
 from scientific_metrics import metrics_bp, register_cli as register_metrics_cli
 app.register_blueprint(metrics_bp)
 register_metrics_cli(app)
+from dissemination import centre_bp, tracking_bp, register_cli as register_dissemination_cli
+app.config['DISSEMINATION_SITE_URL'] = SITE_URL
+app.register_blueprint(centre_bp)
+app.register_blueprint(tracking_bp)
+register_dissemination_cli(app)
 install_billing_cli(app)
 install_submission_cli(app)
 from google_auth import google_bp, install_google_cli
@@ -1633,5 +1638,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
