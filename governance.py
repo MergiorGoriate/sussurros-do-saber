@@ -16,6 +16,9 @@ public_team_bp = Blueprint('public_team', __name__)
 staff_bp.before_request(enforce_admin_authentication)
 staff_bp.after_request(protect_admin_responses)
 PERMISSIONS = {
+    'dissemination.manage': 'Gerir e corrigir materiais de divulgação científica',
+    'dissemination.approve': 'Rever e aprovar materiais de divulgação científica',
+    'dissemination.publish': 'Descarregar e registar divulgação de materiais aprovados',
     'team.manage': 'Gerir equipa, convites e mandatos', 'tasks.manage': 'Distribuir tarefas',
     'reports.read': 'Consultar relatórios e auditoria', 'article.write': 'Escrever artigos próprios',
     'article.edit': 'Editar todos os artigos', 'article.review': 'Rever artigos atribuídos',
@@ -94,7 +97,7 @@ def has_permission(permission, journal_id=None, *, member=None):
         # New accounts always receive an invited member record, with no automatic grants.
         if member is None:
             account=db.session.get(AdminUser,session.get('admin_id')) if session.get('admin_id') else None
-            return bool(account and account.active and not account.governance_managed) and permission not in {'team.manage','manuscript.decide','manuscript.assign'}
+            return bool(account and account.active and not account.governance_managed) and not permission.startswith('dissemination.') and permission not in {'team.manage','manuscript.decide','manuscript.assign'}
     return any(permission in (a.role.permissions or []) and (a.journal_id is None or a.journal_id == journal_id)
                for a in mandates(member))
 
@@ -1217,3 +1220,4 @@ def notification_context():
         return dict(notice_unread=0,notice_recent=[])
     query=active_inbox()
     return dict(notice_unread=query.filter(StaffNotice.read_at.is_(None)).count(),notice_recent=query.order_by(StaffNotice.created_at.desc(),StaffNotice.id.desc()).limit(5).all())
+

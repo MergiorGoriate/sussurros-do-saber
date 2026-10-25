@@ -9,6 +9,7 @@ import governance_models
 import premium_models
 import billing_models
 import scientific_metrics_models
+import dissemination_models
 
 url = os.environ.get("DATABASE_URL", "")
 if not url:
@@ -26,5 +27,6 @@ with engine.connect() as connection:
         if connection.dialect.name == "postgresql":
             connection.execute(text("SELECT pg_advisory_xact_lock(1936028275)"))
         context.run_migrations()
+
 
 
