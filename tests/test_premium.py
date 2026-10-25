@@ -289,7 +289,7 @@ class PremiumMigrationTests(unittest.TestCase):
                     self.assertEqual([c['name'] for c in before_columns],[c['name'] for c in inspect(connection).get_columns('article')])
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM premium_plan')),6)
                     self.assertEqual(connection.scalar(text('SELECT count(*) FROM premium_plan WHERE active')),0)
-                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261025_17')
+                    self.assertEqual(connection.scalar(text('SELECT version_num FROM alembic_version')),'20261025_18')
                     for table in ['premium_content','premium_subscription','premium_audit']:
                         self.assertIn(table,inspect(connection).get_table_names())
                 engine.dispose()

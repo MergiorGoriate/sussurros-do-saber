@@ -12,6 +12,7 @@
 <dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
 <div class="journal-actions mt-8 flex gap-3 flex-wrap"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
 </header>
+{% if language == 'en' %}<p class="translation-notice">The published manuscript and PDF remain in their original language. English metadata do not constitute a translated scientific edition.</p>{% endif %}
 <section class="journal-article-header" id="journal-article-heading">
   <div class="journal-article-topline">
     <div class="journal-article-type"><i class="fa-solid fa-lock-open" aria-hidden="true"></i><span>{{ journal.field or 'Artigo científico' }}</span></div>
@@ -26,6 +27,7 @@
     </div>
   </div>
   <h1 id="journal-article-title">{{ article_title }}</h1>
+  {% if language == 'en' and journal.translation_available %}<section class="translation-notice" aria-label="English metadata"><h2>Abstract</h2>{{ journal.summary|markdown }}<p><strong>Keywords:</strong> {{ journal.keywords }}</p>{% if journal.translation_outdated %}<p>The Portuguese metadata have changed. An editorial update of this English version is pending.</p>{% endif %}</section>{% endif %}
   <div class="journal-article-authors">
   {% if journal_authors %}
     {% for author in journal_authors %}
@@ -189,6 +191,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/journal-details.js', v='20261003-1') }}" defer></script>
 {% endblock %}
+
 
 
 

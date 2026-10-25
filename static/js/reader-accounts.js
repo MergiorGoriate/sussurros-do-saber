@@ -28,9 +28,9 @@
   const api = async (path, data) => {
     const response = await fetch(path, {method: data ? 'POST' : 'GET', body: data,
       credentials: 'same-origin', headers: {Accept: 'application/json'}});
-    const result = await response.json().catch(() => ({ok: false, message: 'Não foi possível concluir. Tente novamente.'}));
+    const result = await response.json().catch(() => ({ok: false, message: window.sdsText("Não foi possível concluir. Tente novamente.")}));
     if (!response.ok || !result.ok) {
-      const error = new Error(result.message || 'Não foi possível concluir. Tente novamente.');
+      const error = new Error(result.message || window.sdsText("Não foi possível concluir. Tente novamente."));
       error.code = response.status; throw error;
     }
     return result;
@@ -60,10 +60,10 @@
     });
     document.querySelectorAll('.reader-header-login').forEach(button => {
       const label = button.querySelector('[data-reader-login-label]');
-      label.textContent = authenticated ? 'Conta' : 'Entrar';
+      label.textContent = authenticated ? 'Conta' : window.sdsText("Entrar");
       label.hidden = authenticated && !!picture;
       button.classList.toggle('reader-has-avatar', authenticated && !!picture);
-      button.setAttribute('aria-label', authenticated ? 'Abrir a minha conta' : 'Entrar');
+      button.setAttribute('aria-label', authenticated ? 'Abrir a minha conta' : window.sdsText("Entrar"));
       button.querySelector('.reader-account-chevron').hidden = !authenticated;
     });
   };
@@ -73,7 +73,7 @@
       document.querySelectorAll('.reader-header-notifications').forEach(link => {
         const count = Math.max(0, Number(state.notification_count) || 0);
         link.hidden = !authenticated;
-        link.setAttribute('aria-label', count ? 'Notificações: ' + count + ' actualizações' : 'Notificações');
+        link.setAttribute('aria-label', count ? window.sdsText("Notificações: ") + count + ' actualizações' : window.sdsText("Notificações"));
         const badge = link.querySelector('[data-reader-notification-count]');
         badge.hidden = !count; badge.textContent = count > 99 ? '99+' : String(count);
       });
@@ -88,7 +88,7 @@
     form.elements.name.required = register; form.elements.password.minLength = register ? 12 : 1;
     form.elements.password.autocomplete = register ? 'new-password' : 'current-password';
     document.getElementById('reader-password-help').hidden = !register;
-    document.getElementById('reader-submit').textContent = register ? 'Criar conta' : 'Entrar';
+    document.getElementById('reader-submit').textContent = register ? 'Criar conta' : window.sdsText("Entrar");
     dialog.querySelectorAll('[data-reader-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.readerMode === mode)));
     status.textContent = '';
   };
@@ -122,7 +122,7 @@
   const finishLogin = async result => {
     csrf = result.csrf;
     if(result.redirect_to && /^\/(?:premium\/aderir\/\d+|submissoes\/confirmacao)(?:\?|$)/.test(result.redirect_to)){location.assign(result.redirect_to);return;}
-    try {await importLegacy();} catch {status.textContent = 'A conta está activa. Os favoritos antigos serão importados na próxima visita.';}
+    try {await importLegacy();} catch {status.textContent = window.sdsText("A conta está activa. Os favoritos antigos serão importados na próxima visita.");}
     await refresh();
     const callback = pending; pending = null;
     if (dialog.open) dialog.close();
@@ -141,9 +141,9 @@
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client'; script.async = true;
-      const timeout = setTimeout(() => {script.remove(); reject(new Error('Google indisponível. Pode continuar a ler ou usar a sua conta existente.'));}, 10000);
-      script.onload = () => {clearTimeout(timeout); if (window.google?.accounts?.id) resolve(window.google.accounts.id); else reject(new Error('Google indisponível.'));};
-      script.onerror = () => {clearTimeout(timeout); script.remove(); reject(new Error('Google indisponível. Pode continuar a ler ou usar a sua conta existente.'));};
+      const timeout = setTimeout(() => {script.remove(); reject(new Error(window.sdsText("Google indisponível. Pode continuar a ler ou usar a sua conta existente.")));}, 10000);
+      script.onload = () => {clearTimeout(timeout); if (window.google?.accounts?.id) resolve(window.google.accounts.id); else reject(new Error(window.sdsText("Google indisponível.")));};
+      script.onerror = () => {clearTimeout(timeout); script.remove(); reject(new Error(window.sdsText("Google indisponível. Pode continuar a ler ou usar a sua conta existente.")));};
       document.head.append(script);
     });
   };
@@ -170,7 +170,7 @@
       const state = await sessionState();
       document.getElementById('reader-password-panel').hidden = state.authenticated;
       const panel = document.getElementById('reader-account-panel'); panel.hidden = !state.authenticated;
-      document.getElementById('reader-account-name').textContent = 'Olá, ' + state.name;
+      document.getElementById('reader-account-name').textContent = window.sdsText("Olá, ") + state.name;
       panel.querySelector('[name="csrf_token"]').value = csrf;
       if (!state.authenticated) form.elements.email.focus();
       googleRequest = null; await prepareGoogle();
@@ -220,7 +220,7 @@
     return async () => {
     values = await post('/conta/revistas/' + encodeURIComponent(slug), {action: key, enabled}); render();
     report(key === 'saved' ? (values.saved ? 'Artigo guardado na sua conta. Consulte Os meus favoritos.' : 'Artigo removido dos favoritos.')
-      : (values.following ? 'Notificações activadas. Consulte a página Notificações para ver actualizações deste artigo.' : 'Notificações desactivadas.'));
+      : (values.following ? 'Notificações activadas. Consulte a página Notificações para ver actualizações deste artigo.' : window.sdsText("Notificações desactivadas.")));
     if (key === 'following') await sessionState();
     };
   }));
@@ -237,7 +237,7 @@
       button.closest('li').remove();
       const empty = document.querySelector('[data-reader-library-empty]');
       if (empty) empty.hidden = !!document.querySelector('[data-reader-library] li');
-      report(article || button.hasAttribute('data-reader-remove-journal') ? 'Artigo removido dos favoritos.' : 'Notificações desactivadas.');
+      report(article || button.hasAttribute('data-reader-remove-journal') ? 'Artigo removido dos favoritos.' : window.sdsText("Notificações desactivadas."));
       await sessionState();
       if (button.hasAttribute('data-reader-unfollow')) {
         document.querySelectorAll('[data-reader-notice-slug]').forEach(el => {if (el.dataset.readerNoticeSlug === journal) el.remove();});
@@ -250,9 +250,9 @@
     button.addEventListener('click', () => withAccount(button, () => async () => {
       const result = await post('/conta/revistas/' + encodeURIComponent(button.dataset.readerMarkRead), {action: 'read', enabled: true, revision: button.dataset.readerRevision});
       if (result.unread) {location.reload(); return;}
-      button.closest('li').querySelector('[data-reader-notification-status]').textContent = 'Sem novas actualizações. Está a acompanhar este artigo.';
+      button.closest('li').querySelector('[data-reader-notification-status]').textContent = window.sdsText("Sem novas actualizações. Está a acompanhar este artigo.");
       button.remove();
-      await sessionState(); report('Actualização marcada como vista.');
+      await sessionState(); report(window.sdsText("Actualização marcada como vista."));
       document.dispatchEvent(new Event('notice-inbox-change'));
     }));
   });
@@ -279,7 +279,7 @@
           if (location.pathname === '/conta/biblioteca' && !readLegacy('savedArticles').length && !readLegacy('savedJournalArticles').length) location.reload();
           else await refresh();
         }
-      } catch {report('Os favoritos antigos serão importados na próxima visita.');}
+      } catch {report(window.sdsText("Os favoritos antigos serão importados na próxima visita."));}
       return;
     }
     if (!googleArea?.dataset.clientId || state.google_prompt_suppressed || /^\/(admin|submissoes|conta)(\/|$)/.test(location.pathname)) return;
@@ -298,4 +298,5 @@
     }, 2500);
   }).catch(() => { /* Account service outages never hide public content. */ });
 })();
+
 

@@ -29,6 +29,22 @@ class PermissionMatrixTests(unittest.TestCase):
 
     def operation(self, permission, member):
         """Return GET UI, POST/GET action, payload, and persisted outcome check."""
+        if permission.startswith('translations.'):
+            from translation_models import ContentTranslation,TranslationVersion,TranslationJob
+            from translation_service import source,digest
+            article=self.article(self.member());article.status='published';db.session.commit()
+            original=source('article',article.id)
+            item=ContentTranslation(kind='article',source_id=article.id,version=1,state='review')
+            db.session.add(item);db.session.flush()
+            db.session.add(TranslationVersion(translation_id=item.id,number=1,source=original,source_hash=digest(original),content=original,report={'ready':True}))
+            if permission=='translations.manage':
+                job=TranslationJob(translation_id=item.id,state='queued');db.session.add(job);db.session.flush()
+                db.session.commit()
+                return '/admin/internacionalizacao/',f'/admin/internacionalizacao/tarefas/{job.id}',dict(action='cancel'),lambda:job.state=='cancelled'
+            action='approve' if permission=='translations.approve' else 'publish'
+            if action=='publish':item.state='approved';item.approved_version=1
+            db.session.commit()
+            return '/admin/internacionalizacao/',f'/admin/internacionalizacao/{item.id}/accao',dict(action=action,version=1,reviewed='yes'),lambda:item.state==('approved' if action=='approve' else 'published')
         if permission.startswith('dissemination.'):
             from dissemination_models import DisseminationMaterial, DisseminationVersion
             from dissemination_service import snapshot

@@ -63,8 +63,14 @@ Todas as afirmações devem ter uma evidência literal do artigo. Não alegues q
 a verificação automática é garantia de exactidão. Devolve apenas JSON.'''
 
 
+def language_rules(source):
+    if source.get('language')=='en':
+        return RULES.replace('Escreve português de Moçambique, ortografia anterior ao Acordo de 1990 (acção,\nactividade, projecto, objectivo, facto, recepção).','Write precise natural English with appropriate scientific terminology.')
+    return RULES
+
+
 def generate(source, network, kind, instruction=''):
-    return chat(RULES + '''
+    return chat(language_rules(source) + '''
 Produz este objecto: {"title":"título até 90 caracteres", "caption":"texto para a rede",
 "claims":[{"text":"afirmação curta", "evidence":"trecho literal do artigo"}],
 "slides":[{"heading":"até 70 caracteres", "body":"até 240 caracteres", "claim_ids":[0]}],
@@ -103,7 +109,7 @@ def illustration(description):
 
 
 def review(source, payload, images):
-    return chat(RULES + '''
+    return chat(language_rules(source) + '''
 Faz uma revisão preliminar independente do material inteiro, incluindo título,
 legenda, todos os slides e imagens anexas. Examina suporte semântico de cada
 afirmação, conceitos, números e contexto. Evidência literal não basta se não

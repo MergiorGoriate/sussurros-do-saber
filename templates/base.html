@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-MZ">
+<html lang="{{ 'en' if language == 'en' else 'pt-MZ' }}">
 <head>
 <meta charset="utf-8">
 <meta name="msvalidate.01" content="DAAF54BC6711A0B43659454F1E941B93" />
@@ -50,10 +50,14 @@ window.dataLayer.push({event:'default_consent'});
 {% endif %}
 <title>{% block title %}Sussurros do Saber — Ciência, educação e investigação{% endblock %}</title>
 <link rel="canonical" href="{% block canonical %}{{ site_url }}{{ request.path }}{% endblock %}">
+{% for locale,path in language_equivalents.items() %}<link rel="alternate" hreflang="{{ 'pt-MZ' if locale == 'pt' else 'en' }}" href="{{ site_url }}{{ path }}">{% endfor %}
+{% if language_equivalents.pt %}<link rel="alternate" hreflang="x-default" href="{{ site_url }}{{ language_equivalents.pt }}">{% endif %}
+<link rel="stylesheet" href="{{ url_for('static',filename='css/internationalization.css') }}">
+<script nonce="{{ csp_nonce }}">{const messages={{ client_translations|tojson }};window.sdsText=text=>messages[text]||text;}</script>
 {% block resource_hints %}{% endblock %}
 <meta property="og:type" content="{% block og_type %}website{% endblock %}">
 <meta property="og:site_name" content="Sussurros do Saber">
-<meta property="og:locale" content="pt_MZ">
+<meta property="og:locale" content="{{ 'en_US' if language == 'en' else 'pt_MZ' }}">
 <meta property="og:title" content="{% block og_title %}Sussurros do Saber{% endblock %}">
 <meta property="og:description" content="{% block og_description %}Ciência, educação e investigação explicadas com clareza.{% endblock %}">
 <meta property="og:url" content="{{ site_url }}{{ request.path }}">
@@ -89,7 +93,7 @@ window.dataLayer.push({event:'default_consent'});
 {% include 'partials/site_icons.html' %}
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css',v='20261008-scientific-share') }}">
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Sussurros do Saber","url":"{{ site_url }}","logo":"{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}"}</script>
-<script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"pt-MZ","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}/artigos?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"{{ 'en' if language == 'en' else 'pt-MZ' }}","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}{{ url_for('articles') }}?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 <link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-notification-cards-v9') }}">
 {% block head_extra %}{% endblock %}
 <link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notice-layout') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footnotes.css', v='20261019-footnotes-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/public-typography.css', v='20261020-audit-v2') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css', v='20261020-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}"></head>
@@ -102,6 +106,7 @@ window.dataLayer.push({event:'default_consent'});
 <div class="max-w-7xl mx-auto px-4 py-2 flex justify-between">
 <span>Conhecimento aberto · Ciência para todos</span>
 <span class="hidden sm:inline">Nampula · Moçambique</span>
+{% if i18n_enabled %}<nav class="language-selector" aria-label="{{ 'Language' if language == 'en' else 'Idioma' }}"><a href="{{ url_for('language.choose',locale='pt',next=request.full_path.rstrip('?')) }}" lang="pt-MZ" hreflang="pt-MZ" {% if language != 'en' %}aria-current="true"{% endif %}>PT</a><span aria-hidden="true">|</span><a href="{{ url_for('language.choose',locale='en',next=request.full_path.rstrip('?')) }}" lang="en" hreflang="en" {% if language == 'en' %}aria-current="true"{% endif %}>EN</a></nav>{% endif %}
 </div>
 </div>
 <header class="site-header sticky top-0 z-50">
@@ -111,6 +116,7 @@ window.dataLayer.push({event:'default_consent'});
 <picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async" fetchpriority="high"></picture>
 </a>
 <div class="flex gap-2 reader-header-controls">
+
 <a href="{{ url_for('reader.notifications') }}" class="reader-header-notifications" aria-label="Notificações" hidden><i class="fa-regular fa-bell" aria-hidden="true"></i><span data-reader-notification-count class="reader-notification-count" aria-hidden="true" hidden></span></a>
 <button type="button" data-reader-open class="reader-header-login" aria-label="Entrar" aria-haspopup="dialog" aria-controls="reader-dialog"><img data-reader-avatar class="reader-avatar" alt="" referrerpolicy="no-referrer" hidden><span data-reader-login-label>Entrar</span><span class="reader-account-chevron" aria-hidden="true" hidden><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 4 4 4 4-4"/></svg></span></button>
 <button id="themeToggle" class="icon-btn" aria-label="Alternar modo escuro" aria-pressed="false">◐</button>
@@ -136,7 +142,7 @@ window.dataLayer.push({event:'default_consent'});
 </form>
 </div>
 </header>
-<main id="conteudo"><p id="reader-action-feedback" class="max-w-6xl mx-auto px-4 py-2" role="status" aria-live="polite" hidden></p>{% block content %}{% endblock %}</main>
+<main id="conteudo">{% if translation_original %}<aside class="translation-notice max-w-6xl mx-auto" role="status">An English translation of this article is not yet published. <a href="{{ url_for('article',slug=translation_original.slug,_language=none) }}">Read the Portuguese original: {{ translation_original.title }}</a></aside>{% endif %}<p id="reader-action-feedback" class="max-w-6xl mx-auto px-4 py-2" role="status" aria-live="polite" hidden></p>{% block content %}{% endblock %}</main>
 <footer class="site-footer bg-ink text-white mt-20" aria-label="Rodapé">
 <div class="footer-layout max-w-7xl mx-auto px-4">
 <div>
@@ -244,6 +250,7 @@ if('requestIdleCallback'in window)requestIdleCallback(loadAssistant,{timeout:650
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/reader-accounts.js',v='20261005-favorite-cards-v7') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/internal-notices.js',v='20261018-notice-layout') }}" defer></script></body>
 </html>
+
 
 
 

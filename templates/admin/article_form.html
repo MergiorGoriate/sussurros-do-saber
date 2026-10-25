@@ -3,6 +3,7 @@
 {% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/article-scheduling.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-headings.css', v='20261022-headings') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css', v='20261018-dropcap-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css',v='20261019-autosave-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-backgrounds.css', v='20261021-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css', v='20261021-v1') }}">{% endblock %}
 {% block content %}
 <header class="admin-header"><div><span>Conteúdo editorial</span><h1>{{ 'Editar artigo' if article.id else 'Novo artigo' }}</h1></div><a href="{{ url_for('admin.articles') }}">← Voltar</a></header>
+{% if article.id and translation_can('manage') %}<p><a href="{{ url_for('translation_admin.dashboard',q=article.title) }}">Preparar ou actualizar a tradução inglesa deste artigo</a></p>{% endif %}
 <form method="post" enctype="multipart/form-data" class="editor-form" data-notes-preview-url="{{ url_for('article_history.preview') }}" data-autosave-url="{{ url_for('article_history.autosave', ident=article.id) if article.id else '' }}" data-article-status="{{ article.status or 'draft' }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   {% if article.id %}<input type="hidden" name="version_token" value="{{ request.form.get('version_token', article.updated_at.isoformat()) }}">{% endif %}
@@ -120,3 +121,4 @@
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-autosave.js', v='20261019-autosave-v1') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/article-cover-player.js',v='20261021-v1') }}" defer></script>
 {% endblock %}
+

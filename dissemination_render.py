@@ -67,7 +67,10 @@ def compose(payload, network, illustration, static_folder):
                 draw.text((55, y), line, font=face, fill='#132d36')
                 y += spacing
             y += 18
-        draw.text((55, height - 100), payload['visual_label'], font=font(24), fill='#425b62')
+        label=payload['visual_label']
+        if payload.get('language')=='en':
+            label={'Ilustração conceptual':'Conceptual illustration','Reconstrução hipotética':'Hypothetical reconstruction'}[label]
+        draw.text((55, height - 100), label, font=font(24), fill='#425b62')
         draw.text((55, height - 58), 'sussurrosdosaber.com', font=font(25), fill=accent)
         draw.text((width - 135, height - 58), f'{index + 1}/{len(payload["slides"])}', font=font(24), fill=accent)
         stream = io.BytesIO()

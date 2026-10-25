@@ -68,6 +68,7 @@ def context():
 @centre_bp.get('/')
 @access
 def dashboard():
+    from translation_models import ContentTranslation
     search = request.args.get('q', '').strip()[:120]
     portal = Article.public_query()
     journals = Journal.query.filter(Journal.published.is_(True), Journal.content_markdown.isnot(None), db.func.trim(Journal.content_markdown) != '')
@@ -79,6 +80,7 @@ def dashboard():
     except ValueError:
         abort(400)
     return render_template('admin/dissemination.html', search=search,
+        english_ids={x.source_id for x in ContentTranslation.query.filter(ContentTranslation.kind=='article',ContentTranslation.published_version.isnot(None))},
         portal=portal.order_by(Article.id.desc()).limit(40).all(),
         journals=journals.order_by(Journal.id.desc()).limit(40).all(),
         materials=Material.query.order_by(Material.id.desc()).paginate(page=page, per_page=20, error_out=False),
@@ -106,6 +108,7 @@ def generate():
 @centre_bp.get('/<int:ident>')
 @access
 def detail(ident):
+    from dissemination_video import DisseminationVideo
     material = db.get_or_404(Material, ident)
     version = service.current_version(material)
     try:
@@ -115,6 +118,7 @@ def detail(ident):
     except (GenerationError, OSError):
         public_link = ''
     return render_template('admin/dissemination_detail.html', material=material, version=version,
+        videos=DisseminationVideo.query.filter_by(material_id=ident).order_by(DisseminationVideo.id.desc()).all(),
         states=service.STATES, kinds=service.KINDS, networks=service.NETWORKS, public_link=public_link,
         versions=Version.query.filter_by(material_id=ident).order_by(Version.number.desc()).all(),
         events=Event.query.filter_by(material_id=ident).order_by(Event.id.desc()).all(),

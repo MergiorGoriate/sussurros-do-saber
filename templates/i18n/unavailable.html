@@ -1,0 +1,4 @@
+{% extends 'base.html' %}
+{% block title %}English translation unavailable — Sussurros do Saber{% endblock %}
+{% block robots %}noindex,follow{% endblock %}
+{% block content %}<section class="max-w-4xl mx-auto px-4 py-16"><h1>English translation not yet published</h1><p>The Portuguese article is available. English translations require editorial approval before publication.</p><p><a href="{{ url_for('article',slug=original.slug,_language=none) }}">Read the Portuguese original: {{ original.title }}</a></p><a href="{{ url_for('articles',_language='en') }}">Browse articles</a></section>{% endblock %}
