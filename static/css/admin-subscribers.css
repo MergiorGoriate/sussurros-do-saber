@@ -185,3 +185,11 @@
 }
 @media(prefers-reduced-motion:reduce){.mail-delivery *{scroll-behavior:auto}}
 
+
+/* Newsletter interaction controls. */
+.subscribers-page [hidden]{display:none!important}
+.newsletter-directory-tools{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:16px}
+.newsletter-directory-tools .newsletter-field{flex:1 1 200px;margin:0}
+#subscriber-filter-result,.newsletter-selection-status{font-size:13px;color:var(--sub-muted);line-height:1.6}
+.newsletter-selection-status{padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--sub-soft)}
+.subscribers-page select:focus-visible{outline:3px solid var(--sub-accent);outline-offset:3px}
