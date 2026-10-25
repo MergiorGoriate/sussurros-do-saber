@@ -1,5 +1,18 @@
 const {test,expect}=require('@playwright/test');
 const {execFileSync}=require('node:child_process');
+test('an English browser negotiates English once and can explicitly choose Portuguese',async({browser})=>{
+ const context=await browser.newContext({locale:'en-US'});
+ const page=await context.newPage();
+ await page.goto('http://127.0.0.1:5000/');
+ await expect(page).toHaveURL('http://127.0.0.1:5000/en/');
+ await expect(page.locator('html')).toHaveAttribute('lang','en');
+ await page.locator('.language-selector').getByRole('link',{name:'PT',exact:true}).click();
+ await expect(page).toHaveURL('http://127.0.0.1:5000/');
+ await expect(page.locator('html')).toHaveAttribute('lang','pt-MZ');
+ await page.reload();
+ await expect(page).toHaveURL('http://127.0.0.1:5000/');
+ await context.close();
+});
 for(const width of [320,768,1440]){
  test(`reviewed PT/EN article, language switch and layout at ${width}px`,async({page})=>{
   const fixture=JSON.parse(execFileSync('python',['tests/browser/internationalization_fixture.py'],{encoding:'utf8'}));
