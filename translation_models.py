@@ -62,6 +62,24 @@ class TranslationQuota(db.Model):
     reserved_units = db.Column(db.Integer, nullable=False, default=0)
 
 
+class TranslationLimitSetting(db.Model):
+    __table_args__ = (db.CheckConstraint('id = 1'),
+                      db.CheckConstraint('daily_units IS NULL OR daily_units BETWEEN 1 AND 1000000'))
+    id = db.Column(db.Integer, primary_key=True)
+    daily_units = db.Column(db.Integer)
+    version = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class TranslationLimitChange(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    previous_units = db.Column(db.Integer)
+    daily_units = db.Column(db.Integer, nullable=False)
+    actor_id = db.Column(db.Integer)
+    actor_name = db.Column(db.String(160), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
 class TranslationWorker(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lease = db.Column(db.String(64))

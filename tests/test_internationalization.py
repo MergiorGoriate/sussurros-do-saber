@@ -13,7 +13,8 @@ from models import db, Article, Author, Category, Journal, utcnow
 from extensions import limiter
 from security_test_support import authenticate_test_session
 from translation_models import (ContentTranslation as Translation, TranslationVersion as Version,
-    TranslationJob as Job, TranslationEvent as Event, TranslationQuota, TranslationWorker, InterfaceTranslation, InterfaceBatch)
+    TranslationJob as Job, TranslationEvent as Event, TranslationQuota, TranslationWorker, InterfaceTranslation, InterfaceBatch,
+    TranslationLimitSetting, TranslationLimitChange)
 from dissemination_ai import GenerationError
 import translation_service as service
 from internationalization import preferred
@@ -24,7 +25,8 @@ class InternationalizationTests(unittest.TestCase):
         self.ctx=app.app_context();self.ctx.push();self.previous=limiter.enabled;limiter.enabled=False
         self.env=patch.dict(os.environ,dict(OPENAI_API_KEY='fixture',TRANSLATION_TEXT_MODEL='fixture',TRANSLATION_REVIEW_MODEL='fixture',TRANSLATION_DAILY_UNITS='100',I18N_ENABLED='true'))
         self.env.start()
-        for model in (Event,Job,Version,Translation,TranslationQuota,TranslationWorker,InterfaceBatch,InterfaceTranslation):model.query.delete()
+        for model in (Event,Job,Version,Translation,TranslationQuota,TranslationWorker,InterfaceBatch,InterfaceTranslation,
+                      TranslationLimitChange,TranslationLimitSetting):model.query.delete()
         token=secrets.token_hex(5)
         self.article=Article(title='Plantas '+token,slug='i18n-'+token,summary='As plantas utilizam luz.',
             body='## Método\nAs plantas utilizam luz. $x=2$ [Fonte](https://example.org/paper).\n\n![Planta](https://example.org/plant.png)',
@@ -37,7 +39,85 @@ class InternationalizationTests(unittest.TestCase):
             authenticate_test_session(s)
 
     def tearDown(self):
-        db.session.rollback();self.env.stop();limiter.enabled=self.previous;self.ctx.pop()
+        db.session.rollback()
+        TranslationLimitChange.query.delete();TranslationLimitSetting.query.delete();db.session.commit()
+        self.env.stop();limiter.enabled=self.previous;self.ctx.pop()
+
+    def test_daily_limit_saved_in_panel_is_persistent_audited_and_used_by_queue(self):
+        from translation_limits import daily_limit, quota_summary
+        response=self.client.post('/admin/internacionalizacao/limite-diario',data=dict(
+            csrf_token='i18n-test',daily_units='1',limit_version='0'))
+        self.assertEqual(response.status_code,302)
+        change=TranslationLimitChange.query.one()
+        self.assertEqual((change.previous_units,change.daily_units),(100,1))
+        article_id=self.article.id
+        db.session.remove()
+        with patch.dict(os.environ,{'TRANSLATION_DAILY_UNITS':'999'}):
+            self.assertEqual(daily_limit(),1)
+            service.queue('article',article_id);db.session.commit()
+            self.assertEqual(quota_summary()['remaining'],0)
+            Job.query.one().state='done';db.session.commit()
+            with self.assertRaisesRegex(GenerationError,'Limite diário'):
+                service.queue('article',article_id)
+            db.session.rollback()
+        self.assertEqual(TranslationQuota.query.one().reserved_units,1)
+
+    def test_daily_limit_update_preserves_reservations_and_blocks_stale_forms(self):
+        from translation_limits import quota_summary
+        db.session.add(TranslationQuota(day=utcnow().date(),reserved_units=6));db.session.commit()
+        for value,version in [('18',0),('3',1)]:
+            response=self.client.post('/admin/internacionalizacao/limite-diario',data=dict(
+                csrf_token='i18n-test',daily_units=value,limit_version=version))
+            self.assertEqual(response.status_code,302)
+        self.assertEqual(quota_summary()['remaining'],0)
+        self.assertEqual(TranslationQuota.query.one().reserved_units,6)
+        response=self.client.post('/admin/internacionalizacao/limite-diario',data=dict(
+            csrf_token='i18n-test',daily_units='50',limit_version='1'))
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(TranslationLimitSetting.query.one().daily_units,3)
+        self.assertEqual(TranslationLimitChange.query.count(),2)
+
+    def test_daily_limit_rejects_invalid_values_and_requires_primary_admin_and_csrf(self):
+        for value in ['', '0', '-1', '1.5', '1000001', 'abc']:
+            response=self.client.post('/admin/internacionalizacao/limite-diario',data=dict(
+                csrf_token='i18n-test',daily_units=value,limit_version='0'))
+            self.assertEqual(response.status_code,409)
+        self.assertEqual(TranslationLimitChange.query.count(),0)
+        self.assertEqual(self.client.post('/admin/internacionalizacao/limite-diario',
+            data=dict(daily_units='18',limit_version='0')).status_code,400)
+        self.assertEqual(app.test_client().post('/admin/internacionalizacao/limite-diario',
+            data=dict(daily_units='18',limit_version='0')).status_code,302)
+        with self.client.session_transaction() as session:
+            session['admin_superuser']=False
+            session.pop('admin_id',None)
+            authenticate_test_session(session)
+        with patch('translation_admin.can',return_value=True):
+            response=self.client.post('/admin/internacionalizacao/limite-diario',data=dict(
+                csrf_token='i18n-test',daily_units='18',limit_version='0'))
+            self.assertEqual(response.status_code,403)
+            page=self.client.get('/admin/internacionalizacao/')
+            self.assertNotIn('id="translation-daily-units"',page.text)
+
+    def test_daily_limit_can_repair_invalid_environment_without_resetting_usage(self):
+        from translation_limits import quota_summary
+        with patch.dict(os.environ,{'TRANSLATION_DAILY_UNITS':'invalid'}):
+            page=self.client.get('/admin/internacionalizacao/')
+            self.assertEqual(page.status_code,200)
+            self.assertIn('O limite definido no servidor é inválido',page.text)
+            response=self.client.post('/admin/internacionalizacao/limite-diario',data=dict(
+                csrf_token='i18n-test',daily_units='18',limit_version='0'))
+            self.assertEqual(response.status_code,302)
+            self.assertEqual(quota_summary()['limit'],18)
+
+    def test_daily_limit_schema_upgrade_is_idempotent(self):
+        from sqlalchemy import create_engine, inspect
+        from translation_schema import upgrade_translation_limits
+        engine=create_engine('sqlite://')
+        with engine.begin() as connection:
+            upgrade_translation_limits(connection);upgrade_translation_limits(connection)
+            self.assertEqual(set(inspect(connection).get_table_names()),
+                {'translation_limit_setting','translation_limit_change'})
+        engine.dispose()
 
     def make(self,publish=False):
         original=service.source('article',self.article.id)

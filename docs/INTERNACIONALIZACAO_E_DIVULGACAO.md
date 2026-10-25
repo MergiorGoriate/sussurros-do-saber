@@ -120,6 +120,10 @@ Para esta VPS, recomenda-se uma sequência de execução única no agendamento, 
 
 As chamadas de tradução/revisão têm limites de resposta e tempo de espera, e a reserva diária considera o tamanho do texto. As unidades não são meticais, dólares, facturação nem um tecto monetário exacto. Configure também os controlos financeiros disponíveis na conta do fornecedor. Tentativas interrompidas podem ter sido cobradas e não são repetidas automaticamente.
 
+O administrador principal pode alterar as unidades diárias em **Administração → Internacionalização → Limite diário de tradução**. O painel mostra o limite, as reservas do dia em UTC e as unidades disponíveis. O valor guardado tem prioridade sobre `TRANSLATION_DAILY_UNITS` e aplica-se aos novos pedidos sem reiniciar a aplicação. Até à primeira alteração, mantém-se o valor do servidor. A migração `20261026_19` cria a configuração persistente e o histórico das alterações, sem modificar as reservas existentes.
+
+Cada unidade corresponde a até 4 000 caracteres dos campos originais enviados pelo fluxo editorial. Tentativas falhadas e tarefas canceladas mantêm a sua reserva. Baixar o limite abaixo das reservas não cancela tarefas aceites: apenas impede novas reservas enquanto não houver quota disponível. O formulário exige a sessão do administrador principal, protecção CSRF e a versão actual da configuração para evitar alterações sobrepostas.
+
 Os vídeos são limitados a 40 MB; a composição verifica uma margem mínima de espaço livre. Versões, imagens e vídeos devem entrar no backup e na política de retenção operacional. Não há eliminação automática de histórico ou limpeza generalizada de ficheiros antigos. Com 75 GB, acompanhe o espaço livre e a utilização efectiva, em vez de presumir capacidade ilimitada.
 
 Na Cloudflare, não force cache de HTML na entrada `/`, em `/en/*`, `/idioma/*`, áreas privadas ou respostas que contenham preferências de utilizador. Preserve os cabeçalhos `no-store`. Os ficheiros estáticos versionados continuam a usar o comportamento existente.
