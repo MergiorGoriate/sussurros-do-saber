@@ -11,6 +11,9 @@ async function adminLogin(page) {
 }
 
 test('staff management pages render at desktop and mobile widths', async ({ page }) => {
+  const expectedPermissions = JSON.parse(execFileSync('python', ['-c',
+    'import json; from governance import PERMISSIONS; print(json.dumps(sorted(PERMISSIONS)))'
+  ], { encoding: 'utf8' }));
   await adminLogin(page);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -29,8 +32,8 @@ test('staff management pages render at desktop and mobile widths', async ({ page
         await page.screenshot({path: `test-results/management-${path.split('/').pop()}-${width}.png`, fullPage:true});
       }
       if (path === '/admin/funcoes') {
-        expect(await page.locator('input[name="permissions"]').count()).toBe(24);
         const codes = await page.locator('input[name="permissions"]').evaluateAll(items => items.map(item => item.value));
+        expect(codes.sort()).toEqual(expectedPermissions);
         expect(new Set(codes).size).toBe(codes.length);
       }
       const overflow = await page.evaluate(() => ({width: innerWidth, document: document.documentElement.scrollWidth,
@@ -122,3 +125,4 @@ for(const width of [320,390,768]){
   await expect(page.getByRole('button',{name:'Expandir barra lateral',exact:true})).toBeVisible();
  });
 }
+
