@@ -55,7 +55,7 @@ class ScientificSearchTests(unittest.TestCase):
         for term in [self.article.title, self.author.name, self.article.doi,
                      'https://doi.org/'+self.article.doi.upper(),
                      self.author.orcid, 'https://orcid.org/'+self.author.orcid,
-                     'metadadopesquisavel']:
+                     'metadadopesquisavel', 'investigacao', 'INVESTIGACAO']:
             with self.subTest(term=term):
                 response = self.client.get('/artigos', query_string={'q':term})
                 self.assertEqual(response.status_code, 200)
@@ -73,7 +73,7 @@ class ScientificSearchTests(unittest.TestCase):
         for term in [self.journal.article_title, name, '0000-0001-5109-3700',
                      'https://orcid.org/0000-0001-5109-3700',
                      self.journal.doi, self.journal.doi.removeprefix('https://doi.org/'),
-                     'metadadopesquisavel']:
+                     'metadadopesquisavel', 'descricao', 'DESCRICAO']:
             with self.subTest(term=term):
                 response = self.client.get('/revistas', query_string={'q':term})
                 self.assertEqual(response.status_code, 200)
