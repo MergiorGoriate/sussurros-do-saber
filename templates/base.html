@@ -105,7 +105,6 @@ window.dataLayer.push({event:'default_consent'});
 <div class="topline text-white text-sm">
 <div class="max-w-7xl mx-auto px-4 py-2 flex justify-between">
 <span>Conhecimento aberto · Ciência para todos</span>
-<span class="hidden sm:inline">Nampula · Moçambique</span>
 {% if i18n_enabled %}<nav class="language-selector" aria-label="{{ 'Language' if language == 'en' else 'Idioma' }}"><a href="{{ url_for('language.choose',locale='pt',next=request.full_path.rstrip('?')) }}" lang="pt-MZ" hreflang="pt-MZ" {% if language != 'en' %}aria-current="true"{% endif %}>PT</a><span aria-hidden="true">|</span><a href="{{ url_for('language.choose',locale='en',next=request.full_path.rstrip('?')) }}" lang="en" hreflang="en" {% if language == 'en' %}aria-current="true"{% endif %}>EN</a></nav>{% endif %}
 </div>
 </div>
