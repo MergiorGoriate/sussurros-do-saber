@@ -1,7 +1,8 @@
 {% extends 'admin/base.html' %}
 {% block title %}Subscritores{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-subscribers.css', v='20261024-planning-v1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-subscribers.css', v='20261025-controls-v1') }}">
+<script defer src="{{ url_for('static', filename='js/admin-newsletter.js', v='20261025-v1') }}" nonce="{{ csp_nonce }}"></script>
 {% endblock %}
 {% block content %}
 {% set total = subscribers|length %}
@@ -58,9 +59,15 @@
   <section class="admin-panel subscribers-directory" aria-labelledby="subscriber-list-title">
     <div class="subscriber-section-head"><div><h2 id="subscriber-list-title">Lista de subscritores</h2><p>Consulte as inscrições e altere o estado de cada subscritor.</p></div><span class="subscriber-count">{{ total }} {{ 'inscrição' if total == 1 else 'inscrições' }}</span></div>
     {% if subscribers %}
+    <div class="newsletter-directory-tools" hidden>
+      <label class="newsletter-field" for="subscriber-search">Pesquisar por e-mail<input id="subscriber-search" type="search" autocomplete="off" placeholder="Introduza parte do endereço"></label>
+      <label class="newsletter-field" for="subscriber-status-filter">Estado<select id="subscriber-status-filter"><option value="all">Todos</option><option value="active">Activos</option><option value="inactive">Inactivos</option></select></label>
+      <button type="button" class="subscriber-toggle" id="subscriber-clear-filters">Limpar filtros</button>
+    </div>
+    <p id="subscriber-filter-result" role="status" aria-live="polite" hidden></p>
     <table class="subscriber-table"><caption class="subscriber-sr-only">Subscritores, estado da inscrição e acções disponíveis</caption><thead><tr><th scope="col">E-mail</th><th scope="col">Estado</th><th scope="col">Inscrição</th><th scope="col">Acção</th></tr></thead><tbody>
       {% for item in subscribers %}
-      <tr><td data-label="E-mail"><div class="subscriber-identity"><span class="subscriber-avatar" aria-hidden="true">{{ item.email[0]|upper }}</span><span>{{ item.email }}</span></div></td><td data-label="Estado"><span class="subscriber-status {{ 'is-active' if item.active else 'is-inactive' }}"><i class="subscriber-dot" aria-hidden="true"></i>{{ 'Activo' if item.active else 'Inactivo' }}</span></td><td data-label="Inscrição"><time datetime="{{ item.created_at.isoformat() }}">{{ item.created_at.strftime('%d/%m/%Y') }}<small>{{ item.created_at.strftime('%H:%M') }}</small></time></td><td data-label="Acção"><form action="{{ url_for('admin.toggle_subscriber', subscriber_id=item.id) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="subscriber-toggle {{ 'is-deactivate' if item.active else '' }}" aria-label="{{ 'Desactivar' if item.active else 'Reactivar' }} inscrição de {{ item.email }}">{{ 'Desactivar' if item.active else 'Reactivar' }}</button></form></td></tr>
+      <tr data-subscriber-state="{{ 'active' if item.active else 'inactive' }}"><td data-label="E-mail"><div class="subscriber-identity"><span class="subscriber-avatar" aria-hidden="true">{{ item.email[0]|upper }}</span><span>{{ item.email }}</span></div></td><td data-label="Estado"><span class="subscriber-status {{ 'is-active' if item.active else 'is-inactive' }}"><i class="subscriber-dot" aria-hidden="true"></i>{{ 'Activo' if item.active else 'Inactivo' }}</span></td><td data-label="Inscrição"><time datetime="{{ item.created_at.isoformat() }}">{{ item.created_at.strftime('%d/%m/%Y') }}<small>{{ item.created_at.strftime('%H:%M') }}</small></time></td><td data-label="Acção"><form action="{{ url_for('admin.toggle_subscriber', subscriber_id=item.id) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="subscriber-toggle {{ 'is-deactivate' if item.active else '' }}" aria-label="{{ 'Desactivar' if item.active else 'Reactivar' }} inscrição de {{ item.email }}">{{ 'Desactivar' if item.active else 'Reactivar' }}</button></form></td></tr>
       {% endfor %}
     </tbody></table>
     {% else %}
