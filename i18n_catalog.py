@@ -1,5 +1,12 @@
 """Small reviewed bootstrap catalogue; full catalogue is editable in the admin UI."""
 EN = {
+ 'Todos os artigos':'All articles','Explorar conteúdos':'Explore content',
+ 'Educação':'Education','Espaço':'Space','Resultados para':'Results for',
+ 'Paginação dos artigos':'Article pagination','← Anteriores':'← Previous',
+ 'Seguintes →':'Next →','Página':'Page','de':'of',
+ 'Imagem de apoio:':'Supporting image:',
+ 'Artigos — Sussurros do Saber':'Articles — Sussurros do Saber',
+ 'Artigos científicos e educativos sobre Biologia, saúde, ambiente, tecnologia e investigação.':'Scientific and educational articles on biology, health, the environment, technology and research.',
  'PT':'PT','EN':'EN','Sussurros do Saber':'Sussurros do Saber','Premium':'Premium','DOI:':'DOI:',
  'DOI':'DOI','ORCID':'ORCID','ISSN':'ISSN','WhatsApp':'WhatsApp','Facebook':'Facebook',
  'Instagram':'Instagram','Bluesky':'Bluesky','Reddit':'Reddit','X':'X','LinkedIn':'LinkedIn',
