@@ -1,10 +1,16 @@
 {% extends 'admin/base.html' %}{% block title %}Internacionalização · Tradução de artigos{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/dissemination.css') }}">{% endblock %}
-{% block content %}<div class="dc"><header class="admin-header"><div><p>Internacionalização</p><h1>Tradução de artigos</h1><p>As versões inglesas exigem revisão e aprovação editorial antes da publicação.</p></div></header>
-<p><a href="{{ url_for('translation_admin.interface') }}">Traduzir interface e páginas institucionais</a></p>
-<p><a href="{{ url_for('translation_admin.documentation') }}">Documentação, auditoria e configuração</a></p>
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/dissemination.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/translation-dashboard.css') }}">{% endblock %}
+{% block content %}<div class="dc translation-dashboard"><header class="admin-header translation-hero"><div><p class="translation-eyebrow">INTERNACIONALIZAÇÃO</p><h1>Tradução de artigos</h1><p>As versões inglesas exigem revisão e aprovação editorial antes da publicação.</p></div><span class="translation-hero-symbol" aria-hidden="true">文 ↔ A</span></header>
+<nav class="translation-quicklinks" aria-label="Acessos de internacionalização"><a href="{{ url_for('translation_admin.interface') }}">Traduzir interface e páginas institucionais <span aria-hidden="true">↗</span></a><a href="{{ url_for('translation_admin.documentation') }}">Documentação, auditoria e configuração <span aria-hidden="true">↗</span></a></nav>
+<div class="translation-stat-grid" aria-label="Resumo do limite diário">
+<div class="translation-stat"><span>Limite diário</span><strong>{{ quota.limit if quota.limit is not none else '—' }}</strong><small>unidades</small></div>
+<div class="translation-stat"><span>Reservadas</span><strong>{{ quota.reserved }}</strong><small>unidades</small></div>
+<div class="translation-stat"><span>Disponíveis</span><strong>{{ quota.remaining }}</strong><small>unidades</small></div>
+<div class="translation-stat"><span>Data de contagem</span><strong class="translation-stat-date">{{ quota.day.strftime('%d/%m/%Y') }}</strong><small>UTC</small></div>
+</div>
 <section class="dc-panel" aria-labelledby="translation-quota-heading">
-<h2 id="translation-quota-heading">Limite diário de tradução</h2>
+<h2 id="translation-quota-heading">Uso diário de tradução</h2>
+{% if quota.limit is not none and quota.limit > 0 %}<div class="translation-meter-label"><span>Unidades reservadas</span><strong>{{ ((quota.reserved / quota.limit) * 100)|round(0)|int }}%</strong></div><progress class="translation-meter" value="{{ [quota.reserved, quota.limit]|min }}" max="{{ quota.limit }}">{{ quota.reserved }} de {{ quota.limit }}</progress>{% endif %}
 <p>Limite: <strong>{{ quota.limit if quota.limit is not none else 'Por configurar' }}</strong> unidades · Reservadas: <strong>{{ quota.reserved }}</strong> · Disponíveis: <strong>{{ quota.remaining }}</strong>.</p>
 <p>Contagem de {{ quota.day.strftime('%d/%m/%Y') }} em UTC. Cada unidade corresponde a até 4 000 caracteres do original; um artigo pode exigir várias unidades. As reservas incluem tentativas falhadas e tarefas canceladas.</p>
 {% if quota.error %}<p class="dc-warning">{{ quota.error }}</p>{% endif %}
