@@ -6,15 +6,15 @@ psycopg2-binary==2.9.13
 psycopg[binary]>=3.3.6,<4
 cloudinary==1.46.3
 Pillow==13.0.0
-Markdown==3.11.1
+Markdown==3.11.2
 bleach==6.4.0
 Flask-Limiter==4.1.1
 redis>=8.1.0,<9
-reportlab==5.0.1
+reportlab==5.1.0
 
 
 beautifulsoup4==4.15.0
-svglib==2.3.0
+svglib==2.3.1
 
 pypdf>=6.20.1,<7
 
@@ -22,4 +22,4 @@ pypdf>=6.20.1,<7
 google-auth[cryptography]>=2.62.0,<3
 CacheControl>=0.14.4,<1
 
-Alembic==1.20.0
+Alembic==1.20.1
