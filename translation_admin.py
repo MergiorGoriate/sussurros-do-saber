@@ -228,12 +228,24 @@ def collect_interface():
                     if isinstance(key,ast.Constant) and key.value in {'message','error'} and isinstance(value,ast.Constant) and isinstance(value.value,str):
                         SOURCES.add(value.value)
     # Public product descriptions are presentation text, never prices, plan IDs or entitlements.
-    from premium_models import PremiumPlan, PremiumContent
+    from premium_models import PremiumPlan, PremiumContent, PremiumPlanTerms
+    from models import Author, EditorialPolicy
     for plan in PremiumPlan.query.filter_by(active=True):
         SOURCES.update(value for value in (plan.name,plan.description) if value.strip())
         SOURCES.update(value for value in (plan.benefits or []) if isinstance(value,str) and value.strip())
     for content in PremiumContent.query.filter_by(published=True):
         SOURCES.update(value for value in (content.title,content.summary,content.category) if value.strip())
+    # Only public presentation fields enter the catalogue, never identities,
+    # payment values, private submissions or the body of scientific manuscripts.
+    for model,fields in ((EditorialPolicy,('page_title','page_description','page_content',
+            'author_guidelines','reviewer_guidelines','ethics_policy','ai_policy',
+            'data_policy','fees_policy','open_access_policy')),
+            (PremiumPlanTerms,('renewal','cancellation','refund','limitations'))):
+        for row in model.query:
+            SOURCES.update(value for field in fields if (value:=getattr(row,field,'')) and value.strip())
+    for author in Author.query.filter_by(active=True):
+        SOURCES.update(value for field in ('role','headline','academic_background','bio','interests',
+            'projects','editorial_experience') if (value:=getattr(author,field,'')) and value.strip())
     for text in sorted(SOURCES):
         key=hashlib.sha256(text.encode()).hexdigest()
         if not db.session.get(InterfaceTranslation,key):

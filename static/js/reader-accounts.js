@@ -1,3 +1,5 @@
+window.sdsText=window.sdsText||(text=>text);
+window.sdsHTML=window.sdsHTML||(text=>window.sdsText(text).replace(/[&<>"\']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[c])));
 (() => {
   const dialog = document.getElementById('reader-dialog');
   const form = document.getElementById('reader-auth-form');
@@ -63,7 +65,7 @@
       label.textContent = authenticated ? 'Conta' : window.sdsText("Entrar");
       label.hidden = authenticated && !!picture;
       button.classList.toggle('reader-has-avatar', authenticated && !!picture);
-      button.setAttribute('aria-label', authenticated ? 'Abrir a minha conta' : window.sdsText("Entrar"));
+      button.setAttribute('aria-label', authenticated ? window.sdsText("Abrir a minha conta") : window.sdsText("Entrar"));
       button.querySelector('.reader-account-chevron').hidden = !authenticated;
     });
   };
@@ -73,7 +75,7 @@
       document.querySelectorAll('.reader-header-notifications').forEach(link => {
         const count = Math.max(0, Number(state.notification_count) || 0);
         link.hidden = !authenticated;
-        link.setAttribute('aria-label', count ? window.sdsText("Notificações: ") + count + ' actualizações' : window.sdsText("Notificações"));
+        link.setAttribute('aria-label', count ? window.sdsText("Notificações: ") + count + window.sdsText(" actualizações") : window.sdsText("Notificações"));
         const badge = link.querySelector('[data-reader-notification-count]');
         badge.hidden = !count; badge.textContent = count > 99 ? '99+' : String(count);
       });
@@ -88,7 +90,7 @@
     form.elements.name.required = register; form.elements.password.minLength = register ? 12 : 1;
     form.elements.password.autocomplete = register ? 'new-password' : 'current-password';
     document.getElementById('reader-password-help').hidden = !register;
-    document.getElementById('reader-submit').textContent = register ? 'Criar conta' : window.sdsText("Entrar");
+    document.getElementById('reader-submit').textContent = register ? window.sdsText("Criar conta") : window.sdsText("Entrar");
     dialog.querySelectorAll('[data-reader-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.readerMode === mode)));
     status.textContent = '';
   };
@@ -131,7 +133,7 @@
   };
   const acceptGoogle = async response => {
     if (googleBusy) return;
-    googleBusy = true; googleStatus.textContent = 'A validar a conta...';
+    googleBusy = true; googleStatus.textContent = window.sdsText("A validar a conta...");
     try {await finishLogin(await post('/conta/google/entrar', {credential: response.credential})); googleStatus.textContent = '';}
     catch (error) {googleStatus.textContent = error.message; googleRequest = null;}
     finally {googleBusy = false;}
@@ -182,7 +184,7 @@
   document.querySelectorAll('[data-reader-open]').forEach(button => button.addEventListener('click', () => open(button)));
   form.addEventListener('submit', async event => {
     event.preventDefault(); const submit = document.getElementById('reader-submit'); submit.disabled = true;
-    status.textContent = 'A processar...'; dialog.querySelectorAll('[data-reader-mode]').forEach(button => {button.disabled = true;});
+    status.textContent = window.sdsText("A processar..."); dialog.querySelectorAll('[data-reader-mode]').forEach(button => {button.disabled = true;});
     try {
       if (!csrf) await sessionState();
       const data = new FormData(form); data.set('csrf_token', csrf); const submittedMode = mode;
@@ -211,7 +213,7 @@
     return async () => {
     const result = await post('/conta/artigos/' + encodeURIComponent(id), {enabled});
     if (result.saved) articleIds.add(id); else articleIds.delete(id); render();
-    button.title = result.saved ? 'Artigo guardado na sua conta.' : 'Artigo removido dos favoritos.';
+    button.title = result.saved ? window.sdsText("Artigo guardado na sua conta.") : window.sdsText("Artigo removido dos favoritos.");
     report(button.title);
     };
   })));
@@ -219,8 +221,8 @@
     const enabled = signedIn ? !values[key] : true;
     return async () => {
     values = await post('/conta/revistas/' + encodeURIComponent(slug), {action: key, enabled}); render();
-    report(key === 'saved' ? (values.saved ? 'Artigo guardado na sua conta. Consulte Os meus favoritos.' : 'Artigo removido dos favoritos.')
-      : (values.following ? 'Notificações activadas. Consulte a página Notificações para ver actualizações deste artigo.' : window.sdsText("Notificações desactivadas.")));
+    report(key === 'saved' ? (values.saved ? window.sdsText("Artigo guardado na sua conta. Consulte Os meus favoritos.") : window.sdsText("Artigo removido dos favoritos."))
+      : (values.following ? window.sdsText("Notificações activadas. Consulte a página Notificações para ver actualizações deste artigo.") : window.sdsText("Notificações desactivadas.")));
     if (key === 'following') await sessionState();
     };
   }));
@@ -237,7 +239,7 @@
       button.closest('li').remove();
       const empty = document.querySelector('[data-reader-library-empty]');
       if (empty) empty.hidden = !!document.querySelector('[data-reader-library] li');
-      report(article || button.hasAttribute('data-reader-remove-journal') ? 'Artigo removido dos favoritos.' : window.sdsText("Notificações desactivadas."));
+      report(article || button.hasAttribute('data-reader-remove-journal') ? window.sdsText("Artigo removido dos favoritos.") : window.sdsText("Notificações desactivadas."));
       await sessionState();
       if (button.hasAttribute('data-reader-unfollow')) {
         document.querySelectorAll('[data-reader-notice-slug]').forEach(el => {if (el.dataset.readerNoticeSlug === journal) el.remove();});

@@ -80,3 +80,8 @@ EN = {
  'Nenhum artigo encontrado':'No articles found','Experimente outra pesquisa.':'Try another search.',
  'Cursos, séries educativas, eventos e entrevistas. Os artigos do portal e da revista científica continuam gratuitos.':'Courses, educational series, events and interviews. Portal and journal articles remain free.',
 }
+
+
+# Complete public interface, with published editorial overrides retaining priority.
+from i18n_public_en import EN_PUBLIC
+EN.update(EN_PUBLIC)
