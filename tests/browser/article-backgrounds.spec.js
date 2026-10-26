@@ -50,14 +50,22 @@ test('editor background controls and preview fit mobile, tablet and desktop in b
 
 test('public paper preserves global surfaces and readable content in both themes',async({page})=>{
  const d=fixture();
+ // main.js applies the session theme after parsing; visibility alone is not
+ // evidence that theme initialisation and inherited colours have settled.
+ const openArticle=async(slug,theme)=>{
+  await page.goto('/artigo/'+slug,{waitUntil:'load'});
+  await expect(page.locator('#themeToggle')).toHaveAttribute('aria-pressed',String(theme==='dark'));
+  await expect.poll(()=>page.locator('html').evaluate(el=>el.classList.contains('dark'))).toBe(theme==='dark');
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ };
  for(const width of [320,768,1440])for(const theme of ['light','dark']){
   await page.setViewportSize({width,height:1000});await page.evaluate(t=>sessionStorage.setItem('theme',t),theme);
-  await page.goto('/artigo/'+d.default_slug,{waitUntil:'domcontentloaded'});await expect(page.locator('.article-title')).toBeVisible();
+  await openArticle(d.default_slug,theme);await expect(page.locator('.article-title')).toBeVisible();
   const outside=()=>page.evaluate(()=>['body','header','nav','footer','.share-panel','.article-comments'].map(s=>{const el=document.querySelector(s);const c=getComputedStyle(el);return [s,c.backgroundColor,c.color];}));
   const before=await outside();await expect(page.locator('.article-paper')).toHaveCount(0);
-  await page.goto('/artigo/'+d.paper_slug,{waitUntil:'domcontentloaded'});await expect(page.locator('.article-paper')).toBeVisible();await fits(page);
-  expect(await outside()).toEqual(before);
-  const contrast=await page.locator('.article-paper').evaluate(root=>{
+  await openArticle(d.paper_slug,theme);await expect(page.locator('.article-paper')).toBeVisible();await fits(page);
+  await expect.poll(outside).toEqual(before);
+  const contrast=()=>page.locator('.article-paper').evaluate(root=>{
    const rgb=s=>s.match(/[\d.]+/g).slice(0,3).map(Number);
    const luminance=s=>rgb(s).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
    const ratio=(a,b)=>{const [x,y]=[luminance(a),luminance(b)].sort((a,b)=>b-a);return (x+.05)/(y+.05);};
@@ -68,6 +76,10 @@ test('public paper preserves global surfaces and readable content in both themes
     return {selector:s,ratio:ratio(getComputedStyle(el).color,bg==='rgba(0, 0, 0, 0)'?base:bg)};
    });
   });
-  for(const item of contrast)expect(item.ratio,item.selector+' '+theme).toBeGreaterThanOrEqual(4.5);
+  // Keep the same WCAG threshold for every element while allowing the
+  // browser to finish propagating the theme to table descendants.
+  await expect.poll(async()=>(await contrast()).filter(item=>item.ratio<4.5),{
+   message:'Contraste do papel antigo em '+theme
+  }).toEqual([]);
  }
 });
