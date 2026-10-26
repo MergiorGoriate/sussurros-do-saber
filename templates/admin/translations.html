@@ -3,6 +3,24 @@
 {% block content %}<div class="dc"><header class="admin-header"><div><p>Internacionalização</p><h1>Tradução de artigos</h1><p>As versões inglesas exigem revisão e aprovação editorial antes da publicação.</p></div></header>
 <p><a href="{{ url_for('translation_admin.interface') }}">Traduzir interface e páginas institucionais</a></p>
 <p><a href="{{ url_for('translation_admin.documentation') }}">Documentação, auditoria e configuração</a></p>
+<section class="dc-panel" aria-labelledby="translation-quota-heading">
+<h2 id="translation-quota-heading">Limite diário de tradução</h2>
+<p>Limite: <strong>{{ quota.limit if quota.limit is not none else 'Por configurar' }}</strong> unidades · Reservadas: <strong>{{ quota.reserved }}</strong> · Disponíveis: <strong>{{ quota.remaining }}</strong>.</p>
+<p>Contagem de {{ quota.day.strftime('%d/%m/%Y') }} em UTC. Cada unidade corresponde a até 4 000 caracteres do original; um artigo pode exigir várias unidades. As reservas incluem tentativas falhadas e tarefas canceladas.</p>
+{% if quota.error %}<p class="dc-warning">{{ quota.error }}</p>{% endif %}
+{% if can_edit_limits %}
+<form method="post" action="{{ url_for('translation_admin.update_daily_limit') }}" class="dc-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="limit_version" value="{{ quota.version }}">
+<label for="translation-daily-units">Unidades por dia</label>
+<input id="translation-daily-units" name="daily_units" type="number" min="1" max="1000000" step="1" value="{{ quota.limit if quota.limit is not none else '' }}" required aria-describedby="translation-limit-help">
+<p id="translation-limit-help">A alteração aplica-se imediatamente a novos pedidos e pode aumentar os custos da API. Não altera o saldo OpenAI, não apaga reservas e não cancela tarefas já aceites. Se baixar o limite abaixo das reservas, novos pedidos ficam bloqueados até haver quota disponível.</p>
+<button class="dc-primary">Guardar limite diário</button>
+</form>
+<p>{{ 'Limite guardado no painel, com prioridade sobre a configuração do servidor.' if quota.source == 'panel' else 'É usado o limite configurado no servidor até guardar um valor neste painel.' }}</p>
+{% if limit_changes %}<details><summary>Histórico de alterações do limite</summary>{% for change in limit_changes %}<p>{{ change.created_at.strftime('%d/%m/%Y %H:%M') }} UTC · {{ change.actor_name }} · {{ change.previous_units if change.previous_units is not none else 'Por configurar' }} → {{ change.daily_units }} unidades/dia.</p>{% endfor %}</details>{% endif %}
+{% else %}<p>Apenas o administrador principal pode alterar este limite.</p>{% endif %}
+</section>
 {% if not configured %}<p class="dc-warning">Configure OPENAI_API_KEY, TRANSLATION_TEXT_MODEL e TRANSLATION_REVIEW_MODEL antes de iniciar tarefas.</p>{% endif %}
 <form method="get" class="dc-search"><label>Pesquisar<input name="q" value="{{ query }}" maxlength="150"></label><label>Origem<select name="kind"><option value="article" {{ 'selected' if kind=='article' else '' }}>Artigos informativos completos</option><option value="journal" {{ 'selected' if kind=='journal' else '' }}>Metadados e informações da revista</option></select></label><button>Pesquisar</button></form>
 <form method="post" action="{{ url_for('translation_admin.batch') }}" class="dc-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="kind" value="{{ kind }}">

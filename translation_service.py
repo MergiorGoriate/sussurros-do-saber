@@ -14,7 +14,7 @@ from translation_models import (ContentTranslation as Translation, TranslationVe
     TranslationEvent as Event, TranslationJob as Job, TranslationQuota as Quota, TranslationWorker as Worker,
     InterfaceBatch, InterfaceTranslation)
 from dissemination_ai import GenerationError
-from dissemination_service import integer_setting
+from translation_limits import daily_limit
 import requests
 
 STATES = {'pending':'Tradução pendente', 'processing':'Em processamento', 'review':'A aguardar revisão',
@@ -94,7 +94,7 @@ def queue(kind, ident, priority=50, mode='generate'):
                 db.session.add(Quota(day=day)); db.session.flush()
         except IntegrityError:
             pass
-    cap = integer_setting('TRANSLATION_DAILY_UNITS', 100)
+    cap = daily_limit(lock=True)
     reserved = db.session.execute(update(Quota).where(Quota.day == day, Quota.reserved_units + units <= cap)
         .values(reserved_units=Quota.reserved_units + units))
     if reserved.rowcount != 1:

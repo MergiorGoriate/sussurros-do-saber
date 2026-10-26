@@ -12,6 +12,8 @@ from governance import current_member, active_member, mandates
 from translation_models import ContentTranslation as Translation, TranslationVersion as Version
 from translation_models import TranslationEvent as Event, TranslationJob as Job, InterfaceTranslation, InterfaceBatch
 import translation_service as service
+from translation_limits import quota_summary, set_daily_limit
+from translation_models import TranslationLimitChange
 from dissemination_ai import GenerationError
 from i18n_catalog import EN
 from i18n_templates import SOURCES
@@ -75,7 +77,26 @@ def dashboard():
     statuses={ident:service.state(item) for ident,item in translations.items()}
     return render_template('admin/translations.html',records=records,translations=translations,statuses=statuses,
         states=service.STATES,kind=kind,query=query,configured=service.configured(),
-        jobs=Job.query.order_by(Job.id.desc()).limit(60).all())
+        jobs=Job.query.order_by(Job.id.desc()).limit(60).all(),
+        quota=quota_summary(), can_edit_limits=bool(session.get('admin_superuser')),
+        limit_changes=TranslationLimitChange.query.order_by(TranslationLimitChange.id.desc()).limit(10).all()
+            if session.get('admin_superuser') else [])
+
+
+@translations_bp.post('/limite-diario')
+@access
+def update_daily_limit():
+    if not session.get('admin_superuser'):
+        abort(403)
+    validate_csrf()
+    try:
+        set_daily_limit(request.form.get('daily_units', ''), request.form.get('limit_version'),
+                        session.get('admin_id'), session.get('admin_username'))
+        db.session.commit()
+    except GenerationError as exc:
+        db.session.rollback()
+        abort(409, description=str(exc))
+    return redirect('/admin/internacionalizacao/')
 
 
 @translations_bp.post('/lote')
