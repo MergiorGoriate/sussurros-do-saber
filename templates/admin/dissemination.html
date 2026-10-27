@@ -1,21 +1,46 @@
 {% extends 'admin/base.html' %}
 {% block title %}Centro de Divulgação Científica{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dissemination.css') }}">{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dissemination.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dissemination-dashboard.css',v='20261027-v1') }}">
+{% endblock %}
 {% block content %}
-<div class="dc"><header class="admin-header"><div><p class="dc-eyebrow">Sussurros do Saber · Divulgação</p><h1>Centro de Divulgação Científica</h1><p>Transforme artigos publicados em materiais educativos, com revisão e aprovação antes da divulgação.</p></div></header>
-<p class="dc-notice">A IA prepara os materiais. A aprovação científica, linguística e visual pertence ao administrador autorizado. Nesta fase, a publicação nas redes é manual.</p>
-<p><a href="{{ url_for('dissemination.documentation') }}">Descarregar documentação e instruções de configuração</a></p>
-{% if not configured %}<p class="dc-warning" role="status">A geração está indisponível até concluir a configuração dos modelos, da chave de API e dos limites de utilização.</p>{% endif %}
-{% if budget %}<p>Hoje, em UTC: {{ budget.jobs }} tarefas reservadas · {{ budget.units }} unidades de orçamento. Estas reservas administrativas não representam custos facturados pelo fornecedor.</p>{% endif %}
-{% if dissemination_can('manage') %}<section class="dc-panel"><h2>Preparar novo material</h2>
-<form method="get" class="dc-search"><label for="source-search">Pesquisar artigo publicado<input id="source-search" name="q" value="{{ search }}" maxlength="120" type="search" placeholder="Título do artigo"></label><button>Pesquisar</button></form>
-<form method="post" action="{{ url_for('dissemination.generate') }}" class="dc-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<label>Artigo de origem<select name="source" required><option value="">Seleccione um artigo publicado</option><optgroup label="Portal científico">{% for item in portal %}<option value="portal:{{ item.id }}">[PT] {{ item.title }}</option>{% if item.id in english_ids %}<option value="portal_en:{{ item.id }}">[EN] {{ item.title }}</option>{% endif %}{% endfor %}</optgroup><optgroup label="Revista científica">{% for item in journals %}<option value="journal:{{ item.id }}">{{ item.article_title or item.title }}</option>{% endfor %}</optgroup></select><small>Até 40 resultados por origem. Pesquise para encontrar artigos anteriores.</small></label>
-<div class="dc-fields"><label>Rede social<select name="network">{% for code,label in networks.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label><label>Tipo de material<select name="kind">{% for code,label in kinds.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label></div>
-<button class="dc-primary" {% if not configured %}disabled{% endif %}>Gerar conteúdo com IA</button><small>A tarefa decorre em segundo plano. Nenhum conteúdo é aprovado ou publicado automaticamente.</small>
-<small>As versões inglesas publicadas estão identificadas no selector de artigos. Traduções desactualizadas não podem originar novos materiais.</small>
-</form></section>{% endif %}
-<section class="dc-panel"><h2>Materiais e decisões editoriais</h2><div class="dc-cards">{% for material in materials.items %}<article class="dc-card"><span class="dc-state">{{ states[material.status] }}</span><h3><a href="{{ url_for('dissemination.detail', ident=material.id) }}">{{ kinds[material.kind] }} #{{ material.id }}</a></h3><p>{{ networks[material.network] }} · Versão {{ material.version }} · {{ dissemination_time(material.created_at) }}</p>{% if material.error %}<p class="dc-warning">{{ material.error }}</p>{% endif %}<a href="{{ url_for('dissemination.detail', ident=material.id) }}">Abrir material e histórico</a></article>{% else %}<p>Nenhum material gerado. Comece por seleccionar um artigo publicado.</p>{% endfor %}</div>
-<nav class="dc-actions" aria-label="Páginas dos materiais">{% if materials.has_prev %}<a href="{{ url_for('dissemination.dashboard', page=materials.prev_num, q=search) }}">Anterior</a>{% endif %}<span>Página {{ materials.page }} de {{ [materials.pages,1]|max }}</span>{% if materials.has_next %}<a href="{{ url_for('dissemination.dashboard', page=materials.next_num, q=search) }}">Seguinte</a>{% endif %}</nav></section></div>
+<div class="dc dissemination-dashboard">
+  <header class="dd-header">
+    <div><p class="dd-eyebrow">Sussurros do Saber · Divulgação</p><h1>Centro de Divulgação Científica</h1><p class="dd-intro">Transforme artigos publicados em materiais educativos, com revisão e aprovação antes da divulgação.</p></div>
+    <a class="dd-documentation" href="{{ url_for('dissemination.documentation') }}">Documentação e configuração <span aria-hidden="true">↗</span></a>
+  </header>
+  <div class="dd-overview" aria-label="Resumo da utilização diária">
+    <div class="dd-metric"><span>Tarefas reservadas</span><strong>{{ budget.jobs if budget else 0 }}</strong><small>Hoje, em UTC</small></div>
+    <div class="dd-metric"><span>Unidades reservadas</span><strong>{{ budget.units if budget else 0 }}</strong><small>Orçamento administrativo diário</small></div>
+    <div class="dd-metric dd-configuration"><span>Configuração da geração</span><strong class="dd-config-status" data-ready="{{ 'true' if configured else 'false' }}"><span class="dd-dot" aria-hidden="true"></span>{{ 'Configuração pronta' if configured else 'Configuração pendente' }}</strong><small>{{ 'Geração mediante pedido do administrador.' if configured else 'Verifique a chave, os modelos e os limites.' }}</small></div>
+  </div>
+  <p class="dd-budget-note">Estas reservas administrativas não representam custos facturados pelo fornecedor.</p>
+  {% if not configured %}<p class="dc-warning" role="status">A geração está indisponível até concluir a configuração dos modelos, da chave de API e dos limites de utilização.</p>{% endif %}
+  {% if dissemination_can('manage') %}
+  <div class="dd-workspace">
+    <section class="dc-panel dd-create" aria-labelledby="dd-create-heading">
+      <div class="dd-panel-heading"><div><p class="dd-eyebrow">Novo material</p><h2 id="dd-create-heading">Preparar novo material</h2></div><span class="dd-format-badge">Artigo → Divulgação</span></div>
+      <form method="get" class="dc-search dd-search"><label for="source-search">Pesquisar artigo publicado<input id="source-search" name="q" value="{{ search }}" maxlength="120" type="search" placeholder="Título do artigo"></label><button>Pesquisar</button></form>
+      <form method="post" action="{{ url_for('dissemination.generate') }}" class="dc-form dd-generate">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="dd-source">Artigo de origem<select id="dd-source" name="source" required><option value="">Seleccione um artigo publicado</option><optgroup label="Portal científico">{% for item in portal %}<option value="portal:{{ item.id }}">[PT] {{ item.title }}</option>{% if item.id in english_ids %}<option value="portal_en:{{ item.id }}">[EN] {{ item.title }}</option>{% endif %}{% endfor %}</optgroup><optgroup label="Revista científica">{% for item in journals %}<option value="journal:{{ item.id }}">{{ item.article_title or item.title }}</option>{% endfor %}</optgroup></select><small>Até 40 resultados por origem. Pesquise para encontrar artigos anteriores.</small></label>
+        <div class="dc-fields"><label for="dd-network">Rede social<select id="dd-network" name="network">{% for code,label in networks.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label><label for="dd-kind">Tipo de material<select id="dd-kind" name="kind">{% for code,label in kinds.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label></div>
+        <div class="dd-generate-action"><button class="dc-primary" {% if not configured %}disabled{% endif %}>Gerar conteúdo com IA</button><small>A tarefa decorre em segundo plano. Nenhum conteúdo é aprovado ou publicado automaticamente.</small></div>
+      </form>
+    </section>
+    <aside class="dc-panel dd-guide" aria-labelledby="dd-guide-heading">
+      <p class="dd-eyebrow">Orientação editorial</p><h2 id="dd-guide-heading">Do artigo à divulgação</h2>
+      <ol class="dd-steps"><li><span aria-hidden="true">1</span><div><h3>Escolha a origem</h3><p>Seleccione um artigo publicado no portal ou na revista científica.</p></div></li><li><span aria-hidden="true">2</span><div><h3>Defina o formato</h3><p>Escolha a rede social e o tipo de material a preparar.</p></div></li><li><span aria-hidden="true">3</span><div><h3>Reveja o resultado</h3><p>Abra o material para verificar o conteúdo e registar a decisão editorial.</p></div></li></ol>
+      <div class="dd-language-note"><strong>Materiais em inglês</strong><p>As versões inglesas publicadas estão identificadas no selector de artigos. Traduções desactualizadas não podem originar novos materiais.</p></div>
+    </aside>
+  </div>
+  {% endif %}
+  <aside class="dd-editorial-note"><strong>Revisão antes da divulgação</strong><p>A IA prepara os materiais. A aprovação científica, linguística e visual pertence ao administrador autorizado. Nesta fase, a publicação nas redes é manual.</p></aside>
+  <section class="dc-panel dd-materials" aria-labelledby="dd-materials-heading">
+    <div class="dd-panel-heading"><div><p class="dd-eyebrow">Acompanhamento</p><h2 id="dd-materials-heading">Materiais e decisões editoriais</h2></div></div>
+    <div class="dc-cards">{% for material in materials.items %}<article class="dc-card"><div class="dd-card-top"><span class="dc-state" data-state="{{ material.status }}">{{ states[material.status] }}</span><span class="dd-material-id">#{{ material.id }}</span></div><h3><a href="{{ url_for('dissemination.detail', ident=material.id) }}">{{ kinds[material.kind] }} #{{ material.id }}</a></h3><p class="dd-network">{{ networks[material.network] }} · Versão {{ material.version }}</p><p class="dd-created">{{ dissemination_time(material.created_at) }}</p>{% if material.error %}<p class="dc-warning">{{ material.error }}</p>{% endif %}<a class="dd-open" href="{{ url_for('dissemination.detail', ident=material.id) }}">Abrir material e histórico <span aria-hidden="true">→</span></a></article>{% else %}<div class="dd-empty"><span aria-hidden="true">↗</span><h3>O próximo material começa num artigo</h3><p>Nenhum material gerado. Comece por seleccionar um artigo publicado.</p></div>{% endfor %}</div>
+    <nav class="dc-actions" aria-label="Páginas dos materiais">{% if materials.has_prev %}<a href="{{ url_for('dissemination.dashboard', page=materials.prev_num, q=search) }}">Anterior</a>{% endif %}<span>Página {{ materials.page }} de {{ [materials.pages,1]|max }}</span>{% if materials.has_next %}<a href="{{ url_for('dissemination.dashboard', page=materials.next_num, q=search) }}">Seguinte</a>{% endif %}</nav>
+  </section>
+</div>
 {% endblock %}
