@@ -21,7 +21,7 @@ for(const width of [320,768,1440]) {
     const section=page.locator('section').filter({has:page.getByRole('heading',{name:'Solicitar correcção',exact:true})});
     await section.getByRole('textbox',{name:'Problemas encontrados',exact:true}).fill('Rever a representação visual antes de divulgar.');
     await section.getByRole('button',{name:'Solicitar correcção e invalidar a aprovação',exact:true}).click();
-    await expect(page.locator('.admin-header .dc-state')).toHaveText('Em correcção');
+    await expect(page.locator('.dr-header .dc-state')).toHaveText('Em correcção');
     await expect(page.getByRole('button',{name:'Aprovar material',exact:true})).toHaveCount(0);
     await page.screenshot({path:`test-results/dissemination-${width}.png`,fullPage:true});
   });
