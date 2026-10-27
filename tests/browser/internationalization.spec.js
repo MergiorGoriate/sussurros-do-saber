@@ -43,3 +43,27 @@ test('translation administration is private and exposes the queue and interface 
  await page.getByRole('link',{name:'Traduzir interface e páginas institucionais',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Interface e páginas institucionais',exact:true})).toBeVisible();
 });
+
+test('manual English choice covers public navigation, tools and author sign-in',async({page})=>{
+ await page.goto('/sobre');
+ await page.locator('.language-selector').getByRole('link',{name:'EN',exact:true}).click();
+ await expect(page).toHaveURL(/\/en\/sobre$/);
+ await expect(page.getByRole('heading',{name:'Scientific knowledge that speaks to everyone.',exact:true})).toBeVisible();
+ await page.goto('/servicos');
+ await expect(page).toHaveURL(/\/en\/servicos$/);
+ await page.goto('/recursos');
+ await expect(page).toHaveURL(/\/en\/recursos$/);
+ await page.locator('#dataValues').fill('1,2,3');
+ await page.locator('#calculateStats').click();
+ await expect(page.locator('#statsResult')).toContainText('Mean');
+ await expect(page.locator('#statsResult')).toContainText('Median');
+ await page.goto('/contacto');
+ await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeVisible();
+ await page.goto('/submissoes/entrar');
+ await expect(page).toHaveURL(/\/en\/submissoes\/entrar$/);
+ await expect(page.locator('html')).toHaveAttribute('lang','en');
+ await page.goto('/sobre');
+ await page.locator('.language-selector').getByRole('link',{name:'PT',exact:true}).click();
+ await expect(page).toHaveURL(/\/sobre$/);
+ await expect(page.locator('html')).toHaveAttribute('lang','pt-MZ');
+});

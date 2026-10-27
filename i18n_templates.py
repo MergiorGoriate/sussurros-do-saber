@@ -18,7 +18,7 @@ def translated_expression(chunk):
     if not chunk.startswith('{{'):
         return chunk
     inner=chunk[2:-2]
-    if inner.strip() in {'label','message'}:
+    if inner.strip() in {'label','message','error'}:
         return '{{ ui('+inner.strip()+') }}'
     def replace(match):
         prefix,quote,value=match.groups()
@@ -79,3 +79,4 @@ class PublicTranslationExtension(Extension):
             else:
                 output.append(expression(chunk))
         return ''.join(output)
+

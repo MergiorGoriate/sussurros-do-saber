@@ -23,8 +23,8 @@ def interface_ready():
             g.interface_complete=False
         else:
             rows=db.session.query(InterfaceTranslation.source).filter(InterfaceTranslation.published.is_(True),InterfaceTranslation.english!='').all()
-            available=set(EN)|{row[0] for row in rows}
-            g.interface_complete=bool(rows) and all(text in available or ' '.join(text.split()) in available for text in INTERFACE_SOURCES)
+            available={key for key,value in EN.items() if value}|{row[0] for row in rows}
+            g.interface_complete=all(text in available or ' '.join(text.split()) in available for text in INTERFACE_SOURCES)
     return g.interface_complete
 
 
@@ -147,17 +147,18 @@ def article_view(obj):
         return obj
     item,row=published('article',obj.id)
     if not row:
-        return Presentation(obj,{},translation_available=False)
-    return Presentation(obj,row.content,translation_available=True,translation_outdated=stale(item,row))
+        return Presentation(obj,{},category=ui(obj.category),translation_available=False)
+    return Presentation(obj,row.content,category=ui(obj.category),translation_available=True,translation_outdated=stale(item,row))
 
 
 def journal_view(obj):
     if language()!='en' or isinstance(obj,Presentation):
         return obj
     item,row=published('journal',obj.id)
+    labels={key:ui(getattr(obj,key,'')) for key in ('field','frequency')}
     if not row:
-        return obj
-    return Presentation(obj,row.content,translation_available=True,translation_outdated=stale(item,row))
+        return Presentation(obj,labels,translation_available=False)
+    return Presentation(obj,row.content,**labels,translation_available=True,translation_outdated=stale(item,row))
 
 
 @language_bp.get('/idioma/<locale>')
@@ -226,18 +227,49 @@ def install(app):
             args=request.args.to_dict(flat=False);args.pop('lang',None)
             path=request.path+('?' + urlencode(args,doseq=True) if args else '')
             return redirect(url_for('language.choose',locale=manual,next=path),302)
-        if request.path=='/' and request.method=='GET' and preferred(request.headers,request.cookies)=='en':
-            agent=request.headers.get('User-Agent','').lower()
-            if not any(x in agent for x in ('bot','crawler','spider')):
-                response=redirect('/en/',302);response.headers['Cache-Control']='private, no-store'
+        # A manual choice also covers old/unprefixed internal links. Browser
+        # negotiation remains limited to home; an explicit /en URL stays stable.
+        agent=request.headers.get('User-Agent','').lower()
+        if request.method in {'GET','HEAD'} and not any(x in agent for x in ('bot','crawler','spider')):
+            chosen=request.cookies.get('sds_language')=='en'
+            if (request.endpoint in allowed and not request.path.startswith('/en/') and
+                (chosen or (request.path=='/' and preferred(request.headers,request.cookies)=='en'))):
+                target=equivalent(request.endpoint,request.view_args or {},'en')
+                if request.query_string:
+                    target+=('&' if '?' in target else '?')+request.query_string.decode('utf-8','replace')
+                response=redirect(target,302)
+                response.headers['Cache-Control']='private, no-store'
+                response.vary.add('Cookie')
                 return response
 
     def presentation(sender,template,context,**extra):
         if language()!='en' or request.path.startswith('/admin'):
             return
-        for key in ('intervals','kinds','resource_types','file_formats'):
+        from models import Author
+        def author_view(author):
+            return Presentation(author,{field:ui(getattr(author,field,'')) for field in
+                ('role','headline','academic_background','bio','interests','projects','editorial_experience')})
+        if isinstance(context.get('author'),Author):
+            context['author']=author_view(context['author'])
+        if isinstance(context.get('authors'),list):
+            context['authors']=[author_view(author) if isinstance(author,Author) else author for author in context['authors']]
+        for key in ('intervals','kinds','resource_types','file_formats','states','file_kinds',
+                    'required_declarations','optional_declarations','premium_request_kinds',
+                    'premium_request_states','billing_states'):
             if isinstance(context.get(key),dict):
                 context[key]={code:ui(label) if isinstance(label,str) else label for code,label in context[key].items()}
+        if isinstance(context.get('errors'),list):
+            context['errors']=[ui(error) if isinstance(error,str) else error for error in context['errors']]
+        if 'steps' in context:
+            context['steps']=tuple(ui(label) for label in context['steps'])
+        for key in ('author_fields','info_fields','scientific_fields'):
+            if isinstance(context.get(key),dict):
+                context[key]={code:(ui(details[0]),*details[1:]) for code,details in context[key].items()}
+        # Learning resources are first-party interface copy, not user manuscripts.
+        for key in ('resources','all_resources'):
+            if isinstance(context.get(key),list) and all(isinstance(x,dict) for x in context[key]):
+                context[key]=[dict(obj,**{field:ui(obj[field]) for field in
+                    ('title','description','type','topic','level') if isinstance(obj.get(field),str)}) for obj in context[key]]
         if 'article' in context and isinstance(context['article'],Article):
             context['article']=article_view(context['article'])
         if 'articles' in context:
@@ -251,10 +283,16 @@ def install(app):
             if isinstance(context['journal'],Presentation) and 'article_title' in context:
                 context['article_title']=context['journal'].article_title or context['article_title']
         if (template.name or '').startswith('premium/'):
-            from premium_models import PremiumContent
+            from premium_models import PremiumContent, PremiumPlan
+            def plan_view(plan):
+                return Presentation(plan,dict(name=ui(plan.name),description=ui(plan.description),
+                    benefits=[ui(value) if isinstance(value,str) else value for value in (plan.benefits or [])]))
             if 'plans' in context:
-                context['plans']=[Presentation(plan,dict(name=ui(plan.name),description=ui(plan.description),
-                    benefits=[ui(value) if isinstance(value,str) else value for value in (plan.benefits or [])])) for plan in context['plans']]
+                context['plans']=[plan_view(plan) for plan in context['plans']]
+            if isinstance(context.get('plan'),PremiumPlan):
+                context['plan']=plan_view(context['plan'])
+            if isinstance(context.get('terms'),dict):
+                context['terms']={key:ui(value) if isinstance(value,str) else value for key,value in context['terms'].items()}
             if context.get('results') and hasattr(context['results'],'items'):
                 result=context['results']
                 context['results']=Presentation(result,{'items':[Presentation(obj,dict(title=ui(obj.title),summary=ui(obj.summary),category=ui(obj.category)))
@@ -281,6 +319,8 @@ def install(app):
         if request.path.startswith('/admin'):
             return response
         response.headers['Content-Language']='en' if language()=='en' else 'pt-MZ'
+        if request.endpoint in allowed:
+            response.vary.add('Cookie')
         if request.path=='/' or request.path.startswith(('/en/','/idioma/')):
             response.headers['Cache-Control']='private, no-store'
         if language()=='en' and getattr(g,'i18n_missing',False):
@@ -293,3 +333,4 @@ def install(app):
                         value[key]=ui(value[key])
                 response.set_data(app.json.dumps(value))
         return response
+

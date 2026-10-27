@@ -1,8 +1,11 @@
 'use strict';
+window.sdsText=window.sdsText||(text=>text);
+window.sdsHTML=window.sdsHTML||(text=>window.sdsText(text).replace(/[&<>"\']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[c])));
+
 const journal=document.getElementById('submissionJournal');
-if(journal){const types=JSON.parse(document.getElementById('submissionTypes').textContent);journal.addEventListener('change',()=>{const select=document.getElementById('submissionType');select.replaceChildren();for(const name of types[journal.value]||[]){const option=document.createElement('option');option.value=name;option.textContent=name;select.append(option);}});}
+if(journal){const types=JSON.parse(document.getElementById('submissionTypes').textContent);journal.addEventListener('change',()=>{const select=document.getElementById('submissionType');select.replaceChildren();for(const name of types[journal.value]||[]){const option=document.createElement('option');option.value=name;option.textContent=window.sdsText(name);select.append(option);}});}
 const authors=document.getElementById('submissionAuthors');
 function renumberAuthors(){authors.querySelectorAll('.submission-author').forEach((row,index)=>{row.querySelector('[data-author-number]').textContent=index+1;row.querySelector('[name="corresponding"]').value=index;});}
 if(authors){document.getElementById('addSubmissionAuthor').addEventListener('click',()=>{if(authors.children.length>=30)return;const row=authors.firstElementChild.cloneNode(true);row.querySelectorAll('input').forEach(input=>{if(input.type==='radio'){input.checked=false;}else{input.value='';}});authors.append(row);renumberAuthors();row.querySelector('input').focus();});authors.addEventListener('click',event=>{const button=event.target.closest('[data-remove-author]');if(button&&authors.children.length>1){button.closest('.submission-author').remove();renumberAuthors();}});}
 for(const form of document.querySelectorAll('[data-draft-form]')){let dirty=false;form.addEventListener('input',()=>{dirty=true;});form.addEventListener('submit',()=>{dirty=false;});window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});}
-for(const button of document.querySelectorAll('[data-once]')){button.form.addEventListener('submit',()=>{button.disabled=true;button.textContent='A enviar…';});}
+for(const button of document.querySelectorAll('[data-once]')){button.form.addEventListener('submit',()=>{button.disabled=true;button.textContent=window.sdsText("A enviar…");});}

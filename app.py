@@ -156,9 +156,10 @@ install_newsletter(app)
 
 @app.get("/diretrizes-para-autores")
 def author_guidelines():
+    from internationalization import ui
     policy = EditorialPolicy.query.first()
     custom_content = (policy.author_guidelines or "").strip() if policy else ""
-    content = render_markdown(custom_content) if custom_content else render_template("partials/author_guidelines_default.html")
+    content = render_markdown(ui(custom_content)) if custom_content else render_template("partials/author_guidelines_default.html")
     guidelines_content, manuscript_types_id = prepare_guidelines(content)
     return render_template("author_guidelines.html", policy=policy, guidelines_content=guidelines_content,
                            manuscript_types_id=manuscript_types_id)
@@ -908,6 +909,7 @@ def privacy():
 @app.get("/politica-editorial")
 @app.get("/politicas-editoriais")
 def editorial_policy():
+    from internationalization import ui
     policy = EditorialPolicy.query.first()
     fields = (
         ("author_guidelines", "Diretrizes para Autores"),
@@ -923,11 +925,11 @@ def editorial_policy():
         for field, title in fields:
             content = (getattr(policy, field, "") or "").strip()
             if content:
-                sections.append({"id": field.replace("_", "-"), "title": title, "content": render_markdown(content)})
+                sections.append({"id": field.replace("_", "-"), "title": ui(title), "content": render_markdown(ui(content))})
     return render_template("editorial_policy.html", policy_sections=sections,
-                           page_title=(getattr(policy, "page_title", "") or "").strip() or "Políticas Editoriais",
-                           page_description=(getattr(policy, "page_description", "") or "").strip(),
-                           page_content=render_markdown(getattr(policy, "page_content", "") or ""))
+                           page_title=ui((getattr(policy, "page_title", "") or "").strip() or "Políticas Editoriais"),
+                           page_description=ui((getattr(policy, "page_description", "") or "").strip()),
+                           page_content=render_markdown(ui(getattr(policy, "page_content", "") or "")))
 
 @app.get("/politica-de-correcoes")
 def corrections_policy():
@@ -1663,6 +1665,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 

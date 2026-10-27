@@ -1,3 +1,5 @@
+window.sdsText=window.sdsText||(text=>text);
+window.sdsHTML=window.sdsHTML||(text=>window.sdsText(text).replace(/[&<>"\']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[c])));
 /* Private, bounded inbox summary. All notification text is inserted as text. */
 (() => {
   const bar = document.querySelector('[data-notice-bar]');
@@ -26,7 +28,7 @@
     busy = true;
     bar.setAttribute('aria-busy', 'true');
     retry.disabled = true;
-    if (bar.open) status.textContent = 'A actualizar notificações…';
+    if (bar.open) status.textContent = window.sdsText("A actualizar notificações…");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     try {
@@ -43,13 +45,13 @@
       for (const item of data.items) {
         const section = node('section', '', `notice-item${item.unread ? ' is-unread' : ''}`);
         const heading = node('div', '', 'notice-item-heading');
-        heading.append(node('strong', item.title), node('span', item.unread ? 'Por ler' : 'Lida', `notice-state${item.unread ? ' notice-state-unread' : ''}`));
+        heading.append(node('strong', item.title), node('span', item.unread ? window.sdsText("Por ler") : 'Lida', `notice-state${item.unread ? ' notice-state-unread' : ''}`));
         section.append(heading, node('p', item.description, 'notice-preview-body'), node('time', item.date));
         const actions = node('div', '', 'notice-item-actions');
-        if (item.url) { const link = node('a', 'Abrir recurso', 'notice-button'); link.setAttribute('href', item.url); actions.append(link); }
+        if (item.url) { const link = node('a', window.sdsText("Abrir recurso"), 'notice-button'); link.setAttribute('href', item.url); actions.append(link); }
         const form = node('form'); form.method = 'post'; form.setAttribute('action', template.getAttribute('action'));
         form.append(hidden('csrf_token', template.querySelector('[name="csrf_token"]').value), hidden('id', item.id));
-        for (const [action, label] of [['read', 'Marcar como lida'], ['delete', 'Eliminar aviso']]) {
+        for (const [action, label] of [['read', window.sdsText("Marcar como lida")], ['delete', window.sdsText("Eliminar aviso")]]) {
           if (action === 'read' && !item.unread) continue;
           const button = node('button', '', `notice-button notice-icon-action${action === 'delete' ? ' notice-button-danger' : ''}`);
           button.title = label;
@@ -62,15 +64,15 @@
         }
         actions.append(form); section.append(actions); items.append(section);
       }
-      if (!data.items.length) items.append(node('p', 'Sem notificações.', 'notice-preview-empty'));
+      if (!data.items.length) items.append(node('p', window.sdsText("Sem notificações."), 'notice-preview-empty'));
       list.replaceChildren(items);
       bar.classList.remove('has-error');
       retry.hidden = true;
       fitPopover();
-      status.textContent = bar.open ? 'Notificações actualizadas.' : '';
+      status.textContent = bar.open ? window.sdsText("Notificações actualizadas.") : '';
     } catch (_) {
       bar.classList.add('has-error'); retry.hidden = false;
-      if (bar.open) status.textContent = 'Não foi possível actualizar. Os avisos apresentados continuam disponíveis.';
+      if (bar.open) status.textContent = window.sdsText("Não foi possível actualizar. Os avisos apresentados continuam disponíveis.");
       fitPopover();
     }
     finally { clearTimeout(timeout); busy = false; retry.disabled = false; bar.removeAttribute('aria-busy'); }

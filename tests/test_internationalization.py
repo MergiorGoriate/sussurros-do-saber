@@ -247,7 +247,8 @@ class InternationalizationTests(unittest.TestCase):
     def test_interface_catalogue_is_escaped_and_incomplete_pages_are_noindex(self):
         row=InterfaceTranslation(key='a'*64,source='Pesquisar',english='<script>alert(1)</script>',published=True)
         db.session.add(row);db.session.commit()
-        page=self.client.get('/en/artigos')
+        with patch.dict('internationalization.EN',{'Todos os artigos':''}):
+            page=self.client.get('/en/artigos')
         self.assertIn('&lt;script&gt;',page.text);self.assertNotIn('<script>alert(1)</script>',page.text)
         self.assertIn('noindex',page.headers.get('X-Robots-Tag',''))
 
@@ -274,7 +275,11 @@ class InternationalizationTests(unittest.TestCase):
         soup=BeautifulSoup(page.text,'html.parser')
         link=soup.select_one('.translation-notice a')
         self.assertIsNotNone(link)
-        self.assertEqual(link['href'],'/artigo/'+self.article.slug)
+        self.assertEqual(link['href'],'/artigo/'+self.article.slug+'?lang=pt')
+        self.client.get('/idioma/en')
+        original=self.client.get(link['href'],follow_redirects=True)
+        self.assertEqual(original.status_code,200)
+        self.assertEqual(original.headers['Content-Language'],'pt-MZ')
         self.assertIn('not yet published',soup.select_one('.translation-notice').get_text())
 
     def test_english_query_matches_published_translated_content(self):
@@ -359,6 +364,98 @@ class InternationalizationTests(unittest.TestCase):
         self.assertEqual(item.state,'approved')
         self.assertEqual(self.post(item,'publish').status_code,302)
         self.assertEqual(self.client.get('/en/artigo/'+self.article.slug).status_code,200)
+
+
+    def test_manual_english_choice_persists_across_unprefixed_public_links(self):
+        response=self.client.get('/idioma/en',query_string={'next':'/sobre'})
+        self.assertEqual(response.location,'/en/sobre')
+        for path in ['/sobre','/servicos','/contacto','/aprender','/submissoes/entrar']:
+            with self.subTest(path=path):
+                response=self.client.get(path)
+                self.assertEqual(response.status_code,302)
+                self.assertEqual(response.location,'/en'+path)
+                self.assertIn('Cookie',response.headers.get('Vary',''))
+                page=self.client.get(response.location)
+                self.assertEqual(page.status_code,200)
+                self.assertEqual(page.headers['Content-Language'],'en')
+        response=self.client.get('/artigos?q=science&page=2')
+        self.assertEqual(response.location,'/en/artigos?q=science&page=2')
+        self.client.get('/idioma/pt',query_string={'next':'/en/sobre'})
+        self.assertEqual(self.client.get('/sobre').status_code,200)
+        self.assertIn('Quem somos',self.client.get('/sobre').text)
+
+    def test_english_public_pages_and_author_forms_use_complete_interface_copy(self):
+        from bs4 import BeautifulSoup
+        cases={'/en/sobre':'Who we are','/en/contacto':'Send message',
+               '/en/servicos':'Services for authors and researchers',
+               '/en/politica-de-privacidade':'Privacy Policy',
+               '/en/aprender':'Explore, experiment, understand.',
+               '/en/submissoes/entrar':'Sign in'}
+        for path,text in cases.items():
+            with self.subTest(path=path):
+                response=self.client.get(path)
+                self.assertEqual(response.status_code,200)
+                soup=BeautifulSoup(response.text,'html.parser')
+                self.assertEqual(soup.html['lang'],'en')
+                self.assertIn(text,soup.get_text(' ',strip=True))
+        page=self.client.get('/en/aprender')
+        self.assertIn('Explore the cell',page.text)
+        self.assertNotIn('>Explore a célula<',page.text)
+        self.assertIn('js/pages.js',self.client.get('/en/contacto').text)
+
+    def test_english_client_catalogue_covers_interactive_messages(self):
+        from i18n_client import KEYS
+        from i18n_catalog import EN
+        for key in KEYS:
+            self.assertIn(key,EN,key)
+        page=self.client.get('/en/recursos')
+        self.assertIn('Sending',page.text)
+        self.assertIn('Correct answer',page.text)
+        self.assertIn('Mean',page.text)
+        original=self.client.get('/recursos')
+        self.assertIn('Calculadora descritiva',original.text)
+
+    def test_cookie_locale_does_not_redirect_admin_api_or_modify_post_payloads(self):
+        self.client.get('/idioma/en',query_string={'next':'/'})
+        self.assertEqual(self.client.get('/admin/internacionalizacao/').status_code,200)
+        response=self.client.post('/api/contacto',json={})
+        self.assertNotEqual(response.status_code,302)
+        self.assertEqual(response.headers['Content-Language'],'en')
+        self.assertNotIn('/en/api/',response.headers.get('Location',''))
+        self.assertEqual(self.article.body.splitlines()[0],'## Método')
+
+    def test_bootstrap_catalogue_covers_public_templates_without_database_generation(self):
+        from pathlib import Path
+        from i18n_templates import PublicTranslationExtension, SOURCES
+        from i18n_catalog import EN
+        extension=PublicTranslationExtension(app.jinja_env)
+        for path in Path(app.template_folder).rglob('*.html'):
+            extension.preprocess(path.read_text(),str(path.relative_to(app.template_folder)))
+        self.assertEqual({text for text in SOURCES if text not in EN and ' '.join(text.split()) not in EN},set())
+
+
+    def test_published_custom_institutional_copy_uses_english_without_mutating_source(self):
+        import hashlib
+        from models import EditorialPolicy
+        source='## Política própria\nConteúdo institucional original.'
+        translated='## Custom policy\nReviewed institutional content.'
+        policy=EditorialPolicy.query.first()
+        created=policy is None
+        if created:
+            policy=EditorialPolicy();db.session.add(policy)
+        previous=policy.page_content
+        policy.page_content=source
+        entry=InterfaceTranslation(key=hashlib.sha256(source.encode()).hexdigest(),source=source,english=translated,published=True)
+        db.session.add(entry);db.session.commit()
+        try:
+            page=self.client.get('/en/politicas-editoriais')
+            self.assertEqual(page.status_code,200)
+            self.assertIn('Reviewed institutional content.',page.text)
+            self.assertEqual(policy.page_content,source)
+        finally:
+            if created:db.session.delete(policy)
+            else:policy.page_content=previous
+            db.session.commit()
 
 
 if __name__=='__main__':unittest.main()
