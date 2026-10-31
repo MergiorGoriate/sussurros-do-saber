@@ -259,7 +259,7 @@ class InternationalizationTests(unittest.TestCase):
         self.assertEqual(soup.select_one('h1').get_text(strip=True),'All articles')
         self.assertEqual(soup.select_one('.section-rule span').get_text(strip=True),'Explore content')
         self.assertEqual([a.get_text(strip=True) for a in soup.select('.filter-row a')],
-                         ['All','Biology','Health','Environment','Education','Technology','Space'])
+                         ['All','Biology','Health','Environment','Education','Technology','Space','Scientific Biography'])
         links=soup.select('.filter-row a')
         self.assertTrue(all('/en/artigos' in a['href'] for a in links))
         page=self.client.get('/en/artigos',query_string={'q':'<science>'})
