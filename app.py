@@ -761,6 +761,7 @@ def articles():
         articles=pagination.items,
         pagination=pagination,
         query=request.args.get("q", ""),
+        scientific_biography=category == "biografia científica",
     )
 
 def comment_csrf_token():
@@ -1611,6 +1612,13 @@ def seed_database():
                 guidelines=default_guidelines,
                 published=not IS_PRODUCTION,
             ))
+        db.session.commit()
+    # Keep the editorial category available on existing installations as well.
+    if not Category.query.filter(db.or_(
+        Category.name == "Biografia Científica",
+        Category.slug == "biografia-cientifica",
+    )).first():
+        db.session.add(Category(name="Biografia Científica", slug="biografia-cientifica"))
         db.session.commit()
     if Article.query.first():
         ensure_article_slugs()

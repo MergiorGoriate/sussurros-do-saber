@@ -1,5 +1,7 @@
 """Small reviewed bootstrap catalogue; full catalogue is editable in the admin UI."""
 EN = {
+ 'Biografia Científica':'Scientific Biography',
+ 'Conheça a vida, as descobertas e o contributo de cientistas e investigadores para o conhecimento humano.':'Explore the lives, discoveries and contributions of scientists and researchers to human knowledge.',
  'Todos os artigos':'All articles','Explorar conteúdos':'Explore content',
  'Educação':'Education','Espaço':'Space','Resultados para':'Results for',
  'Paginação dos artigos':'Article pagination','← Anteriores':'← Previous',
