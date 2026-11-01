@@ -1,6 +1,6 @@
 {% extends 'admin/base.html' %}
 {% block title %}{{ 'Editar artigo' if article.id else 'Novo artigo' }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/article-scheduling.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-headings.css', v='20261022-headings') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css', v='20261101-admin-fixes') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css',v='20261019-autosave-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-backgrounds.css', v='20261021-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css', v='20261021-v1') }}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/article-scheduling.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-headings.css', v='20261022-headings') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css', v='20261101-box-colors') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css',v='20261019-autosave-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-backgrounds.css', v='20261021-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css', v='20261021-v1') }}">{% endblock %}
 {% block content %}
 <header class="admin-header"><div><span>Conteúdo editorial</span><h1>{{ 'Editar artigo' if article.id else 'Novo artigo' }}</h1></div><a href="{{ url_for('admin.articles') }}">← Voltar</a></header>
 {% if article.id and translation_can('manage') %}<p><a href="{{ url_for('translation_admin.dashboard',q=article.title) }}">Preparar ou actualizar a tradução inglesa deste artigo</a></p>{% endif %}
@@ -26,7 +26,14 @@
         <label>Título (opcional)<input id="explainerTitle" maxlength="180"></label>
         <label>Explicação<textarea id="explainerBody" rows="6" maxlength="10000" placeholder="Explique um conceito ou acrescente contexto."></textarea></label>
         <label>Apresentação<select id="explainerLayout"><option value="right">À direita, com texto à volta</option><option value="full">Largura do texto</option></select></label>
-        <p class="field-help">A caixa usa texto simples e conserva os parágrafos. Depois de inserir, pode editar o título e a explicação no corpo do artigo.</p>
+        <fieldset class="explainer-color-options"><legend>Cor do fundo</legend>
+          <label class="check"><input id="explainerCustomColor" type="checkbox"> Usar cor personalizada nesta caixa</label>
+          <label>Escolher cor<input id="explainerColor" type="color" value="#ffead0"></label>
+          <button type="button" id="resetExplainerColor">Cor padrão</button>
+          <p class="field-help">A cor do texto é ajustada automaticamente para manter o contraste. A cor personalizada é conservada nos modos claro e escuro.</p>
+        </fieldset>
+        <div id="explainerColorPreview" class="article-explainer" aria-label="Pré-visualização da cor da caixa"><strong id="explainerPreviewTitle" class="article-explainer-title">Caixa explicativa</strong><p id="explainerPreviewBody">A sua explicação aparecerá com este fundo.</p></div>
+        <p class="field-help">A caixa usa texto simples e conserva os parágrafos. Para editar uma caixa existente, coloque o cursor dentro dela e clique em Caixa explicativa.</p>
         <div class="inline-image-actions"><button type="button" id="insertExplainer" class="admin-primary">Inserir caixa</button><span id="explainerStatus" role="status" aria-live="polite"></span></div>
       </section>
       <section id="inlineImagePanel" class="inline-image-panel" hidden aria-labelledby="inlineImageTitle">
@@ -123,7 +130,7 @@
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if (request.method=='POST' and request.form.get('featured')=='on') or (request.method!='POST' and article.featured) %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>{% if not article.id %}<button type="submit" name="save_mode" value="continue" class="editor-continue">Guardar e continuar</button>{% endif %}
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261101-admin-fixes') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261101-box-colors') }}"></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-footnotes.js', v='20261022-headings') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/article-scheduling.js') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-autosave.js', v='20261019-autosave-v1') }}" defer></script>

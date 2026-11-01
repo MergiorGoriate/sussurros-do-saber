@@ -93,14 +93,74 @@
   const explainerTitle=document.querySelector('#explainerTitle');
   const explainerBody=document.querySelector('#explainerBody');
   const explainerStatus=document.querySelector('#explainerStatus');
-  let explainerStart=0,explainerEnd=0,explainerSource='';
+  const explainerColor=document.querySelector('#explainerColor');
+  const explainerCustomColor=document.querySelector('#explainerCustomColor');
+  const explainerColorPreview=document.querySelector('#explainerColorPreview');
+  const explainerForeground=color=>{
+    const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255);
+    const linear=rgb.map(c=>c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4);
+    const luminance=linear.reduce((sum,c,i)=>sum+c*[0.2126,0.7152,0.0722][i],0);
+    return (luminance+0.05)/0.05>=1.05/(luminance+0.05)?'#000000':'#ffffff';
+  };
+  const updateExplainerPreview=()=>{
+    if(!explainerColorPreview)return;
+    const color=explainerColor.value.toLowerCase();
+    if(explainerCustomColor.checked&&/^#[0-9a-f]{6}$/.test(color)){
+      explainerColorPreview.style.setProperty('--explainer-bg',color);
+      explainerColorPreview.style.setProperty('--explainer-fg',explainerForeground(color));
+    }else{
+      explainerColorPreview.style.removeProperty('--explainer-bg');
+      explainerColorPreview.style.removeProperty('--explainer-fg');
+    }
+    document.querySelector('#explainerPreviewTitle').textContent=explainerTitle.value.trim()||'Caixa explicativa';
+    document.querySelector('#explainerPreviewBody').textContent=explainerBody.value.trim()||'A sua explicação aparecerá com este fundo.';
+  };
+  explainerColor?.addEventListener('input',()=>{explainerCustomColor.checked=true;updateExplainerPreview();});
+  explainerCustomColor?.addEventListener('change',updateExplainerPreview);
+  for(const field of [explainerTitle,explainerBody])field?.addEventListener('input',updateExplainerPreview);
+  document.querySelector('#resetExplainerColor')?.addEventListener('click',()=>{
+    explainerCustomColor.checked=false;explainerColor.value='#ffead0';updateExplainerPreview();
+  });
+  let explainerStart=0,explainerEnd=0,explainerSource='',editingExplainer=false,legacyExplainer=false;
   const closeExplainer=()=>{
     explainerPanel.hidden=true;openExplainer.setAttribute('aria-expanded','false');openExplainer.focus();
   };
   openExplainer?.addEventListener('click',()=>{
     if(!explainerPanel.hidden){closeExplainer();return}
     explainerSource=editor.value;explainerStart=editor.selectionStart;explainerEnd=editor.selectionEnd;
+    editingExplainer=false;legacyExplainer=false;explainerTitle.value='';
     explainerBody.value=editor.value.slice(explainerStart,explainerEnd);
+    if(explainerCustomColor){explainerCustomColor.checked=false;explainerColor.value='#ffead0';}
+    const boxes=/^\[caixa:[ \t]*([^\]\n|]*)(?:\|(right|full))?(?:\|([^\]\n]*))?\][ \t]*\n([\s\S]*?)^\[\/caixa\][ \t]*(?=\n|$)/gm;
+    let box;
+    while((box=boxes.exec(editor.value))){
+      if(explainerStart>=box.index&&explainerEnd<=box.index+box[0].length){
+        editingExplainer=true;explainerStart=box.index;explainerEnd=box.index+box[0].length;
+        explainerTitle.value=box[1].trim();explainerBody.value=box[4].trim();
+        document.querySelector('#explainerLayout').value=box[2]||'right';
+        if(explainerCustomColor&&/^#[0-9a-f]{6}$/i.test((box[3]||'').trim())){
+          explainerCustomColor.checked=true;explainerColor.value=box[3].trim().toLowerCase();
+        }
+        break;
+      }
+    }
+    if(!editingExplainer){
+      const legacyBoxes=/\\n\\n(\[caixa:[^\]\r\n]*\])\\n([\s\S]*?)\\n\[\/caixa\]\\n\\n/g;
+      while((box=legacyBoxes.exec(editor.value))){
+        if(explainerStart<box.index||explainerEnd>box.index+box[0].length)continue;
+        const header=box[1].match(/^\[caixa:[ \t]*([^\]\n|]*)(?:\|(right|full))?(?:\|([^\]\n]*))?\]$/);
+        if(!header)continue;
+        editingExplainer=true;legacyExplainer=true;explainerStart=box.index;explainerEnd=box.index+box[0].length;
+        explainerTitle.value=header[1].trim();explainerBody.value=box[2].trim();
+        document.querySelector('#explainerLayout').value=header[2]||'right';
+        if(explainerCustomColor&&/^#[0-9a-f]{6}$/i.test((header[3]||'').trim())){
+          explainerCustomColor.checked=true;explainerColor.value=header[3].trim().toLowerCase();
+        }
+        break;
+      }
+    }
+    document.querySelector('#insertExplainer').textContent=editingExplainer?'Actualizar caixa':'Inserir caixa';
+    updateExplainerPreview();
     explainerStatus.textContent='';explainerPanel.hidden=false;
     openExplainer.setAttribute('aria-expanded','true');explainerTitle.focus();
   });
@@ -113,7 +173,10 @@
     if(!body){explainerStatus.textContent='Escreva a explicação.';explainerBody.focus();return}
     if(/^\[\/?caixa[:\]]/m.test(body)){explainerStatus.textContent='Retire os marcadores de caixa do texto da explicação.';return}
     const layout=document.querySelector('#explainerLayout').value==='full'?'full':'right';
-    const markup='\n\n[caixa: '+title+'|'+layout+']\n'+body+'\n[/caixa]\n\n';
+    const color=explainerCustomColor?.checked?explainerColor.value.toLowerCase():'';
+    if(color&&!/^#[0-9a-f]{6}$/.test(color)){explainerStatus.textContent='Escolha uma cor de fundo válida.';return;}
+    const space=editingExplainer&&!legacyExplainer?'':'\n\n';
+    const markup=space+'[caixa: '+title+'|'+layout+(color?'|'+color:'')+']\n'+body+'\n[/caixa]'+space;
     if(editor.value.length-(explainerEnd-explainerStart)+markup.length>400000){explainerStatus.textContent='A caixa excede o limite de tamanho do artigo.';return}
     editor.setRangeText(markup,explainerStart,explainerEnd,'end');
     explainerTitle.value='';explainerBody.value='';closeExplainer();editor.focus();

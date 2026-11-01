@@ -44,6 +44,19 @@ class ExplanatoryBoxTests(unittest.TestCase):
         self.assertIn(r'C:\novo e sequência \n literal.', self.embeds[0])
         self.assertEqual(self.render(r'Fora de caixas: C:\novo e \n literal.'), r'Fora de caixas: C:\novo e \n literal.')
 
+    def test_custom_colour_is_validated_and_text_contrast_is_automatic(self):
+        from explanatory_boxes import box_colors
+        self.assertEqual(box_colors('#FFFFFF'), ('#ffffff', '#000000'))
+        self.assertEqual(box_colors('#123456'), ('#123456', '#ffffff'))
+        for invalid in ['red', '#fff', '#123456;position:fixed', '#ffffff" onmouseover="x', 'url(https://example.org/x)']:
+            self.assertIsNone(box_colors(invalid))
+            self.render('[caixa: Conceito|right|' + invalid + ']\nTexto.\n[/caixa]')
+            self.assertEqual(len(self.embeds), 1)
+            self.assertNotIn('style=', self.embeds[0])
+        self.render('[caixa: Conceito|full|#123456]\r\nTexto.\r\n[/caixa]')
+        self.assertIn('style="--explainer-bg:#123456;--explainer-fg:#ffffff"', self.embeds[0])
+
+
 
 from bs4 import BeautifulSoup
 from app import app
@@ -63,7 +76,7 @@ class PublishedExplanatoryBoxTests(unittest.TestCase):
     def test_windows_form_submission_renders_box_in_public_html_without_javascript(self):
         article = self.article(self.member())
         self.signin(self.primary)
-        source = 'Parágrafo anterior.\r\n\r\n[caixa: Conceito|right]\r\nPrimeiro parágrafo explicativo.\r\n\r\nSegundo parágrafo explicativo.\r\n[/caixa]\r\n\r\nParágrafo seguinte.'
+        source = 'Parágrafo anterior.\r\n\r\n[caixa: Conceito|right|#123456]\r\nPrimeiro parágrafo explicativo.\r\n\r\nSegundo parágrafo explicativo.\r\n[/caixa]\r\n\r\nParágrafo seguinte.'
         self.assertEqual(self.edit(article, source, status='published').status_code, 302)
         db.session.refresh(article)
         self.assertEqual(article.body, source)
@@ -73,5 +86,6 @@ class PublishedExplanatoryBoxTests(unittest.TestCase):
         box = soup.select_one('.article-explainer')
         self.assertIsNotNone(box)
         self.assertEqual(box.strong.text, 'Conceito')
+        self.assertEqual(box['style'], '--explainer-bg:#123456;--explainer-fg:#ffffff')
         self.assertEqual([p.text for p in box.select('p')], ['Primeiro parágrafo explicativo.', 'Segundo parágrafo explicativo.'])
         self.assertNotIn('[caixa:', soup.get_text())
