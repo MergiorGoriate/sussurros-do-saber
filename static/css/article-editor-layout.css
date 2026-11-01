@@ -1,0 +1,98 @@
+/* Scoped to the article form: journals and other admin screens keep their layout. */
+.article-edit-page{--ae-surface:#fff;--ae-soft:#f4f7fb;--ae-border:#dce5ef;--ae-text:#172b43;--ae-muted:#65768b;--ae-accent:#245b94;--ae-accent-soft:#edf4fc;max-width:1600px;margin-inline:auto;color:var(--ae-text)}
+.article-edit-page *{min-width:0}
+.article-edit-page .editor-breadcrumb{display:flex;gap:9px;align-items:center;font-size:12px;color:var(--ae-muted);margin-bottom:16px}
+.article-edit-page a{color:var(--ae-accent);text-decoration:none}
+.article-edit-page a:hover{text-decoration:underline;text-underline-offset:3px}
+.article-edit-page .article-edit-header{margin-bottom:16px;gap:20px;align-items:center}
+.article-edit-page .article-edit-header>div>span{font-size:10px;letter-spacing:.15em;font-weight:700;color:var(--ae-accent);text-transform:uppercase}
+.article-edit-page .article-edit-header h1{font:750 clamp(1.75rem,2.5vw,2.4rem)/1.15 Arial,sans-serif;letter-spacing:-.035em;margin:7px 0}
+.article-edit-page .article-edit-header p{font-size:13px;color:var(--ae-muted);margin:0}
+.article-edit-page .editor-header-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.article-edit-page .editor-state-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid var(--ae-border);border-radius:999px;background:var(--ae-surface);color:var(--ae-muted);font-size:11px;font-weight:600;white-space:nowrap}
+.article-edit-page .editor-state-badge>span{width:6px;height:6px;border-radius:50%;background:#8a99ad}
+.article-edit-page .editor-state-badge[data-state=published]>span{background:#20926b}
+.article-edit-page .editor-state-badge[data-state=scheduled]>span{background:#c68a22}
+.article-edit-page .editor-back-link{font-size:12px;font-weight:600}
+.article-edit-page .editor-quick-links{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.article-edit-page .editor-quick-links:empty{display:none}
+.article-edit-page .editor-quick-links a{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--ae-border);border-radius:8px;background:var(--ae-surface);font-size:11px;font-weight:500;overflow-wrap:anywhere}
+.article-edit-page .article-edit-form{grid-template-columns:minmax(0,1fr) 278px;gap:20px}
+.article-edit-page .editor-commandbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:12px;z-index:12;padding:10px 14px;border:1px solid var(--ae-border);border-radius:12px;background:var(--ae-surface);box-shadow:0 5px 18px #102c5009}
+.article-edit-page .editor-commandbar nav{display:flex;gap:4px;overflow-x:auto;max-width:100%;scrollbar-width:thin}
+.article-edit-page .editor-commandbar nav a{padding:7px 9px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;color:var(--ae-muted)}
+.article-edit-page .editor-commandbar nav a:hover{background:var(--ae-soft);color:var(--ae-accent);text-decoration:none}
+.article-edit-page .editor-command-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.article-edit-page #editorSaveState{font-size:11px;color:var(--ae-muted)}
+.article-edit-page .editor-command-actions button{margin:0;padding:10px 15px;border-radius:8px;font-size:12px;font-weight:700;min-height:40px}
+.article-edit-page .editor-command-actions .admin-primary{background:var(--ae-accent);color:#fff;border:1px solid var(--ae-accent);box-shadow:0 3px 8px #245b9418}
+.article-edit-page .editor-command-actions .editor-continue{color:var(--ae-accent);background:var(--ae-accent-soft);border:1px solid var(--ae-border)}
+.article-edit-page .article-edit-form>.editor-main,.article-edit-page .article-edit-form>.editor-side{padding:0;border:0;background:transparent;box-shadow:none;border-radius:0;position:static;display:grid;gap:20px}
+.article-edit-page .editor-card,.article-edit-page .editor-settings-card{background:var(--ae-surface);border:1px solid var(--ae-border);border-radius:14px;padding:22px;box-shadow:0 2px 5px #102c5003;scroll-margin-top:92px}
+.article-edit-page .editor-section-heading{display:flex;gap:11px;align-items:flex-start;margin-bottom:22px}
+.article-edit-page .editor-section-number{display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;border-radius:8px;background:var(--ae-accent-soft);color:var(--ae-accent);font-size:10px;font-weight:700;letter-spacing:.04em}
+.article-edit-page .editor-section-heading h2,.article-edit-page .editor-settings-card>h2{font:700 15px/1.35 Arial,sans-serif;letter-spacing:-.015em;margin:0 0 4px;color:var(--ae-text)}
+.article-edit-page .editor-section-heading p,.article-edit-page .editor-card-intro{font-size:11px;line-height:1.6;color:var(--ae-muted);margin:0}
+.article-edit-page .editor-settings-card{padding:18px}
+.article-edit-page .editor-card-intro{margin-bottom:17px}
+.article-edit-page .editor-settings-card>h2{margin-bottom:14px}
+.article-edit-page .editor-settings-card>h2:has(+.editor-card-intro){margin-bottom:5px}
+.article-edit-page .article-edit-form label{font-size:12px;font-weight:600;gap:7px;margin-bottom:17px;color:var(--ae-text)}
+.article-edit-page .article-edit-form :is(input,textarea,select){font:400 13px/1.6 Arial,sans-serif;color:var(--ae-text);background:var(--ae-surface);border:1px solid var(--ae-border);border-radius:8px;padding:10px 12px;box-shadow:none}
+.article-edit-page .article-edit-form :is(input,textarea,select):focus{outline:2px solid var(--ae-accent);outline-offset:2px;border-color:var(--ae-accent)}
+.article-edit-page .article-edit-form :is(input,textarea)::placeholder{color:var(--ae-muted);opacity:.75}
+.article-edit-page .article-edit-form #titleField{font-size:17px;font-weight:600;line-height:1.5;padding:13px 14px;letter-spacing:-.02em}
+.article-edit-page textarea[name=summary]{min-height:96px;resize:vertical}
+.article-edit-page .article-edit-form :is(small,.field-help){font-size:11px;line-height:1.65;color:var(--ae-muted);font-weight:400}
+.article-edit-page .editor-card>label:last-child,.article-edit-page .editor-settings-card>label:last-child{margin-bottom:0}
+.article-edit-page .editor-two-column{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.article-edit-page .editor-two-column>label{margin-bottom:0}
+.article-edit-page .editor-autosave{margin:0;padding:12px 15px;border:1px solid var(--ae-border);border-radius:10px;background:var(--ae-accent-soft);color:var(--ae-accent);font-size:11px;line-height:1.6;box-shadow:none}
+.article-edit-page .editor-autosave[data-state=error]{background:#fff0ed;color:#a7332f;border-color:#ebc5c0}
+.article-edit-page .editor-writing-heading{flex-wrap:wrap;align-items:center;margin-bottom:17px}
+.article-edit-page .editor-writing-heading>div:not(.editor-view-switch){flex:1}
+.article-edit-page .editor-view-switch{display:flex;gap:3px;padding:3px;border:1px solid var(--ae-border);border-radius:8px;background:var(--ae-soft);max-width:100%}
+.article-edit-page .editor-view-switch[hidden]{display:none}
+.article-edit-page .editor-view-switch button{padding:7px 8px;min-height:33px;border:0;border-radius:5px;background:transparent;color:var(--ae-muted);font-size:10px;font-weight:600;cursor:pointer}
+.article-edit-page .editor-view-switch button[aria-pressed=true]{background:var(--ae-surface);color:var(--ae-accent);box-shadow:0 1px 4px #102c5010}
+.article-edit-page .editor-body-label{font-size:11px;color:var(--ae-muted);font-weight:500}
+.article-edit-page .editor-toolbar{gap:5px;padding:8px;border:1px solid var(--ae-border);border-radius:9px;background:var(--ae-soft);align-items:center}
+.article-edit-page .editor-toolbar button{padding:6px 8px;min-height:32px;font-size:11px;font-weight:500;background:var(--ae-surface);border-color:var(--ae-border);border-radius:5px;color:var(--ae-text)}
+.article-edit-page .editor-toolbar button:hover,.article-edit-page .editor-toolbar button[aria-pressed=true]{background:var(--ae-accent-soft);color:var(--ae-accent);border-color:var(--ae-accent)}
+.article-edit-page .editor-field>.field-help{margin:0;font-size:10px;line-height:1.6}
+.article-edit-page .editor-statistics{gap:9px;flex-wrap:wrap;padding:9px 0;margin:0;border:0;font-size:10px;color:var(--ae-muted);background:transparent}
+.article-edit-page .editor-statistics button{font-size:10px;color:var(--ae-accent);background:transparent;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.article-edit-page .editor-workspace{gap:14px;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.article-edit-page .editor-workspace[data-editor-view=write],.article-edit-page .editor-workspace[data-editor-view=preview]{grid-template-columns:minmax(0,1fr)}
+.article-edit-page .editor-write-pane[hidden],.article-edit-page .editor-preview-pane[hidden]{display:none}
+.article-edit-page .editor-pane-title{display:block;font-size:10px!important;font-weight:700!important;letter-spacing:.06em;text-transform:uppercase;color:var(--ae-muted)!important;margin-bottom:9px!important}
+.article-edit-page .editor-workspace #bodyEditor{display:block;min-height:640px;height:680px;width:100%;resize:vertical;font:13px/1.85 ui-monospace,SFMono-Regular,Consolas,monospace;padding:16px;background:var(--ae-soft);border-color:var(--ae-border);tab-size:2}
+.article-edit-page .editor-preview-pane .article-background-preview{height:680px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--ae-border);border-radius:9px;scrollbar-width:thin;background:var(--ae-surface)}
+.article-edit-page .editor-preview-pane .background-preview-heading{padding:18px 18px 0}
+.article-edit-page .editor-preview-pane .markdown-preview{min-height:0;margin:0;border:0;border-radius:0;padding:18px;font-size:14px}
+.article-edit-page .inline-image-panel{margin:10px 0;padding:17px;border:1px solid var(--ae-border);border-radius:10px;background:var(--ae-soft)}
+.article-edit-page .inline-image-head strong{font:700 14px/1.4 Arial,sans-serif;color:var(--ae-text)}
+.article-edit-page .cover-format-fields,.article-edit-page .editor-scheduling{border:1px solid var(--ae-border);border-radius:9px;padding:14px;background:var(--ae-soft);margin:8px 0 17px}
+.article-edit-page .article-edit-form legend{font-size:11px;font-weight:700;color:var(--ae-text);padding-inline:5px}
+.article-edit-page .editor-settings-card>p:not(.editor-card-intro){font-size:11px;line-height:1.7;color:var(--ae-muted);margin:0 0 16px}
+.article-edit-page .article-background-options{padding:0;border:0;margin:0;background:transparent}
+.article-edit-page .article-background-options legend{padding:0}
+.article-edit-page .article-background-choices{grid-template-columns:minmax(0,1fr);gap:9px}
+.article-edit-page .article-background-choice{padding:10px;gap:6px;margin-bottom:0;font-size:11px}
+.article-edit-page .background-swatch{min-height:65px}
+.article-edit-page .slug-field{border:1px solid var(--ae-border);border-radius:8px;background:var(--ae-soft);display:flex;overflow:hidden}
+.article-edit-page .slug-field>span{padding:10px 7px;font-size:11px;background:transparent;flex-shrink:0}
+.article-edit-page .slug-field>input{border:0;border-radius:0;padding-inline:8px}
+.article-edit-page .url-preview{overflow-wrap:anywhere}
+.article-edit-page .editor-cover-preview{border:1px dashed var(--ae-border);border-radius:10px;margin-top:12px;overflow:hidden}
+.article-edit-page .editor-cover-preview:has(img[hidden]){border:0;margin:0}
+.article-edit-page .editor-cover-preview img{max-height:240px;object-fit:contain;background:var(--ae-soft);margin:0}
+.article-edit-page .check{display:flex;align-items:center;gap:8px}
+.article-edit-page input[type=checkbox],.article-edit-page input[type=radio]{width:auto;flex-shrink:0;accent-color:var(--ae-accent)}
+.article-edit-page :focus-visible{outline:2px solid var(--ae-accent);outline-offset:3px}
+.admin-dark .article-edit-page{--ae-surface:#182536;--ae-soft:#122032;--ae-border:#314357;--ae-text:#e7eef6;--ae-muted:#a3b4c8;--ae-accent:#9dc7f6;--ae-accent-soft:#203950}
+.admin-dark .article-edit-page .editor-command-actions .admin-primary{background:#3977bf;border-color:#3977bf;color:#fff}
+.admin-dark .article-edit-page .editor-autosave[data-state=error]{background:#44282f;color:#ffd4ce;border-color:#74424b}
+@media(max-width:1250px){.article-edit-page .article-edit-form{grid-template-columns:minmax(0,1fr)}.article-edit-page .article-editor-settings{grid-template-columns:repeat(2,minmax(0,1fr))}.article-edit-page .editor-writing-heading>div:not(.editor-view-switch){flex-basis:50%}}
+@media(max-width:850px){.article-edit-page .editor-commandbar{position:static}.article-edit-page .editor-card{scroll-margin-top:180px}.article-edit-page .editor-workspace{grid-template-columns:minmax(0,1fr)}.article-edit-page .editor-workspace #bodyEditor{height:520px;min-height:400px}.article-edit-page .editor-preview-pane .article-background-preview{height:520px}.article-edit-page .editor-section-heading{margin-bottom:17px}}
+@media(max-width:600px){.article-edit-page .article-edit-header{gap:12px;align-items:flex-start}.article-edit-page .editor-header-actions{gap:10px}.article-edit-page .editor-quick-links{gap:6px}.article-edit-page .editor-quick-links a{font-size:10px;padding:7px}.article-edit-page .editor-commandbar{padding:9px;gap:8px}.article-edit-page .editor-commandbar nav{width:100%}.article-edit-page .editor-commandbar nav a{padding:7px;font-size:10px}.article-edit-page .editor-command-actions{width:100%}.article-edit-page .editor-command-actions button{flex:1;padding:10px}.article-edit-page #editorSaveState:empty{display:none}.article-edit-page #editorSaveState:not(:empty){width:100%}.article-edit-page .editor-card,.article-edit-page .editor-settings-card{padding:16px;border-radius:11px}.article-edit-page .article-edit-form,.article-edit-page .article-edit-form>.editor-main,.article-edit-page .article-edit-form>.editor-side{gap:14px}.article-edit-page .article-editor-settings,.article-edit-page .editor-two-column{grid-template-columns:minmax(0,1fr)}.article-edit-page .editor-section-number{flex-basis:25px;width:25px;height:25px;font-size:9px}.article-edit-page .editor-section-heading h2{font-size:14px}.article-edit-page .editor-writing-heading>div:not(.editor-view-switch){flex-basis:70%}.article-edit-page .editor-view-switch{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.article-edit-page .editor-view-switch button{font-size:9px;padding:7px 4px;overflow-wrap:anywhere}.article-edit-page .editor-toolbar{flex-wrap:nowrap;overflow-x:auto}.article-edit-page .editor-toolbar button{white-space:nowrap;flex-shrink:0;min-height:36px}.article-edit-page .article-edit-form #titleField{font-size:16px}.article-edit-page .editor-card{scroll-margin-top:16px}}
