@@ -39,7 +39,7 @@ jobs:
           fi
 
       - name: Check out the exact release
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.RELEASE_TAG }}
           persist-credentials: false
