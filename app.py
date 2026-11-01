@@ -396,6 +396,8 @@ def render_markdown(value, *, article=False, heading_prefix="sec"):
                            f'<img src="{safe_url}" alt="{alt}" loading="lazy" decoding="async">'
                            f'<figcaption>{caption}<small>{credit}</small></figcaption></figure>')
 
+    from explanatory_boxes import prepare_explanatory_boxes
+    value = prepare_explanatory_boxes(value, store_embed)
     prepared = re.sub(r"\[portrait:\s*([^\]\n]+)\]\((https?://[^\s)]+)\)",
                       portrait_placeholder, value or "", flags=re.I)
     prepared = re.sub(r"^\[destaque:\s*([^\]\n]+)\]\s*$",
