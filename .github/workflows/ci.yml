@@ -35,7 +35,7 @@ jobs:
       PGPASSWORD: fixture-only-password
       RESTORE_ADMIN_URL: postgresql://postgres:fixture-only-password@postgres/postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: apt-get update && apt-get install -y --no-install-recommends python3 python3-venv
       - run: python3 -m venv /tmp/drill && /tmp/drill/bin/pip install -r requirements.txt
       - name: Validate versioned schema on PostgreSQL 18
