@@ -9,22 +9,31 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/login-brand.css',v='20261101') }}">
   {% if turnstile_site_key %}<script nonce="{{ csp_nonce }}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin-login-layout.css',v='20261102') }}">
 </head>
-<body class="login-page">
+<body class="login-page login-modern">
+  <main class="login-shell">
+  <aside class="login-introduction" aria-label="Sussurros do Saber">
+    <div class="login-identity"><img src="{{ url_for('static',filename='img/logo-sussurros-admin-simbolo-v2.png') }}" alt="" width="2048" height="2013"><span>Sussurros<br>do Saber</span></div>
+    <div class="login-editorial"><span class="login-eyebrow">PAINEL EDITORIAL</span><h2>O conhecimento começa com uma boa publicação.</h2><p>Um espaço para preparar artigos e acompanhar o trabalho editorial.</p></div>
+    <p class="login-motto">Conhecimento aberto · Ciência para todos</p>
+  </aside>
+  <section class="login-form-area" aria-labelledby="loginTitle">
   <form method="post" class="login-card" autocomplete="off">
-    <img src="{{ url_for('static',filename='img/logo-sussurros-admin-simbolo-v2.png') }}" alt="Sussurros do Saber" class="login-brand-symbol" width="2048" height="2013">
-    <h1>Área administrativa</h1>
-    <p>Acesso protegido por palavra-passe e autenticação em dois fatores.</p>
+    <span class="login-eyebrow">ACESSO RESERVADO</span>
+    <h1 id="loginTitle">Entrar no painel</h1>
+    <p>Introduza as suas credenciais para continuar.</p>
     {% with messages=get_flashed_messages(with_categories=true) %}
-      {% for category,message in messages %}<div class="alert {{ category }}">{{ message }}</div>{% endfor %}
+      {% for category,message in messages %}<div role="alert" class="alert {{ category }}">{{ message }}</div>{% endfor %}
     {% endwith %}
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Utilizador<input name="username" required autocomplete="off" autocapitalize="none" spellcheck="false" autofocus></label>
     <label>Palavra-passe<input name="password" type="password" required autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore></label>
-    {% if turnstile_site_key %}<div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>{% endif %}
-    <button class="admin-primary">Continuar</button>
+    {% if turnstile_site_key %}<div class="cf-turnstile" data-size="flexible" data-sitekey="{{ turnstile_site_key }}"></div>{% endif %}
+    <button type="submit" class="admin-primary">Continuar <span aria-hidden="true">→</span></button>
     <small class="security-caption">A palavra-passe não será memorizada por este formulário. Em cada novo acesso, o código 2FA será obrigatório.</small>
-    <a href="/">← Voltar ao site</a>
+    <a class="login-back" href="/">← Voltar ao site</a>
   </form>
+  </section></main>
 </body>
 </html>
