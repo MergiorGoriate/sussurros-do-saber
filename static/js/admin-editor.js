@@ -88,6 +88,35 @@
     });
   });
 
+  const explainerPanel=document.querySelector('#explainerPanel');
+  const openExplainer=document.querySelector('#openExplainer');
+  const explainerTitle=document.querySelector('#explainerTitle');
+  const explainerBody=document.querySelector('#explainerBody');
+  const explainerStatus=document.querySelector('#explainerStatus');
+  let explainerStart=0,explainerEnd=0;
+  const closeExplainer=()=>{
+    explainerPanel.hidden=true;openExplainer.setAttribute('aria-expanded','false');openExplainer.focus();
+  };
+  openExplainer?.addEventListener('click',()=>{
+    if(!explainerPanel.hidden){closeExplainer();return}
+    explainerStart=editor.selectionStart;explainerEnd=editor.selectionEnd;
+    explainerBody.value=editor.value.slice(explainerStart,explainerEnd);
+    explainerStatus.textContent='';explainerPanel.hidden=false;
+    openExplainer.setAttribute('aria-expanded','true');explainerTitle.focus();
+  });
+  document.querySelector('#closeExplainer')?.addEventListener('click',closeExplainer);
+  explainerPanel?.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeExplainer()}});
+  document.querySelector('#insertExplainer')?.addEventListener('click',()=>{
+    const title=explainerTitle.value.trim().replace(/[\\r\\n\\[\\]|]+/g,' ');
+    const body=explainerBody.value.trim();
+    if(!body){explainerStatus.textContent='Escreva a explicação.';explainerBody.focus();return}
+    if(/^\\[\\/?caixa[:\\]]/m.test(body)){explainerStatus.textContent='Retire os marcadores de caixa do texto da explicação.';return}
+    const layout=document.querySelector('#explainerLayout').value==='full'?'full':'right';
+    editor.setRangeText('\\n\\n[caixa: '+title+'|'+layout+']\\n'+body+'\\n[/caixa]\\n\\n',explainerStart,explainerEnd,'end');
+    explainerTitle.value='';explainerBody.value='';closeExplainer();editor.focus();
+    editor.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+
   const panel=document.querySelector('#inlineImagePanel');
   const openButton=document.querySelector('#openInlineImage');
   const closeButton=document.querySelector('#closeInlineImage');
