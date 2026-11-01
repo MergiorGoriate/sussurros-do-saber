@@ -3,7 +3,7 @@ import re
 from html import escape
 
 BOX = re.compile(
-    r"^\[caixa:[ \t]*([^\]\n|]*)(?:\|(right|full))?\][ \t]*\n"
+    r"^\[caixa:[ \t]*([^\]\n|]*)(?:\|(right|full))?(?:\|([^\]\n]*))?\][ \t]*\n"
     r"([\s\S]*?)^\[/caixa\][ \t]*(?=\n|$)", re.M
 )
 
@@ -15,6 +15,19 @@ LEGACY_BOX = re.compile(
 )
 
 
+def box_colors(value):
+    """Accept one opaque RGB colour and choose the highest-contrast text."""
+    value = (value or "").strip()
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+        return None
+    rgb = [int(value[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+    luminance = sum(c * weight for c, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+    black_contrast = (luminance + 0.05) / 0.05
+    white_contrast = 1.05 / (luminance + 0.05)
+    return value.lower(), "#000000" if black_contrast >= white_contrast else "#ffffff"
+
+
 def prepare_explanatory_boxes(source, store_embed):
     # Native form submissions can use CRLF even when textarea.value uses LF.
     source = (source or "").replace("\r\n", "\n").replace("\r", "\n")
@@ -23,7 +36,7 @@ def prepare_explanatory_boxes(source, store_embed):
         source,
     )
     def replace(match):
-        title, layout, body = match.groups()
+        title, layout, color, body = match.groups()
         if not body.strip():
             return match.group(0)
         paragraphs = [
@@ -32,8 +45,10 @@ def prepare_explanatory_boxes(source, store_embed):
         ]
         heading = f"<strong class=\"article-explainer-title\">{escape(title.strip())}</strong>" if title.strip() else ""
         label = escape(title.strip() or "Caixa explicativa", quote=True)
+        colors = box_colors(color)
+        style = f' style="--explainer-bg:{colors[0]};--explainer-fg:{colors[1]}"' if colors else ""
         html = (
-            f'<aside class="article-explainer article-explainer--{layout or "right"}" aria-label="{label}">'
+            f'<aside class="article-explainer article-explainer--{layout or "right"}" aria-label="{label}"{style}>'
             + heading + "".join(paragraphs) + "</aside>"
         )
         return store_embed("EXPLAINER", html)
