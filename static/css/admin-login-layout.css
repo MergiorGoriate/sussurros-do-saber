@@ -1,0 +1,29 @@
+body.login-modern{margin:0;min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:32px 24px;background:#eef2f7;color:#172b43;font-family:Arial,sans-serif}
+.login-modern *{box-sizing:border-box}
+.login-modern .login-shell{display:grid;grid-template-columns:1fr 1fr;width:min(100%,1000px);min-height:610px;border:1px solid #dce3ed;border-radius:24px;overflow:hidden;background:#fff;box-shadow:0 24px 70px #16345512}
+.login-modern .login-introduction{display:flex;flex-direction:column;justify-content:space-between;padding:44px;background:radial-gradient(ellipse at 0 100%,#214f83,transparent 65%),#102c50;color:#fff;min-width:0}
+.login-identity{display:flex;align-items:center;gap:14px;font-size:19px;font-weight:700;line-height:1.25;letter-spacing:-.02em}
+.login-identity img{width:62px;height:auto;flex:none;background:#fff;border-radius:15px;padding:6px}
+.login-modern .login-eyebrow{display:block;font-size:10px;font-weight:700;letter-spacing:.14em;color:#43648c}
+.login-introduction .login-eyebrow{color:#dcb453}
+.login-editorial{padding:40px 0}
+.login-editorial h2{font-size:34px;line-height:1.18;letter-spacing:-.035em;font-weight:600;margin:16px 0 20px;max-width:330px}
+.login-editorial p{font-size:14px;line-height:1.8;max-width:300px;color:#c0d0e2;margin:0}
+.login-motto{font-size:11px;line-height:1.6;color:#b3c8df;margin:0}
+.login-form-area{display:flex;align-items:center;min-width:0;padding:44px}
+.login-modern .login-card{width:100%;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;margin:0}
+.login-modern .login-card h1{font:700 29px/1.2 Arial,sans-serif;letter-spacing:-.035em;margin:12px 0}
+.login-modern .login-card>p{font-size:14px;line-height:1.7;color:#66788e;margin:0 0 28px}
+.login-modern .login-card label{display:grid;gap:8px;font-size:12px;font-weight:600;margin:0 0 19px;color:#263f5b}
+.login-modern .login-card input:not([type=hidden]){display:block;width:100%;height:48px;padding:12px 14px;border:1px solid #cdd8e5;border-radius:9px;font:400 16px Arial,sans-serif;background:#f9fbfd;color:#172b43;box-shadow:none}
+.login-modern .login-card input:focus{outline:3px solid #c4daf5;outline-offset:1px;border-color:#2c65a2;background:#fff}
+.login-modern .cf-turnstile{width:100%;min-width:0;margin:4px 0 18px}
+.login-modern .login-card .admin-primary{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:48px;border:1px solid #24558c;border-radius:9px;padding:12px 16px;background:#24558c;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin:4px 0 17px}
+.login-modern .login-card .admin-primary:hover{background:#183e6b}
+.login-modern .login-card .security-caption{font-size:11px;line-height:1.7;color:#697c90;margin:0 0 23px;display:block}
+.login-modern .login-card .login-back{display:inline-block;font-size:12px;font-weight:600;color:#355e8e;text-decoration:none}
+.login-modern .login-card .login-back:hover{text-decoration:underline}
+.login-modern :is(a,button):focus-visible{outline:3px solid #729ed0;outline-offset:4px}
+.login-modern .alert{font-size:13px;line-height:1.6;margin:0 0 18px}
+@media(max-width:760px){body.login-modern{padding:20px 14px}.login-modern .login-shell{grid-template-columns:1fr;max-width:460px;min-height:0;border-radius:18px}.login-modern .login-introduction{padding:24px 28px}.login-identity{font-size:17px}.login-identity img{width:52px;border-radius:12px}.login-editorial{display:none}.login-motto{margin-top:16px}.login-form-area{padding:30px 28px}.login-modern .login-card h1{font-size:27px}}
+@media(max-width:360px){body.login-modern{padding:12px 8px}.login-modern .login-introduction,.login-form-area{padding:24px 20px}}
