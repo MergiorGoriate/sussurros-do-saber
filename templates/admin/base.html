@@ -10,13 +10,12 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css',v='20261020-dark-contrast-v3') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/staff.css',v='20261018-dark-panel-v2') }}">
   {% block extra_head %}{% endblock %}
-<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-dark-panel-v2') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footnotes.css', v='20261019-footnotes-v1') }}"></head>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-dark-panel-v2') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footnotes.css', v='20261019-footnotes-v1') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/admin-brand.css',v='20261102') }}"></head>
 <body>
   <aside class="admin-sidebar" id="admin-sidebar">
     <button type="button" class="admin-sidebar-toggle" data-sidebar-toggle aria-controls="admin-sidebar" aria-expanded="true" aria-label="Recolher barra lateral" title="Recolher barra lateral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
-      <img src="{{ url_for('static',filename='img/logo-sussurros-icon.png') }}" alt="Logotipo do Sussurros do Saber">
-      <span>Sussurros<br>do Saber</span>
+    <a class="admin-brand" href="{{ url_for('admin.dashboard') }}" aria-label="Sussurros do Saber — visão geral">
+      <img src="{{ url_for('static',filename='img/logo-sussurros-admin-branco.png') }}" alt="Sussurros do Saber" width="2048" height="916">
     </a>
     <nav aria-label="Administração">
       <a href="{{ url_for('admin.dashboard') }}" title="Visão geral"><svg class="admin-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10l9-7 9 7v10H3z M9 20v-7h6v7"/></svg><span class="admin-menu-label">Visão geral</span></a>
