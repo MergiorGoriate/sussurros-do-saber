@@ -215,6 +215,7 @@ jobs:
             playwright-report/
             test-results/
             /tmp/sussurros-server.log
+            /tmp/article-editor-layout-previews/
             /tmp/history-layout-previews/
             /tmp/notification-layout-previews/
             /tmp/dark-panel-previews/
