@@ -93,13 +93,13 @@
   const explainerTitle=document.querySelector('#explainerTitle');
   const explainerBody=document.querySelector('#explainerBody');
   const explainerStatus=document.querySelector('#explainerStatus');
-  let explainerStart=0,explainerEnd=0;
+  let explainerStart=0,explainerEnd=0,explainerSource='';
   const closeExplainer=()=>{
     explainerPanel.hidden=true;openExplainer.setAttribute('aria-expanded','false');openExplainer.focus();
   };
   openExplainer?.addEventListener('click',()=>{
     if(!explainerPanel.hidden){closeExplainer();return}
-    explainerStart=editor.selectionStart;explainerEnd=editor.selectionEnd;
+    explainerSource=editor.value;explainerStart=editor.selectionStart;explainerEnd=editor.selectionEnd;
     explainerBody.value=editor.value.slice(explainerStart,explainerEnd);
     explainerStatus.textContent='';explainerPanel.hidden=false;
     openExplainer.setAttribute('aria-expanded','true');explainerTitle.focus();
@@ -107,12 +107,15 @@
   document.querySelector('#closeExplainer')?.addEventListener('click',closeExplainer);
   explainerPanel?.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeExplainer()}});
   document.querySelector('#insertExplainer')?.addEventListener('click',()=>{
-    const title=explainerTitle.value.trim().replace(/[\\r\\n\\[\\]|]+/g,' ');
+    if(editor.value!==explainerSource){explainerStatus.textContent='O texto mudou. Feche e volte a abrir a caixa na posição desejada.';return}
+    const title=explainerTitle.value.trim().replace(/[\r\n\[\]|]+/g,' ');
     const body=explainerBody.value.trim();
     if(!body){explainerStatus.textContent='Escreva a explicação.';explainerBody.focus();return}
-    if(/^\\[\\/?caixa[:\\]]/m.test(body)){explainerStatus.textContent='Retire os marcadores de caixa do texto da explicação.';return}
+    if(/^\[\/?caixa[:\]]/m.test(body)){explainerStatus.textContent='Retire os marcadores de caixa do texto da explicação.';return}
     const layout=document.querySelector('#explainerLayout').value==='full'?'full':'right';
-    editor.setRangeText('\\n\\n[caixa: '+title+'|'+layout+']\\n'+body+'\\n[/caixa]\\n\\n',explainerStart,explainerEnd,'end');
+    const markup='\n\n[caixa: '+title+'|'+layout+']\n'+body+'\n[/caixa]\n\n';
+    if(editor.value.length-(explainerEnd-explainerStart)+markup.length>400000){explainerStatus.textContent='A caixa excede o limite de tamanho do artigo.';return}
+    editor.setRangeText(markup,explainerStart,explainerEnd,'end');
     explainerTitle.value='';explainerBody.value='';closeExplainer();editor.focus();
     editor.dispatchEvent(new Event('input',{bubbles:true}));
   });
@@ -401,4 +404,3 @@
   renderCoverPreview();
 
 })();
-

@@ -181,7 +181,7 @@ jobs:
           done
           cat /tmp/sussurros-server.log
           exit 1
-      - run: node --test tests/consent.test.cjs
+      - run: node --test tests/consent.test.cjs tests/js/*.test.cjs
       - name: Run browser regression suite
         timeout-minutes: 15
         run: npm run test:e2e
@@ -223,10 +223,3 @@ jobs:
             /tmp/footnote-previews/
           if-no-files-found: ignore
           retention-days: 7
-
-
-
-
-
-
-

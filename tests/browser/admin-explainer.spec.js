@@ -1,0 +1,32 @@
+const {test,expect}=require('@playwright/test');
+const {execFileSync}=require('node:child_process');
+
+test('explanatory box inserts, previews and survives a manual save',async({page})=>{
+  const cookie=execFileSync('python',['tests/browser/staff_fixture.py'],{encoding:'utf8'}).trim();
+  await page.context().addCookies([{name:'session',value:cookie,url:'http://127.0.0.1:5000',httpOnly:true,sameSite:'Lax'}]);
+  const records=JSON.parse(execFileSync('python',['tests/browser/editor_fixture.py'],{encoding:'utf8'}));
+  const url=`/admin/artigos/${records.article_id}/editar`;
+  await page.goto(url);
+  const editor=page.locator('#bodyEditor');
+  await editor.fill('Parágrafo anterior.\n\nTexto escolhido\n\nParágrafo seguinte.');
+  await editor.evaluate(el=>{const start=el.value.indexOf('Texto escolhido');el.setSelectionRange(start,start+'Texto escolhido'.length);});
+  await page.locator('#openExplainer').click();
+  await expect(page.locator('#explainerBody')).toHaveValue('Texto escolhido');
+  await page.locator('#explainerTitle').fill('RNA: estrutura e função');
+  await page.locator('#explainerBody').fill('Primeira explicação.\n\nSegunda explicação.');
+  await page.locator('#insertExplainer').click();
+  const box=page.locator('#markdownPreview .article-explainer');
+  await expect(box).toBeVisible();
+  await expect(box.locator('p')).toHaveCount(2);
+  await expect(box.locator('strong')).toHaveText('RNA: estrutura e função');
+  await expect(editor).toHaveValue(/\n\[caixa: RNA: estrutura e função\|right\]\n/);
+  if(!await page.locator('body').evaluate(el=>el.classList.contains('admin-dark')))await page.locator('[data-admin-theme-toggle]').click();
+  await expect(box).toHaveCSS('background-color','rgb(59, 45, 32)');
+  await page.setViewportSize({width:390,height:900});
+  await expect(box).toHaveCSS('float','none');
+  await page.getByRole('button',{name:'Guardar artigo',exact:true}).click();
+  await page.waitForURL('**/admin/artigos');
+  await page.goto(url);
+  await expect(page.locator('#markdownPreview .article-explainer p')).toHaveCount(2);
+  await expect(page.locator('#bodyEditor')).toHaveValue(/Parágrafo anterior\.[\s\S]*Segunda explicação\.[\s\S]*Parágrafo seguinte\./);
+});

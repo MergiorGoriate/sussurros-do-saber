@@ -1,6 +1,6 @@
 {% extends 'admin/base.html' %}
 {% block title %}{{ 'Editar artigo' if article.id else 'Novo artigo' }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/article-scheduling.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-headings.css', v='20261022-headings') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css', v='20261101-explainer') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css',v='20261019-autosave-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-backgrounds.css', v='20261021-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css', v='20261021-v1') }}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/article-scheduling.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-headings.css', v='20261022-headings') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css', v='20261101-admin-fixes') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-history.css',v='20261019-autosave-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-backgrounds.css', v='20261021-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css', v='20261021-v1') }}">{% endblock %}
 {% block content %}
 <header class="admin-header"><div><span>Conteúdo editorial</span><h1>{{ 'Editar artigo' if article.id else 'Novo artigo' }}</h1></div><a href="{{ url_for('admin.articles') }}">← Voltar</a></header>
 {% if article.id and translation_can('manage') %}<p><a href="{{ url_for('translation_admin.dashboard',q=article.title) }}">Preparar ou actualizar a tradução inglesa deste artigo</a></p>{% endif %}
@@ -116,17 +116,16 @@
       </div>
       <p id="articleBackgroundStatus" class="field-help" role="status" aria-live="polite"></p>
     </fieldset>
-    <label>Tempo de leitura<input name="read_minutes" type="number" min="1" value="{{ request.form.get('read_minutes', article.read_minutes or 5) }}"></label>
+    <label>Tempo de leitura<input name="read_minutes" type="number" min="1" max="120" value="{{ request.form.get('read_minutes', article.read_minutes or 5) }}"></label>
     <label>Endereço personalizado
       <div class="slug-field"><span>/artigo/</span><input id="slugField" name="slug" value="{{ request.form.get('slug', article.slug or '') }}" placeholder="gerado-a-partir-do-titulo" maxlength="260" autocapitalize="none" autocomplete="off" spellcheck="false"></div>
       <small id="slugPreview" class="url-preview">URL: {{ site_url }}/artigo/{{ article.slug or 'gerado-a-partir-do-titulo' }}</small>
     </label>
     <label class="check"><input name="featured" type="checkbox" {% if (request.method=='POST' and request.form.get('featured')=='on') or (request.method!='POST' and article.featured) %}checked{% endif %}> Artigo em destaque</label><button type="submit" class="admin-primary">Guardar artigo</button>{% if not article.id %}<button type="submit" name="save_mode" value="continue" class="editor-continue">Guardar e continuar</button>{% endif %}
   </aside>
-</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261101-explainer') }}"></script>
+</form><script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-editor.js', v='20261101-admin-fixes') }}"></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-footnotes.js', v='20261022-headings') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/article-scheduling.js') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/article-autosave.js', v='20261019-autosave-v1') }}" defer></script>
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/article-cover-player.js',v='20261021-v1') }}" defer></script>
 {% endblock %}
-

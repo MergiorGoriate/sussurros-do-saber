@@ -754,6 +754,11 @@ def upload_inline_image():
     return jsonify(ok=True, url=image_url)
 
 
+def article_form_authors(article):
+    # Retain the current attribution even when its profile is hidden publicly.
+    return Author.query.filter(db.or_(Author.active.is_(True), Author.id == article.author_id)).order_by(Author.name).all()
+
+
 @admin_bp.route("/artigos/novo", methods=["GET", "POST"])
 @admin_bp.route("/artigos/<int:article_id>/editar", methods=["GET", "POST"])
 @login_required
@@ -771,7 +776,7 @@ def article_form(article_id=None):
         validate_csrf()
         if article.id and request.form.get('version_token') and request.form['version_token'] != article.updated_at.isoformat():
             flash('O artigo foi alterado por outra pessoa. Guarde uma cópia do seu texto e consulte o histórico antes de voltar a guardar.', 'error')
-            return render_template('admin/article_form.html', article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all()), 409
+            return render_template('admin/article_form.html', article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all()), 409
         title = request.form.get("title", "").strip()
         if not 5 <= len(title) <= 240:
             flash("O título deve ter entre 5 e 240 caracteres.", "error")
@@ -787,23 +792,23 @@ def article_form(article_id=None):
                 scheduled_at = parse_schedule(request.form.get("scheduled_at"),request.form.get("schedule_timezone","UTC")) if status=="scheduled" else None
             except (TypeError, ValueError):
                 flash("Revise autor, categoria, tempo de leitura e data programada.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if not 10 <= len(summary) <= 2000 or status not in {"draft", "review", "approved", "published", "scheduled"}:
                 flash("O resumo deve ter entre 10 e 2000 caracteres e o estado deve ser válido.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if status in {"approved", "published", "scheduled"} and len(body.strip()) < 50:
                 flash("Artigos aprovados, publicados ou programados precisam de conteúdo completo.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             limits = {"body": 400000, "references": 100000, "keywords": 500, "doi": 180, "slug": 260, "image": 600}
             if any(len(request.form.get(name, "")) > maximum for name, maximum in limits.items()):
                 flash("Um dos campos excede o limite permitido. Reduza o conteúdo e tente novamente.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if status == "scheduled" and (not scheduled_at or scheduled_at <= utcnow()):
                 flash("Indique uma data e hora futuras no fuso horário seleccionado.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if not db.session.get(Author, author_id) or not db.session.get(Category, category_id):
                 flash("Selecione um autor e uma categoria existentes.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             article_save_guard(article,status,author_id)
             from app import article_cover_video
             cover_video = request.form.get("cover_video", "").strip()
@@ -811,7 +816,7 @@ def article_form(article_id=None):
             cover_mode = request.form.get("cover_mode", article.cover_mode or "auto")
             if "cover_mode" in request.form and cover_mode not in COVER_MODES:
                 flash("Seleccione um formato de capa válido.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if request.form.get("remove_cover_video") == "yes":
                 cover_video, cover_mode = "", "image"
             video_file = request.files.get("cover_video_file")
@@ -820,18 +825,18 @@ def article_form(article_id=None):
                     cover_video = upload_article_video(video_file, cover=True)
                 except VideoUploadError as error:
                     flash(str(error), "error")
-                    return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                    return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if cover_video and (len(cover_video) > 1000 or not article_cover_video(cover_video, title)) and not (cover_mode == "image" and cover_video == article.cover_video):
                 flash("Use uma URL válida do YouTube, Vimeo ou de um vídeo MP4, WebM ou OGG.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if native_video_url(cover_video) and cover_video != article.cover_video and not owned_cloudinary_video(cover_video):
                 flash("Use um vídeo carregado na sua conta Cloudinary. As ligações antigas já associadas são conservadas.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if cover_mode in {"video_animated", "video_controls"}:
                 native = native_video_url(cover_video)
                 if not cover_video or (cover_mode == "video_animated" and not owned_cloudinary_video(cover_video)) or (native and cover_video != article.cover_video and not owned_cloudinary_video(cover_video)):
                     flash("Para uma capa animada, carregue um vídeo ou use uma ligação de vídeo da sua conta Cloudinary. No modo com controlos, pode também manter vídeos anteriores ou usar YouTube/Vimeo.", "error")
-                    return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                    return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             article.cover_video = cover_video
             article.cover_mode = cover_mode
             article.title = title
@@ -852,7 +857,7 @@ def article_form(article_id=None):
                 article.image = upload_article_image(image_file) if image_file and image_file.filename else request.form.get("image", "").strip()
             except ImageUploadError as error:
                 flash(str(error), "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             article.read_minutes = read_minutes
             article.author_id = author_id
             article.category_id = category_id
@@ -863,7 +868,7 @@ def article_form(article_id=None):
                 article.published_at = utcnow()
             if article.status == "scheduled" and not article.scheduled_at:
                 flash("Informe a data e hora da publicação programada.", "error")
-                return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+                return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if not article.id:
                 db.session.add(article)
             db.session.flush()
@@ -877,7 +882,7 @@ def article_form(article_id=None):
             if request.form.get("save_mode") == "continue":
                 return redirect(url_for("admin.article_form", article_id=article.id))
             return redirect(url_for("admin.articles"))
-    return render_template("admin/article_form.html", article=article, authors=Author.query.filter_by(active=True).all(), categories=Category.query.order_by(Category.name).all())
+    return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
 
 
 @admin_bp.post("/artigos/<int:article_id>/eliminar")
@@ -975,7 +980,7 @@ def authors():
             author.researchgate = researchgate
             author.publications = request.form.get("publications", "").strip()
             author.editorial_experience = request.form.get("editorial_experience", "").strip()
-            author.display_order = min(MAX_DATABASE_ID, max(0, request.form.get("display_order", 100, type=int) or 100))
+            author.display_order = min(MAX_DATABASE_ID, max(0, request.form.get("display_order", 100, type=int)))
             if request.form.get("active_present") == "1":
                 author.active = request.form.get("active") == "on"
             elif not author.id:
@@ -1393,4 +1398,3 @@ def publish_scheduled_command():
     import click
     count=Article.publish_due_scheduled()
     click.echo(f'{count} artigo(s) publicado(s).')
-
