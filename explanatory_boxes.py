@@ -8,7 +8,20 @@ BOX = re.compile(
 )
 
 
+# The first editor version emitted literal newline delimiters around the box.
+# Repair that exact envelope only; backslashes inside the explanation stay intact.
+LEGACY_BOX = re.compile(
+    r"\\n\\n(\[caixa:[^\]\r\n]*\])\\n([\s\S]*?)\\n\[/caixa\]\\n\\n"
+)
+
+
 def prepare_explanatory_boxes(source, store_embed):
+    # Native form submissions can use CRLF even when textarea.value uses LF.
+    source = (source or "").replace("\r\n", "\n").replace("\r", "\n")
+    source = LEGACY_BOX.sub(
+        lambda match: "\n\n" + match.group(1) + "\n" + match.group(2) + "\n[/caixa]\n\n",
+        source,
+    )
     def replace(match):
         title, layout, body = match.groups()
         if not body.strip():
