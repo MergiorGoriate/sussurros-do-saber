@@ -1,2 +1,31 @@
-{% extends 'admin/base.html' %}{% block title %}Artigos{% endblock %}{% block content %}<header class="admin-header"><div><span>Conteúdo</span><h1>Artigos</h1></div>{% if staff_can('article.write') or staff_can('article.edit') %}<a class="admin-primary" href="{{ url_for('admin.article_form') }}">+ Novo artigo</a>{% endif %}</header><section class="admin-panel table-wrap"><table><thead><tr><th>Título</th><th>Autor</th><th>Estado</th><th>Atualizado</th><th>Ações</th></tr></thead><tbody>{% for article in articles %}<tr><td><strong>{{ article.title }}</strong><small>{{ article.category }}</small></td><td>{{ article.author }}</td><td><span class="status {{ article.status }}">{{ article.status }}</span></td><td>{{ article.updated_at.strftime('%d/%m/%Y %H:%M') }}</td><td class="actions"><a href="{{ url_for('staff.article_workflow',ident=article.id) }}">Fluxo editorial</a>{% if staff_article_editable(article) %}<a href="{{ url_for('admin.article_form',article_id=article.id) }}">Editar</a>{% endif %}{% if staff_can('article.delete') %}<form method="post" action="{{ url_for('admin.delete_article',article_id=article.id) }}" data-confirm="Eliminar definitivamente este artigo?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Eliminar</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="5">Nenhum artigo.</td></tr>{% endfor %}</tbody></table></section>{% endblock %}
-
+{% extends 'admin/base.html' %}
+{% block title %}Artigos{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static',filename='css/admin-articles-navigation.css',v='20261101') }}">{% endblock %}
+{% block content %}
+<div class="article-list-page">
+<header class="admin-header"><div><span>Conteúdo</span><h1>Artigos</h1></div>{% if staff_can('article.write') or staff_can('article.edit') %}<a class="admin-primary" href="{{ url_for('admin.article_form') }}">+ Novo artigo</a>{% endif %}</header>
+<section class="admin-panel article-navigation" aria-label="Navegação dos artigos">
+  <form method="get" action="{{ url_for('admin.articles') }}" class="article-filters" role="search">
+    <label class="article-search">Pesquisar artigos<input type="search" name="q" value="{{ filters.q }}" placeholder="Título ou autor" maxlength="240"></label>
+    <label>Estado<select name="status"><option value="">Todos os estados</option>{% for code,label in article_stages.items() %}<option value="{{ code }}" {% if filters.status==code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Categoria<select name="category_id"><option value="">Todas as categorias</option>{% for category in categories %}<option value="{{ category.id }}" {% if filters.category_id==category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+    <label>Por página<select name="per_page">{% for size in [10,25,50] %}<option value="{{ size }}" {% if filters.per_page==size %}selected{% endif %}>{{ size }}</option>{% endfor %}</select></label>
+    <button type="submit" class="admin-primary">Aplicar</button>
+    {% if filters.q or filters.status or filters.category_id %}<a class="article-clear" href="{{ url_for('admin.articles') }}">Limpar filtros</a>{% endif %}
+  </form>
+</section>
+{% macro pagination(position) %}
+<nav class="article-pagination" aria-label="Paginação dos artigos — {{ position }}">
+  <p role="status">{{ first }}–{{ last }} de {{ total }} artigos</p>
+  <div class="article-page-links">
+    {% if page>1 %}<a href="{{ page_url(1) }}" aria-label="Primeira página">«</a><a href="{{ page_url(page-1) }}">Anterior</a>{% else %}<span aria-disabled="true">Anterior</span>{% endif %}
+    {% for number in range([1,page-2]|max, [pages,page+2]|min + 1) %}{% if number==page %}<span aria-current="page" aria-label="Página {{ number }}">{{ number }}</span>{% else %}<a href="{{ page_url(number) }}" aria-label="Página {{ number }}">{{ number }}</a>{% endif %}{% endfor %}
+    {% if page<pages %}<a href="{{ page_url(page+1) }}">Seguinte</a><a href="{{ page_url(pages) }}" aria-label="Última página">»</a>{% else %}<span aria-disabled="true">Seguinte</span>{% endif %}
+  </div>
+</nav>
+{% endmacro %}
+{{ pagination('superior') }}
+<section class="admin-panel table-wrap"><table><thead><tr><th>Título</th><th>Autor</th><th>Estado</th><th>Actualizado</th><th>Acções</th></tr></thead><tbody>{% for article in articles %}<tr><td><strong>{{ article.title }}</strong><small>{{ article.category }}</small></td><td>{{ article.author }}</td><td><span class="status {{ article.status }}">{{ article_stages.get(article.status,article.status) }}</span></td><td>{{ article.updated_at.strftime('%d/%m/%Y %H:%M') }}</td><td class="actions"><a href="{{ url_for('staff.article_workflow',ident=article.id) }}">Fluxo editorial</a>{% if staff_article_editable(article) %}<a href="{{ url_for('admin.article_form',article_id=article.id) }}">Editar</a>{% endif %}{% if staff_can('article.delete') %}<form method="post" action="{{ url_for('admin.delete_article',article_id=article.id) }}" data-confirm="Eliminar definitivamente este artigo?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Eliminar</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="5" class="article-empty">Nenhum artigo encontrado.{% if filters.q or filters.status or filters.category_id %} Experimente alterar ou limpar os filtros.{% endif %}</td></tr>{% endfor %}</tbody></table></section>
+{{ pagination('inferior') }}
+</div>
+{% endblock %}

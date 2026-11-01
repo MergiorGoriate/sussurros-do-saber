@@ -716,8 +716,38 @@ def delete_administrator(administrator_id):
 @admin_bp.get("/artigos")
 @login_required
 def articles():
-    from governance import article_scope
-    return render_template('admin/articles.html',articles=article_scope(Article.query).order_by(Article.updated_at.desc()).all())
+    from governance import ARTICLE_STAGES, article_scope
+    search = request.args.get('q', '').strip()[:240]
+    status = request.args.get('status', '')
+    status = status if status in ARTICLE_STAGES else ''
+    try:
+        category_id = database_id(request.args.get('category_id'), optional=True)
+    except ValueError:
+        category_id = None
+    per_page = request.args.get('per_page', 25, type=int)
+    per_page = per_page if per_page in (10, 25, 50) else 25
+    page = max(1, request.args.get('page', 1, type=int) or 1)
+    query = article_scope(Article.query)
+    if search:
+        pattern = '%' + search.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = query.filter(or_(Article.title.ilike(pattern, escape='\\'),
+                                 Article.author_rel.has(Author.name.ilike(pattern, escape='\\'))))
+    if status:
+        query = query.filter(Article.status == status)
+    if category_id:
+        query = query.filter(Article.category_id == category_id)
+    total = query.count()
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, pages)
+    articles = query.order_by(Article.updated_at.desc(), Article.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    filters = dict(q=search, status=status, category_id=category_id or '', per_page=per_page)
+    def page_url(number):
+        return url_for('admin.articles', page=number, **filters)
+    return render_template('admin/articles.html', articles=articles,
+                           categories=Category.query.order_by(Category.name).all(),
+                           filters=filters, page=page, pages=pages, total=total,
+                           first=(page - 1) * per_page + 1 if total else 0,
+                           last=min(page * per_page, total), page_url=page_url)
 
 
 def parse_datetime(value):
