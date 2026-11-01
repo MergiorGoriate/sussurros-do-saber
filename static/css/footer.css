@@ -2,7 +2,8 @@
 .public-site .site-footer{background:#0e171e;color:#c6d0d8}
 .site-footer .footer-layout{display:grid;grid-template-columns:1.4fr repeat(4,minmax(0,1fr));gap:2rem;padding-top:3rem;padding-bottom:2.5rem}
 .site-footer .footer-layout>div,.site-footer .footer-column{min-width:0}
-.site-footer .footer-brand{flex-wrap:wrap;gap:.65rem;margin-bottom:1rem}
+.site-footer .footer-brand{display:block;width:100%;max-width:24rem;margin-bottom:1rem}
+.site-footer .footer-brand img{display:block;width:100%;max-width:100%;height:auto;object-fit:contain}
 .site-footer .footer-brand span{font-size:1.25rem;line-height:1.35}
 .site-footer .footer-layout>div>p{color:#bdc9d2;max-width:30ch}
 .site-footer .footer-social{margin-top:1.5rem}

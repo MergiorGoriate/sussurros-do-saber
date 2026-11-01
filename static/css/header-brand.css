@@ -1,0 +1,6 @@
+/* Keep the supplied blue and gold artwork legible in both themes. */
+.public-site .site-header .brand-link picture{display:block;max-width:100%;line-height:0}
+@media(min-width:768px){.public-site .site-header .brand-logo{width:288px;height:auto;max-width:100%;object-fit:contain}}
+.dark .public-site .site-header .brand-link picture{background:#fff;border-radius:6px}
+.dark .public-site .site-header .brand-logo{filter:none}
+@media(min-width:768px){.dark .public-site .site-header .brand-link picture{padding:4px}}

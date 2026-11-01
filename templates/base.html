@@ -96,7 +96,7 @@ window.dataLayer.push({event:'default_consent'});
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sussurros do Saber","url":"{{ site_url }}","inLanguage":"{{ 'en' if language == 'en' else 'pt-MZ' }}","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{ site_url }}{{ url_for('articles') }}?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 <link rel="stylesheet" href="{{ url_for('static',filename='css/reader-accounts.css',v='20261005-notification-cards-v9') }}">
 {% block head_extra %}{% endblock %}
-<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notice-layout') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footnotes.css', v='20261019-footnotes-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/public-typography.css', v='20261020-audit-v2') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css', v='20261020-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}"></head>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/notices.css',v='20261018-notice-layout') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footnotes.css', v='20261019-footnotes-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/public-typography.css', v='20261020-audit-v2') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css', v='20261101-white-logo') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/header-brand.css',v='20261101') }}"></head>
 <body class="public-site bg-paper text-ink antialiased dark:bg-[#081012] dark:text-slate-100 overflow-x-hidden">
 
 <div id="readingProgress">
@@ -112,7 +112,7 @@ window.dataLayer.push({event:'default_consent'});
 <div class="max-w-7xl mx-auto px-4">
 <div class="h-20 flex items-center justify-between">
 <a href="/" class="brand-link" aria-label="Sussurros do Saber — página inicial">
-<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-white.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-light.png') }}" alt="Sussurros do Saber" width="2047" height="346" decoding="async" fetchpriority="high"></picture>
+<picture><source media="(min-width: 640px)" srcset="{{ url_for('static',filename='img/logo-sussurros-azul-dourado.png') }}" data-light-srcset="{{ url_for('static',filename='img/logo-sussurros-azul-dourado.png') }}" data-dark-srcset="{{ url_for('static',filename='img/logo-sussurros-azul-dourado.png') }}"><img class="brand-logo" src="{{ url_for('static',filename='img/logo-sussurros-azul-dourado.png') }}" alt="Sussurros do Saber" width="2047" height="481" decoding="async" fetchpriority="high"></picture>
 </a>
 <div class="flex gap-2 reader-header-controls">
 
@@ -146,7 +146,7 @@ window.dataLayer.push({event:'default_consent'});
 <footer class="site-footer bg-ink text-white mt-20" aria-label="Rodapé">
 <div class="footer-layout max-w-7xl mx-auto px-4">
 <div>
-<a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-footer.png') }}" alt="Logotipo do Sussurros do Saber" loading="lazy" decoding="async" width="240" height="64"><span>Sussurros do Saber</span></a>
+<a href="/" class="footer-brand" aria-label="Sussurros do Saber — página inicial"><img src="{{ url_for('static',filename='img/logo-sussurros-rodape-branco.png') }}" alt="Sussurros do Saber" loading="lazy" decoding="async" width="2048" height="573"></a>
 <p class="text-white/65">Divulgação científica independente, com atenção à investigação em África.</p>
 <div class="footer-social">
 <p>Siga-nos</p>
