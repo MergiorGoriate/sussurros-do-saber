@@ -34,6 +34,8 @@ test('modern article editor preserves content across view modes and remains resp
   await page.goto(url);
   await expect(page.locator('#bodyEditor')).toHaveValue(value);
   await page.locator('[data-admin-theme-toggle]').click();
+  await page.getByRole('radio',{name:'Papel antigo',exact:true}).check();
+  await expect(page.locator('#articleSurfacePreview')).toHaveCSS('background-color','rgb(48, 43, 34)');
   await page.screenshot({path:path.join(screenshots,'article-editor-dark.png'),fullPage:true});
   for(const width of [320,390,768,1440]){
     await page.setViewportSize({width,height:900});

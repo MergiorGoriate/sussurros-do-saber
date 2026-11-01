@@ -67,7 +67,8 @@
 .article-edit-page .editor-write-pane[hidden],.article-edit-page .editor-preview-pane[hidden]{display:none}
 .article-edit-page .editor-pane-title{display:block;font-size:10px!important;font-weight:700!important;letter-spacing:.06em;text-transform:uppercase;color:var(--ae-muted)!important;margin-bottom:9px!important}
 .article-edit-page .editor-workspace #bodyEditor{display:block;min-height:640px;height:680px;width:100%;resize:vertical;font:13px/1.85 ui-monospace,SFMono-Regular,Consolas,monospace;padding:16px;background:var(--ae-soft);border-color:var(--ae-border);tab-size:2}
-.article-edit-page .editor-preview-pane .article-background-preview{height:680px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--ae-border);border-radius:9px;scrollbar-width:thin;background:var(--ae-surface)}
+.article-edit-page .editor-preview-pane .article-background-preview{height:680px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--ae-border);border-radius:9px;scrollbar-width:thin}
+.article-edit-page .editor-preview-pane .article-background-preview:not(.article-paper){background:var(--ae-surface)}
 .article-edit-page .editor-preview-pane .background-preview-heading{padding:18px 18px 0}
 .article-edit-page .editor-preview-pane .markdown-preview{min-height:0;margin:0;border:0;border-radius:0;padding:18px;font-size:14px}
 .article-edit-page .inline-image-panel{margin:10px 0;padding:17px;border:1px solid var(--ae-border);border-radius:10px;background:var(--ae-soft)}
