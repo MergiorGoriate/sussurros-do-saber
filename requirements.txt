@@ -16,7 +16,7 @@ reportlab==5.1.0
 beautifulsoup4==4.15.0
 svglib==2.3.1
 
-pypdf>=6.21.2,<7
+pypdf>=6.21.4,<7
 
 
 google-auth[cryptography]>=2.62.0,<3
