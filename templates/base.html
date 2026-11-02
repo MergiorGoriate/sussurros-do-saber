@@ -20,7 +20,7 @@ gtag('consent','default',{
 {% if google_cmp_enabled %}
 <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/google-cmp.js', v='20261018-cmp-v3') }}" defer></script>
 {% endif %}
-<meta name="description" content="{% block meta_description %}Sussurros do Saber — ciência, educação e investigação explicadas com clareza.{% endblock %}">
+<meta name="description" content="{% block meta_description %}{{ ui("Explore artigos de ciência, educação e investigação no Sussurros do Saber, com recursos de aprendizagem e atenção à produção científica em Moçambique e África.") }}{% endblock %}">
 <meta name="robots" content="{% block robots %}index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1{% endblock %}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% if gtm_container_id %}
@@ -59,7 +59,7 @@ window.dataLayer.push({event:'default_consent'});
 <meta property="og:site_name" content="Sussurros do Saber">
 <meta property="og:locale" content="{{ 'en_US' if language == 'en' else 'pt_MZ' }}">
 <meta property="og:title" content="{% block og_title %}Sussurros do Saber{% endblock %}">
-<meta property="og:description" content="{% block og_description %}Ciência, educação e investigação explicadas com clareza.{% endblock %}">
+<meta property="og:description" content="{% block og_description %}{{ self.meta_description() }}{% endblock %}">
 <meta property="og:url" content="{{ site_url }}{{ request.path }}">
 <meta property="og:image" content="{% block og_image %}{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}{% endblock %}">
 <meta property="og:image:url" content="{% block og_image_url %}{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}{% endblock %}">
@@ -69,7 +69,7 @@ window.dataLayer.push({event:'default_consent'});
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{% block twitter_title %}Sussurros do Saber{% endblock %}">
-<meta name="twitter:description" content="{% block twitter_description %}Ciência, educação e investigação explicadas com clareza.{% endblock %}">
+<meta name="twitter:description" content="{% block twitter_description %}{{ self.meta_description() }}{% endblock %}">
 <meta name="twitter:image" content="{% block twitter_image %}{{ site_url }}{{ url_for('static',filename='img/logo-sussurros-horizontal.png') }}{% endblock %}">
 <meta name="twitter:image:alt" content="{% block twitter_image_alt %}Logotipo do Sussurros do Saber{% endblock %}">
 <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
