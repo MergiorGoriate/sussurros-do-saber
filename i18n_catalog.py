@@ -99,3 +99,5 @@ EN.update({
 })
 
 EN.update({"Primeira edição está em preparação": "The first issue is in preparation"})
+
+EN.update({"Edições recentes": "Recent issues", "Ver arquivo": "View archive"})
