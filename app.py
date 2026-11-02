@@ -1678,8 +1678,12 @@ def seed_database():
 from internationalization import install as install_internationalization
 install_internationalization(app)
 
+from indexnow_service import install_indexnow
+
 with app.app_context():
     seed_database()
+
+install_indexnow(app, SITE_URL)
 
 if __name__ == "__main__":
     app.run(
