@@ -1,0 +1,16 @@
+.home-publications{max-width:1280px;margin:0 auto;padding:40px 16px 48px}
+.home-publications-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center;padding:40px;border:1px solid #dce4ed;border-radius:24px;background:#fff;box-shadow:0 8px 28px rgba(20,47,78,.04)}
+.home-publications-intro h2{margin:12px 0 16px;max-width:550px;font-size:clamp(26px,3vw,38px);line-height:1.15;letter-spacing:-.025em}
+.home-publications-intro p{margin:0 0 22px;max-width:520px;color:#53677b;line-height:1.7}
+.home-publications-intro .modern-link{display:inline-block;line-height:1.5}
+.home-publications-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px;min-width:0}
+.home-publications-grid .journal-card{min-width:0}
+.home-publications-preparing{padding:32px;background:#f0f5fc;border:1px solid #dbe6f5;border-radius:18px}
+.home-publications-symbol{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;background:#214f8c;color:#fff;font-size:18px;font-weight:700;margin-bottom:20px}
+.home-publications-preparing h3{margin:0;color:#183b65;font-size:clamp(21px,2vw,27px);line-height:1.35}
+.home-publications a:focus-visible{outline:3px solid #d9a91b;outline-offset:5px}
+.dark .home-publications-panel{background:#111f2b;border-color:#344757;box-shadow:none}
+.dark .home-publications-intro p{color:#becbd8}
+.dark .home-publications-preparing{background:#192e47;border-color:#355171}
+.dark .home-publications-preparing h3{color:#ecf3ff}
+@media(max-width:760px){.home-publications{padding:28px 16px 32px}.home-publications-panel{grid-template-columns:minmax(0,1fr);gap:24px;padding:24px;border-radius:18px}.home-publications-preparing{padding:24px}}
