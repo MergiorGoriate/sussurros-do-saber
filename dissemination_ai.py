@@ -70,7 +70,9 @@ def language_rules(source):
 
 
 def generate(source, network, kind, instruction=''):
-    return chat(language_rules(source) + '''
+    slide_rule = ('O formato carousel exige entre 3 e 5 slides.' if kind == 'carousel' else
+                  'Este formato exige exactamente 1 slide, mesmo quando é texto ou infográfico.')
+    system = language_rules(source) + '\n' + slide_rule + '''
 Produz este objecto: {"title":"título até 90 caracteres", "caption":"texto para a rede",
 "claims":[{"text":"afirmação curta", "evidence":"trecho literal do artigo"}],
 "slides":[{"heading":"até 70 caracteres", "body":"até 240 caracteres", "claim_ids":[0]}],
@@ -85,8 +87,16 @@ para acrescentar a ligação identificada. Não repitas o título na caption.
 No Reddit usa tom explicativo e dá contexto; no Instagram orienta para a ligação
 do perfil sem presumir que a ligação já foi configurada. visual_label deve ser
 "Reconstrução hipotética" quando se reconstruir um cenário incerto do passado;
-caso contrário "Ilustração conceptual". Não representar uma fotografia real.''',
-        {'source': source, 'network': network, 'kind': kind, 'correction': instruction})
+caso contrário "Ilustração conceptual". Não representar uma fotografia real.'''
+    data = {'source': source, 'network': network, 'kind': kind, 'correction': instruction}
+    payload = chat(system, data)
+    expected = range(3, 6) if kind == 'carousel' else (1,)
+    slides = payload.get('slides')
+    if not isinstance(slides, list) or len(slides) not in expected:
+        # One bounded text-only correction; never discard slides silently.
+        payload = chat(system + '\nCorrige o número de slides do resultado anterior. ' + slide_rule,
+                       {**data, 'previous_material': payload})
+    return payload
 
 
 def illustration(description):
