@@ -1,5 +1,6 @@
 """Transactional IndexNow outbox; HTTP delivery never runs in an editorial request."""
 import os
+import ipaddress
 import threading
 import time
 from datetime import timedelta
@@ -235,10 +236,19 @@ def install_indexnow(app, site_url):
         return
     origin = site_url.rstrip("/")
     parsed = urlsplit(origin)
-    if (parsed.scheme != "https" or not parsed.hostname or parsed.username or
+    host = (parsed.hostname or "").lower()
+    local = host == "localhost" or host.endswith((".localhost", ".test"))
+    try:
+        local = local or ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        pass
+    app.config.setdefault("INDEXNOW_ENABLED", os.getenv("INDEXNOW_ENABLED", "true").lower() == "true")
+    if local:
+        # Browser/CI servers use HTTP loopback. Never submit local fixtures.
+        app.config["INDEXNOW_ENABLED"] = False
+    if app.config["INDEXNOW_ENABLED"] and (parsed.scheme != "https" or not parsed.hostname or parsed.username or
             parsed.password or parsed.path or parsed.query or parsed.fragment):
         raise ValueError("IndexNow requires an HTTPS SITE_URL with no path or credentials")
-    app.config.setdefault("INDEXNOW_ENABLED", os.getenv("INDEXNOW_ENABLED", "true").lower() == "true")
     app.extensions["indexnow"] = {"origin": origin, "lock": threading.Lock(), "next_wake": 0.0}
 
     @app.after_request

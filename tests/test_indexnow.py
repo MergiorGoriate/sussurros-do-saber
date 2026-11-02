@@ -24,6 +24,29 @@ def urls():
 
 class IndexNowTests(unittest.TestCase):
 
+    def test_local_http_servers_start_without_indexnow_delivery(self):
+        for origin in ('http://127.0.0.1:5000', 'http://localhost:5000', 'http://[::1]:5000'):
+            with self.subTest(origin=origin):
+                local_app = Flask(__name__)
+                local_app.config['INDEXNOW_ENABLED'] = True
+                install_indexnow(local_app, origin)
+                self.assertFalse(local_app.config['INDEXNOW_ENABLED'])
+                with local_app.app_context(), patch('indexnow_service.requests.post') as post:
+                    self.assertEqual(process_pending(local_app), 0)
+                    post.assert_not_called()
+
+    def test_public_http_origin_still_rejected_when_enabled(self):
+        public_app = Flask(__name__)
+        public_app.config['INDEXNOW_ENABLED'] = True
+        with self.assertRaises(ValueError):
+            install_indexnow(public_app, 'http://www.sussurrosdosaber.com')
+
+    def test_explicit_disable_does_not_prevent_http_app_startup(self):
+        disabled_app = Flask(__name__)
+        disabled_app.config['INDEXNOW_ENABLED'] = False
+        install_indexnow(disabled_app, 'http://preview.example.org')
+        self.assertFalse(disabled_app.config['INDEXNOW_ENABLED'])
+
     def setUp(self):
         self.app = Flask(__name__)
         self.app.config.update(TESTING=True, SQLALCHEMY_DATABASE_URI='sqlite://', INDEXNOW_ENABLED=True)
