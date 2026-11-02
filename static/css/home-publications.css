@@ -14,3 +14,24 @@
 .dark .home-publications-preparing{background:#192e47;border-color:#355171}
 .dark .home-publications-preparing h3{color:#ecf3ff}
 @media(max-width:760px){.home-publications{padding:28px 16px 32px}.home-publications-panel{grid-template-columns:minmax(0,1fr);gap:24px;padding:24px;border-radius:18px}.home-publications-preparing{padding:24px}}
+
+.recent-publications{max-width:1280px;margin:0 auto;padding:40px 16px 48px}
+.recent-publications h2{margin:0 0 32px;border-top:4px solid currentColor;padding-top:12px;font:700 clamp(22px,2.5vw,30px)/1.2 Arial,sans-serif;text-transform:uppercase}
+.recent-publications-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px}
+.recent-publication{display:block;min-width:0;color:inherit;text-decoration:none}
+.recent-publication img{display:block;width:100%;height:auto;aspect-ratio:420/534;object-fit:contain;background:#edf0f4;transition:transform .2s}
+.recent-publication:hover img{transform:translateY(-4px)}
+.recent-publication:focus-visible{outline:3px solid #214f8c;outline-offset:6px}
+.recent-publication-caption{display:block;margin-top:12px;font-size:14px;line-height:1.5}
+.recent-publication-placeholder{aspect-ratio:420/534;display:flex;flex-direction:column;justify-content:space-between;padding:24px;background:#183b65;color:white;overflow-wrap:anywhere}
+.recent-publication-placeholder span{font-size:28px}
+.recent-publications-footer{display:flex;justify-content:flex-end;margin-top:28px}
+.recent-publications-footer a{display:inline-flex;gap:12px;align-items:center;color:#a72b22;text-transform:uppercase;font-weight:700;text-decoration:none}
+.recent-publications-footer a:hover{text-decoration:underline}
+.dark .recent-publications-footer a{color:#ffaaa3}
+.dark .recent-publication img{background:#192e47}
+@media(max-width:760px){.recent-publications{padding:28px 16px 32px}.recent-publications-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 16px}}
+@media(prefers-reduced-motion:reduce){.recent-publication img{transition:none}.recent-publication:hover img{transform:none}}
+
+.recent-publication-caption{color:#334155;overflow-wrap:anywhere}
+.dark .recent-publication-caption{color:#dce6f2}

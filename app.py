@@ -736,7 +736,7 @@ def home():
     hero = Article.public_card_query().options(db.undefer(Article.cover_mode), db.undefer(Article.cover_video)).order_by(Article.featured.desc(), Article.published_at.desc(), Article.id.desc()).first()
     items = ([hero] + Article.public_card_query().filter(Article.id != hero.id)
              .order_by(Article.published_at.desc(), Article.id.desc()).limit(9).all()) if hero else []
-    return render_template("index.html", articles=items, journals=Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).limit(3).all())
+    return render_template("index.html", articles=items, journals=Journal.query.filter_by(published=True).order_by(Journal.publication_date.desc().nullslast(), Journal.updated_at.desc(), Journal.id.desc()).limit(4).all())
 
 @app.get("/artigos")
 def articles():
