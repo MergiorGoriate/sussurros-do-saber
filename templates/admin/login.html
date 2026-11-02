@@ -9,12 +9,12 @@
   <link rel="stylesheet" href="{{ url_for('static',filename='css/admin.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/login-brand.css',v='20261101') }}">
   {% if turnstile_site_key %}<script nonce="{{ csp_nonce }}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin-login-layout.css',v='20261102') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/admin-login-layout.css',v='20261102-logo-completo') }}">
 </head>
 <body class="login-page login-modern">
   <main class="login-shell">
   <aside class="login-introduction" aria-label="Sussurros do Saber">
-    <div class="login-identity"><img src="{{ url_for('static',filename='img/logo-sussurros-admin-simbolo-v2.png') }}" alt="" width="2048" height="2013"><span>Sussurros<br>do Saber</span></div>
+    <div class="login-identity"><img src="{{ url_for('static',filename='img/logo-sussurros-login-completo.png') }}" alt="Sussurros do Saber" width="2048" height="916"></div>
     <div class="login-editorial"><span class="login-eyebrow">PAINEL EDITORIAL</span><h2>O conhecimento começa com uma boa publicação.</h2><p>Um espaço para preparar artigos e acompanhar o trabalho editorial.</p></div>
     <p class="login-motto">Conhecimento aberto · Ciência para todos</p>
   </aside>
