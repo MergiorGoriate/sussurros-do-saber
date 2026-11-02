@@ -32,3 +32,6 @@
 .dark .recent-publication img{background:#192e47}
 @media(max-width:760px){.recent-publications{padding:28px 16px 32px}.recent-publications-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 16px}}
 @media(prefers-reduced-motion:reduce){.recent-publication img{transition:none}.recent-publication:hover img{transform:none}}
+
+.recent-publication-caption{color:#334155;overflow-wrap:anywhere}
+.dark .recent-publication-caption{color:#dce6f2}
