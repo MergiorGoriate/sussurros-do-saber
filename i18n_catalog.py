@@ -97,3 +97,5 @@ EN.update({
     "Um espaço para a sua investigação.": "A space for your research.",
     "Conteúdos e conhecimento ao seu alcance.": "Content and knowledge within reach."
 })
+
+EN.update({"Primeira edição está em preparação": "The first issue is in preparation"})
