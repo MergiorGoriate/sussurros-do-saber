@@ -1,8 +1,8 @@
 {% extends 'submissions/base.html' %}
 {% block title %}Minhas Submissões{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/author-workspace.css', v='20261020-v1') }}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/author-workspace.css', v='20261020-v1') }}"><link rel="stylesheet" href="{{ url_for('static',filename='css/author-submissions-list.css',v='20261102') }}">{% endblock %}
 {% block content %}
-<div class="author-workspace">
+<div class="author-workspace author-list-modern">
   <header class="author-page-heading"><div><span class="submission-eyebrow">Área privada do autor</span><h1>Minhas Submissões</h1><p>Continue os seus rascunhos e acompanhe a avaliação dos manuscritos.</p></div><a class="submission-button" href="{{ url_for('submissions.new') }}"><span aria-hidden="true">+</span> Submeter manuscrito</a></header>
   <section class="author-manuscripts" aria-labelledby="manuscripts-title">
     <div class="author-list-toolbar"><div><h2 id="manuscripts-title">Os seus manuscritos <span class="author-count">{{ manuscripts.total }}</span></h2><p>{% if manuscripts.total %}Da actualização mais recente para a mais antiga.{% else %}Os rascunhos e envios aparecerão nesta área.{% endif %}</p></div>{% if manuscripts.items %}<span class="author-page-range">{{ manuscripts.first }}–{{ manuscripts.last }} de {{ manuscripts.total }}</span>{% endif %}</div>
