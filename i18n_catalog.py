@@ -87,3 +87,13 @@ EN = {
 # Complete public interface, with published editorial overrides retaining priority.
 from i18n_public_en import EN_PUBLIC
 EN.update(EN_PUBLIC)
+
+# Author sign-in page.
+EN.update({
+    "Introduza o e-mail e a palavra-passe da sua conta.": "Enter your account email address and password.",
+    "Submeta o seu manuscrito e acompanhe cada etapa do processo editorial.": "Submit your manuscript and follow each stage of the editorial process.",
+    "Entre para continuar a sua subscrição.": "Sign in to continue your subscription.",
+    "SUSSURROS DO SABER": "SUSSURROS DO SABER",
+    "Um espaço para a sua investigação.": "A space for your research.",
+    "Conteúdos e conhecimento ao seu alcance.": "Content and knowledge within reach."
+})
