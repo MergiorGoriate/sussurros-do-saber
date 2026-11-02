@@ -165,6 +165,18 @@ def author_guidelines():
                            manuscript_types_id=manuscript_types_id)
 
 
+@app.get("/790c8a9d2960414f923b2ccf49e86d72.txt")
+@limiter.exempt
+def indexnow_key():
+    """Disponibiliza a chave de verificação IndexNow na raiz pública."""
+    with open(os.path.join(app.root_path, "790c8a9d2960414f923b2ccf49e86d72.txt"), encoding="utf-8") as key_file:
+        return Response(
+            key_file.read(),
+            mimetype="text/plain",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+
 @app.get("/ads.txt")
 def ads_txt():
     """Publica a declaração Authorized Digital Sellers do Google AdSense."""
@@ -178,7 +190,7 @@ def ads_txt():
 @app.before_request
 def publish_due_scheduled_articles():
     """Publica aprovações pendentes e agendamentos cujo horário já chegou."""
-    if request.endpoint != "static" and request.path not in {"/healthz", "/ads.txt", "/robots.txt"}:
+    if request.endpoint != "static" and request.path not in {"/healthz", "/ads.txt", "/robots.txt", "/790c8a9d2960414f923b2ccf49e86d72.txt"}:
         Article.publish_due_scheduled()
 
 
