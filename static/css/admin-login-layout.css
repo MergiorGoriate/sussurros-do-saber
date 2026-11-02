@@ -27,3 +27,8 @@ body.login-modern{margin:0;min-height:100vh;min-height:100svh;display:grid;place
 .login-modern .alert{font-size:13px;line-height:1.6;margin:0 0 18px}
 @media(max-width:760px){body.login-modern{padding:20px 14px}.login-modern .login-shell{grid-template-columns:1fr;max-width:460px;min-height:0;border-radius:18px}.login-modern .login-introduction{padding:24px 28px}.login-identity{font-size:17px}.login-identity img{width:52px;border-radius:12px}.login-editorial{display:none}.login-motto{margin-top:16px}.login-form-area{padding:30px 28px}.login-modern .login-card h1{font-size:27px}}
 @media(max-width:360px){body.login-modern{padding:12px 8px}.login-modern .login-introduction,.login-form-area{padding:24px 20px}}
+
+/* Display the supplied complete artwork once, on a legible light surface. */
+.login-modern .login-identity{display:block;width:276px;max-width:100%;padding:12px;background:#fff;border-radius:12px}
+.login-modern .login-identity img{display:block;width:100%;max-width:100%;height:auto;background:transparent;border-radius:0;padding:0}
+@media(max-width:760px){.login-modern .login-identity{width:220px;padding:10px}}
