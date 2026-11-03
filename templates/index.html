@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% block meta_description %}{{ ui("Explore artigos de ciência, educação e investigação no Sussurros do Saber, com recursos de aprendizagem e atenção à produção científica em Moçambique e África.") }}{% endblock %}
+
 {% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home-publications.css', v='20261102-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/newsletter-signup.css', v='20261020-v1') }}">{% if articles and articles[0].cover_format == 'video_animated' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css') }}"><script defer src="{{ url_for('static', filename='js/article-cover-player.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}{% endblock %}
 {% block resource_hints %}{% if articles %}{% set preload_article = articles[0] %}<link rel="preload" as="image" href="{{ preload_article.cover_poster|image_variant(768) }}" imagesrcset="{{ preload_article.cover_poster|image_srcset([480, 768, 1200]) }}" imagesizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1279px) 64vw, 800px" fetchpriority="high">{% endif %}{% endblock %}{% block content %}
 <section class="max-w-7xl mx-auto px-4 py-10 lg:py-14">
