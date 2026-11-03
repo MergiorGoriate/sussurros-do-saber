@@ -54,7 +54,16 @@ class ArticleCoverTests(unittest.TestCase):
         self.assertEqual(article.cover_format,'video_controls')
         soup=BeautifulSoup(self.public(article).data,'html.parser');self.assertIsNotNone(soup.select_one('video[controls]'));self.assertIsNone(soup.select_one('video[autoplay]'))
         article.cover_video='https://youtu.be/dQw4w9WgXcQ';db.session.commit()
-        self.assertIsNotNone(BeautifulSoup(self.public(article).data,'html.parser').select_one('.article-main-video iframe'))
+        soup=BeautifulSoup(self.public(article).data,'html.parser')
+        cover=soup.select_one('.article-main-video')
+        self.assertIsNotNone(cover)
+        template=cover.select_one('template.cover-external-template')
+        self.assertIsNotNone(template)
+        # Template contents are inert; parse them separately from the live DOM.
+        iframe=BeautifulSoup(template.decode_contents(),'html.parser').find('iframe')
+        self.assertIsNotNone(iframe)
+        self.assertEqual(iframe['src'],'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ')
+        self.assertIsNone(cover.select_one('.cover-external-player iframe'))
 
     def test_modes_save_reopen_without_losing_other_assets_and_explicit_removal(self):
         owner=self.member();article=self.article(owner);article.image='https://example.org/poster.jpg';db.session.commit();self.signin(owner.admin)
@@ -194,4 +203,5 @@ class ArticleCoverTests(unittest.TestCase):
             self.assertEqual(self.edit(article,cover_mode='video_animated',cover_video_file=(io.BytesIO(payload),'cover.mp4')).status_code,302)
             self.assertEqual(upload.call_args.kwargs['resource_type'],'video')
         self.assertEqual((article.cover_mode,article.cover_video),('video_animated',OTHER))
+
 

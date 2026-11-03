@@ -23,3 +23,11 @@ Não foi executada a totalidade da suite, nem uma medição Lighthouse, PageSpee
 ## Publicação e conferência
 
 Não há migração de base de dados nem novas variáveis de ambiente. Após integrar a proposta e publicar a imagem no Coolify, conferir `/healthz`, `/artigos?page=2`, `/en/artigos?page=2`, uma pesquisa em cada idioma, um artigo inglês publicado e `/sitemap.xml`. Confirmar canonical e hreflang com a página correcta, ausência de `noindex` nas páginas inglesas completas e manutenção de `noindex` nas pesquisas. Confirmar também que um artigo sem tradução aprovada continua sem versão inglesa pública.
+
+## Correcção das falhas de CI
+
+A execução inicial da suite completa no GitHub correu 778 testes e terminou com duas falhas e dois testes ignorados. O novo teste de paginação partilhava a listagem com publicações de outras suites; categorias sem tradução activavam correctamente `noindex`, invalidando a premissa de uma página totalmente traduzida. A fixture usa agora uma categoria conhecida e restringe as consultas de cartões às suas próprias publicações, sem apagar registos de outras suites. A falha foi reproduzida com 26 publicações externas e deixou de ocorrer com o isolamento.
+
+O teste antigo de capas procurava o iframe externo através de um selector que atravessava o limite de um elemento HTML `template`. O iframe existia no conteúdo inerte destinado ao carregamento diferido. A verificação passa a analisar esse conteúdo separadamente, exige o endereço exacto do YouTube sem cookies e confirma que o contentor activo ainda não tem iframe. A implementação do leitor não foi alterada.
+
+Após estas correcções passaram 57 testes locais em conjunto: 11 de capas, nove de SEO bilingue e 37 de internacionalização, com as publicações externas de reprodução presentes. A suite completa do GitHub tem de voltar a passar antes do merge; esta validação local não substitui esse resultado.

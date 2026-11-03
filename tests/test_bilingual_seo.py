@@ -15,12 +15,23 @@ class BilingualSEOTests(unittest.TestCase):
         limiter.enabled = False
         self.client = app.test_client()
         with app.app_context():
-            author, category = Author.query.first(), Category.query.first()
+            author = Author.query.first()
+            category = Category.query.filter_by(name='Biologia').first()
+            if category is None:
+                category = Category(name='Biologia', slug='biologia')
+                db.session.add(category)
             for number in range(26):
                 db.session.add(Article(title=f'SEO fixture {number}', slug=f'seo-fixture-{number}',
                     summary='Resumo de ensaio.', body='Texto de ensaio.', status='published',
                     author_rel=author, category_rel=category))
             db.session.commit()
+        # Other suites retain public articles and untranslated categories. Keep
+        # this listing fixture independent without deleting their records.
+        public_cards = Article.public_card_query
+        cards = patch.object(Article, 'public_card_query', side_effect=lambda:
+            public_cards().filter(Article.slug.like('seo-fixture-%')))
+        cards.start()
+        self.addCleanup(cards.stop)
 
     def tearDown(self):
         limiter.enabled = self.previous
