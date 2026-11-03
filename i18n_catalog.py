@@ -123,3 +123,16 @@ EN.update({
     "Explore as publicações científicas do Sussurros do Saber, consulte áreas de investigação e orientações para autores e acompanhe as edições em preparação.": "Explore Sussurros do Saber scientific publications, browse research areas and author guidance, and follow updates about issues currently in preparation.",
     "Leia artigos do Sussurros do Saber sobre Biologia, saúde, ambiente, educação e tecnologia, com explicações acessíveis e fontes para aprofundar a leitura.": "Read Sussurros do Saber articles on biology, health, the environment, education and technology, with accessible explanations and sources for further reading."
 })
+
+
+# Labels shipped to every public English page by the client-side catalogue.
+EN.update({
+    'Manuscrito principal': 'Main manuscript',
+    'Figura': 'Figure',
+    'Tabela': 'Table',
+    'Material suplementar': 'Supplementary material',
+    'Dados suplementares': 'Supplementary data',
+    'Outro documento': 'Other document',
+    'Palavras-chave': 'Keywords',
+    'Agradecimentos': 'Acknowledgements',
+})

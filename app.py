@@ -473,6 +473,7 @@ def render_article_markdown(value, prefix="sec"):
 
 @app.after_request
 def security_headers(response):
+    from internationalization import listing_noindex
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
@@ -517,7 +518,7 @@ def security_headers(response):
             response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
     if request.path.startswith("/admin") or response.status_code >= 400:
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
-    elif request.path == "/favoritos" or (request.path == "/artigos" and request.args):
+    elif request.path == "/favoritos" or (request.endpoint == "articles" and listing_noindex()):
         response.headers.setdefault("X-Robots-Tag", "noindex, follow")
 
     compressible = {
@@ -1691,6 +1692,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
