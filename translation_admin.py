@@ -229,7 +229,7 @@ def collect_interface():
                         SOURCES.add(value.value)
     # Public product descriptions are presentation text, never prices, plan IDs or entitlements.
     from premium_models import PremiumPlan, PremiumContent, PremiumPlanTerms
-    from models import Author, EditorialPolicy
+    from models import Author, Category, EditorialPolicy
     for plan in PremiumPlan.query.filter_by(active=True):
         SOURCES.update(value for value in (plan.name,plan.description) if value.strip())
         SOURCES.update(value for value in (plan.benefits or []) if isinstance(value,str) and value.strip())
@@ -243,6 +243,7 @@ def collect_interface():
             (PremiumPlanTerms,('renewal','cancellation','refund','limitations'))):
         for row in model.query:
             SOURCES.update(value for field in fields if (value:=getattr(row,field,'')) and value.strip())
+    SOURCES.update(row.name for row in Category.query if row.name and row.name.strip())
     for author in Author.query.filter_by(active=True):
         SOURCES.update(value for field in ('role','headline','academic_background','bio','interests',
             'projects','editorial_experience') if (value:=getattr(author,field,'')) and value.strip())
@@ -308,3 +309,4 @@ def register_cli(app):
                 break
             count+=1
         click.echo(f'{count} tarefa(s) de tradução processada(s).')
+

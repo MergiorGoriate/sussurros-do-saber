@@ -426,12 +426,12 @@ class InternationalizationTests(unittest.TestCase):
 
     def test_bootstrap_catalogue_covers_public_templates_without_database_generation(self):
         from pathlib import Path
-        from i18n_templates import PublicTranslationExtension, SOURCES
+        from i18n_templates import PublicTranslationExtension, TEMPLATE_SOURCES
         from i18n_catalog import EN
         extension=PublicTranslationExtension(app.jinja_env)
         for path in Path(app.template_folder).rglob('*.html'):
             extension.preprocess(path.read_text(),str(path.relative_to(app.template_folder)))
-        self.assertEqual({text for text in SOURCES if text not in EN and ' '.join(text.split()) not in EN},set())
+        self.assertEqual({text for text in TEMPLATE_SOURCES if text not in EN and ' '.join(text.split()) not in EN},set())
 
 
     def test_published_custom_institutional_copy_uses_english_without_mutating_source(self):
@@ -459,3 +459,4 @@ class InternationalizationTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+

@@ -8,6 +8,14 @@ from i18n_catalog import EN
 
 PARTS = re.compile(r'(<!--[\s\S]*?-->|<script\b[\s\S]*?</script\s*>|<style\b[\s\S]*?</style\s*>|{%[\s\S]*?%}|{{[\s\S]*?}}|<[^>]+>)',re.I)
 SOURCES = set(KEYS)
+# Only template/client labels gate shared public discovery. The admin collector
+# also adds dynamic profiles, courses and editorial text to SOURCES.
+TEMPLATE_SOURCES = set(KEYS)
+
+
+def record_source(value):
+    SOURCES.add(value)
+    TEMPLATE_SOURCES.add(value)
 
 
 def ui_literal(value):
@@ -24,7 +32,7 @@ def translated_expression(chunk):
         prefix,quote,value=match.groups()
         if not ui_literal(value):
             return match.group()
-        clean=value.strip();SOURCES.add(clean)
+        clean=value.strip();record_source(clean)
         leading=value[:len(value)-len(value.lstrip())];trailing=value[len(value.rstrip()):]
         translated='ui('+json.dumps(clean,ensure_ascii=False)+')'
         if leading or trailing:
@@ -38,7 +46,7 @@ def expression(text):
     clean=html.unescape(text.strip())
     if not clean or not re.search(r'[A-Za-zÀ-ÿ]',clean):
         return text
-    SOURCES.add(clean)
+    record_source(clean)
     lead=text[:len(text)-len(text.lstrip())];tail=text[len(text.rstrip()):]
     return lead+'{{ ui('+json.dumps(clean,ensure_ascii=False)+') }}'+tail
 
@@ -54,7 +62,7 @@ class PublicTranslationExtension(Extension):
             if chunk.startswith('{%'):
                 for _,value in re.findall(r'([\'\"])([^\'\"]+)\1',chunk):
                     if ui_literal(value):
-                        SOURCES.add(value)
+                        record_source(value)
                 output.append(chunk);continue
             if chunk.startswith('{{'):
                 output.append(translated_expression(chunk));continue
@@ -79,4 +87,5 @@ class PublicTranslationExtension(Extension):
             else:
                 output.append(expression(chunk))
         return ''.join(output)
+
 
