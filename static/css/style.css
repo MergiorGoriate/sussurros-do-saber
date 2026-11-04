@@ -260,7 +260,7 @@ main>section:nth-of-type(n+2),footer{content-visibility:auto;contain-intrinsic-s
 
 
 /* O ícone móvel fica branco no modo escuro; o logotipo horizontal usa o ficheiro branco. */
-@media(max-width:639px){.dark .brand-logo{filter:brightness(0) invert(1)}}
+
 
 /* Azul da marca em ligações sobre fundos escuros. */
 .dark .nav-feature,.dark .section-rule a,.dark .modern-link,.dark .journal-card a,.dark .number-story>span,.dark .author-pagination a,.dark .editorial-institution,.dark .author-institution,.dark .text-science,.dark .author-monogram,.dark .article-author-fallback{color:#a8ccf7}
