@@ -136,3 +136,12 @@ EN.update({
     'Palavras-chave': 'Keywords',
     'Agradecimentos': 'Acknowledgements',
 })
+
+# Public categories verified on the portal; future custom labels remain reviewable.
+EN.update({
+    'Ciência e Universo': 'Science and the Universe',
+    'Evolução': 'Evolution',
+    'Ciência em África': 'Science in Africa',
+    'Ambiente e Biodiversidade': 'Environment and Biodiversity',
+    'Evolução e Origens': 'Evolution and Origins',
+})

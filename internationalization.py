@@ -9,7 +9,7 @@ from models import db, Article, utcnow
 from translation_models import InterfaceTranslation, ContentTranslation, TranslationVersion
 from translation_service import published as load_published, stale
 from i18n_catalog import EN
-from i18n_templates import PublicTranslationExtension, SOURCES as INTERFACE_SOURCES
+from i18n_templates import PublicTranslationExtension, TEMPLATE_SOURCES as INTERFACE_SOURCES
 from i18n_client import KEYS as CLIENT_KEYS
 
 ENGLISH_TEXT = frozenset(' '.join(value.split()) for value in EN.values() if isinstance(value, str))
@@ -53,12 +53,12 @@ def interface_ready():
     if os.getenv('I18N_ENABLED', 'true') != 'true':
         return False
     if not hasattr(g,'interface_complete'):
-        if InterfaceTranslation.query.filter_by(published=False).first():
-            g.interface_complete=False
-        else:
-            rows=db.session.query(InterfaceTranslation.source).filter(InterfaceTranslation.published.is_(True),InterfaceTranslation.english!='').all()
-            available={key for key,value in EN.items() if value}|{row[0] for row in rows}
-            g.interface_complete=all(text in available or ' '.join(text.split()) in available for text in INTERFACE_SOURCES)
+        catalogue = interface_catalogue()
+        available = {key for key, value in EN.items() if value}
+        available.update(key for key, value in catalogue.items() if value)
+        g.interface_complete = all(
+            text in available or ' '.join(text.split()) in available
+            for text in INTERFACE_SOURCES)
     return g.interface_complete
 
 
@@ -84,7 +84,7 @@ def alternate_links(endpoint, **values):
         kind='article' if endpoint=='article' else 'journal'
         model=Article if kind=='article' else Journal
         obj=model.query.filter_by(slug=values.get('slug')).first()
-        if not obj or not published(kind,obj.id)[1]:
+        if not content_page_ready(kind, obj):
             return ''
     from app import SITE_URL
     return ''.join('<xhtml:link rel="alternate" hreflang="'+code+'" href="'+escape(SITE_URL+url_for(endpoint,_language=locale,**values),quote=True)+'"/>'
@@ -104,9 +104,9 @@ def sitemap_extras(static_paths):
         if endpoint in current_app.extensions['localized_endpoints']:
             en=url_for(endpoint,_language='en',**args)
             entries.append('<url><loc>'+escape(SITE_URL+en)+'</loc>'+alternate_links(endpoint,**args)+'</url>')
-    for item in ContentTranslation.query.filter(ContentTranslation.published_version.isnot(None),ContentTranslation.kind.in_(['article','journal'])):
+    for item in ContentTranslation.query.filter(ContentTranslation.published_version.isnot(None),ContentTranslation.language=='en',ContentTranslation.kind.in_(['article','journal'])):
         obj=db.session.get(Article if item.kind=='article' else Journal,item.source_id)
-        if not obj or (obj.status!='published' if item.kind=='article' else not obj.published):
+        if not content_page_ready(item.kind, obj):
             continue
         endpoint='article' if item.kind=='article' else 'journal_detail'
         entries.append('<url><loc>'+escape(SITE_URL+url_for(endpoint,slug=obj.slug,_language='en'))+'</loc>'+alternate_links(endpoint,slug=obj.slug)+'</url>')
@@ -133,20 +133,46 @@ def preferred(headers,cookies):
     return parse_accept_header(headers.get('Accept-Language',''),LanguageAccept).best_match(['pt','en'],default='pt')
 
 
+def interface_catalogue():
+    if not hasattr(g, 'interface_catalogue'):
+        g.interface_catalogue = {row.source: row.english for row in
+            InterfaceTranslation.query.filter_by(published=True)}
+        g.interface_english = frozenset(' '.join(value.split())
+            for value in g.interface_catalogue.values() if value)
+    return g.interface_catalogue
+
+
+def interface_translation(text):
+    """Look up approved interface copy without marking the current page."""
+    if not text or not text.strip():
+        return text
+    catalogue = interface_catalogue()
+    normalized = ' '.join(text.split())
+    result = catalogue.get(text) or catalogue.get(normalized) or EN.get(text) or EN.get(normalized)
+    if result:
+        return result
+    if normalized in ENGLISH_TEXT or normalized in g.interface_english:
+        return text
+    return None
+
+
+def content_page_ready(kind, obj):
+    """Advertise only public content with a published English version and labels."""
+    if obj is None or (obj.status != 'published' if kind == 'article' else not obj.published):
+        return False
+    if not published(kind, obj.id)[1]:
+        return False
+    labels = (obj.category,) if kind == 'article' else (obj.field, obj.frequency)
+    return all(interface_translation(value) is not None for value in labels if value)
+
+
 def ui(text):
     if language()!='en' or not text or not text.strip():
         return text
-    if not hasattr(g,'interface_catalogue'):
-        g.interface_catalogue={row.source:row.english for row in InterfaceTranslation.query.filter_by(published=True)}
-        g.interface_english=frozenset(' '.join(value.split()) for value in g.interface_catalogue.values() if value)
-    normalized=' '.join(text.split())
-    result=g.interface_catalogue.get(text) or g.interface_catalogue.get(normalized) or EN.get(text) or EN.get(normalized)
-    if result:
-        return result
-    # Templates may apply ui() to an already translated presentation label.
-    if normalized in ENGLISH_TEXT or normalized in g.interface_english:
-        return text
-    g.i18n_missing=True
+    translated = interface_translation(text)
+    if translated is not None:
+        return translated
+    g.i18n_missing = True
     return text
 
 
@@ -243,6 +269,8 @@ def install(app):
         selected=values.pop('_language',None) if values else None
         g.language=selected or ('en' if request.path.startswith('/en/') else 'pt')
         g.localized_publications = {}
+        for key in ('interface_complete', 'interface_catalogue', 'interface_english', 'i18n_missing'):
+            g.pop(key, None)
         if selected is None and not request.path.startswith('/admin') and (request.path.startswith('/api/') or request.method!='GET') and request.cookies.get('sds_language')=='en':
             g.language='en'
 
@@ -349,8 +377,13 @@ def install(app):
             equivalents={locale:equivalent(endpoint,args,locale) for locale in ('pt','en')}
             if parameters:
                 equivalents={locale:path+'?'+urlencode(parameters) for locale,path in equivalents.items()}
-            if endpoint=='article' and equivalents['en'].startswith('/en/artigos'):
-                equivalents.pop('en')
+            if endpoint in {'article', 'journal_detail'}:
+                from models import Journal
+                kind = 'article' if endpoint == 'article' else 'journal'
+                model = Article if kind == 'article' else Journal
+                obj = model.query.filter_by(slug=args.get('slug')).first()
+                if not content_page_ready(kind, obj):
+                    equivalents.pop('en', None)
         original=None
         if request.endpoint=='articles' and language()=='en' and request.args.get('original'):
             original=Article.public_query().filter_by(slug=request.args['original'][:260]).first()
