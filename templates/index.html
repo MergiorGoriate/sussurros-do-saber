@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block meta_description %}{{ ui("Explore artigos de ciência, educação e investigação no Sussurros do Saber, com recursos de aprendizagem e atenção à produção científica em Moçambique e África.") }}{% endblock %}
 
-{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home-publications.css', v='20261102-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/newsletter-signup.css', v='20261020-v1') }}">{% if articles and articles[0].cover_format == 'video_animated' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css') }}"><script defer src="{{ url_for('static', filename='js/article-cover-player.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home-publications.css', v='20261104-featured-cover-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/newsletter-signup.css', v='20261020-v1') }}">{% if articles and articles[0].cover_format == 'video_animated' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css') }}"><script defer src="{{ url_for('static', filename='js/article-cover-player.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}{% endblock %}
 {% block resource_hints %}{% if articles %}{% set preload_article = articles[0] %}<link rel="preload" as="image" href="{{ preload_article.cover_poster|image_variant(768) }}" imagesrcset="{{ preload_article.cover_poster|image_srcset([480, 768, 1200]) }}" imagesizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1279px) 64vw, 800px" fetchpriority="high">{% endif %}{% endblock %}{% block content %}
 <section class="max-w-7xl mx-auto px-4 py-10 lg:py-14">
   <div class="section-rule"><span>Em destaque</span></div>
@@ -21,7 +21,7 @@
     </div>
     {% else %}
     <a href="{{ url_for('article', slug=hero.slug) }}" class="lg:col-span-8 group block">
-      <div class="relative overflow-hidden aspect-video bg-gray-200"><img src="{{ hero.cover_poster|image_variant(1200) }}" srcset="{{ hero.cover_poster|image_srcset([480, 768, 1200]) }}" sizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1279px) 64vw, 800px" width="1200" height="675" alt="Imagem de apoio: {{ hero.title }}" fetchpriority="high" decoding="async" class="w-full h-full object-cover transition duration-700 group-hover:scale-105"><span class="absolute top-4 left-4 bg-signal text-white px-3 py-1 text-xs font-bold uppercase tracking-widest">{{ hero.category }}</span></div>
+      <div class="home-featured-cover relative overflow-hidden aspect-video bg-gray-200"><img src="{{ hero.cover_poster|image_variant(1200) }}" srcset="{{ hero.cover_poster|image_srcset([480, 768, 1200]) }}" sizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1279px) 64vw, 800px" width="1200" height="675" alt="Imagem de apoio: {{ hero.title }}" fetchpriority="high" decoding="async" class="w-full h-full object-cover transition duration-700 group-hover:scale-105"><span class="absolute top-4 left-4 bg-signal text-white px-3 py-1 text-xs font-bold uppercase tracking-widest">{{ hero.category }}</span></div>
       <h1 class="font-serif text-4xl md:text-6xl leading-[1.02] mt-5 group-hover:text-science transition">{{ hero.title }}</h1><p class="mt-4 hero-summary text-lg max-w-3xl">{{ hero.summary }}</p><p class="article-meta">Por {{ hero.author }} · {{ hero.date }} · {{ hero.read_time }}</p>
     </a>
     {% endif %}
