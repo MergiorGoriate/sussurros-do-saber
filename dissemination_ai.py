@@ -131,6 +131,15 @@ caso contrário "Ilustração conceptual". Não representar uma fotografia real.
     problems = []
     if not isinstance(slides, list) or len(slides) not in expected:
         problems.append('Corrige o número de slides. ' + slide_rule)
+    if isinstance(slides, list):
+        for index, slide in enumerate(slides):
+            if not isinstance(slide, dict):
+                problems.append(f'Slide {index + 1}: usa um objecto com heading, body e claim_ids.')
+                continue
+            for key, maximum in (('heading', 70), ('body', 240)):
+                value = slide.get(key)
+                if not isinstance(value, str) or not value.strip() or len(value) > maximum:
+                    problems.append(f'Slide {index + 1}, {key}: escreve texto não vazio com no máximo {maximum} caracteres, incluindo espaços. Encurta sem alterar o significado nem acrescentar factos.')
     full_source = '\n'.join(source.get(key, '') for key in ('title', 'body', 'references'))
     claims = payload.get('claims')
     for index, claim in enumerate(claims if isinstance(claims, list) else []):
