@@ -38,10 +38,15 @@
 
 /* Reveal edition details without moving the cover or surrounding layout. */
 .recent-publication{position:relative}
-.recent-publication-info{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;background:rgba(157,24,32,.8);color:#fff;text-align:center;opacity:0;transition:opacity .2s;overflow:auto;overflow-wrap:anywhere}
+.recent-publication-info{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;background:rgba(157,24,32,.8);color:#fff;text-align:center;opacity:0;transition:opacity .3s ease;overflow:auto;overflow-wrap:anywhere}
 .recent-publication-info time{font-size:14px;font-weight:700;line-height:1.5}
 .recent-publication-info strong{font-size:clamp(18px,2vw,28px);line-height:1.35}
 .recent-publication:hover .recent-publication-info,.recent-publication:focus .recent-publication-info{opacity:1}
 .recent-publication:hover img{transform:none}
 @media(hover:none){.recent-publication-info{inset:auto 0 0;opacity:1;padding:12px;gap:4px}.recent-publication-info strong{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.recent-publication-info{transition:none}}
+
+.recent-publication-info>time,.recent-publication-info>strong{transform:translateY(12px);transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+.recent-publication:hover .recent-publication-info>*,.recent-publication:focus .recent-publication-info>*{transform:translateY(0)}
+@media(hover:none){.recent-publication-info>time,.recent-publication-info>strong{transform:none;transition:none}}
+@media(prefers-reduced-motion:reduce){.recent-publication-info,.recent-publication-info>time,.recent-publication-info>strong{transition:none;transform:none}}
