@@ -88,9 +88,10 @@ def invalidate(material):
     material.publication_url = ''
 
 
-def reserve():
-    if not ai.configured():
-        raise GenerationError('Configure as chaves, os modelos de IA e os limites antes de gerar.')
+def reserve(require_images=True):
+    issues = ai.configuration_issues(require_images)
+    if issues:
+        raise GenerationError(' '.join(issues))
     units = integer_setting('DISSEMINATION_JOB_UNITS')
     limit = integer_setting('DISSEMINATION_DAILY_UNITS')
     jobs = integer_setting('DISSEMINATION_DAILY_JOBS', 20)
@@ -111,7 +112,7 @@ def reserve():
 
 
 def enqueue(material, mode='generate', instruction=''):
-    units = reserve()
+    units = reserve(require_images=material.kind != 'text')
     material.status = 'generating'
     material.error = ''
     invalidate(material)
@@ -290,6 +291,9 @@ def process_one():
     job = db.session.get(Job, job_id)
     material = db.session.get(Material, job.material_id)
     try:
+        issues = ai.configuration_issues(require_images=material.kind != 'text' and job.mode != 'review')
+        if issues:
+            raise GenerationError('Configuração do trabalhador: ' + ' '.join(issues))
         source = snapshot(material.source_kind, material.source_id)
         previous = current_version(material)
         if job.mode == 'review':
@@ -354,3 +358,4 @@ def expire_jobs():
             material.error = 'Trabalhador interrompido. A tentativa pode ter gerado custos; não há repetição automática.'
             event(material, 'worker_expired', material.error)
     db.session.commit()
+

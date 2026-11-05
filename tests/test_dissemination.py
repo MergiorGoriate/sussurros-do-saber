@@ -339,6 +339,53 @@ class DisseminationTests(unittest.TestCase):
         self.assertIn('processar-divulgacao',response.text)
         response.close()
 
+    def test_text_only_configuration_is_usable_in_dashboard_and_queue(self):
+        with patch.dict(os.environ, {'DISSEMINATION_IMAGE_MODEL': ''}):
+            response = self.client.get('/admin/divulgacao/')
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('Apenas texto configurado', response.text)
+            item = self.create('text')
+            self.process()
+            self.assertEqual(item.status, 'review')
+            with self.assertRaisesRegex(GenerationError, 'DISSEMINATION_IMAGE_MODEL'):
+                self.create('curiosity')
+            db.session.rollback()
+
+    def test_missing_assets_are_explained_and_approval_remains_blocked(self):
+        item = self.ready('curiosity')
+        for asset in service.current_version(item).assets:
+            (service.asset_root() / asset['name']).unlink()
+        response = self.client.get(f'/admin/divulgacao/{item.id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('volume persistente partilhado', response.text)
+        self.assertEqual(self.approve(item).status_code, 409)
+        self.assertEqual(item.status, 'review')
+
+    def test_worker_reports_its_own_missing_configuration(self):
+        item = self.create('text')
+        with patch.dict(os.environ, {'DISSEMINATION_TEXT_MODEL': ''}), \
+                patch('dissemination_ai.generate') as generate:
+            self.assertTrue(service.process_one())
+            generate.assert_not_called()
+        self.assertEqual(item.status, 'failed')
+        self.assertIn('Configuração do trabalhador', item.error)
+        self.assertIn('DISSEMINATION_TEXT_MODEL', item.error)
+
+    def test_diagnostic_command_inspects_queue_without_provider_calls(self):
+        self.create('text')
+        with patch('dissemination_ai.requests.post') as post:
+            result = app.test_cli_runner().invoke(args=['diagnosticar-divulgacao'])
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn('queued: 1', result.output)
+        self.assertIn('ainda não foi testada', result.output)
+        self.assertNotIn('test-only', result.output)
+        post.assert_not_called()
+
+    def test_claim_checks_use_zero_based_identifiers(self):
+        item = self.ready('text')
+        response = self.client.get(f'/admin/divulgacao/{item.id}')
+        self.assertIn('O artigo sustenta a afirmação.', response.text)
+
     def test_provider_errors_are_sanitized_and_do_not_follow_redirects(self):
         from dissemination_ai import api
         with patch('dissemination_ai.requests.post',return_value=Mock(status_code=429,text='secret-key-body')) as supplier:
@@ -348,3 +395,4 @@ class DisseminationTests(unittest.TestCase):
 
 
 if __name__ == '__main__': unittest.main()
+

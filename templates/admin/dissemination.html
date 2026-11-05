@@ -13,9 +13,12 @@
   <div class="dd-overview" aria-label="Resumo da utilização diária">
     <div class="dd-metric"><span>Tarefas reservadas</span><strong>{{ budget.jobs if budget else 0 }}</strong><small>Hoje, em UTC</small></div>
     <div class="dd-metric"><span>Unidades reservadas</span><strong>{{ budget.units if budget else 0 }}</strong><small>Orçamento administrativo diário</small></div>
-    <div class="dd-metric dd-configuration"><span>Configuração da geração</span><strong class="dd-config-status" data-ready="{{ 'true' if configured else 'false' }}"><span class="dd-dot" aria-hidden="true"></span>{{ 'Configuração pronta' if configured else 'Configuração pendente' }}</strong><small>{{ 'Geração mediante pedido do administrador.' if configured else 'Verifique a chave, os modelos e os limites.' }}</small></div>
+    <div class="dd-metric dd-configuration"><span>Configuração da geração</span><strong class="dd-config-status" data-ready="{{ 'true' if configured else 'false' }}"><span class="dd-dot" aria-hidden="true"></span>{{ ('Variáveis preenchidas' if images_configured else 'Apenas texto configurado') if configured else 'Configuração pendente' }}</strong><small>{{ 'A ligação à IA e o trabalhador precisam de validação operacional.' if configured else 'Verifique a chave, os modelos e os limites.' }}</small></div>
   </div>
   <p class="dd-budget-note">Estas reservas administrativas não representam custos facturados pelo fornecedor.</p>
+  {% if configuration_issues %}<ul class="dc-warning" role="status">{% for issue in configuration_issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
+  {% if configured and not images_configured %}<p class="dc-warning" role="status">A geração de texto está configurada. Configure DISSEMINATION_IMAGE_MODEL para os formatos com imagens.</p>{% endif %}
+  {% if queued_jobs %}<p class="dc-warning" role="status">{{ queued_jobs }} tarefa(s) na fila. Se não avançarem, verifique a execução periódica de processar-divulgacao no trabalhador.</p>{% endif %}
   {% if not configured %}<p class="dc-warning" role="status">A geração está indisponível até concluir a configuração dos modelos, da chave de API e dos limites de utilização.</p>{% endif %}
   {% if dissemination_can('manage') %}
   <div class="dd-workspace">
@@ -25,7 +28,7 @@
       <form method="post" action="{{ url_for('dissemination.generate') }}" class="dc-form dd-generate">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="dd-source">Artigo de origem<select id="dd-source" name="source" required><option value="">Seleccione um artigo publicado</option><optgroup label="Portal científico">{% for item in portal %}<option value="portal:{{ item.id }}">[PT] {{ item.title }}</option>{% if item.id in english_ids %}<option value="portal_en:{{ item.id }}">[EN] {{ item.title }}</option>{% endif %}{% endfor %}</optgroup><optgroup label="Revista científica">{% for item in journals %}<option value="journal:{{ item.id }}">{{ item.article_title or item.title }}</option>{% endfor %}</optgroup></select><small>Até 40 resultados por origem. Pesquise para encontrar artigos anteriores.</small></label>
-        <div class="dc-fields"><label for="dd-network">Rede social<select id="dd-network" name="network">{% for code,label in networks.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label><label for="dd-kind">Tipo de material<select id="dd-kind" name="kind">{% for code,label in kinds.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label></div>
+        <div class="dc-fields"><label for="dd-network">Rede social<select id="dd-network" name="network">{% for code,label in networks.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></label><label for="dd-kind">Tipo de material<select id="dd-kind" name="kind">{% for code,label in kinds.items() %}<option value="{{ code }}"{% if configured and not images_configured %} {{ "selected" if code == "text" else "disabled" }}{% endif %}>{{ label }}</option>{% endfor %}</select></label></div>
         <div class="dd-generate-action"><button class="dc-primary" {% if not configured %}disabled{% endif %}>Gerar conteúdo com IA</button><small>A tarefa decorre em segundo plano. Nenhum conteúdo é aprovado ou publicado automaticamente.</small></div>
       </form>
     </section>
@@ -44,3 +47,4 @@
   </section>
 </div>
 {% endblock %}
+
