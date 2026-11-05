@@ -4,13 +4,13 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 
-UNLIMITED_READING_ENDPOINTS = frozenset({'article', 'journal_detail'})
+UNLIMITED_GET_ENDPOINTS = frozenset({'article', 'journal_detail', 'language.choose'})
 
 
 def default_rate_limits():
-    # Only reading published articles is unlimited. Mutations and other routes
-    # retain their existing defaults and endpoint-specific limits.
-    if request.method in {'GET', 'HEAD'} and request.endpoint in UNLIMITED_READING_ENDPOINTS:
+    # Reading articles and choosing a display language must stay available
+    # after repeated visits. Mutations retain their endpoint-specific limits.
+    if request.method in {'GET', 'HEAD'} and request.endpoint in UNLIMITED_GET_ENDPOINTS:
         return ''
     return '300 per day; 100 per hour'
 
