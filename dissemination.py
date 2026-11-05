@@ -17,8 +17,9 @@ from extensions import limiter
 from governance import current_member, mandates, active_member
 from models import db, Article, Journal, utcnow
 from dissemination_models import DisseminationMaterial as Material, DisseminationVersion as Version
-from dissemination_models import DisseminationEvent as Event, DisseminationClick as Click, DisseminationBudget as Budget
-from dissemination_ai import GenerationError, configured
+from dissemination_models import (DisseminationEvent as Event, DisseminationClick as Click,
+    DisseminationBudget as Budget, DisseminationJob as Job)
+from dissemination_ai import GenerationError, configured, configuration_issues
 import dissemination_service as service
 
 centre_bp = Blueprint('dissemination', __name__, url_prefix='/admin/divulgacao')
@@ -84,7 +85,10 @@ def dashboard():
         portal=portal.order_by(Article.id.desc()).limit(40).all(),
         journals=journals.order_by(Journal.id.desc()).limit(40).all(),
         materials=Material.query.order_by(Material.id.desc()).paginate(page=page, per_page=20, error_out=False),
-        states=service.STATES, kinds=service.KINDS, networks=service.NETWORKS, configured=configured(),
+        states=service.STATES, kinds=service.KINDS, networks=service.NETWORKS,
+        configured=configured(require_images=False), images_configured=configured(),
+        configuration_issues=configuration_issues(require_images=False),
+        queued_jobs=Job.query.filter_by(status='queued').count(),
         budget=db.session.get(Budget, utcnow().date()))
 
 
@@ -111,6 +115,13 @@ def detail(ident):
     from dissemination_video import DisseminationVideo
     material = db.get_or_404(Material, ident)
     version = service.current_version(material)
+    assets_available = True
+    if version:
+        try:
+            for asset in version.assets:
+                service.read_asset(asset)
+        except (GenerationError, OSError):
+            assets_available = False
     try:
         public_link = service.tracking_url(material) if material.status in {'approved', 'published'} else ''
         if version and public_link:
@@ -120,6 +131,7 @@ def detail(ident):
     return render_template('admin/dissemination_detail.html', material=material, version=version,
         videos=DisseminationVideo.query.filter_by(material_id=ident).order_by(DisseminationVideo.id.desc()).all(),
         states=service.STATES, kinds=service.KINDS, networks=service.NETWORKS, public_link=public_link,
+        assets_available=assets_available,
         versions=Version.query.filter_by(material_id=ident).order_by(Version.number.desc()).all(),
         events=Event.query.filter_by(material_id=ident).order_by(Event.id.desc()).all(),
         clicks=Click.query.filter_by(material_id=ident).count())
@@ -297,6 +309,37 @@ def track(token):
 
 
 def register_cli(app):
+    @app.cli.command('diagnosticar-divulgacao')
+    def diagnose():
+        """Local configuration and queue inspection; no provider calls or secret values."""
+        issues = configuration_issues()
+        for issue in issues:
+            click.echo(issue)
+        if not issues:
+            click.echo('Variáveis locais válidas. A ligação à IA ainda não foi testada.')
+        for status in ('queued', 'running', 'failed', 'done'):
+            click.echo(f'{status}: {Job.query.filter_by(status=status).count()}')
+        oldest = Job.query.filter_by(status='queued').order_by(Job.id).first()
+        if oldest:
+            click.echo('Há tarefas na fila. Confirme o agendamento de processar-divulgacao neste serviço.')
+        try:
+            import tempfile
+            from dissemination_render import font
+            with tempfile.TemporaryFile(dir=service.asset_root()) as probe:
+                probe.write(b'cdc-storage-probe')
+                probe.flush()
+            font(24)
+            logo = Path(current_app.static_folder) / 'img/logo-sussurros-light.png'
+            if not logo.is_file():
+                raise GenerationError('O logotipo oficial não está disponível.')
+            click.echo('Armazenamento local, fonte e ficheiro do logotipo disponíveis.')
+            click.echo('Confirme que web e trabalhador usam a mesma base de dados e o mesmo volume persistente.')
+        except (OSError, GenerationError):
+            issues.append('Verifique permissões do armazenamento, fonte e logotipo neste serviço.')
+            click.echo(issues[-1])
+        if issues:
+            raise click.ClickException('Diagnóstico local com pendências. Nenhuma chamada à IA foi efectuada.')
+
     @app.cli.command('processar-divulgacao')
     @click.option('--limit', type=click.IntRange(1, 20), default=2)
     def worker(limit):
@@ -308,3 +351,4 @@ def register_cli(app):
                 break
             count += 1
         click.echo(f'{count} tarefa(s) processada(s). Consulte o painel para decisões e falhas.')
+

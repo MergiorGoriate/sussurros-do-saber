@@ -11,24 +11,60 @@ class GenerationError(Exception):
     pass
 
 
-def configured():
-    return all(os.getenv(k, '').strip() for k in (
-        'OPENAI_API_KEY', 'DISSEMINATION_TEXT_MODEL', 'DISSEMINATION_REVIEW_MODEL',
-        'DISSEMINATION_IMAGE_MODEL', 'DISSEMINATION_JOB_UNITS', 'DISSEMINATION_DAILY_UNITS'))
+def configuration_issues(require_images=True):
+    issues = []
+    keys = ['OPENAI_API_KEY', 'DISSEMINATION_TEXT_MODEL', 'DISSEMINATION_REVIEW_MODEL']
+    if require_images:
+        keys.append('DISSEMINATION_IMAGE_MODEL')
+    for key in keys:
+        if not os.getenv(key, '').strip():
+            issues.append('Falta configurar ' + key + '.')
+    limits = {}
+    for key, default in (('DISSEMINATION_JOB_UNITS', ''),
+                         ('DISSEMINATION_DAILY_UNITS', ''), ('DISSEMINATION_DAILY_JOBS', '20')):
+        try:
+            value = int(os.getenv(key, default))
+            if not 1 <= value <= 1_000_000:
+                raise ValueError()
+            limits[key] = value
+        except ValueError:
+            issues.append('Configure um inteiro positivo até 1000000 em ' + key + '.')
+    if (limits.get('DISSEMINATION_JOB_UNITS', 0) >
+            limits.get('DISSEMINATION_DAILY_UNITS', 1_000_000)):
+        issues.append('A reserva por tarefa excede o limite diário de unidades.')
+    return issues
+
+
+def configured(require_images=True):
+    return not configuration_issues(require_images)
 
 
 def api(path, body, timeout=120):
-    if not configured():
-        raise GenerationError('Configure o fornecedor de IA e os limites de utilização.')
+    if not os.getenv('OPENAI_API_KEY', '').strip():
+        raise GenerationError('Falta configurar OPENAI_API_KEY no serviço que processa as tarefas.')
     try:
         response = requests.post('https://api.openai.com/v1/' + path,
             headers={'Authorization': 'Bearer ' + os.environ['OPENAI_API_KEY']},
             json=body, timeout=(10, timeout), allow_redirects=False)
         if response.status_code != 200:
-            raise GenerationError('O fornecedor de IA recusou a operação. Consulte a conta e os limites.')
+            # Fixed messages only: provider bodies may echo private input or credentials.
+            messages = {
+                400: 'A IA recusou os parâmetros do pedido (HTTP 400). Verifique a compatibilidade do modelo com este formato.',
+                401: 'A chave da IA não foi aceite (HTTP 401). Verifique OPENAI_API_KEY no trabalhador.',
+                403: 'A conta não tem autorização para esta operação de IA (HTTP 403). Verifique as permissões do projecto e do modelo.',
+                404: 'O modelo ou recurso de IA não está disponível (HTTP 404). Verifique o identificador e o acesso da conta.',
+                429: 'A IA recusou o pedido por quota ou limite de pedidos (HTTP 429). Verifique o saldo, a facturação e os limites da conta.',
+            }
+            message = messages.get(response.status_code)
+            if message is None:
+                message = ('O fornecedor de IA está temporariamente indisponível.'
+                           if 500 <= response.status_code < 600 else 'O fornecedor de IA recusou a operação.')
+            raise GenerationError(message)
         if len(response.content) > 30_000_000:
             raise GenerationError('Resposta do fornecedor demasiado grande.')
         return response.json()
+    except requests.Timeout as exc:
+        raise GenerationError('A IA excedeu o tempo de resposta. A tentativa pode ter gerado custos; não foi repetida automaticamente.') from exc
     except (requests.RequestException, ValueError) as exc:
         raise GenerationError('Falha na comunicação com o fornecedor de IA.') from exc
 
@@ -92,9 +128,20 @@ caso contrário "Ilustração conceptual". Não representar uma fotografia real.
     payload = chat(system, data)
     expected = range(3, 6) if kind == 'carousel' else (1,)
     slides = payload.get('slides')
+    problems = []
     if not isinstance(slides, list) or len(slides) not in expected:
-        # One bounded text-only correction; never discard slides silently.
-        payload = chat(system + '\nCorrige o número de slides do resultado anterior. ' + slide_rule,
+        problems.append('Corrige o número de slides. ' + slide_rule)
+    full_source = '\n'.join(source.get(key, '') for key in ('title', 'body', 'references'))
+    claims = payload.get('claims')
+    for index, claim in enumerate(claims if isinstance(claims, list) else []):
+        if isinstance(claim, dict):
+            evidence = claim.get('evidence')
+            if not isinstance(evidence, str) or len(evidence) < 15 or evidence not in full_source:
+                problems.append(f'Afirmação {index + 1}: copia um trecho literal do artigo para evidence, sem o parafrasear. Se não houver suporte, remove ou corrige a afirmação e actualiza os claim_ids.')
+    if problems:
+        # At most one bounded text correction, shared by slide/evidence checks.
+        # The service validator and semantic review still decide whether it is usable.
+        payload = chat(system + '\nCorrige estes problemas do resultado anterior:\n' + '\n'.join(problems),
                        {**data, 'previous_material': payload})
     return payload
 
@@ -132,3 +179,4 @@ e a adequação do formato. Não aproves factos não sustentados. Devolve exacta
 Os valores booleanos devem ser rigorosos. A ausência de imagem num conteúdo
 de texto é normal. Esta análise é preliminar e exige revisão humana.''',
         {'source': source, 'material': payload}, review=True, images=images)
+

@@ -132,3 +132,22 @@ Antes da activação em produção, é necessário configurar a conta e os model
 Outras limitações: artigos com mais de 60 000 caracteres de conteúdo e referências são recusados sem truncagem silenciosa; não há análise de vídeos ou imagens do artigo original, apenas do texto e das imagens produzidas; não existe editor gráfico livre, OCR determinístico, confirmação da publicação por API, agendamento social ou remoção remota de publicações; não há limpeza automática de ficheiros órfãos, retenção configurável ou cópia de segurança automática neste módulo. As imagens e versões devem ser geridas no backup operacional existente.
 
 A segunda fase, com APIs oficiais, deve preservar a autorização por versão e exigir nova revisão sempre que o conteúdo mudar. Nenhuma funcionalidade dessa fase está activada nesta entrega.
+
+
+## Diagnóstico operacional
+
+Execute no serviço que processa as tarefas:
+
+```bash
+python -m flask --app app diagnosticar-divulgacao
+```
+
+O comando verifica os nomes das variáveis obrigatórias, limites inteiros e coerência da reserva por tarefa, apresenta contagens da fila e testa escrita no armazenamento local, disponibilidade da fonte e existência do logotipo. Não mostra chaves nem efectua chamadas ao fornecedor. O resultado local não confirma saldo, acesso aos modelos, agendamento, nem partilha efectiva do volume e da base de dados entre serviços. O código de saída é diferente de zero quando há pendências de configuração ou recursos locais.
+
+O painel distingue variáveis preenchidas de uma ligação efectivamente testada e avisa quando existem tarefas na fila. Não apresenta a presença de variáveis como prova de funcionamento. Se os pedidos ficarem na fila, verifique o agendamento de `processar-divulgacao` e se o trabalhador usa a mesma base de dados do serviço web. Se falharem, consulte a mensagem no material e os registos do trabalhador. Recusas HTTP 400, 401, 403, 404 e 429 têm mensagens próprias; erros do fornecedor nunca são reproduzidos integralmente no painel.
+
+Para gerar apenas texto são necessários os modelos de texto e revisão, a chave e os limites. `DISSEMINATION_IMAGE_MODEL` é obrigatório nos formatos com imagem, mas a sua ausência não bloqueia o formato Texto. Um trabalhador com variáveis diferentes das do serviço web apresenta a configuração em falta na falha do material. Não há repetição automática de chamadas falhadas.
+
+A geração dispõe de uma única tentativa adicional de correcção textual, partilhada entre erros no número de slides e trechos de suporte inexistentes. Persistindo o problema, a validação continua a bloquear o material; não se substitui evidência literal por semelhança nem se dispensam a revisão semântica e a revisão humana.
+
+Se os ficheiros de uma versão estiverem ausentes ou alterados, o painel apresenta um aviso e desactiva a aprovação. Este aviso não recupera ficheiros perdidos. Restaure os ficheiros originais do backup no volume correcto ou solicite uma nova geração, sujeita a custos e revisão. Versões antigas não são reescritas automaticamente.
