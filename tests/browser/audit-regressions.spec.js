@@ -15,7 +15,7 @@ for(const width of [360,1280]){
     for(const dark of [false,true]){
       await page.addInitScript(value=>sessionStorage.setItem('theme',value?'dark':'light'),dark);
       for(const [path,selector] of [
-        ['/','.recent-publication-caption'],
+        ['/','.recent-publications-footer a'],
         ['/revistas','.open-badge'],
         ['/revistas','.publication-card dt'],
         ['/revistas','.publication-card footer a'],

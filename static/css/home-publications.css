@@ -25,7 +25,6 @@
 .recent-publication img{display:block;width:100%;height:auto;aspect-ratio:420/534;object-fit:contain;background:#edf0f4;transition:transform .2s}
 .recent-publication:hover img{transform:translateY(-4px)}
 .recent-publication:focus-visible{outline:3px solid #214f8c;outline-offset:6px}
-.recent-publication-caption{display:block;margin-top:12px;font-size:14px;line-height:1.5}
 .recent-publication-placeholder{aspect-ratio:420/534;display:flex;flex-direction:column;justify-content:space-between;padding:24px;background:#183b65;color:white;overflow-wrap:anywhere}
 .recent-publication-placeholder span{font-size:28px}
 .recent-publications-footer{display:flex;justify-content:flex-end;margin-top:28px}
@@ -36,5 +35,3 @@
 @media(max-width:760px){.recent-publications{padding:28px 16px 32px}.recent-publications-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 16px}}
 @media(prefers-reduced-motion:reduce){.recent-publication img{transition:none}.recent-publication:hover img{transform:none}}
 
-.recent-publication-caption{color:#334155;overflow-wrap:anywhere}
-.dark .recent-publication-caption{color:#dce6f2}
