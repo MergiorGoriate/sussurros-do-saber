@@ -40,12 +40,16 @@
   <h2 id="recent-publications-title">Edições recentes</h2>
   <div class="recent-publications-grid">
     {% for journal in journals %}
-    <a class="recent-publication" href="{{ url_for('journal_detail', slug=journal.slug) }}" aria-label="{{ journal.title }}{% if journal.current_issue %} · {{ journal.current_issue }}{% endif %}">
+    <a class="recent-publication" href="{{ url_for('journal_detail', slug=journal.slug) }}" aria-label="{{ journal.title }}{% if journal.current_issue %} · {{ journal.current_issue }}{% endif %}"{% if journal.publication_date %} aria-describedby="recent-publication-date-{{ loop.index }}"{% endif %}>
       {% if journal.cover_image %}
       <img src="{{ journal.cover_image|image_variant(640) }}" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}" width="420" height="534" loading="lazy" decoding="async">
       {% else %}
       <div class="recent-publication-placeholder"><span>{{ journal.abbreviation }}</span><strong>{{ journal.title }}</strong></div>
       {% endif %}
+      <span class="recent-publication-info">
+        {% if journal.publication_date %}<time id="recent-publication-date-{{ loop.index }}" datetime="{{ journal.publication_date.isoformat() }}">{{ journal.publication_date.strftime('%d/%m/%Y') }}</time>{% endif %}
+        <strong>{{ journal.current_issue or journal.title }}</strong>
+      </span>
     </a>
     {% endfor %}
   </div>
