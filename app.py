@@ -739,9 +739,12 @@ LEARNING_RESOURCES = [
     {"id": 1, "type": "Interactivo", "topic": "Biologia Celular", "level": "Universitário", "title": "Explore a célula", "description": "Identifique organelos e relacione estruturas com as suas funções.", "icon": "◉"},
     {"id": 2, "type": "Laboratório Virtual", "topic": "Fisiologia", "level": "Secundário", "title": "Osmose em células", "description": "Teste concentrações e observe o movimento previsto da água.", "icon": "⌁", "url": "/laboratorio/osmose"},
     {"id": 3, "type": "Actividade", "topic": "Genética", "level": "Universitário", "title": "Heredogramas passo a passo", "description": "Pratique a identificação de padrões de herança em famílias.", "icon": "◇"},
-    {"id": 4, "type": "Vídeo", "topic": "Microbiologia", "level": "Secundário", "title": "O mundo invisível dos microrganismos", "description": "Uma introdução visual à diversidade microbiana.", "icon": "▶"},
+    {"id": 4, "type": "Explicador", "topic": "Microbiologia", "level": "Secundário", "title": "O mundo invisível dos microrganismos", "description": "Uma introdução visual à diversidade microbiana.", "icon": "▶"},
     {"id": 5, "type": "Dados", "topic": "Ecologia", "level": "Universitário", "title": "Diversidade de espécies", "description": "Conjunto demonstrativo para calcular riqueza e abundância.", "icon": "▥"},
     {"id": 6, "type": "Explicador", "topic": "Bioquímica", "level": "Universitário", "title": "Do DNA à proteína", "description": "Uma sequência guiada por replicação, transcrição e tradução.", "icon": "↝"},
+    {"id":7,"type":"Actividade","topic":"Método Científico","level":"Secundário","title":"Hipóteses e variáveis","description":"Distinga a variável manipulada, a resposta medida e os factores controlados.","icon":"?"},
+    {"id":8,"type":"Actividade","topic":"Estatística","level":"Secundário","title":"Média e mediana","description":"Compare duas medidas de tendência central com um exemplo resolvido.","icon":"Σ"},
+    {"id":9,"type":"Actividade","topic":"Probabilidade","level":"Secundário","title":"Probabilidade em experiências simples","description":"Calcule probabilidades e reconheça acontecimentos independentes.","icon":"½"},
 ]
 
 @app.get("/")
@@ -1122,6 +1125,8 @@ def build_journal_pdf(journal):
 def resources():
     return render_template("resources.html")
 
+from learning_content import LEARNING_LESSONS
+
 @app.get("/aprender")
 def learn():
     resource_type = request.args.get("tipo", "").strip().lower()
@@ -1131,7 +1136,8 @@ def learn():
         items = [item for item in items if item["type"].lower() == resource_type]
     if topic:
         items = [item for item in items if item["topic"].lower() == topic]
-    return render_template("learn.html", resources=items, all_resources=LEARNING_RESOURCES)
+    return render_template("learn.html", resources=items, all_resources=LEARNING_RESOURCES,
+                           lessons=LEARNING_LESSONS)
 
 @app.get("/laboratorio/osmose")
 def osmosis_lab():

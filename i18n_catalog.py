@@ -145,3 +145,20 @@ EN.update({
     'Ambiente e Biodiversidade': 'Environment and Biodiversity',
     'Evolução e Origens': 'Evolution and Origins',
 })
+
+# Learning activities and catalogue controls.
+from learning_content import EN_LEARNING
+EN.update(EN_LEARNING)
+EN.update({
+    "Filtrar por nível": "Filter by level",
+    "Todos os níveis": "All levels",
+    "A minha colecção": "My collection",
+    "Limpar filtros": "Clear filters",
+    "Fechar recurso": "Close resource",
+    "Verificar resposta": "Check answer",
+    "Recomeçar exercício": "Restart exercise",
+    "Resposta correcta.": "Correct answer.",
+    "Reveja a explicação e tente novamente.": "Review the explanation and try again.",
+    "Remover da colecção": "Remove from collection",
+    "Adicionar à colecção": "Add to collection"
+})
