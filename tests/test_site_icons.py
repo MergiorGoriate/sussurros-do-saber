@@ -17,8 +17,8 @@ class SiteIconTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200, path)
             soup = BeautifulSoup(response.data, 'html.parser')
             links = soup.head.select('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')
-            self.assertEqual(len(links), 4, path)
-            self.assertEqual(len({link['href'] for link in links}), 4)
+            self.assertEqual(len(links), 5, path)
+            self.assertEqual(len({link['href'] for link in links}), 5)
             for link in links:
                 asset = client.get(link['href'])
                 self.assertEqual(asset.status_code, 200, link['href'])
@@ -64,3 +64,23 @@ class SiteIconTests(unittest.TestCase):
             self.assertIn('must-revalidate', response.headers['Cache-Control'])
             self.assertNotIn('immutable', response.headers['Cache-Control'])
             response.close()
+
+    def test_root_favicon_is_public_and_revalidates(self):
+        client = app.test_client()
+        for method in ('get', 'head'):
+            response = getattr(client, method)('/favicon.ico')
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(response.mimetype, {'image/vnd.microsoft.icon', 'image/x-icon'})
+            self.assertIn('must-revalidate', response.headers['Cache-Control'])
+            self.assertNotIn('noindex', response.headers.get('X-Robots-Tag', ''))
+            if method == 'get':
+                with Image.open(io.BytesIO(response.data)) as icon:
+                    self.assertEqual(icon.format, 'ICO')
+                    self.assertTrue({(16, 16), (32, 32), (48, 48)}.issubset(icon.ico.sizes()))
+            response.close()
+
+    def test_home_declares_high_resolution_icon_and_root_ico(self):
+        response = app.test_client().get('/')
+        soup = BeautifulSoup(response.data, 'html.parser')
+        self.assertIsNotNone(soup.head.select_one('link[rel="icon"][sizes="192x192"]'))
+        self.assertEqual(soup.head.select_one('link[rel="shortcut icon"]')['href'], '/favicon.ico')

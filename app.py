@@ -177,6 +177,15 @@ def indexnow_key():
         )
 
 
+@app.get("/favicon.ico")
+@limiter.exempt
+def favicon():
+    """Serve the institutional icon at the conventional discovery URL."""
+    response = app.send_static_file("icons/favicon.ico")
+    response.headers["Cache-Control"] = "public, no-cache, max-age=0, must-revalidate"
+    return response
+
+
 @app.get("/ads.txt")
 def ads_txt():
     """Publica a declaração Authorized Digital Sellers do Google AdSense."""
@@ -190,7 +199,7 @@ def ads_txt():
 @app.before_request
 def publish_due_scheduled_articles():
     """Publica aprovações pendentes e agendamentos cujo horário já chegou."""
-    if request.endpoint != "static" and request.path not in {"/healthz", "/ads.txt", "/robots.txt", "/790c8a9d2960414f923b2ccf49e86d72.txt"}:
+    if request.endpoint != "static" and request.path not in {"/favicon.ico", "/healthz", "/ads.txt", "/robots.txt", "/790c8a9d2960414f923b2ccf49e86d72.txt"}:
         Article.publish_due_scheduled()
 
 
@@ -491,7 +500,7 @@ def security_headers(response):
     )
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-    if request.path.startswith("/static/"):
+    if request.path.startswith("/static/") or request.endpoint == "favicon":
         filename = (request.view_args or {}).get('filename', '')
         version = static_asset_version(filename) if filename else None
         if response.status_code == 200 and version and request.args.get('v') == version:

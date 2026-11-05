@@ -252,7 +252,7 @@ def install(app):
     app.register_blueprint(language_bp)
     app.jinja_env.add_extension(PublicTranslationExtension)
     app.jinja_env.globals.update(ui=ui,localized_path=localized_path,site_language=language)
-    excluded={'static','feed','sitemap','robots','healthcheck','journal_download_pdf','journal_preview_pdf','article_legacy'}
+    excluded={'favicon','static','feed','sitemap','robots','healthcheck','journal_download_pdf','journal_preview_pdf','article_legacy'}
     allowed=set()
     for rule in list(app.url_map.iter_rules()):
         if (rule.endpoint in excluded or rule.rule.startswith(('/admin','/api','/static','/idioma','/divulgacao'))
