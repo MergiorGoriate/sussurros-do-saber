@@ -3,13 +3,13 @@
 {% block title %}{{ journal.title }} — Sussurros do Saber{% endblock %}
 {% block meta_description %}{{ journal.description }}{% endblock %}
 {% block canonical %}{{ site_url }}{{ url_for('journal_detail', slug=journal.slug) }}{% endblock %}
-{% block head_extra %}{% if scientific_eligible %}<link rel="stylesheet" href="{{ url_for('static',filename='css/scientific-metrics.css') }}">{% endif %}{% endblock %}
+{% block head_extra %}{% if scientific_eligible %}<link rel="stylesheet" href="{{ url_for('static',filename='css/scientific-metrics.css') }}">{% endif %}<link rel="stylesheet" href="{{ url_for('static',filename='css/journal-mobile.css') }}">{% endblock %}
 {% block content %}
 <article data-reader-journal="{{ journal.slug }}" class="journal-page max-w-6xl mx-auto px-4 py-14">
-<header class="journal-hero grid md:grid-cols-[300px_1fr] gap-10 items-start">
-{% if journal.cover_image %}<img class="w-full rounded-2xl shadow-xl" src="{{ journal.cover_image|image_variant(480) }}" srcset="{{ journal.cover_image|image_srcset([320, 480, 800]) }}" sizes="(max-width: 767px) 100vw, 300px" width="480" height="640" decoding="async" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}">{% endif %}
+<header class="journal-hero{% if journal.cover_image %} journal-hero-has-cover{% endif %} grid md:grid-cols-[300px_1fr] gap-10 items-start">
+{% if journal.cover_image %}<img class="journal-cover w-full rounded-2xl shadow-xl" src="{{ journal.cover_image|image_variant(480) }}" srcset="{{ journal.cover_image|image_srcset([320, 480, 800]) }}" sizes="(max-width: 479px) 96px, (max-width: 767px) 140px, 300px" width="480" height="640" decoding="async" alt="{{ journal.cover_alt or ('Capa de ' ~ journal.title) }}">{% endif %}
 <div class="journal-hero-copy"><div class="journal-kicker"><span class="eyebrow">{{ journal.field }}</span><span class="journal-open-badge">Acesso aberto</span></div><h1 class="font-serif text-5xl mt-3">{{ journal.title }}</h1><p class="journal-description text-xl opacity-70 mt-5">{{ journal.description }}</p>
-<dl class="grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
+<dl class="journal-stats grid sm:grid-cols-3 gap-4 mt-8"><div><dt>ISSN</dt><dd>{{ journal.issn or 'Em atribuição' }}</dd></div><div><dt>Periodicidade</dt><dd>{{ journal.frequency or 'A definir' }}</dd></div><div><dt>Edição prevista</dt><dd>{{ journal.current_issue or 'A anunciar' }} · Em preparação</dd></div></dl>
 <div class="journal-actions mt-8 flex gap-3 flex-wrap"><a class="primary-btn" href="/contacto?assunto={{ journal.abbreviation|urlencode }}">Submeter proposta</a><a class="secondary-btn" href="{{ url_for('journals') }}">Voltar ao catálogo</a></div></div>
 </header>
 {% if language == 'en' %}<p class="translation-notice">The published manuscript and PDF remain in their original language. English metadata do not constitute a translated scientific edition.</p>{% endif %}

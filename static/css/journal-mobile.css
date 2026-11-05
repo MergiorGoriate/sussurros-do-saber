@@ -1,0 +1,27 @@
+/* Compact edition header for phones, loaded after the shared styles. */
+@media(max-width:767px){
+ .journal-page{padding-top:24px!important;padding-bottom:32px!important}
+ .journal-page .journal-hero{display:grid!important;grid-template-columns:minmax(0,1fr);gap:16px!important;padding:20px 16px!important;border:1px solid var(--line);border-radius:16px;background:var(--paper,#fff)}
+ .dark .journal-page .journal-hero{background:#172027}
+ .journal-page .journal-hero-has-cover{grid-template-columns:140px minmax(0,1fr)}
+ .journal-page .journal-hero-copy{display:contents}
+ .journal-page .journal-hero>.journal-cover{grid-column:1;grid-row:1 / span 2;width:100%!important;max-width:140px!important;height:auto;max-height:none;object-fit:contain;align-self:start;margin:0!important;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+ .journal-page .journal-hero-has-cover .journal-kicker,.journal-page .journal-hero-has-cover h1{grid-column:2;min-width:0}
+ .journal-page .journal-kicker{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0}
+ .journal-page .journal-kicker .eyebrow,.journal-page .journal-open-badge{font-size:10px;line-height:1.4;letter-spacing:.06em}
+ .journal-page .journal-open-badge{padding:4px 6px}
+ .journal-page .journal-hero h1{margin:0!important;font-family:Arial,sans-serif;font-size:clamp(20px,4.2vw,28px)!important;line-height:1.25!important;letter-spacing:-.02em;overflow-wrap:break-word}
+ .journal-page .journal-description{grid-column:1 / -1;margin:2px 0 0!important;font-size:16px!important;line-height:1.65!important;opacity:1;color:#53677b}
+ .dark .journal-page .journal-description{color:#c1cfdd}
+ .journal-page .journal-stats{grid-column:1 / -1;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0!important;margin:0!important;border-top:1px solid var(--line)}
+ .journal-page .journal-stats>div{min-width:0;padding:12px 8px;border-bottom:1px solid var(--line)}
+ .journal-page .journal-stats>div:last-child{grid-column:1 / -1}
+ .journal-page .journal-stats dt{font-size:10px;line-height:1.4;letter-spacing:.07em}
+ .journal-page .journal-stats dd{margin:5px 0 0;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+ .journal-page .journal-actions{grid-column:1 / -1;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;margin:0!important}
+ .journal-page .journal-actions a{width:100%;min-width:0;padding:10px 8px;min-height:44px!important;font-size:13px;line-height:1.4;text-align:center}
+}
+@media(max-width:479px){
+ .journal-page .journal-hero-has-cover{grid-template-columns:96px minmax(0,1fr);gap:12px!important}
+ .journal-page .journal-hero>.journal-cover{max-width:96px!important}
+}
