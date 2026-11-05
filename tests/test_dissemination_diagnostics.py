@@ -67,8 +67,8 @@ class DiagnosticsTests(unittest.TestCase):
 
     def test_missing_evidence_gets_one_bounded_correction(self):
         evidence = 'As plantas utilizam luz na fotossíntese.'
-        bad = {'claims': [{'text': 'Afirmação', 'evidence': 'Uma paráfrase que não está no artigo.'}], 'slides': [{}]}
-        good = {'claims': [{'text': 'Afirmação', 'evidence': evidence}], 'slides': [{}]}
+        bad = {'claims': [{'text': 'Afirmação', 'evidence': 'Uma paráfrase que não está no artigo.'}], 'slides': [{'heading': 'Título', 'body': 'Texto breve', 'claim_ids': [0]}]}
+        good = {'claims': [{'text': 'Afirmação', 'evidence': evidence}], 'slides': [{'heading': 'Título', 'body': 'Texto breve', 'claim_ids': [0]}]}
         with patch.object(ai, 'chat', side_effect=[bad, good]) as chat:
             self.assertEqual(ai.generate({'body': evidence}, 'facebook', 'text'), good)
             self.assertEqual(chat.call_count, 2)
@@ -82,9 +82,37 @@ class DiagnosticsTests(unittest.TestCase):
 
     def test_literal_evidence_does_not_trigger_correction(self):
         evidence = 'As plantas utilizam luz na fotossíntese.'
-        payload = {'claims': [{'evidence': evidence}], 'slides': [{}]}
+        payload = {'claims': [{'evidence': evidence}], 'slides': [{'heading': 'Título', 'body': 'Texto breve', 'claim_ids': [0]}]}
         with patch.object(ai, 'chat', return_value=payload) as chat:
             ai.generate({'body': evidence}, 'facebook', 'text')
+            chat.assert_called_once()
+
+    def test_overlong_slide_gets_one_bounded_correction(self):
+        evidence = 'As plantas utilizam luz na fotossíntese.'
+        for key, maximum in (('heading', 70), ('body', 240)):
+            good = {'claims': [{'evidence': evidence}], 'slides': [
+                {'heading': 'Título', 'body': 'Texto breve', 'claim_ids': [0]}]}
+            import copy
+            bad = copy.deepcopy(good)
+            bad['slides'][0][key] = 'x' * (maximum + 1)
+            with self.subTest(key=key), patch.object(ai, 'chat', side_effect=[bad, good]) as chat:
+                self.assertEqual(ai.generate({'body': evidence}, 'facebook', 'curiosity'), good)
+                self.assertEqual(chat.call_count, 2)
+                self.assertIn(f'no máximo {maximum} caracteres', chat.call_args.args[0])
+
+    def test_slide_text_and_evidence_share_single_retry(self):
+        payload = {'claims': [{'evidence': 'Ausente'}], 'slides': [
+            {'heading': 'x' * 71, 'body': 'x' * 241, 'claim_ids': [0]}]}
+        with patch.object(ai, 'chat', return_value=payload) as chat:
+            self.assertEqual(ai.generate({'body': 'Texto original do artigo.'}, 'facebook', 'curiosity'), payload)
+            self.assertEqual(chat.call_count, 2)
+
+    def test_slide_text_limits_accept_exact_boundary(self):
+        evidence = 'As plantas utilizam luz na fotossíntese.'
+        payload = {'claims': [{'evidence': evidence}], 'slides': [
+            {'heading': 'x' * 70, 'body': 'x' * 240, 'claim_ids': [0]}]}
+        with patch.object(ai, 'chat', return_value=payload) as chat:
+            ai.generate({'body': evidence}, 'facebook', 'curiosity')
             chat.assert_called_once()
 
 
