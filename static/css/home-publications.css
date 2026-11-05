@@ -38,7 +38,7 @@
 
 /* Reveal edition details without moving the cover or surrounding layout. */
 .recent-publication{position:relative}
-.recent-publication-info{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;background:rgba(157,24,32,.95);color:#fff;text-align:center;opacity:0;transition:opacity .2s;overflow:auto;overflow-wrap:anywhere}
+.recent-publication-info{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;background:rgba(157,24,32,.8);color:#fff;text-align:center;opacity:0;transition:opacity .2s;overflow:auto;overflow-wrap:anywhere}
 .recent-publication-info time{font-size:14px;font-weight:700;line-height:1.5}
 .recent-publication-info strong{font-size:clamp(18px,2vw,28px);line-height:1.35}
 .recent-publication:hover .recent-publication-info,.recent-publication:focus .recent-publication-info{opacity:1}
