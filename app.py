@@ -588,7 +588,7 @@ def site_context():
         "gtm_container_id": os.getenv("GTM_CONTAINER_ID", "GTM-PQSZGPQQ").strip(),
         "social_links": {
             "facebook": os.getenv("SOCIAL_FACEBOOK_URL", "https://web.facebook.com/profile.php?id=61584597102517"),
-            "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/sussurrodosaber?stkn=djl2d2s5cmJnZzE5"),
+            "instagram": os.getenv("SOCIAL_INSTAGRAM_URL", "https://www.instagram.com/sussurros_do_saber/"),
             "youtube": os.getenv("SOCIAL_YOUTUBE_URL", "https://www.youtube.com/channel/UCMxbh7jSRUxxX48JSWszc8g"),
             "linkedin": os.getenv("SOCIAL_LINKEDIN_URL", "").strip(),
             "x": os.getenv("SOCIAL_X_URL", "https://x.com/sussurrodosaber"),
