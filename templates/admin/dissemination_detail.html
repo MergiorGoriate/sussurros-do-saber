@@ -6,7 +6,23 @@
 <a class="dr-back" href="{{ url_for('dissemination.dashboard') }}">← Centro de Divulgação Científica</a>
 <header class="dr-header"><div><p class="dr-eyebrow">{{ networks[material.network] }} · {{ kinds[material.kind] }}</p><h1>Revisão do material #{{ material.id }}</h1><p class="dr-intro">Verifique o conteúdo, registe a decisão editorial e acompanhe as versões deste material.</p></div><div class="dr-status-group"><span class="dc-state" data-state="{{ material.status }}">{{ states[material.status] }}</span><span class="dr-version">Versão {{ material.version }}</span></div></header>
 <nav class="dr-section-nav" aria-label="Secções da revisão">{% if version %}<a href="#dr-preview">Texto e imagens</a><a href="#dr-checks">Verificação preliminar</a>{% endif %}{% if material.status in ['review','correction','failed'] and dissemination_can('manage') %}<a href="#dr-regenerate">Nova geração</a>{% endif %}<a href="#dr-versions">Versões anteriores</a><a href="#dr-history">Histórico editorial</a></nav>
-{% if material.status == 'generating' %}<p class="dc-notice" role="status">A tarefa aguarda ou está em execução no trabalhador assíncrono. <a href="{{ url_for('dissemination.detail', ident=material.id) }}">Actualizar resultado</a></p>{% endif %}
+{% if material.status == 'generating' %}
+<section class="dc-panel" aria-label="Estado do processamento">
+{% if latest_job and latest_job.status == 'queued' %}
+<h2>A aguardar início do processamento</h2>
+<p class="dc-notice" role="status">A tarefa está na fila e ainda não foi iniciada pelo trabalhador.</p>
+<p>Entrada na fila: {{ dissemination_time(latest_job.created_at) }} · Hora de Moçambique.</p>
+{% if dissemination_can('manage') %}<p>Se a tarefa continuar em espera, confirme no Coolify o agendamento de <code>python -m flask --app app processar-divulgacao --limit 2</code>, com a mesma base de dados, variáveis e volume de armazenamento do serviço web.</p><p>Para verificar a configuração sem chamadas à IA: <code>python -m flask --app app diagnosticar-divulgacao</code>.</p>{% endif %}
+{% elif latest_job and latest_job.status == 'running' %}
+<h2>Processamento em execução</h2>
+<p class="dc-notice" role="status">O trabalhador iniciou esta tarefa em {{ dissemination_time(latest_job.started_at) }}. A geração de imagens e a revisão podem demorar vários minutos.</p>
+<p>Não solicite outra geração enquanto esta tentativa estiver em execução. Uma tentativa interrompida é detectada na próxima execução do trabalhador após 30 minutos.</p>
+{% else %}
+<p class="dc-warning" role="status">O material está marcado como «Em geração», mas não existe uma tarefa activa correspondente. Verifique o diagnóstico e os registos do trabalhador.</p>
+{% endif %}
+<a href="{{ url_for('dissemination.detail', ident=material.id) }}">Actualizar resultado</a>
+</section>
+{% endif %}
 {% if material.error %}<aside class="dr-error" role="alert"><div class="dr-error-icon" aria-hidden="true">!</div><div><h2>{{ 'Não foi possível concluir a geração' if material.status == 'failed' else 'Ocorrência registada' }}</h2><p>{{ material.error }}</p>{% if material.status == 'failed' and dissemination_can('manage') %}<p class="dr-error-help">Indique as orientações de correcção no formulário abaixo para solicitar uma nova geração.</p>{% endif %}</div></aside>{% endif %}
 {% if not version %}<p class="dr-empty-note">Ainda não existe uma versão concluída para pré-visualizar. O histórico será apresentado após a primeira geração concluída.</p>{% endif %}
 {% if version %}

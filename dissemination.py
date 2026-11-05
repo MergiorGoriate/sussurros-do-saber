@@ -132,6 +132,7 @@ def detail(ident):
         videos=DisseminationVideo.query.filter_by(material_id=ident).order_by(DisseminationVideo.id.desc()).all(),
         states=service.STATES, kinds=service.KINDS, networks=service.NETWORKS, public_link=public_link,
         assets_available=assets_available,
+        latest_job=Job.query.filter_by(material_id=ident).order_by(Job.id.desc()).first(),
         versions=Version.query.filter_by(material_id=ident).order_by(Version.number.desc()).all(),
         events=Event.query.filter_by(material_id=ident).order_by(Event.id.desc()).all(),
         clicks=Click.query.filter_by(material_id=ident).count())
