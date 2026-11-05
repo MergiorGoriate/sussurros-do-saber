@@ -3,13 +3,13 @@
   "short_name": "Sussurros",
   "icons": [
     {
-      "src": "icons/android-chrome-192x192.png?v=a3475f48f8a80ac7",
+      "src": "icons/android-chrome-192x192.png?v=30ab4db8692ffc34",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/android-chrome-512x512.png?v=b8e213fb0cc77a1a",
+      "src": "icons/android-chrome-512x512.png?v=995f93f269d1ba64",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
