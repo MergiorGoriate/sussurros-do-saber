@@ -200,15 +200,42 @@ com um texto por campo recebido e na mesma ordem.'''
     result = chat(instructions, {'fields': fields, 'claims': claims})
     texts = result.get('texts')
     if not isinstance(texts, list) or len(texts) != len(fields):
-        raise GenerationError('A IA não devolveu os resumos dos campos pedidos.')
+        texts = [None] * len(fields)
+
+    replacements = []
     for field, text in zip(fields, texts):
-        if not isinstance(text, str) or not text.strip() or len(text.strip()) > field['maximum']:
+        maximum = field['maximum']
+        text = text.strip() if isinstance(text, str) else ''
+        if (not text or len(text) > maximum) and field['field'] == 'body':
+            text = short_linked_claim(source, claims, field['claim_ids'], maximum)
+        if not text or len(text) > maximum:
             raise GenerationError(
                 f"A IA não conseguiu resumir o slide {field['slide'] + 1}, "
-                f"campo {field['field']}, para {field['maximum']} caracteres."
+                f"campo {field['field']}, para {maximum} caracteres."
             )
-    for field, text in zip(fields, texts):
-        slides[field['slide']][field['field']] = text.strip()
+        replacements.append(text)
+    for field, text in zip(fields, replacements):
+        slides[field['slide']][field['field']] = text
+
+
+def short_linked_claim(source, claims, claim_ids, maximum):
+    """Reuse an intact linked claim with a literal source excerpt."""
+    if not isinstance(claims, list) or not isinstance(claim_ids, list):
+        return ''
+    full_source = '\n'.join(source.get(key, '') for key in ('title', 'body', 'references'))
+    for index in claim_ids:
+        if type(index) is not int or not 0 <= index < len(claims):
+            continue
+        claim = claims[index]
+        if not isinstance(claim, dict):
+            continue
+        text, evidence = claim.get('text'), claim.get('evidence')
+        if not isinstance(text, str) or not isinstance(evidence, str):
+            continue
+        text = ' '.join(text.split())
+        if 0 < len(text) <= maximum and len(evidence.strip()) >= 15 and evidence in full_source:
+            return text
+    return ''
 
 
 def illustration(description):

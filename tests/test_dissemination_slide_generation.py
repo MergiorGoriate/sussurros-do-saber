@@ -51,3 +51,17 @@ class SlideGenerationTests(unittest.TestCase):
             with self.assertRaisesRegex(ai.GenerationError, '240 caracteres'):
                 ai.generate({}, 'instagram', 'infographic')
         self.assertEqual(chat.call_count, 3)
+
+    def test_overlength_summary_reuses_linked_claim_with_literal_support(self):
+        evidence = 'As plantas utilizam luz na fotossíntese.'
+        claim = {'text': 'As plantas usam luz na fotossíntese.', 'evidence': evidence}
+        draft = {'claims': [
+            {'text': 'Afirmação alheia ao slide.', 'evidence': evidence},
+            {'text': 'Afirmação sem trecho literal.', 'evidence': 'Trecho inexistente no artigo.'},
+            claim,
+        ], 'slides': [{'heading': 'Fotossíntese', 'body': 'x' * 241, 'claim_ids': [1, 2]}]}
+        with patch.object(ai, 'chat', side_effect=[draft, draft, {'texts': ['x' * 241]}]) as chat:
+            result = ai.generate({'body': evidence}, 'instagram', 'infographic')
+        self.assertEqual(result['slides'][0]['body'], claim['text'])
+        self.assertEqual(result['slides'][0]['claim_ids'], [1, 2])
+        self.assertEqual(chat.call_count, 3)
