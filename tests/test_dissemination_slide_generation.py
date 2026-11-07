@@ -27,3 +27,27 @@ class SlideGenerationTests(unittest.TestCase):
         with patch.object(ai, 'chat', return_value={'slides': []}) as chat:
             self.assertEqual(ai.generate({}, 'facebook', 'text'), {'slides': []})
             self.assertEqual(chat.call_count, 2)
+
+    def test_persistent_overlength_gets_targeted_summary(self):
+        from copy import deepcopy
+
+        original = {'claims': [{'evidence': 'As plantas utilizam luz na fotossíntese.'}],
+                    'slides': [{'heading': 'Fotossíntese', 'body': 'x' * 241, 'claim_ids': [0]}],
+                    'layout': 'balanced'}
+        corrected = deepcopy(original)
+        summary = 'A luz fornece energia à fotossíntese.'
+        with patch.object(ai, 'chat', side_effect=[original, corrected, {'texts': [summary]}]) as chat:
+            result = ai.generate({'body': original['claims'][0]['evidence']}, 'instagram', 'infographic')
+        self.assertEqual(chat.call_count, 3)
+        self.assertEqual(result['slides'], [
+            {'heading': 'Fotossíntese', 'body': summary, 'claim_ids': [0]}])
+        self.assertEqual(result['claims'], original['claims'])
+        self.assertEqual(result['layout'], original['layout'])
+        self.assertEqual(chat.call_args.args[1]['fields'][0]['maximum'], 240)
+
+    def test_invalid_summary_stops_after_one_attempt(self):
+        draft = {'slides': [{'heading': 'Fotossíntese', 'body': 'x' * 241, 'claim_ids': [0]}]}
+        with patch.object(ai, 'chat', side_effect=[draft, draft, {'texts': ['x' * 241]}]) as chat:
+            with self.assertRaisesRegex(ai.GenerationError, '240 caracteres'):
+                ai.generate({}, 'instagram', 'infographic')
+        self.assertEqual(chat.call_count, 3)

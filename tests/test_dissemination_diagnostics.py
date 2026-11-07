@@ -100,9 +100,9 @@ class DiagnosticsTests(unittest.TestCase):
                 self.assertEqual(chat.call_count, 2)
                 self.assertIn(f'no máximo {maximum} caracteres', chat.call_args.args[0])
 
-    def test_slide_text_and_evidence_share_single_retry(self):
+    def test_empty_slide_text_and_evidence_share_single_retry(self):
         payload = {'claims': [{'evidence': 'Ausente'}], 'slides': [
-            {'heading': 'x' * 71, 'body': 'x' * 241, 'claim_ids': [0]}]}
+            {'heading': '', 'body': '', 'claim_ids': [0]}]}
         with patch.object(ai, 'chat', return_value=payload) as chat:
             self.assertEqual(ai.generate({'body': 'Texto original do artigo.'}, 'facebook', 'curiosity'), payload)
             self.assertEqual(chat.call_count, 2)
