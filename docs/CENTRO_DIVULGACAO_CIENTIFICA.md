@@ -148,6 +148,6 @@ O painel distingue variáveis preenchidas de uma ligação efectivamente testada
 
 Para gerar apenas texto são necessários os modelos de texto e revisão, a chave e os limites. `DISSEMINATION_IMAGE_MODEL` é obrigatório nos formatos com imagem, mas a sua ausência não bloqueia o formato Texto. Um trabalhador com variáveis diferentes das do serviço web apresenta a configuração em falta na falha do material. Não há repetição automática de chamadas falhadas.
 
-A geração dispõe de uma única tentativa adicional de correcção textual, partilhada entre erros no número de slides e trechos de suporte inexistentes. Persistindo o problema, a validação continua a bloquear o material; não se substitui evidência literal por semelhança nem se dispensam a revisão semântica e a revisão humana.
+A geração dispõe de uma tentativa de correcção geral para a estrutura dos slides e os trechos de suporte. Se ainda houver texto acima do limite, uma chamada adicional resume apenas os campos afectados antes de gerar a imagem. A validação final e as revisões semântica e humana continuam obrigatórias.
 
 Se os ficheiros de uma versão estiverem ausentes ou alterados, o painel apresenta um aviso e desactiva a aprovação. Este aviso não recupera ficheiros perdidos. Restaure os ficheiros originais do backup no volume correcto ou solicite uma nova geração, sujeita a custos e revisão. Versões antigas não são reescritas automaticamente.

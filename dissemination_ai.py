@@ -105,6 +105,9 @@ def language_rules(source):
     return RULES
 
 
+SLIDE_TEXT_LIMITS = (('heading', 70), ('body', 240))
+
+
 def generate(source, network, kind, instruction=''):
     slide_rule = ('O formato carousel exige entre 3 e 5 slides.' if kind == 'carousel' else
                   'Este formato exige exactamente 1 slide, mesmo quando é texto ou infográfico.')
@@ -115,7 +118,7 @@ Produz este objecto: {"title":"título até 90 caracteres", "caption":"texto par
 "illustration":"descrição científica da imagem sem texto nem logotipos",
 "visual_label":"Ilustração conceptual", "layout":"balanced", "accent":"teal"}.
 Usa 3 a 5 slides para carousel; 1 slide para os restantes formatos. Até 8 claims.
-Cada slide associa os índices das claims que o sustentam. Todos os factos do título
+Resume o texto para leitura rápida: aponta para 50 caracteres no título e 160\nno corpo. Leva detalhes secundários para a legenda.\nCada slide associa os índices das claims que o sustentam. Todos os factos do título
 e da legenda devem constar nas claims. Para texto usa 1 slide, mesmo sem imagem.
 Limites de caption: x 180, bluesky 200, instagram 1800, facebook 3000, reddit 5000.
 Para x e bluesky usa título até 60 caracteres e caption até 90, deixando espaço
@@ -129,7 +132,7 @@ caso contrário "Ilustração conceptual". Não representar uma fotografia real.
 No infográfico conceptual, usa um título informativo no topo e uma ilustração
 central com um único motivo dominante, enquadrado por inteiro e sem texto.
 Em slides[0].body escreve de 2 a 4 tópicos distintos, um por linha, com até
-60 caracteres por tópico. Usa quebras de linha reais no valor JSON, sem
+45 caracteres por tópico como alvo e 60 como máximo. Usa quebras de linha reais no valor JSON, sem
 numeração nem marcadores. Se o artigo sustentar apenas um ponto relevante,
 usa um único tópico. Resume apenas factos sustentados e preserva incertezas.
 Não acrescentes conclusão, recomendações ou texto decorativo.
@@ -150,7 +153,7 @@ conforme o assunto.'''
             if not isinstance(slide, dict):
                 problems.append(f'Slide {index + 1}: usa um objecto com heading, body e claim_ids.')
                 continue
-            for key, maximum in (('heading', 70), ('body', 240)):
+            for key, maximum in SLIDE_TEXT_LIMITS:
                 value = slide.get(key)
                 if not isinstance(value, str) or not value.strip() or len(value) > maximum:
                     problems.append(f'Slide {index + 1}, {key}: escreve texto não vazio com no máximo {maximum} caracteres, incluindo espaços. Encurta sem alterar o significado nem acrescentar factos.')
@@ -162,11 +165,50 @@ conforme o assunto.'''
             if not isinstance(evidence, str) or len(evidence) < 15 or evidence not in full_source:
                 problems.append(f'Afirmação {index + 1}: copia um trecho literal do artigo para evidence, sem o parafrasear. Se não houver suporte, remove ou corrige a afirmação e actualiza os claim_ids.')
     if problems:
-        # At most one bounded text correction, shared by slide/evidence checks.
+        # One general correction, shared by slide and evidence checks.
         # The service validator and semantic review still decide whether it is usable.
         payload = chat(system + '\nCorrige estes problemas do resultado anterior:\n' + '\n'.join(problems),
                        {**data, 'previous_material': payload})
+    # If the general correction still exceeds a limit, ask only for the affected
+    # fields. Keep the evidence, claim links and layout from the corrected draft.
+    slides = payload.get('slides')
+    if isinstance(slides, list) and len(slides) in expected and all(isinstance(slide, dict) for slide in slides):
+        summarize_slide_text(source, slides, payload.get('claims'), kind)
     return payload
+
+
+def summarize_slide_text(source, slides, claims, kind):
+    fields = []
+    for index, slide in enumerate(slides):
+        for key, maximum in SLIDE_TEXT_LIMITS:
+            value = slide.get(key)
+            if isinstance(value, str) and len(value) > maximum:
+                fields.append(dict(slide=index, field=key, text=value, maximum=maximum,
+                                   claim_ids=slide.get('claim_ids')))
+    if not fields:
+        return
+
+    instructions = language_rules(source) + '''
+Resume apenas os textos indicados. Cada resumo deve ficar abaixo do respectivo
+maximum, incluindo espaços e quebras de linha. Conserva a ideia principal e as
+incertezas do texto original. Elimina pormenores secundários e redundâncias.
+Aponta para 50 caracteres no heading e 160 no body.
+Devolve {"texts": ["resumo do primeiro campo", "resumo do segundo campo"]},
+com um texto por campo recebido e na mesma ordem.'''
+    if kind == 'infographic':
+        instructions += '\nNo body usa até quatro tópicos curtos, um por linha, com até 45 caracteres por tópico.'
+    result = chat(instructions, {'fields': fields, 'claims': claims})
+    texts = result.get('texts')
+    if not isinstance(texts, list) or len(texts) != len(fields):
+        raise GenerationError('A IA não devolveu os resumos dos campos pedidos.')
+    for field, text in zip(fields, texts):
+        if not isinstance(text, str) or not text.strip() or len(text.strip()) > field['maximum']:
+            raise GenerationError(
+                f"A IA não conseguiu resumir o slide {field['slide'] + 1}, "
+                f"campo {field['field']}, para {field['maximum']} caracteres."
+            )
+    for field, text in zip(fields, texts):
+        slides[field['slide']][field['field']] = text.strip()
 
 
 def illustration(description):
