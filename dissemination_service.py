@@ -307,7 +307,7 @@ def process_one():
                 payload['language']='en'
             validate_payload(payload, source, material)
             art = ai.illustration(payload['illustration']) if material.kind != 'text' else None
-        images = compose(payload, material.network, art, current_app.static_folder) if material.kind != 'text' else []
+        images = compose(payload, material.network, art, current_app.static_folder, kind=material.kind) if material.kind != 'text' else []
         report = checked_report(source, payload, material, images)
         # A cancelled/expired worker must never replace a newer job's material.
         job = db.session.execute(select(Job).where(Job.id == job_id).with_for_update()
