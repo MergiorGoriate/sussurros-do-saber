@@ -124,6 +124,16 @@ No Reddit usa tom explicativo e dá contexto; no Instagram orienta para a ligaç
 do perfil sem presumir que a ligação já foi configurada. visual_label deve ser
 "Reconstrução hipotética" quando se reconstruir um cenário incerto do passado;
 caso contrário "Ilustração conceptual". Não representar uma fotografia real.'''
+    if kind == 'infographic':
+        system += '''
+No infográfico conceptual, usa um título informativo no topo e uma ilustração
+central com um único motivo dominante, enquadrado por inteiro e sem texto.
+Em slides[0].body escreve de 2 a 4 tópicos distintos, um por linha, com até
+60 caracteres por tópico. Usa quebras de linha reais no valor JSON, sem
+numeração nem marcadores. Se o artigo sustentar apenas um ponto relevante,
+usa um único tópico. Resume apenas factos sustentados e preserva incertezas.
+Não acrescentes conclusão, recomendações ou texto decorativo.
+Escolhe teal, blue ou purple conforme o assunto.'''
     data = {'source': source, 'network': network, 'kind': kind, 'correction': instruction}
     payload = chat(system, data)
     expected = range(3, 6) if kind == 'carousel' else (1,)
