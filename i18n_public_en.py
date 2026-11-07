@@ -492,7 +492,7 @@ EN_PUBLIC = {
     'Disponibilidade de dados': 'Data availability',
     'Distribuição geográfica das visualizações': 'Geographical distribution of views',
     'Diversidade de espécies': 'Species diversity',
-    'Divulgação científica independente, com atenção à investigação em África.': 'Independent science communication, with a focus on research in Africa.',
+    'Divulgação científica independente, em português e inglês, para leitores de todo o mundo.': 'Independent science communication in Portuguese and English for readers worldwide.',
     'Do DNA à proteína': 'From DNA to protein',
     'Do rascunho à confirmação': 'From draft to confirmation',
     'Documento educativo': 'Educational document',
