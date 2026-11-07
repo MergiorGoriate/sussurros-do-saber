@@ -133,7 +133,11 @@ Em slides[0].body escreve de 2 a 4 tópicos distintos, um por linha, com até
 numeração nem marcadores. Se o artigo sustentar apenas um ponto relevante,
 usa um único tópico. Resume apenas factos sustentados e preserva incertezas.
 Não acrescentes conclusão, recomendações ou texto decorativo.
-Escolhe teal, blue ou purple conforme o assunto.'''
+Usa layout balanced para a composição vertical escura com imagem central
+e layout compact para a composição horizontal com painéis temáticos.
+Prefere balanced no Instagram. Nas restantes redes, escolhe compact quando
+os pontos se prestarem a uma leitura por painéis. Escolhe teal, blue ou purple
+conforme o assunto.'''
     data = {'source': source, 'network': network, 'kind': kind, 'correction': instruction}
     payload = chat(system, data)
     expected = range(3, 6) if kind == 'carousel' else (1,)

@@ -34,20 +34,88 @@ def lines(draw, text, face, width):
     return output + ([line] if line else [])
 
 
+def infographic_points(slide):
+    points = [line.strip() for line in slide['body'].splitlines() if line.strip()]
+    if len(points) > 4 or any(len(point) > 60 for point in points):
+        return [' '.join(points)]
+    return points
+
+
+def illustration_label(payload):
+    label = payload['visual_label']
+    if payload.get('language') == 'en':
+        return {'Ilustração conceptual': 'Conceptual illustration',
+                'Reconstrução hipotética': 'Hypothetical reconstruction'}[label]
+    return label
+
+
+def compose_infographic_panels(payload, illustration, logo, accent):
+    width, height = 1536, 1024
+    canvas = Image.new('RGB', (width, height), '#f7f9f8')
+    draw = ImageDraw.Draw(canvas)
+    slide = payload['slides'][0]
+    points = infographic_points(slide)
+    margin_x, margin_y = round(width * .1), round(height * .1)
+    right = width - margin_x
+    banner_bottom = 420
+    draw.rounded_rectangle((margin_x, margin_y, right, banner_bottom), radius=24, fill='#102b46')
+    logo.thumbnail((235, 40))
+    logo_x, logo_y = margin_x + 34, margin_y + 24
+    draw.rounded_rectangle((logo_x - 8, logo_y - 5, logo_x + logo.width + 8,
+                            logo_y + logo.height + 5), radius=8, fill='white')
+    canvas.paste(logo, (logo_x, logo_y), logo)
+    heading = font(48)
+    title_width = 740 if illustration else right - margin_x - 68
+    for index, line in enumerate(lines(draw, slide['heading'], heading, title_width)):
+        draw.text((logo_x, margin_y + 96 + index * 58), line, font=heading,
+                  anchor='lt', fill='white')
+    if illustration:
+        with Image.open(io.BytesIO(illustration)) as raw:
+            visual = ImageOps.contain(raw.convert('RGB'), (300, 240))
+        centre = right - 176
+        canvas.paste(visual, (centre - visual.width // 2, margin_y + 16 + (240 - visual.height) // 2))
+        draw.text((centre, banner_bottom - 40), illustration_label(payload),
+                  font=font(18), anchor='mt', fill='white')
+
+    gap = 20
+    columns = 1 if len(points) == 1 else 2
+    rows = (len(points) + columns - 1) // columns
+    panels_top = banner_bottom + gap
+    panel_width = (right - margin_x - gap * (columns - 1)) // columns
+    panel_height = (height - margin_y - panels_top - gap * (rows - 1)) // rows
+    panel_fill = Image.blend(Image.new('RGB', (1, 1), 'white'),
+                             Image.new('RGB', (1, 1), accent), .10).getpixel((0, 0))
+    body = font(30)
+    for index, point in enumerate(points):
+        row, column = divmod(index, columns)
+        x = margin_x + column * (panel_width + gap)
+        if columns == 2 and index == len(points) - 1 and column == 0:
+            x = (width - panel_width) // 2
+        y = panels_top + row * (panel_height + gap)
+        draw.rounded_rectangle((x, y, x + panel_width, y + panel_height), radius=18, fill=panel_fill)
+        draw.text((x + 24, y + 24), f'{index + 1:02d}', font=font(24), fill=accent, anchor='lt')
+        for line_index, line in enumerate(lines(draw, point, body, panel_width - 120)):
+            draw.text((x + 88, y + 24 + line_index * 40), line, font=body,
+                      fill='#132d36', anchor='lt')
+    stream = io.BytesIO()
+    canvas.save(stream, format='PNG', optimize=True)
+    return [stream.getvalue()]
+
+
 def compose_infographic(payload, network, illustration, logo, accent):
     """Compose one editorial infographic with a central image and short callouts."""
+    if payload['layout'] == 'compact':
+        return compose_infographic_panels(payload, illustration, logo, accent)
     width, height = SIZES['instagram'] if network == 'instagram' else (2480, 3508)
-    canvas = Image.new('RGB', (width, height), '#f7f9f8')
+    canvas = Image.new('RGB', (width, height), '#081e33')
     draw = ImageDraw.Draw(canvas)
     margin_x, margin_y = round(width * .1), round(height * .1)
     usable_width = width - 2 * margin_x
-    ink = '#132d36'
+    ink = '#f5fbff'
+    accent = {'#05756c': '#65e0d1', '#184f83': '#48d6f7', '#684487': '#dab7ff'}[accent]
     scale = width / 1080
     slide = payload['slides'][0]
-    points = [line.strip() for line in slide['body'].splitlines() if line.strip()]
-    # Earlier versions and manually edited paragraphs retain a readable layout.
-    if len(points) > 4 or any(len(point) > 60 for point in points):
-        points = [' '.join(points)]
+    points = infographic_points(slide)
 
     def text_block(text, x, y, max_width, size, color):
         face = font(round(size * scale))
@@ -58,7 +126,10 @@ def compose_infographic(payload, network, illustration, logo, accent):
         return y
 
     logo.thumbnail((round(width * .27), round(42 * scale)))
-    canvas.paste(logo, ((width - logo.width) // 2, margin_y), logo)
+    logo_x = (width - logo.width) // 2
+    draw.rounded_rectangle((logo_x - 12, margin_y, logo_x + logo.width + 12,
+                            margin_y + logo.height + 16), radius=8, fill='white')
+    canvas.paste(logo, (logo_x, margin_y + 8), logo)
     title_end = text_block(slide['heading'], width // 2, margin_y + logo.height + round(28 * scale),
                            usable_width, 46, ink)
     image_width = round(width * .42)
@@ -69,11 +140,7 @@ def compose_infographic(payload, network, illustration, logo, accent):
             visual = ImageOps.contain(raw.convert('RGB'), (image_width, image_height))
         canvas.paste(visual, ((width - visual.width) // 2,
                              image_top + (image_height - visual.height) // 2))
-    label = payload['visual_label']
-    if payload.get('language') == 'en':
-        label = {'Ilustração conceptual': 'Conceptual illustration',
-                 'Reconstrução hipotética': 'Hypothetical reconstruction'}[label]
-    label_end = text_block(label, width // 2, image_top + image_height + round(12 * scale),
+    label_end = text_block(illustration_label(payload), width // 2, image_top + image_height + round(12 * scale),
                            image_width, 17, ink)
 
     gap = round(width * .025)
