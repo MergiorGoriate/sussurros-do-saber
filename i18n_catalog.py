@@ -162,3 +162,12 @@ EN.update({
     "Remover da colecção": "Remove from collection",
     "Adicionar à colecção": "Add to collection"
 })
+
+
+# Reviewed English copy for the founder's public profile.
+EN.update({
+    "Fundador e Editor-Chefe": "Founder and Editor-in-Chief",
+    "Investigador, autor e fundador do Sussurros do Saber.": "Researcher, author and founder of Sussurros do Saber.",
+    "Universidade Rovuma": "Rovuma University",
+    "É investigador, ensaísta e divulgador científico moçambicano, com formação em Ensino de Biologia, pela Universidade Rovuma, Faculdade de Ciências Naturais e Matemática, com habilitação em Gestão de Laboratório. Os seus interesses académicos abrangem Biologia, Microbiologia, Biotecnologia, plantas medicinais, bactérias endofíticas, microbiologia ruminal, educação científica e divulgação do conhecimento. Através do Sussurros do Saber, dedica-se à produção e divulgação de conteúdos científicos, académicos e culturais, procurando aproximar a ciência dos estudantes, investigadores e do público em geral. O seu trabalho procura valorizar o pensamento crítico, o rigor científico e a produção de conhecimento relevante para Moçambique e para África.": "He is a Mozambican researcher, essayist and science communicator. He trained in Biology Education at Rovuma University’s Faculty of Natural Sciences and Mathematics, with a specialisation in Laboratory Management.\n\nHis academic interests include biology, microbiology, biotechnology, medicinal plants, endophytic bacteria, rumen microbiology, science education and knowledge dissemination.\n\nThrough Sussurros do Saber, he creates and shares scientific, academic and cultural content to bring science closer to students, researchers and the wider public. His work promotes critical thinking, scientific rigour and the production of knowledge relevant to Mozambique and Africa."
+})

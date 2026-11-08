@@ -314,8 +314,11 @@ def install(app):
             return
         from models import Author
         def author_view(author):
-            return Presentation(author,{field:ui(getattr(author,field,'')) for field in
-                ('role','headline','academic_background','bio','interests','projects','editorial_experience')})
+            fields = {field: ui(getattr(author, field, '')) for field in
+                      ('role', 'headline', 'academic_background', 'bio', 'interests',
+                       'projects', 'editorial_experience')}
+            fields['institution'] = interface_translation(author.institution) or author.institution
+            return Presentation(author, fields)
         if isinstance(context.get('author'),Author):
             context['author']=author_view(context['author'])
         if isinstance(context.get('authors'),list):
