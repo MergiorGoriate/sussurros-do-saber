@@ -321,6 +321,9 @@ def install(app):
             return Presentation(author, fields)
         if isinstance(context.get('author'),Author):
             context['author']=author_view(context['author'])
+            if template.name == 'author.html':
+                for field in ('academic_background', 'interests'):
+                    context[field] = [ui(item) for item in context[field]]
         if isinstance(context.get('authors'),list):
             context['authors']=[author_view(author) if isinstance(author,Author) else author for author in context['authors']]
         for key in ('intervals','kinds','resource_types','file_formats','states','file_kinds',
