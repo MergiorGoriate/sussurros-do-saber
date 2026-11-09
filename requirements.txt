@@ -4,9 +4,9 @@ requests==2.34.2
 Flask-SQLAlchemy==3.1.1
 psycopg2-binary==2.9.13
 psycopg[binary]>=3.3.6,<4
-cloudinary==1.46.3
+cloudinary==1.47.0
 Pillow==13.0.0
-Markdown==3.11.2
+Markdown==3.11.3
 bleach==6.4.0
 Flask-Limiter==4.1.1
 redis>=8.1.0,<9
@@ -14,7 +14,7 @@ reportlab==5.1.0
 
 
 beautifulsoup4==4.15.0
-svglib==2.3.2
+svglib==2.4.0
 
 pypdf>=6.21.4,<7
 
