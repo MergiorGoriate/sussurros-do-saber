@@ -17,8 +17,8 @@ class SiteIconTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200, path)
             soup = BeautifulSoup(response.data, 'html.parser')
             links = soup.head.select('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')
-            self.assertEqual(len(links), 5, path)
-            self.assertEqual(len({link['href'] for link in links}), 5)
+            self.assertEqual(len(links), 6, path)
+            self.assertEqual(len({link['href'] for link in links}), 6)
             for link in links:
                 asset = client.get(link['href'])
                 self.assertEqual(asset.status_code, 200, link['href'])
