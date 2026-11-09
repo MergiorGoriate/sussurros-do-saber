@@ -51,7 +51,10 @@ class JournalPDFTests(unittest.TestCase):
         self.assertEqual(brand[0].__class__.__name__, "Image")
         self.assertEqual(brand[0].hAlign, "CENTER")
         self.assertEqual(header._cellStyles[0][1].alignment, "CENTER")
-        self.assertAlmostEqual(brand[0].drawWidth, 220)
+        self.assertLessEqual(brand[0].drawWidth, 220)
+        self.assertAlmostEqual(brand[0].drawHeight, 74)
+        self.assertAlmostEqual(brand[0].drawWidth / brand[0].drawHeight,
+                               brand[0].imageWidth / brand[0].imageHeight)
         self.assertLess(brand[0].drawHeight, brand[0].drawWidth)
         self.assertEqual(brand[-1].getPlainText(), "www.sussurrosdosaber.com")
 
