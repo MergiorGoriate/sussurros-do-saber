@@ -164,10 +164,8 @@ def compose_infographic(payload, network, illustration, logo, accent):
 
     draw.rounded_rectangle((24, footer, width - 24, height - 20), radius=24, fill=navy)
     draw.line((47, footer + 5, width - 47, footer + 5), fill=cyan, width=3)
-    logo.thumbnail((212, 52))
+    logo.thumbnail((212, 64))
     logo_y = footer + (120 - logo.height) // 2
-    draw.rounded_rectangle((40, logo_y - 7, 62 + logo.width, logo_y + logo.height + 7),
-                           radius=8, fill='white')
     canvas.paste(logo, (51, logo_y), logo)
     if summary:
         label = 'Summary' if payload.get('language') == 'en' else 'Síntese'
@@ -185,7 +183,8 @@ def compose_infographic(payload, network, illustration, logo, accent):
 
 def compose(payload, network, illustration, static_folder, kind=None):
     width, height = SIZES[network]
-    logo_path = Path(static_folder) / 'img/logo-sussurros-light.png'
+    logo_name = 'logo-sussurros-rodape-branco.png' if kind == 'infographic' else 'logo-sussurros-light.png'
+    logo_path = Path(static_folder) / 'img' / logo_name
     if not logo_path.is_file():
         raise GenerationError('O logotipo oficial não está disponível.')
     with Image.open(logo_path) as logo_file:
