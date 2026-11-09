@@ -45,9 +45,9 @@ def _settings():
     return None
 
 
-def _content_url(settings, obj, slug):
+def _content_url(settings, model, slug):
     # Escape the slug as a single URL segment, never a host or query string.
-    prefix = "/artigo/" if isinstance(obj, Article) else "/revistas/"
+    prefix = "/artigo/" if model is Article else "/revistas/"
     return settings["origin"] + prefix + quote(slug, safe="") if slug else None
 
 
@@ -96,9 +96,9 @@ def enqueue_committed_changes(session):
             obj.status == "published" if isinstance(obj, Article) else bool(obj.published)
         )
         if was_public:
-            urls.add(_content_url(settings, obj, old_slug))
+            urls.add(_content_url(settings, type(obj), old_slug))
         if public:
-            urls.add(_content_url(settings, obj, obj.slug))
+            urls.add(_content_url(settings, type(obj), obj.slug))
     for url in sorted(urls - {None}):
         session.add(IndexNowNotification(url=url))
     if urls - {None}:
@@ -257,6 +257,45 @@ def install_indexnow(app, site_url):
         if response.status_code < 500 and request_is_content_request():
             wake_worker(app)
         return response
+
+    @app.cli.command("diagnosticar-indexnow")
+    def diagnose_indexnow_command():
+        """Mostra o estado da fila, sem enviar URLs."""
+        settings = _settings()
+        if not settings:
+            click.echo("IndexNow desactivado.")
+            return
+        click.echo(f"Origem: {settings['origin']}")
+        counts = db.session.execute(
+            select(IndexNowNotification.sent_at.is_not(None),
+                   IndexNowNotification.last_status,
+                   IndexNowNotification.last_error, db.func.count())
+            .group_by(IndexNowNotification.sent_at.is_not(None),
+                      IndexNowNotification.last_status, IndexNowNotification.last_error)
+        )
+        for delivered, status, error, count in counts:
+            state = "Recebido" if delivered else "Pendente"
+            detail = f"HTTP {status}" if status is not None else "sem resposta HTTP"
+            click.echo(f"{state}: {count} ({detail}{'; ' + error if error else ''})")
+
+    @app.cli.command("enfileirar-indexnow")
+    @click.option("--confirmar", is_flag=True, help="Grava na fila os URLs públicos sem registo.")
+    def queue_existing_indexnow_command(confirmar):
+        """Prepara URLs públicos sem registo anterior no IndexNow."""
+        settings = _settings()
+        if not settings:
+            raise click.ClickException("IndexNow desactivado.")
+        articles = Article.public_query().with_entities(Article.slug).all()
+        journals = Journal.query.filter_by(published=True).with_entities(Journal.slug).all()
+        known = set(db.session.scalars(select(IndexNowNotification.url).distinct()))
+        public_urls = {_content_url(settings, Article, slug) for (slug,) in articles}
+        public_urls.update(_content_url(settings, Journal, slug) for (slug,) in journals)
+        missing = sorted(public_urls - known - {None})
+        click.echo(f"URLs públicos sem registo: {len(missing)}")
+        if confirmar and missing:
+            db.session.add_all(IndexNowNotification(url=url) for url in missing)
+            db.session.commit()
+            click.echo("URLs adicionados à fila. Execute processar-indexnow para enviar.")
 
     @app.cli.command("processar-indexnow")
     def process_indexnow_command():
