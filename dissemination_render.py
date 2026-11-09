@@ -35,10 +35,21 @@ def lines(draw, text, face, width):
 
 
 def infographic_points(slide):
-    points = [line.strip() for line in slide['body'].splitlines() if line.strip()]
-    if len(points) > 4 or any(len(point) > 60 for point in points):
-        return [' '.join(points)]
-    return points
+    points = []
+    summary = ''
+    for line in slide['body'].splitlines():
+        if not line.strip():
+            continue
+        label, separator, detail = line.partition(':')
+        if separator and label.strip().casefold() in {'síntese', 'summary'} and detail.strip():
+            summary = detail.strip()
+        elif separator and 0 < len(label.strip()) <= 26 and detail.strip():
+            points.append((label.strip(), detail.strip()))
+        else:
+            points.append(('', line.strip()))
+    if len(points) > 6 or not points:
+        return [('', ' '.join(slide['body'].split()))], ''
+    return points, summary
 
 
 def illustration_label(payload):
@@ -49,115 +60,122 @@ def illustration_label(payload):
     return label
 
 
-def compose_infographic_panels(payload, illustration, logo, accent):
-    width, height = 1536, 1024
-    canvas = Image.new('RGB', (width, height), '#f7f9f8')
-    draw = ImageDraw.Draw(canvas)
-    slide = payload['slides'][0]
-    points = infographic_points(slide)
-    margin_x, margin_y = round(width * .1), round(height * .1)
-    right = width - margin_x
-    banner_bottom = 420
-    draw.rounded_rectangle((margin_x, margin_y, right, banner_bottom), radius=24, fill='#102b46')
-    logo.thumbnail((235, 40))
-    logo_x, logo_y = margin_x + 34, margin_y + 24
-    draw.rounded_rectangle((logo_x - 8, logo_y - 5, logo_x + logo.width + 8,
-                            logo_y + logo.height + 5), radius=8, fill='white')
-    canvas.paste(logo, (logo_x, logo_y), logo)
-    heading = font(48)
-    title_width = 740 if illustration else right - margin_x - 68
-    for index, line in enumerate(lines(draw, slide['heading'], heading, title_width)):
-        draw.text((logo_x, margin_y + 96 + index * 58), line, font=heading,
-                  anchor='lt', fill='white')
-    if illustration:
-        with Image.open(io.BytesIO(illustration)) as raw:
-            visual = ImageOps.contain(raw.convert('RGB'), (300, 240))
-        centre = right - 176
-        canvas.paste(visual, (centre - visual.width // 2, margin_y + 16 + (240 - visual.height) // 2))
-        draw.text((centre, banner_bottom - 40), illustration_label(payload),
-                  font=font(18), anchor='mt', fill='white')
+def infographic_text(draw, value, box, size, minimum, color):
+    x, y, right, bottom = box
+    for candidate in range(size, minimum - 1, -1):
+        face = font(candidate)
+        if any(draw.textlength(word, font=face) > right - x for word in value.split()):
+            continue
+        wrapped = lines(draw, value, face, right - x)
+        step = round(candidate * 1.24)
+        if y + len(wrapped) * step <= bottom:
+            for line in wrapped:
+                draw.text((x, y), line, font=face, fill=color, anchor='lt')
+                y += step
+            return y
+    raise GenerationError('O texto do infográfico excede a área legível. Encurte os tópicos.')
 
-    gap = 20
-    columns = 1 if len(points) == 1 else 2
-    rows = (len(points) + columns - 1) // columns
-    panels_top = banner_bottom + gap
-    panel_width = (right - margin_x - gap * (columns - 1)) // columns
-    panel_height = (height - margin_y - panels_top - gap * (rows - 1)) // rows
-    panel_fill = Image.blend(Image.new('RGB', (1, 1), 'white'),
-                             Image.new('RGB', (1, 1), accent), .10).getpixel((0, 0))
-    body = font(30)
-    for index, point in enumerate(points):
-        row, column = divmod(index, columns)
-        x = margin_x + column * (panel_width + gap)
-        if columns == 2 and index == len(points) - 1 and column == 0:
-            x = (width - panel_width) // 2
-        y = panels_top + row * (panel_height + gap)
-        draw.rounded_rectangle((x, y, x + panel_width, y + panel_height), radius=18, fill=panel_fill)
-        draw.text((x + 24, y + 24), f'{index + 1:02d}', font=font(24), fill=accent, anchor='lt')
-        for line_index, line in enumerate(lines(draw, point, body, panel_width - 120)):
-            draw.text((x + 88, y + 24 + line_index * 40), line, font=body,
-                      fill='#132d36', anchor='lt')
-    stream = io.BytesIO()
-    canvas.save(stream, format='PNG', optimize=True)
-    return [stream.getvalue()]
+
+def infographic_visual(canvas, raw, box):
+    if raw:
+        x, y, right, bottom = box
+        with Image.open(io.BytesIO(raw)) as image:
+            visual = ImageOps.contain(image.convert('RGB'), (right - x, bottom - y))
+        canvas.paste(visual, ((x + right - visual.width) // 2, (y + bottom - visual.height) // 2))
+
+
+def infographic_card(draw, point, index, box, palette):
+    x, y, right, bottom = box
+    fill, accent, ink = palette
+    heading_ink = accent if ink == "#f5fbff" else ink
+    draw.rounded_rectangle(box, radius=20, fill=fill)
+    draw.ellipse((x + 15, y + 14, x + 48, y + 47), fill=accent)
+    draw.text((x + 31, y + 30), str(index), font=font(17), fill='#06182b', anchor='mm')
+    label, body = point
+    start = y + 56
+    if label:
+        start = infographic_text(draw, label.upper(), (x + 15, start, right - 15, y + 120),
+                                 23, 16, heading_ink) + 6
+    infographic_text(draw, body, (x + 15, start, right - 15, bottom - 12), 23, 15, ink)
 
 
 def compose_infographic(payload, network, illustration, logo, accent):
-    """Compose one editorial infographic with a central image and short callouts."""
-    if payload['layout'] == 'compact':
-        return compose_infographic_panels(payload, illustration, logo, accent)
-    width, height = SIZES['instagram'] if network == 'instagram' else (2480, 3508)
-    canvas = Image.new('RGB', (width, height), '#081e33')
+    compact = payload['layout'] == 'compact'
+    width, height = (1536, 1024) if compact else SIZES['instagram']
+    print_size = (2480, 3508)
+    if not compact and network != 'instagram':
+        height = round(width * print_size[1] / print_size[0])
+    canvas = Image.new('RGB', (width, height), '#f1f6fa' if compact else '#06182b')
     draw = ImageDraw.Draw(canvas)
-    margin_x, margin_y = round(width * .1), round(height * .1)
-    usable_width = width - 2 * margin_x
-    ink = '#f5fbff'
-    accent = {'#05756c': '#65e0d1', '#184f83': '#48d6f7', '#684487': '#dab7ff'}[accent]
-    scale = width / 1080
     slide = payload['slides'][0]
-    points = infographic_points(slide)
+    points, summary = infographic_points(slide)
+    cyan, white, navy = '#58e4fb', '#f5fbff', '#0a2743'
+    footer = height - 140
+    if compact:
+        draw.rounded_rectangle((24, 24, width - 24, 300), radius=28, fill=navy)
+        infographic_text(draw, slide['heading'], (58, 68, 866 if illustration else width - 58, 270),
+                         64, 36, white)
+        infographic_visual(canvas, illustration, (890, 38, width - 50, 254))
+        if illustration:
+            draw.text((1180, 266), illustration_label(payload), font=font(20), fill=white, anchor='mt')
 
-    def text_block(text, x, y, max_width, size, color):
-        face = font(round(size * scale))
-        step = round(size * scale * 1.28)
-        for line in lines(draw, text, face, max_width):
-            draw.text((x, y), line, font=face, fill=color, anchor='mt')
-            y += step
-        return y
+        palettes = (('#dceffb', '#72cffa'), ('#e2f3d8', '#88d49c'), ('#ece6fa', '#c8aaf4'),
+                    ('#fff0d2', '#f5c572'), ('#daf4ed', '#83ddc5'), ('#e3ebff', '#a3bdf9'))
+        columns = min(3, len(points))
+        rows = (len(points) + columns - 1) // columns
+        card_width = (width - 48 - (columns - 1) * 16) // columns
+        card_height = (footer - 330 - (rows - 1) * 16) // rows
+        for index, point in enumerate(points):
+            row, column = divmod(index, columns)
+            x = 24 + column * (card_width + 16)
+            y = 314 + row * (card_height + 16)
+            fill, badge = palettes[index]
+            infographic_card(draw, point, index + 1, (x, y, x + card_width, y + card_height),
+                             (fill, badge, '#102b46'))
+    else:
+        cyan = {'#05756c': '#65e0d1', '#184f83': '#58e4fb', '#684487': '#dab7ff'}[accent]
+        draw.text((34, 45), str(len(points)), font=font(112), fill=cyan, anchor='lt')
+        infographic_text(draw, slide['heading'].upper(), (133, 45, width - 32, 230), 55, 32, white)
+        draw.line((34, 246, width - 34, 246), fill=cyan, width=3)
 
-    logo.thumbnail((round(width * .27), round(42 * scale)))
-    logo_x = (width - logo.width) // 2
-    draw.rounded_rectangle((logo_x - 12, margin_y, logo_x + logo.width + 12,
-                            margin_y + logo.height + 16), radius=8, fill='white')
-    canvas.paste(logo, (logo_x, margin_y + 8), logo)
-    title_end = text_block(slide['heading'], width // 2, margin_y + logo.height + round(28 * scale),
-                           usable_width, 46, ink)
-    image_width = round(width * .42)
-    image_height = round(height * .39)
-    image_top = max(title_end + round(30 * scale), round(height * .32))
-    if illustration:
-        with Image.open(io.BytesIO(illustration)) as raw:
-            visual = ImageOps.contain(raw.convert('RGB'), (image_width, image_height))
-        canvas.paste(visual, ((width - visual.width) // 2,
-                             image_top + (image_height - visual.height) // 2))
-    label_end = text_block(illustration_label(payload), width // 2, image_top + image_height + round(12 * scale),
-                           image_width, 17, ink)
-
-    gap = round(width * .025)
-    side_width = (usable_width - image_width) // 2 - gap
-    for index, point in enumerate(points):
-        if len(points) == 1 or (len(points) == 3 and index == 2):
-            x, y, point_width = width // 2, label_end + round(24 * scale), usable_width
+        if len(points) == 1:
+            infographic_visual(canvas, illustration, (80, 270, width - 80, 854))
+            infographic_card(draw, points[0], 1, (36, 915, width - 36, footer - 20),
+                             (navy, cyan, white))
+            label_y = 874
         else:
-            x = margin_x + side_width // 2 if index % 2 == 0 else width - margin_x - side_width // 2
-            y = image_top + round(image_height * (.08 if index < 2 else .58))
-            point_width = side_width
-        if len(points) > 1:
-            y = text_block(f'{index + 1:02d}', x, y, point_width, 27, accent) + round(8 * scale)
-        bottom = text_block(point, x, y, point_width, 22, ink)
-        if bottom > height - margin_y:
-            raise GenerationError('O texto do infográfico excede a área legível. Encurte os tópicos.')
+            image_box = (312, 270, width - 312, footer - 84)
+            infographic_visual(canvas, illustration, image_box)
+            label_y = footer - 65
+            rows = (len(points) + 1) // 2
+            card_height = min(282, (footer - 298 - (rows - 1) * 14) // rows)
+            for index, point in enumerate(points):
+                row, side = divmod(index, 2)
+                x = 25 if side == 0 else width - 301
+                y = 272 + row * (card_height + 14)
+                middle = y + card_height // 2
+                draw.line((x + (276 if side == 0 else 0), middle,
+                           image_box[0] if side == 0 else image_box[2], middle), fill=cyan, width=2)
+                infographic_card(draw, point, index + 1, (x, y, x + 276, y + card_height),
+                                 (navy, cyan, white))
+        if illustration:
+            draw.text((width // 2, label_y), illustration_label(payload),
+                      font=font(19), fill=white, anchor='mt')
 
+    draw.rounded_rectangle((24, footer, width - 24, height - 20), radius=24, fill=navy)
+    draw.line((47, footer + 5, width - 47, footer + 5), fill=cyan, width=3)
+    logo.thumbnail((212, 64))
+    logo_y = footer + (120 - logo.height) // 2
+    canvas.paste(logo, (51, logo_y), logo)
+    if summary:
+        label = 'Summary' if payload.get('language') == 'en' else 'Síntese'
+        draw.text((288, footer + 24), label, font=font(24), fill=cyan, anchor='lt')
+        infographic_text(draw, summary, (288, footer + 55, width - 45, height - 28), 24, 16, white)
+    else:
+        draw.text((288, footer + 59), 'sussurrosdosaber.com', font=font(22), fill=white, anchor='lm')
+
+    if not compact and network != 'instagram':
+        canvas = canvas.resize(print_size, Image.Resampling.LANCZOS)
     stream = io.BytesIO()
     canvas.save(stream, format='PNG', optimize=True)
     return [stream.getvalue()]
@@ -165,7 +183,8 @@ def compose_infographic(payload, network, illustration, logo, accent):
 
 def compose(payload, network, illustration, static_folder, kind=None):
     width, height = SIZES[network]
-    logo_path = Path(static_folder) / 'img/logo-sussurros-light.png'
+    logo_name = 'logo-sussurros-rodape-branco.png' if kind == 'infographic' else 'logo-sussurros-light.png'
+    logo_path = Path(static_folder) / 'img' / logo_name
     if not logo_path.is_file():
         raise GenerationError('O logotipo oficial não está disponível.')
     with Image.open(logo_path) as logo_file:
