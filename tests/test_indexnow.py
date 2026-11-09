@@ -61,6 +61,28 @@ class IndexNowTests(unittest.TestCase):
         db.drop_all()
         self.context.pop()
 
+    def test_backfill_simulates_then_queues_only_missing_public_urls(self):
+        article('published', slug='publicado')
+        article('draft', slug='privado')
+        db.session.commit()
+        IndexNowNotification.query.delete()
+        db.session.commit()
+        runner = self.app.test_cli_runner()
+        with patch('indexnow_service.requests.post') as post:
+            dry_run = runner.invoke(args=['enfileirar-indexnow'])
+            self.assertEqual(dry_run.exit_code, 0, dry_run.output)
+            self.assertIn('URLs públicos sem registo: 1', dry_run.output)
+            self.assertEqual(urls(), [])
+            for expected in (1, 0):
+                result = runner.invoke(args=['enfileirar-indexnow', '--confirmar'])
+                self.assertEqual(result.exit_code, 0, result.output)
+                self.assertIn(f'URLs públicos sem registo: {expected}', result.output)
+            self.assertEqual(urls(), [ORIGIN + '/artigo/publicado'])
+            diagnosis = runner.invoke(args=['diagnosticar-indexnow'])
+            self.assertEqual(diagnosis.exit_code, 0, diagnosis.output)
+            self.assertIn('Pendente: 1', diagnosis.output)
+            post.assert_not_called()
+
     def test_publication_queued_transactionally_without_http(self):
         app = self.app
         with patch('indexnow_service.requests.post') as post:
