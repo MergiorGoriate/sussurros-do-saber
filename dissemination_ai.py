@@ -131,15 +131,16 @@ caso contrário "Ilustração conceptual". Não representar uma fotografia real.
         system += '''
 No infográfico conceptual, usa um título informativo no topo e uma ilustração
 central com um único motivo dominante, enquadrado por inteiro e sem texto.
-Em slides[0].body escreve de 2 a 4 tópicos distintos, um por linha, com até
-45 caracteres por tópico como alvo e 60 como máximo. Usa quebras de linha reais no valor JSON, sem
-numeração nem marcadores. Se o artigo sustentar apenas um ponto relevante,
-usa um único tópico. Resume apenas factos sustentados e preserva incertezas.
-Não acrescentes conclusão, recomendações ou texto decorativo.
-Usa layout balanced para a composição vertical escura com imagem central
-e layout compact para a composição horizontal com painéis temáticos.
-Prefere balanced no Instagram. Nas restantes redes, escolhe compact quando
-os pontos se prestarem a uma leitura por painéis. Escolhe teal, blue ou purple
+Em slides[0].body escreve até seis tópicos distintos, um por linha, no formato
+"Tema curto: frase breve". Usa normalmente 3 a 5 tópicos. Inclui no fim uma linha
+"Síntese: frase breve" (em inglês, "Summary: short sentence") que reúna a ideia
+principal sem repetir literalmente os tópicos. O corpo inteiro deve ter no máximo
+240 caracteres. Aponta para 30 caracteres por linha. Usa quebras de linha no
+valor JSON, sem numeração. Se a fonte só sustentar um ponto, usa um único tópico.
+Preserva a incerteza e liga todos os pontos aos claim_ids.
+Usa layout balanced para o cartaz vertical escuro com pontos numerados em torno
+da ilustração e compact para o cartaz horizontal com painéis coloridos.
+Prefere balanced no Instagram e compact nas restantes redes. Escolhe teal, blue ou purple
 conforme o assunto.'''
     data = {'source': source, 'network': network, 'kind': kind, 'correction': instruction}
     payload = chat(system, data)
@@ -196,7 +197,7 @@ Aponta para 50 caracteres no heading e 160 no body.
 Devolve {"texts": ["resumo do primeiro campo", "resumo do segundo campo"]},
 com um texto por campo recebido e na mesma ordem.'''
     if kind == 'infographic':
-        instructions += '\nNo body usa até quatro tópicos curtos, um por linha, com até 45 caracteres por tópico.'
+        instructions += '\nNo body preserva o formato Tema: frase, um por linha. Conserva a linha Síntese ou Summary se couber; reduz o número de tópicos para respeitar o limite.'
     result = chat(instructions, {'fields': fields, 'claims': claims})
     texts = result.get('texts')
     if not isinstance(texts, list) or len(texts) != len(fields):
