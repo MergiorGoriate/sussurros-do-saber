@@ -197,23 +197,38 @@ Devolve {"texts": ["resumo do primeiro campo", "resumo do segundo campo"]},
 com um texto por campo recebido e na mesma ordem.'''
     if kind == 'infographic':
         instructions += '\nNo body usa até quatro tópicos curtos, um por linha, com até 45 caracteres por tópico.'
-    result = chat(instructions, {'fields': fields, 'claims': claims})
-    texts = result.get('texts')
-    if not isinstance(texts, list) or len(texts) != len(fields):
-        texts = [None] * len(fields)
+    replacements = [''] * len(fields)
+    pending = list(enumerate(fields))
+    for attempt in range(2):
+        prompt = instructions
+        if attempt:
+            prompt += ('\nA resposta anterior não coube. Usa apenas uma frase curta por campo, '
+                       'com até metade do limite indicado, preservando a ressalva essencial.')
+        result = chat(prompt, {'fields': [field for _, field in pending], 'claims': claims})
+        texts = result.get('texts')
+        if not isinstance(texts, list) or len(texts) != len(pending):
+            texts = [None] * len(pending)
 
-    replacements = []
-    for field, text in zip(fields, texts):
-        maximum = field['maximum']
-        text = text.strip() if isinstance(text, str) else ''
-        if (not text or len(text) > maximum) and field['field'] == 'body':
-            text = short_linked_claim(source, claims, field['claim_ids'], maximum)
-        if not text or len(text) > maximum:
-            raise GenerationError(
-                f"A IA não conseguiu resumir o slide {field['slide'] + 1}, "
-                f"campo {field['field']}, para {maximum} caracteres."
-            )
-        replacements.append(text)
+        unresolved = []
+        for (index, field), text in zip(pending, texts):
+            maximum = field['maximum']
+            text = text.strip() if isinstance(text, str) else ''
+            if (not text or len(text) > maximum) and field['field'] == 'body':
+                text = short_linked_claim(source, claims, field['claim_ids'], maximum)
+            if not text or len(text) > maximum:
+                unresolved.append((index, field))
+            else:
+                replacements[index] = text
+        pending = unresolved
+        if not pending:
+            break
+
+    if pending:
+        _, field = pending[0]
+        raise GenerationError(
+            f"A IA não conseguiu resumir o slide {field['slide'] + 1}, "
+            f"campo {field['field']}, para {field['maximum']} caracteres."
+        )
     for field, text in zip(fields, replacements):
         slides[field['slide']][field['field']] = text
 
