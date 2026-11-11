@@ -23,7 +23,7 @@ def cached_pdf_response(journal, build):
     values = ({column.name: getattr(journal, column.name) for column in table.columns}
               if table is not None else vars(journal))
     values = dict(values)
-    values['_format_version'] = 4
+    values['_format_version'] = 5
     values['_database'] = current_app.config['SQLALCHEMY_DATABASE_URI']
     if table is None or getattr(journal, 'id', None) is None:
         values['_transient'] = secrets.token_hex(16)
