@@ -15,6 +15,13 @@ class ReadingRateLimitTests(unittest.TestCase):
             default_limits=[default_rate_limits],storage_uri='memory://',key_prefix=secrets.token_hex(6))
         def reading(slug):return 'Article '+slug
         def journal(slug):return 'Journal '+slug
+        def listing():return 'Articles'
+        for endpoint, path in (('home', '/'), ('articles', '/artigos'),
+                               ('journals', '/revistas'), ('authors', '/autores'),
+                               ('author_detail', '/autor/example')):
+            for prefix in ('', '/en'):
+                self.app.add_url_rule(prefix + path, endpoint=endpoint,
+                    view_func=listing, methods=['GET', 'HEAD'])
         def api():return 'API'
         def login():return 'Login'
         def comment():return 'Comment'
@@ -42,6 +49,13 @@ class ReadingRateLimitTests(unittest.TestCase):
             self.assertEqual(self.client.get('/artigo/'+str(index)).status_code,200)
             self.assertEqual(self.client.head('/en/artigo/'+str(index)).status_code,200)
             self.assertEqual(self.client.get('/revistas/'+str(index)).status_code,200)
+
+    def test_public_browsing_exceeds_previous_limits(self):
+        for _ in range(310):
+            for path in ('/', '/artigos', '/revistas', '/autores', '/autor/example'):
+                for prefix in ('', '/en'):
+                    self.assertEqual(self.client.get(prefix + path).status_code, 200)
+                    self.assertEqual(self.client.head(prefix + path).status_code, 200)
 
     def test_posts_and_apis_retain_original_default_limits(self):
         for _ in range(100):
