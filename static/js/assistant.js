@@ -1,5 +1,6 @@
 (() => {
-  const locale = (document.documentElement.lang || "pt-MZ").toLowerCase().startsWith("en") ? "en" : "pt";
+  const selectedLanguage = document.querySelector(".language-selector a[aria-current=\"true\"]")?.getAttribute("lang");
+  const locale = (selectedLanguage || document.documentElement.lang || "pt-MZ").toLowerCase().startsWith("en") ? "en" : "pt";
   const english = {
   "Abrir assistente": "Open assistant",
   "Assistente Sussurros": "Sussurros Assistant",
