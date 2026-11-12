@@ -54,6 +54,19 @@
     messages.appendChild(el);
     messages.scrollTop = messages.scrollHeight;
   };
+  // Histórico temporário por separador, sem gravação no servidor.
+  const memoryKey = "sussurros-assistant-session-v1";
+  let history = [];
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(memoryKey) || "[]");
+    if (Array.isArray(saved)) history = saved.filter(item => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string").slice(-16).map(item => ({ role: item.role, content: item.content.slice(0, 1200) }));
+  } catch { history = []; }
+  const remember = (role, content) => {
+    history.push({ role, content: String(content).slice(0, 1200) });
+    history = history.slice(-16);
+    try { sessionStorage.setItem(memoryKey, JSON.stringify(history)); } catch {}
+  };
+  history.forEach(item => add(item.content, item.role === "assistant" ? "bot" : "user"));
   let pending = false;
   const sendButton = root.querySelector(".assistant-form button");
   const chips = [...root.querySelectorAll(".assistant-chip")];
@@ -63,6 +76,7 @@
     sendButton.disabled = true;
     chips.forEach(button => { button.disabled = true; });
     win.setAttribute("aria-busy", "true");
+    const context = history.slice();
     add(message, "user");
     input.value = "";
     const typing = document.createElement("div");
@@ -73,12 +87,14 @@
       const r = await fetch("/api/assistente", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, language: locale }),
+          body: JSON.stringify({ message, language: locale, history: context }),
         }),
         data = await r.json();
       if (!r.ok) throw new Error(data.answer || t("Erro do assistente"));
       typing.remove();
       add(data.answer, "bot");
+      remember("user", message);
+      remember("assistant", data.answer);
       if (data.links?.length) {
         const links = document.createElement("div");
         links.className = "assistant-links";
