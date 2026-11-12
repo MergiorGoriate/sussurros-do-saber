@@ -1229,9 +1229,10 @@ def sitemap():
         for journal in public_journals
     )
     author_urls = "".join(
-        f"<url><loc>{escape(SITE_URL + url_for('author_detail', slug=author.slug))}</loc></url>"
+        f"<url><loc>{escape(SITE_URL + url_for('author_detail', slug=author.slug))}</loc>{alternate_links('author_detail', slug=author.slug)}</url>"
         for author in public_authors if author.slug
     )
+    author_paths = [url_for("author_detail", slug=author.slug) for author in public_authors if author.slug]
     article_entries = []
     for article in public_articles:
         article_url = escape(SITE_URL + url_for("article", slug=article.slug))
@@ -1252,7 +1253,7 @@ def sitemap():
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
         'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" '
         'xmlns:xhtml="http://www.w3.org/1999/xhtml">'
-        + static_urls + journal_urls + author_urls + "".join(article_entries) + sitemap_extras(static_paths) + "</urlset>",
+        + static_urls + journal_urls + author_urls + "".join(article_entries) + sitemap_extras(static_paths + author_paths) + "</urlset>",
         mimetype="application/xml",
     )
     response.headers["Cache-Control"] = "public, max-age=3600"
@@ -1310,14 +1311,18 @@ def newsletter():
 @app.post("/api/assistente")
 @limiter.limit("5 per minute; 20 per hour")
 def assistant():
+    payload = request.get_json(silent=True)
+    english = isinstance(payload, dict) and payload.get("language") == "en"
+    def reply(pt, en):
+        return en if english else pt
     data = json_text_fields("message")
     if data is None:
-        return jsonify(ok=False, answer="Escreva uma pergunta em texto."), 400
+        return jsonify(ok=False, answer=reply("Escreva uma pergunta em texto.", "Enter a question as text.")), 400
     message = data["message"]
     if not message:
-        return jsonify({"ok": False, "answer": "Escreva uma pergunta para eu poder ajudar."}), 400
+        return jsonify({"ok": False, "answer": reply("Escreva uma pergunta para eu poder ajudar.", "Enter a question so I can help.")}), 400
     if len(message) > 800:
-        return jsonify({"ok": False, "answer": "Utilize até 800 caracteres por pergunta."}), 400
+        return jsonify({"ok": False, "answer": reply("Utilize até 800 caracteres por pergunta.", "Use up to 800 characters per question.")}), 400
 
     try:
         headers = {}
@@ -1325,7 +1330,7 @@ def assistant():
             headers["X-Assistant-Key"] = os.environ["ASSISTANT_SHARED_KEY"]
         worker_response = requests.post(
             os.getenv("ASSISTANT_WORKER_URL", "https://assistente-sussurros.geniospurificado.workers.dev"),
-            json={"message": message},
+            json={"message": message, "language": "en" if english else "pt"},
             headers=headers,
             timeout=25,
         )
@@ -1337,7 +1342,7 @@ def assistant():
     except (requests.RequestException, ValueError):
         return jsonify({
             "ok": False,
-            "answer": "O assistente está temporariamente indisponível. Tente novamente dentro de alguns instantes.",
+            "answer": reply("O assistente está temporariamente indisponível. Tente novamente dentro de alguns instantes.", "The assistant is temporarily unavailable. Please try again shortly."),
             "links": [],
         }), 502
 
