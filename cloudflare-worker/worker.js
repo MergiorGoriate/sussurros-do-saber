@@ -19,10 +19,17 @@ export default {
     const message = payload.message.trim();
     if (!message || message.length > 800) return json({ ok: false, answer: reply("A pergunta deve ter entre 1 e 800 caracteres.", "The question must contain between 1 and 800 characters.") }, 400);
 
+    const history = Array.isArray(payload.history) ? payload.history.slice(-16) : [];
+    const context = history.filter(item => item && typeof item === "object" &&
+      (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+      .map(item => ({ role: item.role, content: item.content.trim().slice(0, 1200) }))
+      .filter(item => item.content);
+
     try {
       const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
         messages: [
           { role: "system", content: english ? "You are the science assistant for Sussurros do Saber. Respond in clear English with scientific accuracy. Do not invent sources. For health, safety or high-risk topics, explain the limits of your answer and recommend professional support. Be concise." : "És o assistente científico do Sussurros do Saber. Responde em português claro, com rigor, sem inventar fontes. Em saúde, segurança ou temas de alto risco, informa os limites da resposta e recomenda apoio profissional. Sê conciso." },
+          ...context,
           { role: "user", content: message },
         ],
         max_tokens: 500,
