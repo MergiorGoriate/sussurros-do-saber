@@ -177,13 +177,18 @@ class InternationalizationTests(unittest.TestCase):
                 self.assertEqual(preferred({'CF-IPCountry': 'MZ', 'Accept-Language': 'en-US'}, {}), 'en')
 
     def test_assistant_receives_selected_locale_and_only_published_source_titles(self):
+        # Other tests retain published articles in the shared database. A unique
+        # search term keeps this fixture inside the assistant's bounded results.
+        search_term='assistantfixture'+secrets.token_hex(8)
+        self.article.keywords=search_term
+        db.session.commit()
         self.make(publish=True)
         for locale, expected_title in [('en', 'Plants and sunlight'), ('pt', self.article.title)]:
             with self.subTest(locale=locale):
                 self.client.get('/idioma/'+locale)
                 with patch('app.requests.post') as worker:
                     worker.return_value.json.return_value={'ok':True,'answer':'fixture','links':[]}
-                    response=self.client.post('/api/assistente',json={'message':'plantas','language':locale})
+                    response=self.client.post('/api/assistente',json={'message':search_term,'language':locale})
                 self.assertEqual(response.status_code,200)
                 payload=worker.call_args.kwargs['json']
                 self.assertEqual(payload['language'],locale)
