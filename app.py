@@ -1324,13 +1324,25 @@ def assistant():
     if len(message) > 800:
         return jsonify({"ok": False, "answer": reply("Utilize até 800 caracteres por pergunta.", "Use up to 800 characters per question.")}), 400
 
+    # Contexto temporário recebido do navegador, sem persistência.
+    raw_history = payload.get("history", []) if isinstance(payload, dict) else []
+    if not isinstance(raw_history, list):
+        return jsonify(ok=False, answer=reply("Histórico inválido.", "Invalid history.")), 400
+    history = []
+    for item in raw_history[-16:]:
+        if (isinstance(item, dict) and item.get("role") in ("user", "assistant")
+                and isinstance(item.get("content"), str)):
+            content = item["content"].strip()[:1200]
+            if content:
+                history.append({"role": item["role"], "content": content})
+
     try:
         headers = {}
         if os.getenv("ASSISTANT_SHARED_KEY"):
             headers["X-Assistant-Key"] = os.environ["ASSISTANT_SHARED_KEY"]
         worker_response = requests.post(
             os.getenv("ASSISTANT_WORKER_URL", "https://assistente-sussurros.geniospurificado.workers.dev"),
-            json={"message": message, "language": "en" if english else "pt"},
+            json={"message": message, "language": "en" if english else "pt", "history": history},
             headers=headers,
             timeout=25,
         )

@@ -24,7 +24,7 @@ for (const language of ['pt-MZ', 'en']) {
     await input.press('Enter');
     await expect(page.locator('.assistant-form button')).toBeDisabled();
     await expect.poll(() => payloads.length).toBe(1);
-    expect(payloads[0]).toEqual({ message: 'Question', language: language === 'en' ? 'en' : 'pt' });
+    expect(payloads[0]).toEqual({ message: 'Question', language: language === 'en' ? 'en' : 'pt', history: [] });
     resolveResponse();
     await expect(page.locator('.assistant-message.bot').last()).toHaveText('Test answer');
     await expect(page.locator('.assistant-form button')).toBeEnabled();
