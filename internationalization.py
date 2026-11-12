@@ -17,6 +17,15 @@ ENGLISH_TEXT = frozenset(' '.join(value.split()) for value in EN.values() if isi
 language_bp=Blueprint('language',__name__)
 LUSOPHONE={'MZ','PT','BR','AO','CV','GW','ST','TL','GQ'}
 ANGLOPHONE={'GB','US','AU','NZ','CA','IE','ZA','BW','ZM','ZW','MW','KE','UG','TZ','GH','NG','GM','SL','LR','NA','SS','JM','TT','BB','BS','BZ','GY'}
+# These countries have multiple official/common languages. Prefer a supported
+# browser language there; English remains the default when none is supported.
+MULTILINGUAL_ANGLOPHONE={
+    'CA','IE','ZA','BW','ZM','ZW','MW','KE','UG','TZ','GH','NG','GM','SL',
+    'LR','NA','SS','BZ','CM','RW','BI','SZ','LS','SC','MU','SD','IN','PK',
+    'SG','PH','MT','FJ','PG','SB','VU','WS','TO','KI','TV','NR','MH','FM','PW',
+    'HK','CK','NU',
+}
+ANGLOPHONE |= MULTILINGUAL_ANGLOPHONE | {'AG','DM','GD','KN','LC','VC'}
 
 
 def published(kind, ident):
@@ -127,14 +136,23 @@ def preferred(headers,cookies):
     choice=cookies.get('sds_language')
     if choice in {'pt','en'}:
         return choice
-    country=headers.get('CF-IPCountry','').upper() if os.getenv('TRUST_CLOUDFLARE_COUNTRY')=='true' else ''
-    if country in LUSOPHONE:
-        return 'pt'
-    if country in ANGLOPHONE:
-        return 'en'
+    # Enabling this flag is an operational assertion that the origin is
+    # protected. A Cloudflare-looking header alone never enables geolocation.
+    country=headers.get('CF-IPCountry','').strip().upper() if os.getenv('TRUST_CLOUDFLARE_COUNTRY')=='true' else ''
     from werkzeug.datastructures import LanguageAccept
     from werkzeug.http import parse_accept_header
-    return parse_accept_header(headers.get('Accept-Language',''),LanguageAccept).best_match(['pt','en'],default='pt')
+    accepted=parse_accept_header(headers.get('Accept-Language',''),LanguageAccept)
+    # Match regional tags at the same quality as their base language. Otherwise
+    # an exact lower-priority "en" can beat the visitor's first choice "pt-MZ".
+    supported=LanguageAccept([(tag.lower().split('-')[0], quality) for tag, quality in accepted])
+    browser=supported.best_match(['pt','en'])
+    if country in LUSOPHONE:
+        return 'pt'
+    if country in MULTILINGUAL_ANGLOPHONE and browser:
+        return browser
+    if country in ANGLOPHONE:
+        return 'en'
+    return browser or 'pt'
 
 
 def interface_catalogue():
@@ -409,6 +427,10 @@ def install(app):
             response.vary.add('Cookie')
         if request.path=='/' or request.path.startswith(('/en/','/idioma/')):
             response.headers['Cache-Control']='private, no-store'
+        if request.path=='/':
+            response.vary.add('Accept-Language')
+            if os.getenv('TRUST_CLOUDFLARE_COUNTRY')=='true':
+                response.vary.add('CF-IPCountry')
         if language()=='en' and getattr(g,'i18n_missing',False):
             response.headers['X-Robots-Tag']='noindex, follow'
         if language()=='en' and request.path.startswith('/api/') and response.is_json:
@@ -419,5 +441,6 @@ def install(app):
                         value[key]=ui(value[key])
                 response.set_data(app.json.dumps(value))
         return response
+
 
 
