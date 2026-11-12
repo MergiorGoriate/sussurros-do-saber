@@ -37,3 +37,37 @@ test('worker explains English outages in English', async () => {
   assert.equal(response.status, 502);
   assert.match((await response.json()).answer, /temporarily unavailable/);
 });
+
+test('worker applies selected language to grounding and preserves source links', async () => {
+  for (const language of ['en', 'pt']) {
+    let messages;
+    const env = { ASSISTANT_SHARED_KEY: 'test', AI: { run: async (_, options) => {
+      messages = options.messages;
+      return { response: language === 'en' ? 'English answer' : 'Resposta em português' };
+    } } };
+    const sources = [{ title: 'Biologia', url: 'https://www.sussurrosdosaber.com/artigo/biologia', excerpt: 'A célula é a unidade básica da vida.' }];
+    const response = await (await worker).default.fetch(request({ message: 'What is a cell?', language, sources,
+      history: [{ role: 'user', content: 'Previous question' }] }), env);
+    const data = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(data.links.length, 1);
+    assert.equal(data.links[0].title, 'Biologia');
+    assert.equal(data.links[0].url, sources[0].url);
+    assert.match(messages[1].content, language === 'en' ? /general knowledge/ : /conhecimento geral/);
+    assert.match(messages[1].content, /Biologia/);
+    assert.equal(messages[2].content, 'Previous question');
+    assert.equal(messages.at(-1).content, 'What is a cell?');
+  }
+});
+
+test('worker falls back to general knowledge without fabricated portal links', async () => {
+  let messages;
+  const env = { ASSISTANT_SHARED_KEY: 'test', AI: { run: async (_, options) => {
+    messages = options.messages;
+    return { response: 'General knowledge answer' };
+  } } };
+  const response = await (await worker).default.fetch(request({ message: 'Question', language: 'en', sources: [] }), env);
+  const data = await response.json();
+  assert.deepEqual(data.links, []);
+  assert.match(messages[1].content, /general knowledge/);
+});
