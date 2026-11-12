@@ -1,5 +1,5 @@
 (() => {
-  const locale = document.documentElement.lang.toLowerCase().startsWith("en") ? "en" : "pt";
+  const locale = (document.documentElement.lang || "pt-MZ").toLowerCase().startsWith("en") ? "en" : "pt";
   const english = {
   "Abrir assistente": "Open assistant",
   "Assistente Sussurros": "Sussurros Assistant",
@@ -104,7 +104,7 @@
             if (!['http:', 'https:'].includes(url.protocol)) return;
             const link = document.createElement('a');
             link.href = url.href;
-            link.textContent = `${String(item.label || t('Consultar'))} →`;
+            link.textContent = `${String(item.title || item.label || t('Consultar'))} →`;
             if (url.origin !== location.origin) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
             links.appendChild(link);
           } catch {}
