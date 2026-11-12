@@ -148,6 +148,71 @@ class InternationalizationTests(unittest.TestCase):
         self.assertEqual(self.client.get('/',headers={'Accept-Language':'en','User-Agent':'Googlebot'}).status_code,200)
         self.assertEqual(self.client.get('/en/').status_code,200)
 
+    def test_multilingual_country_respects_supported_browser_languages(self):
+        cases = [
+            ('CA', 'pt-BR,pt;q=0.9,en;q=0.5', 'pt'),
+            ('ZA', 'pt-MZ,en;q=0.8', 'pt'),
+            ('NG', 'en-NG,en;q=0.8,pt;q=0.2', 'en'),
+            ('IN', 'pt-PT', 'pt'), ('SG', 'en-SG', 'en'),
+            ('PH', '', 'en'), ('CA', 'fr-CA,fr;q=0.9', 'en'),
+            ('ZA', 'en;q=0,pt;q=0.8', 'pt'),
+            ('MZ', 'en-US', 'pt'), ('PT', 'en', 'pt'),
+            ('US', 'pt', 'en'), ('AU', 'pt', 'en'),
+            ('XX', 'pt-PT;q=0.5,en-GB;q=0.9', 'en'),
+            ('T1', '', 'pt'), ('', '', 'pt'),
+            (' ca ', 'pt', 'pt'),
+        ]
+        with patch.dict(os.environ, {'TRUST_CLOUDFLARE_COUNTRY': 'true'}):
+            for country, browser, expected in cases:
+                with self.subTest(country=country, browser=browser):
+                    headers={'CF-IPCountry': country, 'Accept-Language': browser}
+                    self.assertEqual(preferred(headers, {}), expected)
+                    for manual in ('pt', 'en'):
+                        self.assertEqual(preferred(headers, {'sds_language': manual}), manual)
+
+    def test_untrusted_country_is_ignored_even_with_invalid_language_cookie(self):
+        for flag in ('false', '', 'TRUE'):
+            with patch.dict(os.environ, {'TRUST_CLOUDFLARE_COUNTRY': flag}):
+                self.assertEqual(preferred({'CF-IPCountry': 'US'}, {'sds_language': 'invalid'}), 'pt')
+                self.assertEqual(preferred({'CF-IPCountry': 'MZ', 'Accept-Language': 'en-US'}, {}), 'en')
+
+    def test_assistant_receives_selected_locale_and_only_published_source_titles(self):
+        self.make(publish=True)
+        for locale, expected_title in [('en', 'Plants and sunlight'), ('pt', self.article.title)]:
+            with self.subTest(locale=locale):
+                self.client.get('/idioma/'+locale)
+                with patch('app.requests.post') as worker:
+                    worker.return_value.json.return_value={'ok':True,'answer':'fixture','links':[]}
+                    response=self.client.post('/api/assistente',json={'message':'plantas','language':locale})
+                self.assertEqual(response.status_code,200)
+                payload=worker.call_args.kwargs['json']
+                self.assertEqual(payload['language'],locale)
+                self.assertTrue(any(source['title']==expected_title for source in payload['sources']))
+                source=next(source for source in payload['sources'] if source['title']==expected_title)
+                self.assertIn(('/en/artigo/' if locale=='en' else '/artigo/')+self.article.slug,source['url'])
+
+    def test_country_redirect_and_manual_choice_are_private_and_stable(self):
+        client=app.test_client()
+        with patch.dict(os.environ, {'TRUST_CLOUDFLARE_COUNTRY': 'true'}):
+            headers={'CF-IPCountry':'ZA', 'Accept-Language':'pt-MZ,en;q=0.7'}
+            response=client.get('/', headers=headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['Content-Language'], 'pt-MZ')
+            self.assertIn('Accept-Language', response.vary)
+            self.assertIn('CF-IPCountry', response.vary)
+            self.assertIn('no-store', response.headers['Cache-Control'])
+            response=client.get('/idioma/en')
+            self.assertIn('Max-Age=31536000', response.headers['Set-Cookie'])
+            self.assertIn('HttpOnly', response.headers['Set-Cookie'])
+            self.assertIn('SameSite=Lax', response.headers['Set-Cookie'])
+            response=client.get('/', headers=headers, follow_redirects=True)
+            self.assertEqual(response.headers['Content-Language'], 'en')
+            self.assertEqual(client.get('/en/', headers={'CF-IPCountry':'MZ'}).status_code, 200)
+            client.get('/idioma/pt')
+            response=client.get('/', headers={'CF-IPCountry':'US','Accept-Language':'en'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['Content-Language'], 'pt-MZ')
+
     def test_switch_preserves_query_and_rejects_open_redirects(self):
         r=self.client.get('/idioma/en',query_string={'next':'/artigos?q=plantas&page=2'})
         self.assertEqual(r.location,'/en/artigos?q=plantas&page=2')
@@ -459,4 +524,5 @@ class InternationalizationTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
 
