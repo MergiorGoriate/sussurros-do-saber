@@ -1336,13 +1336,32 @@ def assistant():
             if content:
                 history.append({"role": item["role"], "content": content})
 
+    # Consultar apenas artigos publicados, sem guardar perguntas.
+    sources = []
+    try:
+        terms = list(dict.fromkeys(re.findall(r'[^\W_]{4,}', message.lower(), re.UNICODE)))[:8]
+        if terms:
+            filters = [db.or_(Article.title.ilike('%' + t + '%'), Article.summary.ilike('%' + t + '%'), Article.keywords.ilike('%' + t + '%'), Article.body.ilike('%' + t + '%')) for t in terms]
+            candidates = Article.public_query().filter(db.or_(*filters)).limit(30).all()
+            ranked = []
+            for article in candidates:
+                title, summary, keywords = article.title or '', article.summary or '', article.keywords or ''
+                body = re.sub(r'<[^>]+>', ' ', article.body or '')
+                score = sum(5 * (t in title.lower()) + 3 * (t in keywords.lower()) + 2 * (t in summary.lower()) + (t in body.lower()) for t in terms)
+                if score >= 2:
+                    excerpt = next((body[max(0, body.lower().find(t) - 100):body.lower().find(t) + 550] for t in terms if t in body.lower()), body[:550])
+                    ranked.append((score, {'title': title[:240], 'url': url_for('article', slug=article.slug, _external=True), 'excerpt': (summary[:500] + ' ' + excerpt[:650]).strip()}))
+            sources = [item for _, item in sorted(ranked, key=lambda pair: pair[0], reverse=True)[:3]]
+    except Exception:
+        app.logger.exception('Assistant article search failed')
+
     try:
         headers = {}
         if os.getenv("ASSISTANT_SHARED_KEY"):
             headers["X-Assistant-Key"] = os.environ["ASSISTANT_SHARED_KEY"]
         worker_response = requests.post(
             os.getenv("ASSISTANT_WORKER_URL", "https://assistente-sussurros.geniospurificado.workers.dev"),
-            json={"message": message, "language": "en" if english else "pt", "history": history},
+            json={"message": message, "language": "en" if english else "pt", "history": history, "sources": sources},
             headers=headers,
             timeout=25,
         )

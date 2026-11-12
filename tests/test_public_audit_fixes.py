@@ -53,7 +53,7 @@ class PublicAuditTests(unittest.TestCase):
             with patch('app.requests.post', return_value=worker) as send:
                 response = self.client.post('/api/assistente', json={'message': 'Question', 'language': requested})
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(send.call_args.kwargs['json'], {'message': 'Question', 'language': expected, 'history': []})
+            self.assertEqual(send.call_args.kwargs['json'], {'message': 'Question', 'language': expected, 'history': [], 'sources': []})
 
     def test_assistant_english_validation_and_outage(self):
         response = self.client.post('/api/assistente', json={'message': '', 'language': 'en'})
