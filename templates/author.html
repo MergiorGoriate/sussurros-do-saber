@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}{{ author.name }} — {{ ui('Autor') }}{% if pagination.page > 1 %} — {{ ui('Página') }} {{ pagination.page }}{% endif %} | Sussurros do Saber{% endblock %}
+{% block title %}{{ author.name }} — Autor | Sussurros do Saber{% if pagination.page > 1 %} — {{ ui('Página') }} {{ pagination.page }}{% endif %}{% endblock %}
 {% block meta_description %}{{ (author.headline or author.bio or ('Perfil e artigos de ' ~ author.name ~ ' no Sussurros do Saber.'))|striptags|truncate(155, True, '…') }}{% endblock %}
 {% block canonical %}{{ site_url }}{{ seo_canonical_path }}{% endblock %}
 {% block head_extra %}
