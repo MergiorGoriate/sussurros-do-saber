@@ -1350,7 +1350,17 @@ def assistant():
                 score = sum(5 * (t in title.lower()) + 3 * (t in keywords.lower()) + 2 * (t in summary.lower()) + (t in body.lower()) for t in terms)
                 if score >= 2:
                     excerpt = next((body[max(0, body.lower().find(t) - 100):body.lower().find(t) + 550] for t in terms if t in body.lower()), body[:550])
-                    ranked.append((score, {'title': title[:240], 'url': url_for('article', slug=article.slug, _external=True), 'excerpt': (summary[:500] + ' ' + excerpt[:650]).strip()}))
+                    source_title = title
+                    source_excerpt = (summary[:500] + ' ' + excerpt[:650]).strip()
+                    if english:
+                        # Prefer the reviewed, published English translation, never a guessed title.
+                        from translation_service import published
+                        _, translated_version = published('article', article.id)
+                        translated = translated_version.content if translated_version else {}
+                        if isinstance(translated, dict):
+                            source_title = translated.get('title') or title
+                            source_excerpt = (translated.get('summary') or source_excerpt)[:1200]
+                    ranked.append((score, {'title': source_title[:240], 'url': url_for('article', slug=article.slug, _external=True), 'excerpt': source_excerpt}))
             sources = [item for _, item in sorted(ranked, key=lambda pair: pair[0], reverse=True)[:3]]
     except Exception:
         app.logger.exception('Assistant article search failed')
