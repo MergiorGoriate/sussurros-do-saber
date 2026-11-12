@@ -32,6 +32,10 @@ def published(kind, ident):
 
 def listing_parameters():
     """Keep content selectors, dropping tracking and empty/default parameters."""
+    if request.endpoint == 'author_detail':
+        from request_values import pagination_page
+        page = pagination_page('pagina')
+        return {'pagina': page} if page > 1 else {}
     if request.endpoint != 'articles':
         return {}
     from request_values import pagination_page

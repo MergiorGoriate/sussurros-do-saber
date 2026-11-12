@@ -11,21 +11,26 @@ export default {
     }
     let payload;
     try { payload = await request.json(); } catch { return json({ ok: false, answer: "Pedido inválido." }, 400); }
-    const message = String(payload.message || "").trim();
-    if (!message || message.length > 800) return json({ ok: false, answer: "A pergunta deve ter entre 1 e 800 caracteres." }, 400);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload) || typeof payload.message !== "string") {
+      return json({ ok: false, answer: "Invalid question." }, 400);
+    }
+    const english = payload.language === "en";
+    const reply = (pt, en) => english ? en : pt;
+    const message = payload.message.trim();
+    if (!message || message.length > 800) return json({ ok: false, answer: reply("A pergunta deve ter entre 1 e 800 caracteres.", "The question must contain between 1 and 800 characters.") }, 400);
 
     try {
       const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
         messages: [
-          { role: "system", content: "És o assistente científico do Sussurros do Saber. Responde em português claro, com rigor, sem inventar fontes. Em saúde, segurança ou temas de alto risco, informa os limites da resposta e recomenda apoio profissional. Sê conciso." },
+          { role: "system", content: english ? "You are the science assistant for Sussurros do Saber. Respond in clear English with scientific accuracy. Do not invent sources. For health, safety or high-risk topics, explain the limits of your answer and recommend professional support. Be concise." : "És o assistente científico do Sussurros do Saber. Responde em português claro, com rigor, sem inventar fontes. Em saúde, segurança ou temas de alto risco, informa os limites da resposta e recomenda apoio profissional. Sê conciso." },
           { role: "user", content: message },
         ],
         max_tokens: 500,
       });
       const answer = result.response || result.result?.response;
-      return json({ ok: true, answer: answer || "Não consegui produzir uma resposta.", links: [] });
+      return json({ ok: true, answer: answer || reply("Não consegui produzir uma resposta.", "I could not produce an answer."), links: [] });
     } catch {
-      return json({ ok: false, answer: "O modelo está temporariamente indisponível.", links: [] }, 502);
+      return json({ ok: false, answer: reply("O modelo está temporariamente indisponível.", "The model is temporarily unavailable."), links: [] }, 502);
     }
   },
 };
