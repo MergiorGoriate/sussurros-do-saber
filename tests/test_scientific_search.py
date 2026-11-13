@@ -2,7 +2,7 @@
 import json
 import secrets
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from bs4 import BeautifulSoup
 
 from app import app
@@ -105,6 +105,99 @@ class ScientificSearchTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/artigos', query_string={
             'q':self.article.doi,'ids':str(self.private.id)}).json, [])
 
+    def test_typo_search_uses_all_words_and_keeps_filters_and_drafts_private(self):
+        token = self.article.slug.removeprefix('search-article-')
+        self.article.title = 'Cérebro e imunologia '+token
+        self.private.title = self.article.title
+        self.article.keywords = 'neuroplasticidade'
+        db.session.commit()
+        for term in ['imunlogia '+token, 'imunologia cerebro '+token,
+                     'cerebro imunolgia '+token, 'Autroa '+token,
+                     'neuroplaticidade '+token]:
+            with self.subTest(term=term):
+                page = self.client.get('/artigos', query_string={'q':term})
+                self.assertEqual(page.status_code, 200)
+                soup = BeautifulSoup(page.data, 'html.parser')
+                self.assertIsNotNone(soup.select_one('a[href="/artigo/'+self.article.slug+'"]'))
+                self.assertIsNone(soup.select_one('a[href="/artigo/'+self.private.slug+'"]'))
+                rows = self.client.get('/api/artigos', query_string={'q':term}).json
+                self.assertIn(self.article.id, [row['id'] for row in rows])
+                self.assertNotIn(self.private.id, [row['id'] for row in rows])
+        self.assertEqual(self.client.get('/api/artigos', query_string={
+            'q':'imunlogia '+token, 'ids':str(self.private.id)}).json, [])
+        excluded = self.client.get('/artigos', query_string={
+            'q':'imunlogia '+token, 'categoria':'categoria-inexistente'})
+        self.assertNotIn('/artigo/'+self.article.slug, excluded.text)
+        self.assertEqual(self.client.get('/api/artigos', query_string={
+            'q':'imunlogia oceanografia '+token}).json, [])
+
+    def test_relevance_precedes_recency_and_pagination_in_html_and_api(self):
+        token = self.article.slug.removeprefix('search-article-')
+        self.article.title = 'Imunologia cérebro '+token
+        self.article.published_at = utcnow()-timedelta(days=365)
+        extras = [Article(title='Imunologia e cérebro '+token,
+            slug='search-rank-'+token+'-'+str(i), summary='Fixture', body='',
+            author_rel=self.author, category_rel=self.category, status='published',
+            published_at=utcnow()) for i in range(14)]
+        db.session.add_all(extras)
+        db.session.commit()
+        try:
+            term = 'imunologia cerebro '+token
+            api = self.client.get('/api/artigos', query_string={'q':term, 'limit':1})
+            self.assertEqual([row['id'] for row in api.json], [self.article.id])
+            pages = []
+            for page in (1, 2):
+                response = self.client.get('/artigos', query_string={'q':term, 'page':page})
+                self.assertEqual(response.status_code, 200)
+                soup = BeautifulSoup(response.data, 'html.parser')
+                pages.append([link['href'] for link in soup.select('article.story-card > a')])
+            self.assertEqual(pages[0][0], '/artigo/'+self.article.slug)
+            self.assertEqual(len(pages[0]), 12)
+            self.assertEqual(len(pages[1]), 3)
+            self.assertFalse(set(pages[0]) & set(pages[1]))
+        finally:
+            for item in extras:
+                db.session.delete(item)
+            db.session.commit()
+
+    def test_english_search_uses_only_published_translation_version(self):
+        from translation_models import ContentTranslation, TranslationVersion
+        from translation_service import source, digest
+        token = self.article.slug.removeprefix('search-article-')
+        translation = ContentTranslation(kind='article', source_id=self.article.id,
+            language='en', state='review', version=2, published_version=1)
+        db.session.add(translation)
+        db.session.flush()
+        original = source('article', self.article.id)
+        versions = [TranslationVersion(translation_id=translation.id, number=number,
+            source_hash=digest(original), source=original, report={},
+            content=dict(original, title=title, summary='Published discovery'))
+            for number, title in [(1, 'Memory and neuroplasticity '+token),
+                                  (2, 'Unpublishedsecret '+token)]]
+        db.session.add_all(versions)
+        db.session.commit()
+        try:
+            for path in ['/en/artigos', '/api/artigos']:
+                # API locale is selected by its normal language cookie.
+                self.client.set_cookie('sds_language', 'en')
+                response = self.client.get(path, query_string={'q':'memroy '+token})
+                self.assertEqual(response.status_code, 200)
+                if response.is_json:
+                    self.assertIn(self.article.id, [row['id'] for row in response.json])
+                else:
+                    self.assertIn('Memory and neuroplasticity', response.text)
+            response = self.client.get('/en/artigos', query_string={'q':'unpublishedsecret '+token})
+            self.assertNotIn('/en/artigo/'+self.article.slug, response.text)
+            self.assertEqual(self.client.get('/api/artigos',
+                query_string={'q':'unpublishedsecret '+token}).json, [])
+        finally:
+            self.client.delete_cookie('sds_language')
+            for item in versions:
+                db.session.delete(item)
+            db.session.flush()
+            db.session.delete(translation)
+            db.session.commit()
+
     def test_doi_links_resolve_without_duplicate_prefixes(self):
         for record, path in [(self.journal, '/revistas/'+self.journal.slug),
                              (self.article, '/artigo/'+self.article.slug)]:
@@ -133,3 +226,4 @@ class DoiResolverTests(unittest.TestCase):
         for value in ['', None, 'javascript:alert(1)', 'https://evil.test/10.12345/Test',
                       '10.123/Test', '10.12345/with space', '10.12345/<script>']:
             self.assertEqual(doi_url(value), '')
+

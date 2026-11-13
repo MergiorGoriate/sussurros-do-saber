@@ -29,6 +29,7 @@ from werkzeug.utils import safe_join
 from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
 from journal_metadata import journal_authors
 from scientific_search import metadata_match, doi_url
+from smart_search import article_search
 from editorial_content import prepare_guidelines
 from admin import admin_bp, login_required, slugify, validate_csrf
 from extensions import limiter
@@ -769,20 +770,19 @@ def articles():
     if getattr(g,'language','pt')=='en':
         from i18n_catalog import EN
         category=next((pt.lower() for pt,en in EN.items() if en.lower()==category),category)
-    query = request.args.get("q", "").strip().lower()
+    query = request.args.get("q", "").strip()[:120]
     results = Article.public_card_query()
+    relevance = []
+    if category or query:
+        results = results.join(Category)
     if category:
-        results = results.join(Category).filter(db.func.lower(Category.name) == category)
+        results = results.filter(db.func.lower(Category.name) == category)
     if query:
-        match = metadata_match(query,
-            Article.title, Article.summary, Article.body, Article.keywords,
-            Article.doi, Author.name, Author.orcid)
-        if getattr(g,'language','pt')=='en':
-            from internationalization import translated_match
-            match=db.or_(match,translated_match('article',query,Article.id))
+        match, score = article_search(query, english=getattr(g, "language", "pt") == "en")
         results = results.join(Author).filter(match)
+        relevance = [score.desc()]
     page = pagination_page()
-    pagination = results.order_by(Article.published_at.desc()).paginate(page=page, per_page=12, error_out=False)
+    pagination = results.order_by(*relevance, Article.published_at.desc(), Article.id.desc()).paginate(page=page, per_page=12, error_out=False)
     return render_template(
         "articles.html",
         articles=pagination.items,
@@ -1176,11 +1176,12 @@ def api_articles():
     if "ids" in request.args:
         items = items.filter(Article.id.in_(requested_ids))
         limit = min(50, len(requested_ids))
+    relevance = []
     if query:
-        items = items.join(Category).join(Author).filter(metadata_match(query,
-            Article.title, Article.summary, Article.keywords, Article.doi,
-            Category.name, Author.name, Author.orcid))
-    articles = items.order_by(Article.published_at.desc()).limit(limit).all()
+        match, score = article_search(query, english=getattr(g, "language", "pt") == "en")
+        items = items.join(Category).join(Author).filter(match)
+        relevance = [score.desc()]
+    articles = items.order_by(*relevance, Article.published_at.desc(), Article.id.desc()).limit(limit).all()
     response = jsonify([
         {
             "id": article.id,
@@ -1753,6 +1754,7 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=5000,
     )
+
 
 
 
