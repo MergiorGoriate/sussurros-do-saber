@@ -194,6 +194,7 @@ class ScientificSearchTests(unittest.TestCase):
             self.client.delete_cookie('sds_language')
             for item in versions:
                 db.session.delete(item)
+            db.session.flush()
             db.session.delete(translation)
             db.session.commit()
 
