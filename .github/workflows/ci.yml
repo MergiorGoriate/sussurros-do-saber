@@ -66,6 +66,14 @@ jobs:
           /tmp/drill/bin/python -m unittest discover -s tests -p 'test_newsletter.py' -v
           MAIL_TEST_DATABASE_URL="$DATABASE_URL" /tmp/drill/bin/python -m unittest discover -s tests -p 'test_mail_delivery.py' -v
           SCIENTIFIC_METRICS_TEST_DATABASE_URL="$DATABASE_URL" /tmp/drill/bin/python -m unittest discover -s tests -p 'test_scientific_metrics_postgres.py' -v
+      - name: Validate smart search on PostgreSQL 18
+        env:
+          SMART_SEARCH_TEST_DATABASE_URL: postgresql://postgres:fixture-only-password@postgres/functionality_fixture
+          DATABASE_URL: postgresql://postgres:fixture-only-password@postgres/functionality_fixture
+          SECRET_KEY: isolated-audit-secret
+        run: |
+          /tmp/drill/bin/python -m unittest discover -s tests -p 'test_smart_search.py' -v
+          /tmp/drill/bin/python -m unittest discover -s tests -p 'test_scientific_search.py' -v
       - name: Restore synthetic archive and verify production fixture is unchanged
         run: |
           createdb sussurros_fixture
@@ -224,3 +232,4 @@ jobs:
             /tmp/footnote-previews/
           if-no-files-found: ignore
           retention-days: 7
+

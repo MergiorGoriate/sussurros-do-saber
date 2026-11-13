@@ -3,6 +3,20 @@ const {execFileSync}=require('node:child_process');
 const fixture=()=>JSON.parse(execFileSync('python',['tests/browser/scientific_search_fixture.py'],{encoding:'utf8'}));
 
 for(const width of [320,1440]){
+  test(`global search tolerates typos at ${width}px`,async({page})=>{
+    const data=fixture();
+    await page.setViewportSize({width,height:1000});
+    await page.goto('/idioma/pt');
+    await page.goto('/');
+    await page.locator('#searchToggle').click();
+    await page.locator('#siteSearch').fill(data.article_query);
+    await page.locator('#searchPanel button').click();
+    await expect(page).toHaveURL(new RegExp('/artigos\\?q='));
+    await expect(page.locator(`a[href="/artigo/${data.article_slug}"]`).first()).toBeVisible();
+    await expect(page.locator(`a[href="/artigo/${data.private_article_slug}"]`)).toHaveCount(0);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  });
+
   test(`scientific catalogue search and DOI at ${width}px`,async({page})=>{
     const data=fixture();
     await page.setViewportSize({width,height:1000});
@@ -40,3 +54,4 @@ test('catalogue GET search works without JavaScript',async({browser})=>{
     await expect(page.locator('#journalEmpty')).toBeVisible();
   }finally{await context.close();}
 });
+

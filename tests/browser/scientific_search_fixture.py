@@ -9,7 +9,7 @@ if not os.environ.get('DATABASE_URL', '').startswith('sqlite:') or os.environ.ge
     raise RuntimeError('Scientific search fixture requires isolated SQLite outside production')
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from app import app
-from models import db, Journal
+from models import db, Journal, Article, Author, Category
 
 with app.app_context():
     token = uuid.uuid4().hex
@@ -21,7 +21,19 @@ with app.app_context():
             'orcid':'https://orcid.org/0000-0001-5109-3700','description':''}]), published=True)
     hidden = Journal(title=journal.title, slug='hidden-search-'+token,
         field='Biologia', description=journal.description, doi=doi, published=False)
-    db.session.add_all([journal, hidden])
+    author = Author(name='Autor '+token, slug='search-author-'+token, role='Investigador', bio='Teste')
+    category = Category(name='Categoria '+token, slug='search-category-'+token)
+    db.session.add_all([author, category])
+    db.session.flush()
+    article = Article(title='Imunologia do cérebro '+token, slug='fuzzy-'+token,
+        summary='Artigo para teste de pesquisa', body='Conteúdo sintético.',
+        author_id=author.id, category_id=category.id, status='published')
+    private = Article(title=article.title, slug='hidden-fuzzy-'+token,
+        summary=article.summary, body=article.body,
+        author_id=author.id, category_id=category.id, status='draft')
+    db.session.add_all([journal, hidden, article, private])
     db.session.commit()
     print(json.dumps({'slug':journal.slug,'private_slug':hidden.slug,'doi':doi,
-                     'author':'Coautora '+token}))
+                     'author':'Coautora '+token, 'article_slug':article.slug,
+                     'private_article_slug':private.slug, 'article_query':'imunlogia cerebro '+token}))
+
