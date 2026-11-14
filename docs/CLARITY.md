@@ -24,10 +24,7 @@ Do not also install this project through GTM, which would create a second loader
 
 Validation: Node tests cover consent, expiry, deduplication and revocation;
 Python tests cover page/CSP scope and disclosures; browser tests mock Clarity
-and send no real analytics. After deployment, accept analytics on an anonymous
-public page and inspect a single `/tag/zdbchcjjtg?ref=bwt` request, then verify
-collection and the actual recording/masking in the project dashboard. Rejecting
-analytics must produce no Clarity requests.
+and send no real analytics.
 
 The browser CI job sets an empty project ID globally. The dedicated mocked test
 mounts the real local loader only after its vendor route is mocked, so unrelated
