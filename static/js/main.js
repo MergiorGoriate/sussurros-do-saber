@@ -104,7 +104,7 @@ window.sdsTrack=pushAnalyticsEvent;
     const secure=location.protocol==='https:'?'; Secure':'';
     document.cookie=cookieName+'='+encodeURIComponent(JSON.stringify(consent))+'; Max-Age=15552000; Path=/; SameSite=Lax'+secure;
     updateGoogleConsent(consent);
-    if(withdrawing){location.reload();return}
+    if(withdrawing){dispatchEvent(new CustomEvent('cookieconsentchange',{detail:consent}));location.reload();return}
     banner.hidden=true;
     activateOptionalScripts(consent);
     dispatchEvent(new CustomEvent('cookieconsentchange',{detail:consent}));

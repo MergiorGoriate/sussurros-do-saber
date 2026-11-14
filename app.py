@@ -29,6 +29,7 @@ from werkzeug.utils import safe_join
 from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
 from journal_metadata import journal_authors
 from scientific_search import metadata_match, doi_url
+from clarity_tracking import project_id as clarity_project_id
 from smart_search import article_search
 from editorial_content import prepare_guidelines
 from admin import admin_bp, login_required, slugify, validate_csrf
@@ -484,6 +485,7 @@ def render_article_markdown(value, prefix="sec"):
 @app.after_request
 def security_headers(response):
     from internationalization import listing_noindex
+    clarity_connect = ' https://*.clarity.ms https://c.bing.com' if clarity_project_id() else ''
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
@@ -497,7 +499,7 @@ def security_headers(response):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://accounts.google.com/gsi/style; "
         f"script-src 'nonce-{getattr(g, 'csp_nonce', '')}' 'strict-dynamic' 'self' https:; "
         "script-src-attr 'none'; "
-        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com https://fundingchoicesmessages.google.com; media-src 'self' blob: https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com https://fundingchoicesmessages.google.com; upgrade-insecure-requests",
+        f"frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://*.doubleclick.net https://*.googlesyndication.com https://*.google.com https://fundingchoicesmessages.google.com; media-src 'self' blob: https:; connect-src 'self' https://challenges.cloudflare.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com https://fundingchoicesmessages.google.com{clarity_connect}; upgrade-insecure-requests",
     )
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -584,6 +586,7 @@ def google_site_verification_token():
 @app.context_processor
 def site_context():
     return {
+        "clarity_project_id": clarity_project_id(),
         "google_cmp_enabled": (
             os.getenv("GOOGLE_CMP_ENABLED", "false").strip().lower() == "true"
             and request.method == "GET"
