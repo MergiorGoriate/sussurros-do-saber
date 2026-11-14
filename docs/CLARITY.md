@@ -29,6 +29,15 @@ public page and inspect a single `/tag/zdbchcjjtg?ref=bwt` request, then verify
 collection and the actual recording/masking in the project dashboard. Rejecting
 analytics must produce no Clarity requests.
 
+The browser CI job sets an empty project ID globally. The dedicated mocked test
+mounts the real local loader only after its vendor route is mocked, so unrelated
+browser regressions cannot send visits to the production Clarity project.
+
+After deployment, accept analytics on an anonymous
+public page and inspect a single `/tag/zdbchcjjtg?ref=bwt` request, then verify
+collection and the actual recording/masking in the project dashboard. Rejecting
+analytics must produce no Clarity requests.
+
 Primary references consulted 2026-11-14:
 - https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-consent-api-v2
 - https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp

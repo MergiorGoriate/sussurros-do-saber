@@ -15,6 +15,16 @@ test('Clarity respects rejection, acceptance and withdrawal without live telemet
    `});
  });
  await page.goto('/idioma/pt');await page.goto('/');
+ // CI disables the project globally so unrelated tests cannot send real data.
+ // Mount the real local loader only after the vendor route has been mocked.
+ if(await page.locator('script[src*="js/clarity.js"]').count()===0){
+   await page.evaluate(()=>new Promise((resolve,reject)=>{
+     const script=document.createElement('script');
+     script.src='/static/js/clarity.js';script.dataset.projectId='zdbchcjjtg';
+     script.nonce=document.querySelector('script[nonce]').nonce;
+     script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
+   }));
+ }
  await page.locator('#cookieReject').click();
  expect(tags).toEqual([]);
  await page.locator('#cookieSettingsLink').click();await page.locator('#cookieAccept').click();

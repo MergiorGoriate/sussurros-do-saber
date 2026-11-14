@@ -132,6 +132,8 @@ jobs:
     timeout-minutes: 30
     env:
       DATABASE_URL: sqlite:////tmp/sussurros-browser-ci.db
+      # Only the dedicated mocked test mounts Clarity; other tests emit no telemetry.
+      CLARITY_PROJECT_ID: ''
       CLOUDINARY_CLOUD_NAME: cover-fixture
       SECRET_KEY: ci-browser-secret-key
       ADMIN_TOTP_SECRET: JBSWY3DPEHPK3PXP
