@@ -529,9 +529,9 @@ Os botões de partilha do Bluesky e Reddit são independentes dos links de perfi
 
 SQLite é o padrão local (`sqlite:///sussurros.db`, normalmente na pasta `instance/`). Para produção, configurar PostgreSQL persistente por `DATABASE_URL`; o código normaliza `postgres://` para `postgresql://`. A versão exacta do servidor PostgreSQL é definida pela infraestrutura, não pelo repositório.
 
-Ao importar a aplicação, `AUTO_SCHEMA_UPGRADE=true` (padrão quando ausente) permite `db.create_all()` e alterações leves de colunas antes das consultas ORM. O seed pode criar exemplos quando as tabelas de conteúdo estão vazias. `create_all()` não migra sozinho colunas de tabelas antigas.
+Com `BOOTSTRAP_ON_STARTUP=true` (valor por omissão), o arranque mantém a preparação de dados e, se `AUTO_SCHEMA_UPGRADE=true`, as actualizações de esquema legadas. Os exemplos de revistas e artigos são criados apenas fora do modo de produção. Em produção, pode preparar a base explicitamente e arrancar com `BOOTSTRAP_ON_STARTUP=false`.
 
-As revisões Alembic incluem a baseline histórica, `20261007_02` (governação) e `20261008_03` (remoções/notificações), actualmente o head. Acrescentam estruturas sem substituir funções personalizadas, permissões ou conteúdo. A baseline valida o esquema histórico existente; um esquema incompatível deve ser investigado antes de prosseguir. O downgrade destrutivo é recusado.
+As revisões Alembic partem da baseline histórica e chegam a `20261102_20` (IndexNow). A baseline valida o esquema histórico existente. Investigue incompatibilidades antes de prosseguir. O downgrade destrutivo é recusado.
 
 No **terminal do serviço da aplicação no Coolify**, com a versão nova disponível, o ambiente apontado à base correcta e backup previamente verificado, aplicar antes de iniciar os novos processos:
 
@@ -539,9 +539,10 @@ No **terminal do serviço da aplicação no Coolify**, com a versão nova dispon
 python -m alembic current
 python -m alembic upgrade head
 python -m alembic current
+FLASK_ENV=production BOOTSTRAP_ON_STARTUP=false python -m flask --app app preparar-dados
 ```
 
-Resultado esperado nesta versão: `20261021_07 (head)`. Ensaiar primeiro numa cópia isolada. `AUTO_SCHEMA_UPGRADE` é compatibilidade de arranque, não substitui a migração explícita; não alterar a configuração de produção apenas para resolver um problema visual. Guias: [governação](docs/STAFF_GOVERNANCE.md) e [remoções/notificações](docs/LIFECYCLE_NOTIFICATIONS.md).
+O último `alembic current` deve apresentar `20261102_20 (head)`. Ensaiar primeiro numa cópia isolada. Executar `preparar-dados` uma vez por implantação, com o ambiente de produção configurado. O comando prepara as funções padrão, a categoria editorial e os slugs legados. Após validar estes passos, definir `BOOTSTRAP_ON_STARTUP=false` no serviço web do Coolify e verificar `/healthz`, a listagem pública e o acesso administrativo.
 
 Comando específico para as tabelas Google/favoritos:
 
@@ -633,7 +634,9 @@ Segredos pertencem às variáveis protegidas do serviço/Worker. Os valores abai
 | `FLASK_DEBUG` | Debug local explícito, ignorado em produção |
 | `PORT` | Porta do comando Gunicorn no Docker; padrão 8000 |
 | `WEB_CONCURRENCY` | Workers Gunicorn no Docker; padrão 2 |
-| `AUTO_SCHEMA_UPGRADE` | Actualização leve de esquema na inicialização; padrão true; manter activa nesta etapa |
+| `BOOTSTRAP_ON_STARTUP` | Preparação legada ao arrancar, activa por omissão. Usar `false` após configurar Alembic e `preparar-dados` na implantação. |
+| `AUTO_SCHEMA_UPGRADE` | Actualização legada do esquema, activa por omissão quando a preparação ao arrancar está activa. |
+| `PUBLISH_SCHEDULED_ON_REQUEST` | Processamento de publicações ao receber pedidos HTTP, activo por omissão. Usar `false` após validar a tarefa periódica. |
 | `PROXY_FIX_X_FOR`, `PROXY_FIX_X_PROTO` | Saltos de proxy confiáveis para IP/protocolo; padrão 1 |
 | `PROXY_FIX_X_HOST` | Saltos confiáveis para host encaminhado; padrão 0 |
 

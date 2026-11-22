@@ -259,7 +259,9 @@ class DisseminationTests(unittest.TestCase):
         self.client.get(path,headers={'User-Agent':'Googlebot'})
         self.client.get(path,headers={'User-Agent':'Mozilla/5.0','Sec-Purpose':'prefetch'})
         self.assertEqual(Click.query.count(),0)
-        self.client.get(path,headers={'User-Agent':'Mozilla/5.0'})
+        response = self.client.get(path, headers={'User-Agent': 'Mozilla/5.0'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers['Cache-Control'], 'no-store')
         self.assertEqual(Click.query.count(),1)
 
     def test_no_cross_network_or_arbitrary_publication_url(self):

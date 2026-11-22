@@ -18,12 +18,14 @@ from email.utils import format_datetime
 from html import escape as html_escape, unescape as html_unescape
 from urllib.parse import parse_qs, quote, unquote, urlparse
 import bleach
+import click
 import markdown
 from article_notes import render_notes_markdown, allowed_markdown_attribute, decorate_notes
 import math
 from markupsafe import Markup
 from sqlalchemy import case, inspect, or_, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import load_only
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import safe_join
 from journal_article import ARTICLE_FIELD_LIMITS, structured_article_content
@@ -106,6 +108,8 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
     SESSION_REFRESH_EACH_REQUEST=False,
     MAX_CONTENT_LENGTH=60 * 1024 * 1024,
+    BOOTSTRAP_ON_STARTUP=os.getenv("BOOTSTRAP_ON_STARTUP", "true").lower() == "true",
+    PUBLISH_SCHEDULED_ON_REQUEST=os.getenv("PUBLISH_SCHEDULED_ON_REQUEST", "true").lower() == "true",
 )
 CANONICAL_ORIGIN = "https://www.sussurrosdosaber.com"
 _configured_site_url = os.getenv("SITE_URL", CANONICAL_ORIGIN).rstrip("/")
@@ -201,6 +205,8 @@ def ads_txt():
 @app.before_request
 def publish_due_scheduled_articles():
     """Publica aprovações pendentes e agendamentos cujo horário já chegou."""
+    if not app.config["PUBLISH_SCHEDULED_ON_REQUEST"]:
+        return
     if request.endpoint != "static" and request.path not in {"/favicon.ico", "/healthz", "/ads.txt", "/robots.txt", "/790c8a9d2960414f923b2ccf49e86d72.txt"}:
         Article.publish_due_scheduled()
 
@@ -526,7 +532,7 @@ def security_headers(response):
         elif request.endpoint in {"home", "articles", "author_detail", "feed", "sitemap"}:
             # Revalidate lists on every visit so a publication is immediately visible.
             response.headers["Cache-Control"] = "public, no-cache, max-age=0, must-revalidate"
-        elif not response.headers.get("Cache-Control") or response.headers["Cache-Control"] == "no-store":
+        elif not response.headers.get("Cache-Control"):
             response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
     if request.path.startswith("/admin") or response.status_code >= 400:
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
@@ -1212,10 +1218,15 @@ def feed():
 
 @app.get("/sitemap.xml")
 def sitemap():
-    from internationalization import alternate_links, sitemap_extras, path_alternates
+    from internationalization import alternate_links, path_alternates, sitemap_content_alternates, sitemap_extras
     public_articles = Article.public_card_query().order_by(Article.updated_at.desc()).all()
-    public_journals = Journal.query.filter_by(published=True).order_by(Journal.updated_at.desc()).all()
+    public_journals = (
+        Journal.query.filter_by(published=True)
+        .options(load_only(Journal.id, Journal.slug, Journal.updated_at, Journal.field, Journal.frequency))
+        .order_by(Journal.updated_at.desc()).all()
+    )
     public_authors = Author.query.filter_by(active=True).order_by(Author.name).all()
+    localized_content = sitemap_content_alternates(public_articles, public_journals)
     static_paths = [
         url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"),
         url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"),
@@ -1229,7 +1240,8 @@ def sitemap():
     )
     journal_urls = "".join(
         f"<url><loc>{escape(SITE_URL + url_for('journal_detail', slug=journal.slug))}</loc>"
-        f"<lastmod>{journal.updated_at.strftime('%Y-%m-%d')}</lastmod>{alternate_links('journal_detail',slug=journal.slug)}</url>"
+        f"<lastmod>{journal.updated_at.strftime('%Y-%m-%d')}</lastmod>"
+        f"{localized_content.get(('journal_detail', journal.slug), '')}</url>"
         for journal in public_journals
     )
     author_urls = "".join(
@@ -1250,14 +1262,15 @@ def sitemap():
         article_entries.append(
             f"<url><loc>{article_url}</loc>"
             f"<lastmod>{article.updated_at.strftime('%Y-%m-%d')}</lastmod>"
-            f"{alternate_links('article',slug=article.slug)}{image_xml}</url>"
+            f"{localized_content.get(('article', article.slug), '')}{image_xml}</url>"
         )
     response = Response(
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
         'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" '
         'xmlns:xhtml="http://www.w3.org/1999/xhtml">'
-        + static_urls + journal_urls + author_urls + "".join(article_entries) + sitemap_extras(static_paths + author_paths) + "</urlset>",
+        + static_urls + journal_urls + author_urls + "".join(article_entries)
+        + sitemap_extras(static_paths + author_paths, localized_content) + "</urlset>",
         mimetype="application/xml",
     )
     response.headers["Cache-Control"] = "public, max-age=3600"
@@ -1646,7 +1659,7 @@ def ensure_notification_columns():
     db.session.commit()
 
 
-def seed_database():
+def upgrade_legacy_schema():
     if os.getenv("AUTO_SCHEMA_UPGRADE", "true").lower() == "true":
         # IMPORTANTE: db.create_all() só cria tabelas; não adiciona colunas a tabelas
         # existentes. As migrações leves precisam ocorrer antes de qualquer SELECT
@@ -1672,8 +1685,35 @@ def seed_database():
         ensure_editorial_policy_columns()
         ensure_article_columns()
         ensure_notification_columns()
+
+
+def seed_database():
+    upgrade_legacy_schema()
+    prepare_initial_data()
+
+
+@app.cli.command("preparar-dados")
+def prepare_data_command():
+    """Prepara os dados iniciais depois de aplicar as migrações."""
+    prepare_initial_data()
+    click.echo("Dados iniciais preparados.")
+
+
+def prepare_initial_data():
     from governance import seed_roles
     seed_roles()
+    # Keep the editorial category available on existing installations as well.
+    if not Category.query.filter(db.or_(
+        Category.name == "Biografia Científica",
+        Category.slug == "biografia-cientifica",
+    )).first():
+        db.session.add(Category(name="Biografia Científica", slug="biografia-cientifica"))
+        db.session.commit()
+    has_articles = db.session.query(Article.id).first() is not None
+    if has_articles:
+        ensure_article_slugs()
+    if IS_PRODUCTION:
+        return
     if not Journal.query.first():
         default_guidelines = (
             "Aceitamos manuscritos originais, revisões e relatos fundamentados. "
@@ -1690,18 +1730,10 @@ def seed_database():
                 frequency=item["frequency"],
                 current_issue=item["issue"],
                 guidelines=default_guidelines,
-                published=not IS_PRODUCTION,
+                published=True,
             ))
         db.session.commit()
-    # Keep the editorial category available on existing installations as well.
-    if not Category.query.filter(db.or_(
-        Category.name == "Biografia Científica",
-        Category.slug == "biografia-cientifica",
-    )).first():
-        db.session.add(Category(name="Biografia Científica", slug="biografia-cientifica"))
-        db.session.commit()
-    if Article.query.first():
-        ensure_article_slugs()
+    if has_articles:
         return
     author_names = sorted({item["author"] for item in SEED_ARTICLES})
     authors = {}
@@ -1735,7 +1767,7 @@ def seed_database():
         published_at = datetime(int(year), month_numbers[month_name], int(day))
         db.session.add(Article(
             title=item["title"], slug=slugify(item["title"]), summary=item["summary"], body=default_body,
-            image=item["image"], status=("draft" if IS_PRODUCTION else "published"), read_minutes=int(item["read_time"].split()[0]),
+            image=item["image"], status="published", read_minutes=int(item["read_time"].split()[0]),
             featured=item.get("featured", False), published_at=published_at, author_rel=authors[item["author"]], category_rel=categories[item["category"]],
         ))
     db.session.commit()
@@ -1746,8 +1778,9 @@ install_internationalization(app)
 
 from indexnow_service import install_indexnow
 
-with app.app_context():
-    seed_database()
+if app.config["BOOTSTRAP_ON_STARTUP"]:
+    with app.app_context():
+        seed_database()
 
 install_indexnow(app, SITE_URL)
 

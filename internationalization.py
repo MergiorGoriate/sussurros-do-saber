@@ -92,23 +92,39 @@ def alternate_links(endpoint, **values):
     from html import escape
     if not interface_ready():
         return ''
-    if endpoint in {'article','journal_detail'}:
-        from models import Journal
-        kind='article' if endpoint=='article' else 'journal'
-        model=Article if kind=='article' else Journal
-        obj=model.query.filter_by(slug=values.get('slug')).first()
-        if not content_page_ready(kind, obj):
-            return ''
     from app import SITE_URL
     return ''.join('<xhtml:link rel="alternate" hreflang="'+code+'" href="'+escape(SITE_URL+url_for(endpoint,_language=locale,**values),quote=True)+'"/>'
         for code,locale in [('pt-MZ',None),('en','en'),('x-default',None)])
 
 
-def sitemap_extras(static_paths):
+def sitemap_content_alternates(articles, journals):
+    """Load published versions once for the public objects used by the sitemap."""
+    if not interface_ready() or not (articles or journals):
+        return {}
+    translations = select(ContentTranslation.kind, ContentTranslation.source_id).join(
+        TranslationVersion, db.and_(
+            TranslationVersion.translation_id == ContentTranslation.id,
+            TranslationVersion.number == ContentTranslation.published_version,
+        )
+    ).where(
+        ContentTranslation.language == 'en',
+        ContentTranslation.kind.in_(('article', 'journal')),
+    )
+    published_ids = set(db.session.execute(translations))
+    return {
+        (endpoint, obj.slug): alternate_links(endpoint, slug=obj.slug)
+        for kind, endpoint, objects in (
+            ('article', 'article', articles), ('journal', 'journal_detail', journals),
+        )
+        for obj in objects
+        if (kind, obj.id) in published_ids and content_labels_ready(kind, obj)
+    }
+
+
+def sitemap_extras(static_paths, localized_content):
     if not interface_ready():
         return ''
     from html import escape
-    from models import Journal
     from app import SITE_URL
     entries=[]
     adapter=current_app.url_map.bind_to_environ(request.environ)
@@ -117,12 +133,9 @@ def sitemap_extras(static_paths):
         if endpoint in current_app.extensions['localized_endpoints']:
             en=url_for(endpoint,_language='en',**args)
             entries.append('<url><loc>'+escape(SITE_URL+en)+'</loc>'+alternate_links(endpoint,**args)+'</url>')
-    for item in ContentTranslation.query.filter(ContentTranslation.published_version.isnot(None),ContentTranslation.language=='en',ContentTranslation.kind.in_(['article','journal'])):
-        obj=db.session.get(Article if item.kind=='article' else Journal,item.source_id)
-        if not content_page_ready(item.kind, obj):
-            continue
-        endpoint='article' if item.kind=='article' else 'journal_detail'
-        entries.append('<url><loc>'+escape(SITE_URL+url_for(endpoint,slug=obj.slug,_language='en'))+'</loc>'+alternate_links(endpoint,slug=obj.slug)+'</url>')
+    for (endpoint, slug), links in localized_content.items():
+        url = escape(SITE_URL + url_for(endpoint, slug=slug, _language='en'))
+        entries.append(f'<url><loc>{url}</loc>{links}</url>')
     return ''.join(entries)
 
 
@@ -184,6 +197,10 @@ def content_page_ready(kind, obj):
         return False
     if not published(kind, obj.id)[1]:
         return False
+    return content_labels_ready(kind, obj)
+
+
+def content_labels_ready(kind, obj):
     labels = (obj.category,) if kind == 'article' else (obj.field, obj.frequency)
     return all(interface_translation(value) is not None for value in labels if value)
 
