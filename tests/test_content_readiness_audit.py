@@ -39,26 +39,30 @@ class ContentReadinessTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), before)
             engine.dispose()
 
-    def test_production_bootstrap_keeps_demo_content_private(self):
+    def test_production_bootstrap_omits_demo_content_and_preserves_articles(self):
         with tempfile.TemporaryDirectory() as folder:
             env = dict(os.environ, FLASK_ENV='production', RENDER='false',
                        DATABASE_URL='sqlite:///' + str(Path(folder) / 'production-fixture.db'),
                        SECRET_KEY='isolated-content-audit-test-secret', RATELIMIT_STORAGE_URI='memory://',
-                       ADMIN_TOTP_SECRET='JBSWY3DPEHPK3PXP', AUTO_SCHEMA_UPGRADE='true')
+                       ADMIN_TOTP_SECRET='JBSWY3DPEHPK3PXP', AUTO_SCHEMA_UPGRADE='true',
+                       BOOTSTRAP_ON_STARTUP='true')
             code = """
 from app import app, seed_database
-from models import Article, Journal, db
+from models import Article, Author, Category, Journal, db
 with app.app_context():
-    assert Article.query.count() > 0
-    assert Article.public_query().count() == 0
-    assert Journal.query.filter_by(published=True).count() == 0
-    article = Article.query.first()
-    article.status = 'published'
-    article.body = 'Texto revisto pelo editor, que não pode ser sobrescrito.'
+    assert Article.query.count() == 0
+    assert Journal.query.count() == 0
+    body = 'Texto revisto pelo editor, que deve ser preservado.'
+    article = Article(
+        title='Artigo de ensaio', slug='artigo-de-ensaio', summary='Resumo de ensaio.',
+        body=body, status='published', author_rel=Author(name='Autor de ensaio', slug='autor-de-ensaio'),
+        category_rel=Category.query.filter_by(slug='biografia-cientifica').one(),
+    )
+    db.session.add(article)
     db.session.commit()
     seed_database()
     assert Article.public_query().count() == 1
-    assert Article.public_query().first().body == 'Texto revisto pelo editor, que não pode ser sobrescrito.'
+    assert Article.public_query().first().body == body
 """
             result = subprocess.run([sys.executable, '-c', code], env=env, capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr[-1000:])

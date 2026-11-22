@@ -53,7 +53,11 @@ class ArticleSchedulingTests(unittest.TestCase):
     def test_due_schedule_publishes_once_without_http_request(self):
         article=self.article(self.member());self.assertEqual(self.schedule(article).status_code,302)
         article.scheduled_at=utcnow()-timedelta(minutes=1);db.session.commit()
-        result=app.test_cli_runner().invoke(args=['admin','publicar-programados'])
+        path = '/artigo/' + article.slug
+        with patch.dict(app.config, {'PUBLISH_SCHEDULED_ON_REQUEST': False}):
+            self.assertEqual(app.test_client().get(path).status_code, 404)
+            result=app.test_cli_runner().invoke(args=['admin','publicar-programados'])
+            self.assertEqual(app.test_client().get(path).status_code, 200)
         self.assertEqual(result.exit_code,0,result.output+str(result.exception))
         db.session.refresh(article);self.assertEqual(article.status,'published')
         self.assertEqual(article.published_at,article.scheduled_at)

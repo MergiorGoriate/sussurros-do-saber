@@ -24,7 +24,7 @@ python -m flask --app app admin publicar-programados
 
 Este comando executa o processador existente, que também trata aprovações pendentes válidas. Pode ser chamado por cron, temporizador ou tarefa do alojamento, por exemplo a cada minuto, usando o mesmo ambiente e a mesma base de dados da aplicação. Deve existir uma única configuração operacional da tarefa; os bloqueios existentes protegem os trabalhadores concorrentes no PostgreSQL.
 
-**Configuração externa pendente:** esta entrega não instala nem activa uma tarefa no alojamento. Sem tarefa periódica, o primeiro pedido elegível após a hora marcada processa a publicação; não se promete execução ao segundo num site sem tráfego. Com uma tarefa por minuto, a publicação fica sujeita a essa frequência e à disponibilidade do serviço. Monitorizar falhas e confirmar o relógio UTC do servidor. Não são necessárias credenciais de um serviço de agendamento externo para executar o comando.
+No Coolify, configure primeiro a tarefa periódica e confirme a execução com a mesma versão, base de dados e ambiente do portal. Depois, defina `PUBLISH_SCHEDULED_ON_REQUEST=false` no serviço web para retirar este processamento dos pedidos HTTP. Mantenha o valor por omissão (`true`) enquanto a tarefa estiver por validar: nesse modo, o primeiro pedido elegível depois da hora marcada também pode processar a publicação. Com uma tarefa por minuto, a precisão depende da sua frequência e da disponibilidade do serviço. Monitorize falhas da tarefa e confirme o relógio UTC do servidor.
 
 ## Ficheiros
 

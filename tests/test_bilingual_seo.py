@@ -1,7 +1,9 @@
 """Regression checks for locale pagination, indexing and translation reads."""
 import unittest
 from unittest.mock import patch
+from xml.etree import ElementTree
 from bs4 import BeautifulSoup
+from sqlalchemy import event
 import test_platform
 from app import app, SITE_URL
 from extensions import limiter
@@ -94,6 +96,60 @@ class BilingualSEOTests(unittest.TestCase):
                     published('article', 999999)
                     published('article', 999999)
             self.assertEqual(load.call_count, 2)
+
+    def test_sitemap_loads_published_translation_links_together(self):
+        from translation_models import ContentTranslation, TranslationVersion
+        with app.app_context():
+            article_ids = [
+                Article.query.filter_by(slug=f'seo-fixture-{number}').one().id
+                for number in range(2)
+            ]
+            items = [
+                ContentTranslation(kind='article', source_id=ident, version=1, published_version=published_version)
+                for ident, published_version in zip(article_ids, (1, None))
+            ]
+            db.session.add_all(items)
+            db.session.flush()
+            item_ids = [item.id for item in items]
+            db.session.add_all([
+                TranslationVersion(translation_id=item_id, number=1,
+                    source_hash='fixture', source={}, content={'title': 'English fixture'}, report={})
+                for item_id in item_ids
+            ])
+            db.session.commit()
+            engine = db.engine
+
+        translation_queries = []
+
+        def collect_translation_queries(conn, cursor, statement, parameters, context, executemany):
+            if 'FROM content_translation' in statement:
+                translation_queries.append(statement)
+
+        event.listen(engine, 'before_cursor_execute', collect_translation_queries)
+        try:
+            with patch('internationalization.interface_ready', return_value=True):
+                response = self.client.get('/sitemap.xml')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(translation_queries), 1)
+            ns = {'s': 'http://www.sitemaps.org/schemas/sitemap/0.9', 'x': 'http://www.w3.org/1999/xhtml'}
+            entries = {
+                entry.findtext('s:loc', namespaces=ns): {
+                    link.attrib['hreflang']: link.attrib['href'] for link in entry.findall('x:link', ns)
+                }
+                for entry in ElementTree.fromstring(response.data).findall('s:url', ns)
+            }
+            original = SITE_URL + '/artigo/seo-fixture-0'
+            translated = SITE_URL + '/en/artigo/seo-fixture-0'
+            self.assertEqual(entries[original]['en'], translated)
+            self.assertEqual(entries[translated]['pt-MZ'], original)
+            self.assertEqual(entries[SITE_URL + '/artigo/seo-fixture-1'], {})
+            self.assertNotIn(SITE_URL + '/en/artigo/seo-fixture-1', entries)
+        finally:
+            event.remove(engine, 'before_cursor_execute', collect_translation_queries)
+            with app.app_context():
+                TranslationVersion.query.filter(TranslationVersion.translation_id.in_(item_ids)).delete()
+                ContentTranslation.query.filter(ContentTranslation.id.in_(item_ids)).delete()
+                db.session.commit()
 
     def test_english_cards_skip_full_source_hashing(self):
         from translation_models import ContentTranslation, TranslationVersion
