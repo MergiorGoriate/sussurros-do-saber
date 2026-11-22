@@ -20,6 +20,6 @@ pypdf>=7.0.1,<8
 
 
 google-auth[cryptography]>=2.62.2,<3
-CacheControl>=0.14.4,<1
+CacheControl>=0.15.0,<1
 
 Alembic==1.20.1
