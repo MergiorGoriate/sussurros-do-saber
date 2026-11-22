@@ -424,6 +424,35 @@ class InternationalizationTests(unittest.TestCase):
         self.assertEqual(page.status_code,200);self.assertIn('Reviewed monthly plan',page.text)
         self.assertEqual(plan.name,name);self.assertEqual(plan.price_minor,12345);self.assertEqual(plan.benefits,['Benefício público'])
 
+    def test_premium_format_cards_follow_the_language_selector(self):
+        from bs4 import BeautifulSoup
+
+        portuguese = BeautifulSoup(self.client.get('/premium/').text, 'html.parser')
+        english_link = portuguese.select_one('.language-selector a[lang="en"]')
+        response = self.client.get(english_link['href'], follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request.path, '/en/premium/')
+        english = BeautifulSoup(response.text, 'html.parser')
+        cards = []
+        for card in english.select('.premium-format-card'):
+            link = card.select_one('h3 a')
+            cards.append((link.get_text(strip=True).removesuffix('↗'), card.p.get_text(strip=True), link['href']))
+        self.assertEqual(cards, [
+            ('Specialised courses', 'Learning paths organised by topic.', '/en/premium/biblioteca?tipo=course'),
+            ('Educational series', 'Content sequences to explore a subject.', '/en/premium/biblioteca?tipo=series'),
+            ('Events', 'Meetings and training sessions.', '/en/premium/biblioteca?tipo=event'),
+            ('Interviews', 'In-depth conversations about science and research.', '/en/premium/biblioteca?tipo=interview'),
+        ])
+
+        portuguese_link = english.select_one('.language-selector a[lang="pt-MZ"]')
+        response = self.client.get(portuguese_link['href'], follow_redirects=True)
+        restored = BeautifulSoup(response.text, 'html.parser')
+        self.assertEqual(response.request.path, '/premium/')
+        self.assertEqual(
+            [card.get_text(' ', strip=True) for card in restored.select('.premium-format-card')],
+            [card.get_text(' ', strip=True) for card in portuguese.select('.premium-format-card')],
+        )
+
     def test_new_draft_can_be_translated_and_approved_but_not_published_before_original(self):
         self.article.status='draft';db.session.commit()
         item=self.make()
