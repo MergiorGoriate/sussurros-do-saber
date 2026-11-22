@@ -1,5 +1,7 @@
 # Sussurros do Saber
 
+**Notícias de Ciência:** secção bilingue em `/noticias` e `/en/news`, publicações independentes por idioma e fluxo editorial no painel. [Operação e implantação](docs/SCIENCE_NEWS.md).
+
 **Métricas científicas:** recolha interna, painéis públicos/administrativos e adaptadores bibliográficos na migração `20261023_13`. [Implementação, operação, testes e limitações](docs/SCIENTIFIC_METRICS.md).
 
 **Premium — pagamentos:** a migração `20261023_11` acrescenta ClicPay (M-Pesa, e-Mola e checkout de cartões), Stripe recorrente condicionado à elegibilidade, histórico privado, cancelamento, reconciliação e diário financeiro. As cobranças ficam desactivadas por omissão; os artigos científicos e informativos continuam gratuitos. Configuração, limites, testes e operação: [Pagamentos Premium](docs/PREMIUM_PAYMENTS.md). Os registos de alterações anteriores abaixo descrevem fases históricas.
@@ -531,7 +533,7 @@ SQLite é o padrão local (`sqlite:///sussurros.db`, normalmente na pasta `insta
 
 Com `BOOTSTRAP_ON_STARTUP=true` (valor por omissão), o arranque mantém a preparação de dados e, se `AUTO_SCHEMA_UPGRADE=true`, as actualizações de esquema legadas. Os exemplos de revistas e artigos são criados apenas fora do modo de produção. Em produção, pode preparar a base explicitamente e arrancar com `BOOTSTRAP_ON_STARTUP=false`.
 
-As revisões Alembic partem da baseline histórica e chegam a `20261102_20` (IndexNow). A baseline valida o esquema histórico existente. Investigue incompatibilidades antes de prosseguir. O downgrade destrutivo é recusado.
+As revisões Alembic partem da baseline histórica e chegam a `20261122_21` (Notícias de Ciência). A baseline valida o esquema histórico existente. Investigue incompatibilidades antes de prosseguir. O downgrade destrutivo é recusado.
 
 No **terminal do serviço da aplicação no Coolify**, com a versão nova disponível, o ambiente apontado à base correcta e backup previamente verificado, aplicar antes de iniciar os novos processos:
 
@@ -542,7 +544,7 @@ python -m alembic current
 FLASK_ENV=production BOOTSTRAP_ON_STARTUP=false python -m flask --app app preparar-dados
 ```
 
-O último `alembic current` deve apresentar `20261102_20 (head)`. Ensaiar primeiro numa cópia isolada. Executar `preparar-dados` uma vez por implantação, com o ambiente de produção configurado. O comando prepara as funções padrão, a categoria editorial e os slugs legados. Após validar estes passos, definir `BOOTSTRAP_ON_STARTUP=false` no serviço web do Coolify e verificar `/healthz`, a listagem pública e o acesso administrativo.
+O último `alembic current` deve apresentar `20261122_21 (head)`. Ensaiar primeiro numa cópia isolada. Executar `preparar-dados` uma vez por implantação, com o ambiente de produção configurado. O comando prepara as funções padrão, a categoria editorial e os slugs legados. Após validar estes passos, definir `BOOTSTRAP_ON_STARTUP=false` no serviço web do Coolify e verificar `/healthz`, a listagem pública e o acesso administrativo.
 
 Comando específico para as tabelas Google/favoritos:
 

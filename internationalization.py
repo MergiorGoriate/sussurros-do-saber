@@ -11,6 +11,7 @@ from translation_service import published as load_published, stale
 from i18n_catalog import EN
 from i18n_templates import PublicTranslationExtension, TEMPLATE_SOURCES as INTERFACE_SOURCES
 from i18n_client import KEYS as CLIENT_KEYS
+from news import EN_ROUTES as NEWS_EN_ROUTES, listing_values as news_listing_values, translation_routes as news_translation_routes
 
 ENGLISH_TEXT = frozenset(' '.join(value.split()) for value in EN.values() if isinstance(value, str))
 
@@ -45,6 +46,8 @@ def listing_parameters():
         from request_values import pagination_page
         page = pagination_page('pagina')
         return {'pagina': page} if page > 1 else {}
+    if request.endpoint == 'news.index':
+        return news_listing_values()
     if request.endpoint != 'articles':
         return {}
     from request_values import pagination_page
@@ -57,6 +60,8 @@ def listing_parameters():
 
 
 def listing_noindex():
+    if request.endpoint == 'news.index':
+        return 'tema' in listing_parameters()
     return request.endpoint == 'articles' and (
         any(key in listing_parameters() for key in ('q', 'categoria'))
         or bool(request.args.get('original')))
@@ -217,6 +222,9 @@ def ui(text):
 
 def equivalent(endpoint,args,target):
     values={k:v for k,v in args.items() if k!='_language'}
+    if endpoint == 'news.detail':
+        slug = news_translation_routes(values['slug'], args.get('_language')).get(target)
+        return url_for(endpoint, slug=slug, _language='en' if target == 'en' else None) if slug else None
     if target=='en' and endpoint=='article' and values.get('slug'):
         obj=Article.public_query().filter_by(slug=values['slug']).first()
         if not obj or not published('article',obj.id)[1]:
@@ -232,7 +240,8 @@ def localized_path(path):
         endpoint,args=current_app.url_map.bind_to_environ(request.environ).match(parts.path,method='GET')
         if endpoint not in current_app.extensions.get('localized_endpoints',set()):
             return path
-        return equivalent(endpoint,args,'en')+('?' + parts.query if parts.query else '')+('#'+parts.fragment if parts.fragment else '')
+        target = equivalent(endpoint, args, 'en')
+        return target+('?' + parts.query if parts.query else '')+('#'+parts.fragment if parts.fragment else '') if target else path
     except Exception:
         return path
 
@@ -275,7 +284,15 @@ def choose(locale):
     try:
         endpoint,args=current_app.url_map.bind_to_environ(request.environ).match(parts.path,method='GET')
         target=equivalent(endpoint,args,locale) if endpoint in current_app.extensions['localized_endpoints'] else ('/en/' if locale=='en' else '/')
-        if parts.query and '?' not in target:
+        if endpoint == 'news.detail':
+            from urllib.parse import parse_qsl
+            params = [(key, value) for key, value in parse_qsl(parts.query) if key in {'tema', 'page'}]
+            if target is None:
+                params.append(('idioma_indisponivel', locale))
+                return redirect(parts.path + '?' + urlencode(params), 302)
+            if params:
+                target += '?' + urlencode(params)
+        elif parts.query and '?' not in target:
             target+='?'+parts.query
         if parts.fragment:
             target+='#'+parts.fragment
@@ -299,7 +316,8 @@ def install(app):
             or any(x in rule.rule for x in ('.pdf','ficheiros','figuras','webhook','callback','/sessao'))):
             continue
         allowed.add(rule.endpoint)
-        app.add_url_rule('/<any(en):_language>'+rule.rule,endpoint=rule.endpoint,
+        localized_rule = NEWS_EN_ROUTES.get(rule.endpoint, rule.rule)
+        app.add_url_rule('/<any(en):_language>'+localized_rule,endpoint=rule.endpoint,
             view_func=app.view_functions[rule.endpoint],methods=rule.methods,defaults=rule.defaults)
     app.extensions['localized_endpoints']=allowed
 
@@ -308,6 +326,7 @@ def install(app):
         selected=values.pop('_language',None) if values else None
         g.language=selected or ('en' if request.path.startswith('/en/') else 'pt')
         g.localized_publications = {}
+        g.news_routes = {}
         for key in ('interface_complete', 'interface_catalogue', 'interface_english', 'i18n_missing'):
             g.pop(key, None)
         if selected is None and not request.path.startswith('/admin') and (request.path.startswith('/api/') or request.method!='GET') and request.cookies.get('sds_language')=='en':
@@ -341,6 +360,8 @@ def install(app):
             if (request.endpoint in allowed and not request.path.startswith('/en/') and
                 (chosen or (request.path=='/' and preferred(request.headers,request.cookies)=='en'))):
                 target=equivalent(request.endpoint,request.view_args or {},'en')
+                if target is None or (request.endpoint == 'news.detail' and request.args.get('idioma_indisponivel')):
+                    return None
                 if request.query_string:
                     target+=('&' if '?' in target else '?')+request.query_string.decode('utf-8','replace')
                 response=redirect(target,302)
@@ -419,7 +440,8 @@ def install(app):
         canonical_path=request.path + ('?' + urlencode(parameters) if parameters else '')
         equivalents={}
         if endpoint in allowed and interface_ready():
-            equivalents={locale:equivalent(endpoint,args,locale) for locale in ('pt','en')}
+            equivalents = {locale: path for locale in ('pt', 'en')
+                           if (path := equivalent(endpoint, args, locale))}
             if parameters:
                 equivalents={locale:path+'?'+urlencode(parameters) for locale,path in equivalents.items()}
             if endpoint in {'article', 'journal_detail'}:

@@ -57,6 +57,7 @@ window.dataLayer.push({event:'default_consent'});
 {% if language_equivalents.pt %}<link rel="alternate" hreflang="x-default" href="{{ site_url }}{{ language_equivalents.pt }}">{% endif %}
 <link rel="stylesheet" href="{{ url_for('static',filename='css/internationalization.css') }}">
 <script nonce="{{ csp_nonce }}">{const messages={{ client_translations|tojson }};window.sdsText=text=>messages[text]||text;}</script>
+{% if request.endpoint in ('home', 'news.index', 'news.detail') %}<link rel="stylesheet" href="{{ url_for('static', filename='css/science-news.css') }}">{% endif %}
 {% block resource_hints %}{% endblock %}
 <meta property="og:type" content="{% block og_type %}website{% endblock %}">
 <meta property="og:site_name" content="Sussurros do Saber">
@@ -110,6 +111,10 @@ window.dataLayer.push({event:'default_consent'});
 <span>Conhecimento aberto · Ciência para todos</span>
 {% if i18n_enabled %}<nav class="language-selector" aria-label="{{ 'Language' if language == 'en' else 'Idioma' }}"><a href="{{ url_for('language.choose',locale='pt',next=request.full_path.rstrip('?')) }}" lang="pt-MZ" hreflang="pt-MZ" {% if language != 'en' %}aria-current="true"{% endif %}>PT</a><span aria-hidden="true">|</span><a href="{{ url_for('language.choose',locale='en',next=request.full_path.rstrip('?')) }}" lang="en" hreflang="en" {% if language == 'en' %}aria-current="true"{% endif %}>EN</a></nav>{% endif %}
 </div>
+{% if news_missing_locale %}<p class="news-language-notice" role="status" lang="{{ 'en' if news_missing_locale == 'en' else 'pt-MZ' }}">
+<span>{{ news_missing_copy[0] }}</span>
+<a href="{{ url_for('language.choose', locale=news_missing_locale, next=url_for('news.index', _language='en' if news_missing_locale == 'en' else none)) }}">{{ news_missing_copy[1] }}</a>
+</p>{% endif %}
 </div>
 <header class="site-header sticky top-0 z-50">
 <div class="max-w-7xl mx-auto px-4">
@@ -128,6 +133,7 @@ window.dataLayer.push({event:'default_consent'});
 </div>
 <nav id="mainNav" aria-label="Navegação principal" class="hidden md:flex border-t border-black/10 dark:border-white/10 items-center gap-5 h-12 text-sm font-semibold">
 <a href="/artigos">Últimos</a>
+<a href="{{ url_for('news.index') }}" {% if request.endpoint in ('news.index', 'news.detail') %}aria-current="page"{% endif %}>{{ ui('Notícias') }}</a>
 <a href="{{ url_for('articles', categoria='Biologia') }}">Biologia</a>
 <a href="{{ url_for('articles', categoria='Saúde') }}">Saúde</a>
 <a href="{{ url_for('articles', categoria='Ambiente') }}">Ambiente</a>

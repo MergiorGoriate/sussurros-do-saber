@@ -178,3 +178,33 @@ EN.update({
 EN.update({'Microsoft Clarity e análise de utilização': 'Microsoft Clarity and usage analytics', 'Com autorização para análise, utilizamos o Microsoft Clarity para compreender a navegação através de mapas de cliques e gravações de sessões. O serviço pode tratar interacções, páginas visitadas e dados técnicos do dispositivo e da ligação. O código é carregado apenas em páginas editoriais públicas sem parâmetros e sem sessão autenticada; formulários, comentários e o assistente são mascarados nas gravações. Não enviamos identificadores de conta personalizados ao Clarity. A partilha para publicidade permanece desactivada. Pode retirar a autorização em Configurar cookies; a página é recarregada para interromper o serviço.': 'With analytics consent, we use Microsoft Clarity to understand navigation through click maps and session recordings. The service may process interactions, visited pages and technical device and connection data. The code loads only on public editorial pages without query parameters or an authenticated session; forms, comments and the assistant are masked in recordings. We do not send custom account identifiers to Clarity. Advertising data sharing remains disabled. You can withdraw consent through Configure cookies; the page reloads to stop the service.', 'Permite estatísticas, mapas de cliques e gravações de sessões com campos de formulário mascarados.': 'Enables statistics, click maps and session recordings with form fields masked.', 'Última actualização: 14 de Novembro de 2026': 'Last updated: 14 November 2026'})
 
 EN["Declaração de Privacidade da Microsoft"] = "Microsoft Privacy Statement"
+
+# Science News interface. Editorial content is published separately by language.
+EN.update({
+    'Notícias': 'News',
+    'Notícias de Ciência': 'Science News',
+    'Actualidade científica internacional, com atenção à investigação feita em África.':
+        'International science news with a focus on research conducted in Africa.',
+    'Investigação em África': 'Research in Africa',
+    'Tema': 'Topic',
+    'Todos os temas': 'All topics',
+    'Filtrar': 'Filter',
+    'Limpar filtro': 'Clear filter',
+    'Notícia em destaque': 'Featured story',
+    'Não há notícias para esta selecção.': 'No news stories match this selection.',
+    'Paginação das notícias': 'News pagination',
+    'Anterior': 'Previous',
+    'Página': 'Page',
+    'Seguinte': 'Next',
+    'Voltar às Notícias de Ciência': 'Back to Science News',
+    'Crédito da imagem': 'Image credit',
+    'Fontes': 'Sources',
+    'Ler artigo relacionado': 'Read related article',
+    'Partilhar notícia': 'Share this story',
+    'Últimas notícias': 'Latest news',
+    'Ver todas as notícias': 'View all news',
+    'Revisto por pares': 'Peer reviewed',
+    'Pré-publicação sem revisão por pares': 'Preprint without peer review',
+    'Evidência preliminar': 'Preliminary evidence',
+    'Revisão por pares por confirmar': 'Peer review status unconfirmed',
+})
