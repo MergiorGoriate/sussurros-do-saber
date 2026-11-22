@@ -12,6 +12,7 @@ import scientific_metrics_models
 import dissemination_models
 import translation_models
 import indexnow_service
+import news_models
 
 url = os.environ.get("DATABASE_URL", "")
 if not url:

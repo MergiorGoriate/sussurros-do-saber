@@ -1,0 +1,28 @@
+{% extends 'admin/base.html' %}
+{% block title %}Notícias de Ciência{% endblock %}
+{% block content %}
+<header class="admin-header">
+  <h1>Notícias de Ciência</h1>
+  {% if can_create %}<a class="admin-primary" href="{{ url_for('admin.news_form') }}">Nova notícia</a>{% endif %}
+</header>
+<section class="admin-panel">
+  {% if rows.items %}
+  <div class="staff-table-wrap">
+    <table>
+      <thead><tr><th>Notícia</th><th>Idioma</th><th>Estado</th><th>Tema</th></tr></thead>
+      <tbody>
+      {% for item in rows.items %}
+      <tr>
+        <td><a href="{{ url_for('admin.news_form', ident=item.id) }}">{{ item.title or item.slug }}</a></td>
+        <td>{{ item.language|upper }}</td><td>{{ statuses[item.status] }}{% if item.featured %} · Em destaque{% endif %}</td>
+        <td>{{ item.category.name if item.category else '—' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p>Não há notícias nesta página.</p>{% endif %}
+  {% if rows.has_prev %}<a href="{{ url_for('admin.news_index', page=rows.prev_num) }}">Anterior</a>{% endif %}
+  {% if rows.has_next %}<a href="{{ url_for('admin.news_index', page=rows.next_num) }}">Seguinte</a>{% endif %}
+</section>
+{% endblock %}

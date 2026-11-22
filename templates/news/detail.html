@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}{{ news_item.title }} — Sussurros do Saber{% endblock %}
+{% block meta_description %}{{ news_item.summary }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ news_item.title }}{% endblock %}
+{% block og_image %}{{ news_item.image|social_image }}{% endblock %}
+{% block og_image_url %}{{ self.og_image() }}{% endblock %}
+{% block og_image_secure %}{{ self.og_image() }}{% endblock %}
+{% block og_image_alt %}{{ news_item.image_alt or super() }}{% endblock %}
+{% block twitter_title %}{{ news_item.title }}{% endblock %}
+{% block twitter_image %}{{ news_item.image|social_image }}{% endblock %}
+{% block twitter_image_alt %}{{ news_item.image_alt or super() }}{% endblock %}
+{% block head_extra %}<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/social-share.js') }}"></script><link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}">{% endblock %}
+{% block content %}
+{% set structured = {'@context':'https://schema.org','@type':'NewsArticle','headline':news_item.title,'description':news_item.summary,'inLanguage':'en' if language == 'en' else 'pt-MZ','datePublished':news_item.published_date.isoformat(),'dateModified':(news_item.revised_date or news_item.published_date).isoformat(),'image':news_item.image|social_image,'author':{'@type':'Person','name':news_item.author.name},'publisher':{'@type':'Organization','name':'Sussurros do Saber'},'mainEntityOfPage':site_url ~ seo_canonical_path} %}
+<script nonce="{{ csp_nonce }}" type="application/ld+json">{{ structured|tojson }}</script>
+<article class="article-page news-detail max-w-4xl mx-auto px-4 py-10">
+  <a class="news-back" href="{{ url_for('news.index', **news_listing) }}">{{ ui('Voltar às Notícias de Ciência') }}</a>
+  <header class="article-header">
+    <p class="eyebrow"><a href="{{ url_for('news.index', tema=news_item.category.slug) }}">{{ ui(news_item.category.name) }}</a>{% if news_item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
+    <h1 class="article-title font-serif">{{ news_item.title }}</h1>
+    <p class="article-summary mt-5">{{ news_item.summary }}</p>
+    <p class="article-meta">
+      <a href="{{ url_for('author_detail', slug=news_item.author.slug) }}">{{ news_item.author.name }}</a> ·
+      {{ ui('Publicado em') }} <time datetime="{{ news_item.published_date.isoformat() }}">{{ news_item.published_date.strftime('%d/%m/%Y') }}</time>
+      {% if news_item.revised_at %} · {{ ui('Actualizado em') }} <time datetime="{{ news_item.revised_date.isoformat() }}">{{ news_item.revised_date.strftime('%d/%m/%Y') }}</time>{% endif %}
+    </p>
+  </header>
+  {% if news_item.image %}
+  <figure class="news-figure">
+    <img class="news-cover" src="{{ news_item.image|image_variant(1200) }}" srcset="{{ news_item.image|image_srcset([480, 768, 1200]) }}"
+         sizes="(max-width: 896px) 100vw, 896px" width="1200" height="675" alt="{{ news_item.image_alt }}" decoding="async">
+    {% if news_item.image_credit %}<figcaption>{{ ui('Crédito da imagem') }} · {{ news_item.image_credit }}</figcaption>{% endif %}
+  </figure>
+  {% endif %}
+  <div class="article-markdown news-body">{{ news_item.body|article_markdown }}</div>
+
+  {% if news_item.evidence or news_item.evidence_note %}
+  <aside class="news-evidence">
+    {% if news_item.evidence %}<h2>{{ ui(evidence_labels[news_item.evidence]) }}</h2>{% endif %}
+    {% if news_item.evidence_note %}<p>{{ news_item.evidence_note }}</p>{% endif %}
+  </aside>
+  {% endif %}
+  <section class="news-sources" aria-labelledby="news-sources-heading">
+    <h2 id="news-sources-heading">{{ ui('Fontes') }}</h2>
+    <ul>{% for source in news_item.sources %}<li><a href="{{ source.url }}" rel="external noopener">{{ source.label or source.url }}</a></li>{% endfor %}</ul>
+  </section>
+  {% if news_related %}
+  <p class="news-related"><a href="{{ url_for('article', slug=news_related.slug) }}">{{ ui('Ler artigo relacionado') }}</a></p>
+  {% endif %}
+  {% set share_url = site_url ~ seo_canonical_path %}
+  <aside class="share-panel" data-title="{{ news_item.title }}" data-url="{{ share_url }}">
+    <div><h2>{{ ui('Partilhar notícia') }}</h2></div>
+    <div class="social-share">
+      <a data-network="whatsapp" href="https://wa.me/?text={{ (news_item.title ~ ' ' ~ share_url)|urlencode }}" aria-label="{{ ui('Compartilhar no WhatsApp') }}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>WhatsApp</span></a>
+      <a data-network="linkedin" href="https://www.linkedin.com/sharing/share-offsite/?url={{ share_url|urlencode }}" aria-label="{{ ui('Compartilhar no LinkedIn') }}"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i><span>LinkedIn</span></a>
+      <button type="button" id="copyArticleLink" aria-label="{{ ui('Copiar ligação') }}"><i class="fa-solid fa-link" aria-hidden="true"></i><span>{{ ui('Copiar') }}</span></button>
+    </div>
+    <p id="shareStatus" class="share-status" aria-live="polite"></p>
+  </aside>
+</article>
+{% endblock %}

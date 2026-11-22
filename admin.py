@@ -1029,8 +1029,9 @@ def delete_author(author_id):
     validate_csrf()
     author = db.get_or_404(Author, author_id)
     from governance_models import TeamMember
-    if author.articles or TeamMember.query.filter_by(author_id=author_id).first():
-        flash("Não é possível eliminar um autor que possui artigos.", "error")
+    from news_models import NewsVersion
+    if author.articles or TeamMember.query.filter_by(author_id=author_id).first() or NewsVersion.query.filter_by(author_id=author_id).first():
+        flash("Não é possível eliminar um autor associado a artigos ou notícias.", "error")
     else:
         db.session.delete(author); db.session.commit(); flash("Autor eliminado.", "success")
     return redirect(url_for("admin.authors"))
@@ -1071,8 +1072,9 @@ def categories():
 def delete_category(category_id):
     validate_csrf()
     category = db.get_or_404(Category, category_id)
-    if category.articles:
-        flash("Não é possível eliminar uma categoria que possui artigos.", "error")
+    from news_models import NewsVersion
+    if category.articles or NewsVersion.query.filter_by(category_id=category_id).first():
+        flash("Não é possível eliminar uma categoria usada por artigos ou notícias.", "error")
     else:
         db.session.delete(category); db.session.commit(); flash("Categoria eliminada.", "success")
     return redirect(url_for("admin.categories"))

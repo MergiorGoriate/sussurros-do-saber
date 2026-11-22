@@ -90,8 +90,8 @@ class MigrationTests(unittest.TestCase):
             self.run_migration(url)
             engine = create_engine(url)
             with engine.connect() as connection:
-                self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message", "newsletter_plan", "translation_limit_setting", "translation_limit_change"}.issubset(inspect(connection).get_table_names()))
-                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261102_20")
+                self.assertTrue({"admin_user", "author", "category", "journal", "article", "comment", "subscriber", "contact_message", "newsletter_plan", "translation_limit_setting", "translation_limit_change", "news_story", "news_version"}.issubset(inspect(connection).get_table_names()))
+                self.assertEqual(connection.execute(text("SELECT version_num FROM alembic_version")).scalar(), "20261122_21")
                 columns={column['name']:column for column in inspect(connection).get_columns('article_workflow')}
                 self.assertTrue(columns['owner_id']['nullable'])
                 self.assertFalse(columns['primary_owned']['nullable'])
