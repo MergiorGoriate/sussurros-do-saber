@@ -1,93 +1,201 @@
 {% extends 'admin/base.html' %}
-{% block title %}{{ item.title or item.slug if item else 'Nova notícia' }}{% endblock %}
+{% block title %}{{ (item.title or item.slug) if item else 'Nova notícia' }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-news-editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}">
+{% endblock %}
 {% block content %}
-<header class="admin-header">
-  <div><a href="{{ url_for('admin.news_index') }}">Notícias de Ciência</a>
-  <h1>{{ item.title or item.slug if item else 'Nova notícia' }}</h1>
-  {% if item %}<p>{{ item.language|upper }} · {{ statuses[item.status] }}{% if item.featured %} · Em destaque{% endif %}</p>{% endif %}</div>
-</header>
-{% if error %}<p class="admin-panel" role="alert">{{ error }}</p>{% endif %}
-{% if versions %}
-<section class="admin-panel" aria-labelledby="news-versions-heading">
-  <h2 id="news-versions-heading">Versões linguísticas</h2>
-  {% for code, label in [('pt','Português'), ('en','Inglês')] %}
-    {% set version = versions|selectattr('language', 'equalto', code)|first %}
-    {% if version %}<p><a href="{{ url_for('admin.news_form', ident=version.id) }}">{{ label }} · {{ statuses[version.status] }}</a></p>
-    {% elif can_add %}<p><a href="{{ url_for('admin.news_form', story_id=versions[0].story_id, language=code) }}">Criar versão em {{ label|lower }}</a></p>{% endif %}
-  {% endfor %}
-</section>
-{% endif %}
-{% if editable %}
-<form method="post" class="admin-panel admin-form" enctype="multipart/form-data">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  {% if item %}<input type="hidden" name="revision" value="{{ item.revision }}">{% endif %}
-  {% if not item %}
-  {% set locale = request.form.get('language', request.args.get('language', 'pt')) %}
-  <label>Idioma<select name="language"><option value="pt" {% if locale == 'pt' %}selected{% endif %}>Português</option><option value="en" {% if locale == 'en' %}selected{% endif %}>Inglês</option></select></label>
+{% set headline = (item.title or item.slug) if item else 'Nova notícia' %}
+{% set status = item.status if item else 'draft' %}
+{% set cover = (item.image|safe_image_url) if item else '' %}
+<div class="news-editor">
+  <header class="news-editor-header">
+    <a class="news-editor-back" href="{{ url_for('admin.news_index') }}"><span aria-hidden="true">←</span> Notícias de Ciência</a>
+    <div class="news-editor-heading">
+      <h1>{{ headline }}</h1>
+      <div class="news-editor-state">
+        {% if item %}<span>{{ 'Português' if item.language == 'pt' else 'Inglês' }}</span>{% endif %}
+        <span class="news-editor-status" data-status="{{ status }}">{{ statuses[status] }}</span>
+        {% if item and item.featured %}<span>Em destaque</span>{% endif %}
+      </div>
+    </div>
+  </header>
+
+  {% if error %}<p class="news-editor-error" role="alert">{{ error }}</p>{% endif %}
+
+  {% if editable %}
+  <div class="news-editor-bar">
+    <nav aria-label="Secções do editor">
+      <a href="#news-content">Conteúdo</a>
+      <a href="#news-sources">Fontes e evidência</a>
+      <a href="#news-settings">Definições</a>
+      <a href="#news-cover">Imagem de capa</a>
+    </nav>
+    <button type="submit" class="admin-primary" form="news-editor-form" name="action" value="save">
+      {{ 'Guardar alterações' if status == 'published' else 'Guardar rascunho' }}
+    </button>
+  </div>
   {% endif %}
-  <label>Título<input name="title" value="{{ request.form.get('title', item.title if item else '') }}" maxlength="240"></label>
-  <label>Identificador da rota<input name="slug" value="{{ request.form.get('slug', item.slug if item else '') }}" maxlength="160"></label>
-  <label>Resumo<textarea name="summary" maxlength="2000" rows="3">{{ request.form.get('summary', item.summary if item else '') }}</textarea></label>
-  <label>Texto em Markdown<textarea name="body" maxlength="400000" rows="16">{{ request.form.get('body', item.body if item else '') }}</textarea></label>
-  <label>Autoria<select name="author_id"><option value="">Seleccionar</option>
-    {% for author in authors %}<option value="{{ author.id }}" {% if request.form.get('author_id', (item.author_id if item else staff_member.author_id)|string) == author.id|string %}selected{% endif %}>{{ author.name }}</option>{% endfor %}
-  </select></label>
-  <label>Tema<select name="category_id"><option value="">Seleccionar</option>
-    {% for theme in themes %}<option value="{{ theme.id }}" {% if request.form.get('category_id', (item.category_id if item else '')|string) == theme.id|string %}selected{% endif %}>{{ theme.name }}</option>{% endfor %}
-  </select></label>
-  <label><input name="africa_focus" type="checkbox" value="yes" {% if request.form.get('africa_focus') == 'yes' or (request.method == 'GET' and item and item.africa_focus) %}checked{% endif %}> Investigação feita em África</label>
-  <label>Imagem de capa (URL HTTPS)<input name="image" type="url" maxlength="1000" value="{{ request.form.get('image', item.image if item else '') }}"></label>
-  <label>Carregar imagem de capa<input name="image_file" type="file" accept="image/*"></label>
-  <label>Texto alternativo<input name="image_alt" maxlength="300" value="{{ request.form.get('image_alt', item.image_alt if item else '') }}"></label>
-  <label>Crédito da imagem<input name="image_credit" maxlength="300" value="{{ request.form.get('image_credit', item.image_credit if item else '') }}"></label>
-  <label>Fontes <small>Um URL HTTPS por linha. Pode indicar «Título | URL».</small>
-  <textarea name="sources_text" maxlength="24000" rows="5">{% if 'sources_text' in request.form %}{{ request.form['sources_text'] }}{% elif item %}{% for source in item.sources %}{% if source.label %}{{ source.label }} | {% endif %}{{ source.url }}{{ '\n' if not loop.last }}{% endfor %}{% endif %}</textarea></label>
-  <label>Estado da evidência<select name="evidence"><option value="">Não se aplica</option>
-    {% for code,label in evidence_labels.items() %}<option value="{{ code }}" {% if request.form.get('evidence', item.evidence if item else '') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
-  </select></label>
-  <label>Limitações ou aspectos por verificar<textarea name="evidence_note" maxlength="4000" rows="3">{{ request.form.get('evidence_note', item.evidence_note if item else '') }}</textarea></label>
-  <label>Artigo relacionado (identificador da rota)<input name="related_slug" maxlength="260" value="{{ request.form.get('related_slug', item.related_article.slug if item and item.related_article else '') }}"></label>
-  <button class="admin-primary" name="action" value="save">{{ 'Guardar alterações' if item and item.status == 'published' else 'Guardar rascunho' }}</button>
-</form>
-{% endif %}
-{% if item %}
-<section class="admin-panel" aria-labelledby="news-preview-heading">
-  <h2 id="news-preview-heading">Pré-visualização guardada</h2>
-  <p>{{ item.summary }}</p>
-  {% if item.category or item.author %}<p>{{ item.category.name if item.category else '' }} · {{ item.author.name if item.author else '' }}</p>{% endif %}
-  <div class="article-markdown">{{ item.body|article_markdown }}</div>
-  {% if item.evidence %}<p>{{ evidence_labels[item.evidence] }} · {{ item.evidence_note }}</p>{% endif %}
-  <ul>{% for source in item.sources %}<li><a rel="external noopener" href="{{ source.url }}">{{ source.label or source.url }}</a></li>{% endfor %}</ul>
-</section>
-<section class="admin-panel" aria-labelledby="news-workflow-heading">
-  <h2 id="news-workflow-heading">Fluxo editorial</h2>
-  {% if item.reviewer %}<p>Revisor: {{ item.reviewer.name }}</p>{% endif %}
-  {% if item.review_note %}<p>{{ item.review_note }}</p>{% endif %}
-  <form method="post" class="admin-form">
+
+  {% if item %}
+  <form id="news-workflow-form" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="revision" value="{{ item.revision }}">
-    {% if reviewers and item.status != 'published' %}
-    <label>Revisor independente<select name="reviewer_id"><option value="">Seleccionar</option>
-      {% for reviewer in reviewers %}<option value="{{ reviewer.id }}">{{ reviewer.name }}</option>{% endfor %}
-    </select></label>
-    <button name="action" value="assign">Enviar para revisão</button>
-    {% endif %}
-    {% if can_review and item.status == 'review' %}
-    <label>Parecer<textarea name="review_note" maxlength="4000" rows="4"></textarea></label>
-    <button name="action" value="reviewed">Concluir revisão</button>
-    <button name="action" value="changes">Pedir correcções</button>
-    {% endif %}
-    {% if staff_can('article.approve') and item.status == 'reviewed' %}<button name="action" value="approve">Aprovar</button>{% endif %}
-    {% if staff_can('article.publish') %}
-      {% if item.status == 'approved' or (current_admin_is_primary and item.status in ('draft', 'reviewed', 'withdrawn')) %}
-      <button class="admin-primary" name="action" value="publish">Publicar {{ item.language|upper }}</button>
-      {% elif item.status == 'published' %}
-      <a href="{{ url_for('news.detail', slug=item.slug, _language='en' if item.language == 'en' else none) }}">Ver notícia publicada</a>
-      <button name="action" value="{{ 'unfeature' if item.featured else 'feature' }}">{{ 'Remover destaque' if item.featured else 'Definir como destaque do idioma' }}</button>
-      <button name="action" value="withdraw">Retirar publicação</button>
-      {% endif %}
-    {% endif %}
   </form>
-</section>
-{% endif %}
+  {% endif %}
+
+  {% if editable %}
+  <form id="news-editor-form" method="post" class="news-editor-grid" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if item %}<input type="hidden" name="revision" value="{{ item.revision }}">{% endif %}
+  {% else %}
+  <div class="news-editor-grid">
+  {% endif %}
+    <div class="news-editor-main">
+      {% if editable %}
+      <section class="news-editor-card" aria-labelledby="news-content">
+        <h2 id="news-content">Conteúdo</h2>
+        <div class="news-editor-fields">
+          <label for="news-title">Título</label>
+          <input class="news-title-field" id="news-title" name="title" value="{{ request.form.get('title', item.title if item else '') }}" maxlength="240" placeholder="Escreva o título da notícia">
+          <label for="news-summary">Resumo</label>
+          <textarea id="news-summary" name="summary" maxlength="2000" rows="3" placeholder="Identifique o acontecimento e explique a sua relevância.">{{ request.form.get('summary', item.summary if item else '') }}</textarea>
+          <div class="news-editor-field-heading"><label for="news-body">Texto da notícia</label><span>Markdown</span></div>
+          <textarea id="news-body" name="body" maxlength="400000" rows="14" placeholder="Comece a escrever…">{{ request.form.get('body', item.body if item else '') }}</textarea>
+        </div>
+      </section>
+
+      <section class="news-editor-card" aria-labelledby="news-sources">
+        <h2 id="news-sources">Fontes e evidência</h2>
+        <div class="news-editor-fields">
+          <label for="news-sources-text">Fontes</label>
+          <textarea id="news-sources-text" name="sources_text" maxlength="24000" rows="5" aria-describedby="news-sources-help" placeholder="Estudo original | https://…">{% if 'sources_text' in request.form %}{{ request.form['sources_text'] }}{% elif item %}{% for source in item.sources %}{% if source.label %}{{ source.label }} | {% endif %}{{ source.url }}{{ '\n' if not loop.last }}{% endfor %}{% endif %}</textarea>
+          <small id="news-sources-help">Um URL HTTPS por linha. Pode indicar «Título | URL».</small>
+          <label for="news-evidence">Estado da evidência</label>
+          <select id="news-evidence" name="evidence"><option value="">Não se aplica</option>
+            {% for code, label in evidence_labels.items() %}<option value="{{ code }}" {% if request.form.get('evidence', item.evidence if item else '') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+          <label for="news-evidence-note">Limitações ou aspectos por verificar</label>
+          <textarea id="news-evidence-note" name="evidence_note" maxlength="4000" rows="3">{{ request.form.get('evidence_note', item.evidence_note if item else '') }}</textarea>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if item %}
+      <details class="news-editor-card news-editor-preview" {% if not editable %}open{% endif %}>
+        <summary><h2>Pré-visualização guardada</h2></summary>
+        <div class="news-editor-preview-content">
+          <p>{{ item.summary }}</p>
+          {% if item.category or item.author %}<p class="news-editor-muted">{{ item.category.name if item.category else '' }}{% if item.category and item.author %} · {% endif %}{{ item.author.name if item.author else '' }}</p>{% endif %}
+          <div class="article-markdown">{{ item.body|article_markdown }}</div>
+          {% if item.evidence %}<p>{{ evidence_labels[item.evidence] }}{% if item.evidence_note %} · {{ item.evidence_note }}{% endif %}</p>{% endif %}
+          {% if item.sources %}
+          <ul>{% for source in item.sources %}<li><a rel="external noopener" href="{{ source.url }}">{{ source.label or source.url }}</a></li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+      </details>
+      {% endif %}
+    </div>
+
+    <aside class="news-editor-side" aria-label="Definições e publicação">
+      {% if editable %}
+      <section class="news-editor-card" aria-labelledby="news-settings">
+        <h2 id="news-settings">Definições</h2>
+        <div class="news-editor-fields">
+          {% if not item %}
+          {% set locale = request.form.get('language', request.args.get('language', 'pt')) %}
+          <label for="news-language">Idioma</label>
+          <select id="news-language" name="language">
+            <option value="pt" {% if locale == 'pt' %}selected{% endif %}>Português</option>
+            <option value="en" {% if locale == 'en' %}selected{% endif %}>Inglês</option>
+          </select>
+          {% endif %}
+          <label for="news-author">Autoria</label>
+          <select id="news-author" name="author_id"><option value="">Seleccionar</option>
+            {% for author in authors %}<option value="{{ author.id }}" {% if request.form.get('author_id', (item.author_id if item else staff_member.author_id)|string) == author.id|string %}selected{% endif %}>{{ author.name }}</option>{% endfor %}
+          </select>
+          <label for="news-category">Tema</label>
+          <select id="news-category" name="category_id"><option value="">Seleccionar</option>
+            {% for theme in themes %}<option value="{{ theme.id }}" {% if request.form.get('category_id', (item.category_id if item else '')|string) == theme.id|string %}selected{% endif %}>{{ theme.name }}</option>{% endfor %}
+          </select>
+          <label class="news-editor-check"><input name="africa_focus" type="checkbox" value="yes" {% if request.form.get('africa_focus') == 'yes' or (request.form.get('action') != 'save' and item and item.africa_focus) %}checked{% endif %}> Investigação feita em África</label>
+          <label for="news-slug">Identificador da rota</label>
+          <input id="news-slug" name="slug" value="{{ request.form.get('slug', item.slug if item else '') }}" maxlength="160" aria-describedby="news-slug-help">
+          <small id="news-slug-help">Se ficar vazio, é gerado a partir do título.</small>
+          <label for="news-related">Artigo relacionado</label>
+          <input id="news-related" name="related_slug" maxlength="260" value="{{ request.form.get('related_slug', item.related_article.slug if item and item.related_article else '') }}" placeholder="Identificador da rota">
+        </div>
+      </section>
+
+      <section class="news-editor-card" aria-labelledby="news-cover">
+        <h2 id="news-cover">Imagem de capa</h2>
+        {% if cover %}<img class="news-editor-cover-preview" src="{{ cover }}" alt="{{ item.image_alt or '' }}" loading="lazy" decoding="async">{% endif %}
+        <div class="news-editor-fields">
+          <label for="news-image-file">Carregar imagem de capa</label>
+          <input id="news-image-file" name="image_file" type="file" accept="image/*">
+          <label for="news-image-url">Imagem de capa (URL HTTPS)</label>
+          <input id="news-image-url" name="image" type="url" maxlength="1000" value="{{ request.form.get('image', item.image if item else '') }}" placeholder="https://…">
+          <label for="news-image-alt">Texto alternativo</label>
+          <input id="news-image-alt" name="image_alt" maxlength="300" value="{{ request.form.get('image_alt', item.image_alt if item else '') }}">
+          <label for="news-image-credit">Crédito da imagem</label>
+          <input id="news-image-credit" name="image_credit" maxlength="300" value="{{ request.form.get('image_credit', item.image_credit if item else '') }}">
+        </div>
+      </section>
+      {% endif %}
+
+      {% if versions %}
+      <section class="news-editor-card" aria-labelledby="news-versions-heading">
+        <h2 id="news-versions-heading">Versões linguísticas</h2>
+        <div class="news-editor-versions">
+          {% for code, label in [('pt','Português'), ('en','Inglês')] %}
+            {% set version = versions|selectattr('language', 'equalto', code)|first %}
+            {% if version %}
+            <a href="{{ url_for('admin.news_form', ident=version.id) }}" {% if item and item.id == version.id %}aria-current="page"{% endif %}>
+              <span>{{ label }}</span><small>{{ statuses[version.status] }}</small>
+            </a>
+            {% elif can_add %}
+            <a href="{{ url_for('admin.news_form', story_id=versions[0].story_id, language=code) }}">Criar versão em {{ label|lower }}</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if item %}
+      <section class="news-editor-card" aria-labelledby="news-workflow-heading">
+        <h2 id="news-workflow-heading">Fluxo editorial</h2>
+        {% if item.reviewer %}<p class="news-editor-muted">Revisor: {{ item.reviewer.name }}</p>{% endif %}
+        {% if item.review_note %}<p class="news-editor-review-note">{{ item.review_note }}</p>{% endif %}
+        <div class="news-editor-fields">
+          {% if reviewers and status != 'published' %}
+          <label for="news-reviewer">Revisor independente</label>
+          <select id="news-reviewer" form="news-workflow-form" name="reviewer_id"><option value="">Seleccionar</option>
+            {% for reviewer in reviewers %}<option value="{{ reviewer.id }}">{{ reviewer.name }}</option>{% endfor %}
+          </select>
+          <button type="submit" form="news-workflow-form" name="action" value="assign">Enviar para revisão</button>
+          {% endif %}
+          {% if can_review and status == 'review' %}
+          <label for="news-review-note">Parecer</label>
+          <textarea id="news-review-note" form="news-workflow-form" name="review_note" maxlength="4000" rows="4"></textarea>
+          <button type="submit" form="news-workflow-form" name="action" value="reviewed">Concluir revisão</button>
+          <button type="submit" form="news-workflow-form" name="action" value="changes">Pedir correcções</button>
+          {% endif %}
+          {% if staff_can('article.approve') and status == 'reviewed' %}
+          <button type="submit" form="news-workflow-form" name="action" value="approve">Aprovar</button>
+          {% endif %}
+          {% if staff_can('article.publish') %}
+            {% if status == 'approved' or (current_admin_is_primary and status in ('draft', 'reviewed', 'withdrawn')) %}
+            <button type="submit" class="admin-primary" form="news-workflow-form" name="action" value="publish">Publicar {{ item.language|upper }}</button>
+            {% elif status == 'published' %}
+            <a href="{{ url_for('news.detail', slug=item.slug, _language='en' if item.language == 'en' else none) }}">Ver notícia publicada</a>
+            <button type="submit" form="news-workflow-form" name="action" value="{{ 'unfeature' if item.featured else 'feature' }}">{{ 'Remover destaque' if item.featured else 'Definir como destaque do idioma' }}</button>
+            <button type="submit" class="news-editor-withdraw" form="news-workflow-form" name="action" value="withdraw">Retirar publicação</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+    </aside>
+  {% if editable %}</form>{% else %}</div>{% endif %}
+</div>
 {% endblock %}
