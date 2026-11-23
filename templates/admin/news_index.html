@@ -1,28 +1,123 @@
 {% extends 'admin/base.html' %}
 {% block title %}Notícias de Ciência{% endblock %}
+{% block extra_head %}
+<style>
+.news-admin{--news-blue:#1e4e8c;--news-ink:#14243a;--news-muted:#66768b;--news-line:#e3e9f0;max-width:1400px;margin:0 auto;color:var(--news-ink)}
+.news-admin *{box-sizing:border-box}
+.news-admin .news-kicker{color:#54749b;font-size:.75rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase;margin:0 0 8px}
+.news-admin .news-top{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}
+.news-admin .news-top h1{font:700 clamp(1.85rem,3vw,2.6rem)/1.18 Georgia,serif;letter-spacing:-.035em;margin:0 0 9px}
+.news-admin .news-subtitle{margin:0;color:var(--news-muted);font-size:.96rem}
+.news-admin .news-new{display:inline-flex;align-items:center;gap:9px;white-space:nowrap;border-radius:11px;background:#1e4e8c;color:#fff!important;text-decoration:none;font-weight:750;padding:13px 19px;box-shadow:0 6px 16px rgba(30,78,140,.16)}
+.news-admin .news-new:hover{background:#153d70}
+.news-admin .news-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 24px}
+.news-admin .news-metric{border:1px solid var(--news-line);background:#fff;border-radius:15px;padding:18px 20px;box-shadow:0 4px 20px rgba(20,36,58,.035)}
+.news-admin .news-metric-label{display:block;color:var(--news-muted);font-size:.82rem;font-weight:650}
+.news-admin .news-metric-value{display:block;font:700 2rem/1.25 Georgia,serif;margin-top:7px}
+.news-admin .news-metric-note{font-size:.75rem;color:#8390a0}
+.news-admin .news-surface{background:#fff;border:1px solid var(--news-line);border-radius:18px;box-shadow:0 8px 30px rgba(20,36,58,.045);overflow:hidden}
+.news-admin .news-toolbar{padding:22px 24px;border-bottom:1px solid var(--news-line);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.news-admin .news-toolbar h2{font:700 1.22rem Georgia,serif;margin:0 0 4px}
+.news-admin .news-toolbar p{margin:0;color:var(--news-muted);font-size:.85rem}
+.news-admin .news-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.news-admin .news-filters input,.news-admin .news-filters select{width:auto;min-height:42px;border:1px solid #d9e2ec;border-radius:9px;background:#fff;color:var(--news-ink);padding:9px 12px;font-size:.87rem}
+.news-admin .news-filters input{width:min(250px,100%)}
+.news-admin .news-filters input:focus-visible,.news-admin .news-filters select:focus-visible{outline:3px solid #b9d5f6;outline-offset:1px}
+.news-admin .news-table-wrap{overflow-x:auto}
+.news-admin table{width:100%;min-width:700px;border-collapse:collapse}
+.news-admin th{background:#f8fafc;color:#718097;font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;font-weight:800;text-align:left;padding:15px 22px}
+.news-admin td{padding:18px 22px;border-top:1px solid #edf1f5;font-size:.9rem;vertical-align:middle}
+.news-admin tbody tr:hover{background:#f8fbff}
+.news-admin .news-title-link{display:block;color:#1c385b;font-weight:750;text-decoration:none;line-height:1.45}
+.news-admin .news-title-link:hover{color:#1e4e8c;text-decoration:underline}
+.news-admin .news-id{display:block;color:#8290a1;font-size:.75rem;margin-top:5px}
+.news-admin .news-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#eef3f9;color:#355578;padding:5px 10px;font-size:.76rem;font-weight:750;white-space:nowrap}
+.news-admin .news-pill:before{content:"";height:6px;width:6px;border-radius:50%;background:currentColor}
+.news-admin .news-pill.is-published{background:#e5f5ed;color:#16704a}
+.news-admin .news-pill.is-draft{background:#f0f2f6;color:#596779}
+.news-admin .news-pill.is-scheduled{background:#fff2d9;color:#92610c}
+.news-admin .news-featured{display:inline-block;margin-top:6px;color:#9b6b11;font-size:.74rem;font-weight:750}
+.news-admin .news-edit{display:inline-block;text-decoration:none;color:#1e4e8c;font-weight:750;padding:7px 10px;border:1px solid #dce7f4;border-radius:8px}
+.news-admin .news-edit:hover{background:#edf4fc}
+.news-admin .news-empty{padding:52px 20px;text-align:center;color:var(--news-muted)}
+.news-admin .news-empty strong{display:block;color:var(--news-ink);font-size:1.1rem;margin-bottom:6px}
+.news-admin .news-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 24px;border-top:1px solid var(--news-line);color:var(--news-muted);font-size:.83rem}
+.news-admin .news-pages{display:flex;gap:8px}
+.news-admin .news-pages a{padding:8px 12px;border:1px solid #dce5ee;border-radius:8px;text-decoration:none;color:#1e4e8c;font-weight:700}
+.news-admin .news-pages a:hover{background:#edf4fc}
+.admin-dark .news-admin{--news-ink:#e6edf7;--news-muted:#a8b7ca;--news-line:#34465e}
+.admin-dark .news-admin .news-metric,.admin-dark .news-admin .news-surface{background:#182a40}
+.admin-dark .news-admin th{background:#21354d;color:#bdcad9}
+.admin-dark .news-admin td{border-color:#34465e}
+.admin-dark .news-admin tbody tr:hover{background:#233b56}
+.admin-dark .news-admin .news-title-link,.admin-dark .news-admin .news-edit{color:#bcd8ff}
+.admin-dark .news-admin .news-filters input,.admin-dark .news-admin .news-filters select{background:#21354d;border-color:#465a72;color:#fff}
+.admin-dark .news-admin .news-id,.admin-dark .news-admin .news-metric-note{color:#a8b7ca}
+@media(max-width:1050px){.news-admin .news-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.news-admin .news-toolbar{align-items:stretch}.news-admin .news-filters{width:100%}}
+@media(max-width:600px){.news-admin .news-top{align-items:flex-start;flex-direction:column}.news-admin .news-new{width:100%;justify-content:center}.news-admin .news-metrics{gap:9px}.news-admin .news-metric{padding:14px}.news-admin .news-metric-value{font-size:1.6rem}.news-admin .news-toolbar{padding:17px}.news-admin .news-filters input{width:100%}.news-admin .news-filters select{flex:1;min-width:0}.news-admin .news-footer{padding:15px;align-items:flex-start;flex-direction:column}}
+</style>
+{% endblock %}
 {% block content %}
-<header class="admin-header">
-  <h1>Notícias de Ciência</h1>
-  {% if can_create %}<a class="admin-primary" href="{{ url_for('admin.news_form') }}">Nova notícia</a>{% endif %}
-</header>
-<section class="admin-panel">
-  {% if rows.items %}
-  <div class="staff-table-wrap">
-    <table>
-      <thead><tr><th>Notícia</th><th>Idioma</th><th>Estado</th><th>Tema</th></tr></thead>
-      <tbody>
-      {% for item in rows.items %}
-      <tr>
-        <td><a href="{{ url_for('admin.news_form', ident=item.id) }}">{{ item.title or item.slug }}</a></td>
-        <td>{{ item.language|upper }}</td><td>{{ statuses[item.status] }}{% if item.featured %} · Em destaque{% endif %}</td>
+<div class="news-admin">
+  <header class="news-top">
+    <div>
+      <p class="news-kicker">Painel editorial / Gestão de conteúdos</p>
+      <h1>Notícias de Ciência</h1>
+      <p class="news-subtitle">Organize, acompanhe e actualize as notícias científicas do portal.</p>
+    </div>
+    {% if can_create %}<a class="news-new" href="{{ url_for('admin.news_form') }}"><span aria-hidden="true">＋</span> Nova notícia</a>{% endif %}
+  </header>
+  {% set page_items = rows.items %}
+  <section class="news-metrics" aria-label="Resumo das notícias nesta página">
+    <article class="news-metric"><span class="news-metric-label">Nesta página</span><strong class="news-metric-value">{{ page_items|length }}</strong><span class="news-metric-note">Registos apresentados</span></article>
+    <article class="news-metric"><span class="news-metric-label">Publicadas</span><strong class="news-metric-value">{{ page_items|selectattr('status','equalto','published')|list|length }}</strong><span class="news-metric-note">Nesta página</span></article>
+    <article class="news-metric"><span class="news-metric-label">Em rascunho</span><strong class="news-metric-value">{{ page_items|selectattr('status','equalto','draft')|list|length }}</strong><span class="news-metric-note">Nesta página</span></article>
+    <article class="news-metric"><span class="news-metric-label">Em destaque</span><strong class="news-metric-value">{{ page_items|selectattr('featured')|list|length }}</strong><span class="news-metric-note">Nesta página</span></article>
+  </section>
+  <section class="news-surface" aria-labelledby="news-list-title">
+    <div class="news-toolbar">
+      <div><h2 id="news-list-title">Publicações</h2><p>Consulte os registos e abra uma notícia para a editar.</p></div>
+      <div class="news-filters" role="search" aria-label="Filtrar notícias nesta página">
+        <input id="news-search" type="search" placeholder="Pesquisar notícia..." aria-label="Pesquisar pelo título" autocomplete="off">
+        <select id="news-language" aria-label="Filtrar por idioma"><option value="">Todos os idiomas</option><option value="PT">Português</option><option value="EN">Inglês</option></select>
+        <select id="news-status" aria-label="Filtrar por estado"><option value="">Todos os estados</option>{% for code, label in statuses.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+      </div>
+    </div>
+    {% if page_items %}
+    <div class="news-table-wrap"><table>
+      <thead><tr><th scope="col">Notícia</th><th scope="col">Idioma</th><th scope="col">Estado</th><th scope="col">Tema</th><th scope="col">Acções</th></tr></thead>
+      <tbody id="news-rows">
+      {% for item in page_items %}
+      <tr data-title="{{ (item.title or item.slug)|lower|e }}" data-language="{{ item.language|upper|e }}" data-status="{{ item.status|e }}">
+        <td><a class="news-title-link" href="{{ url_for('admin.news_form', ident=item.id) }}">{{ item.title or item.slug }}</a><span class="news-id">#{{ item.id }}</span></td>
+        <td><span class="news-pill">{{ item.language|upper }}</span></td>
+        <td><span class="news-pill {% if item.status == 'published' %}is-published{% elif item.status == 'draft' %}is-draft{% elif item.status == 'scheduled' %}is-scheduled{% endif %}">{{ statuses.get(item.status, item.status) }}</span>{% if item.featured %}<span class="news-featured">★ Em destaque</span>{% endif %}</td>
         <td>{{ item.category.name if item.category else '—' }}</td>
+        <td><a class="news-edit" href="{{ url_for('admin.news_form', ident=item.id) }}" aria-label="Editar {{ item.title or item.slug }}">Editar</a></td>
       </tr>
       {% endfor %}
       </tbody>
-    </table>
-  </div>
-  {% else %}<p>Não há notícias nesta página.</p>{% endif %}
-  {% if rows.has_prev %}<a href="{{ url_for('admin.news_index', page=rows.prev_num) }}">Anterior</a>{% endif %}
-  {% if rows.has_next %}<a href="{{ url_for('admin.news_index', page=rows.next_num) }}">Seguinte</a>{% endif %}
-</section>
+    </table></div>
+    <div class="news-empty" id="news-filter-empty" hidden><strong>Nenhuma notícia encontrada</strong>Experimente alterar os filtros.</div>
+    {% else %}
+    <div class="news-empty"><strong>Ainda não há notícias nesta página.</strong>{% if can_create %}Comece por criar uma nova notícia.{% endif %}</div>
+    {% endif %}
+    <footer class="news-footer"><span id="news-visible-count">{{ page_items|length }} registo(s) nesta página</span><nav class="news-pages" aria-label="Paginação das notícias">{% if rows.has_prev %}<a href="{{ url_for('admin.news_index', page=rows.prev_num) }}">← Anterior</a>{% endif %}{% if rows.has_next %}<a href="{{ url_for('admin.news_index', page=rows.next_num) }}">Seguinte →</a>{% endif %}</nav></footer>
+  </section>
+</div>
+<script nonce="{{ csp_nonce }}">
+(function(){
+  const search=document.getElementById('news-search'),language=document.getElementById('news-language'),status=document.getElementById('news-status');
+  const rows=Array.from(document.querySelectorAll('#news-rows tr')),empty=document.getElementById('news-filter-empty'),count=document.getElementById('news-visible-count');
+  if(!search||!language||!status)return;
+  function update(){
+    const term=search.value.trim().toLocaleLowerCase(),lang=language.value,state=status.value;
+    let visible=0;
+    rows.forEach(row=>{const matches=(!term||row.dataset.title.includes(term))&&(!lang||row.dataset.language===lang)&&(!state||row.dataset.status===state);row.hidden=!matches;if(matches)visible++});
+    if(empty)empty.hidden=visible!==0;
+    if(count)count.textContent=visible+' registo(s) visível(is) nesta página';
+  }
+  search.addEventListener('input',update);language.addEventListener('change',update);status.addEventListener('change',update);
+})();
+</script>
 {% endblock %}
