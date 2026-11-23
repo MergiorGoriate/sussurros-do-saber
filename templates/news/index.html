@@ -59,6 +59,8 @@
     <p>{{ self.meta_description() }}</p>
   </header>
   <nav class="sn-filters" aria-label="{{ ui('Tema') }}">
+    <label for="news-topic" class="sr-only">{{ ui('Tema') }}</label>
+    <select id="news-topic" name="tema" aria-label="{{ ui('Tema') }}" hidden><option value="">{{ ui('Todos os temas') }}</option>{% for theme in news_themes %}<option value="{{ theme.slug }}" {% if active_theme == theme.slug %}selected{% endif %}>{{ ui(theme.name) }}</option>{% endfor %}</select>
     <span>{{ ui('Tema') }}:</span>
     <a class="sn-topic" href="{{ url_for('news.index') }}" {% if not active_theme %}aria-current="true"{% endif %}>{{ ui('Todos os temas') }}</a>
     {% for theme in news_themes %}
@@ -68,11 +70,11 @@
   {% set back = dict(tema=active_theme) if active_theme else {} %}
   {% if news_page.page > 1 %}{% set back = dict(back, page=news_page.page) %}{% endif %}
   {% if lead_news and news_page.page == 1 %}
-  <section aria-labelledby="sn-feature-title">
+  <section class="news-lead" aria-labelledby="sn-feature-title">
     <h2 class="sn-lead-heading" id="sn-feature-title">{{ ui('Notícia em destaque') }}</h2>
     <div class="sn-feature-layout">
       {{ card(lead_news, back, 'h2') }}
-      {% if news_items %}<div class="sn-side" aria-label="{{ ui('Últimas notícias') }}">{% for item in news_items[:4] %}{{ card(item, back, 'h2') }}{% endfor %}</div>{% endif %}
+      {% if news_items %}<div class="sn-side news-grid" aria-label="{{ ui('Últimas notícias') }}">{% for item in news_items[:4] %}{{ card(item, back, 'h2') }}{% endfor %}</div>{% endif %}
     </div>
   </section>
   {% endif %}
@@ -80,7 +82,7 @@
   {% if remaining %}
   <section aria-labelledby="sn-latest-title">
     <h2 class="sn-section-heading" id="sn-latest-title">{{ ui('Últimas notícias') }}</h2>
-    <div class="sn-latest">{% for item in remaining %}{{ card(item, back, 'h2') }}{% endfor %}</div>
+    <div class="sn-latest news-grid">{% for item in remaining %}{{ card(item, back, 'h2') }}{% endfor %}</div>
   </section>
   {% elif not lead_news or news_page.page > 1 %}
   <p class="empty-state" role="status">{{ ui('Não há notícias para esta selecção.') }}</p>
