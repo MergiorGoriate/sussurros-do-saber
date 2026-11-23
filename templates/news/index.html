@@ -5,13 +5,14 @@
 {% block robots %}{% if active_theme %}noindex,follow{% else %}{{ super() }}{% endif %}{% endblock %}
 {% block content %}
 <style>
-.science-news{--sn-blue:#184a82;--sn-ink:#10213a;--sn-muted:#627085;--sn-line:#e1e6ed;max-width:1320px;margin:auto;padding:34px 22px 70px;color:var(--sn-ink)}
+.science-news{--sn-blue:#184a82;--sn-ink:#10213a;--sn-muted:#627085;--sn-line:#e1e6ed;max-width:1320px;margin:auto;padding:18px 22px 70px;color:var(--sn-ink)}
 .science-news *{box-sizing:border-box}
+.science-news .sn-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .science-news .sn-eyebrow{color:#1d568d;text-transform:uppercase;font-size:.72rem;letter-spacing:.14em;font-weight:800;margin:0 0 12px}
 .science-news .sn-heading{border-bottom:1px solid var(--sn-line);padding-bottom:22px}
 .science-news .sn-heading h1{font:700 clamp(2.3rem,5vw,4rem)/1.12 Georgia,serif;letter-spacing:-.04em;margin:0 0 10px}
 .science-news .sn-heading p:last-child{font-size:1.03rem;color:var(--sn-muted);margin:0}
-.science-news .sn-filters{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:19px 0 22px;margin:0 0 24px;border-bottom:1px solid var(--sn-line)}
+ .science-news .sn-filters{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:6px 0 22px;margin:0 0 24px;border-bottom:1px solid var(--sn-line)}
 .science-news .sn-filters label{font-size:.84rem;font-weight:800;margin:0 5px 0 0}
 .science-news .sn-filters select{max-width:min(100%,290px);width:auto;min-height:42px;background:#fff;color:#14263e;border:1px solid #d7e0e9;border-radius:999px;padding:8px 14px;font-size:.85rem}
 .science-news .sn-filter-submit{background:#184a82;color:white;border:1px solid #184a82;border-radius:999px;padding:9px 18px;min-height:42px;font-size:.85rem;font-weight:750;cursor:pointer}
@@ -57,11 +58,7 @@
 @media(max-width:600px){.science-news{padding:24px 15px 45px}.science-news .sn-feature-layout>.news-lead>.news-card{min-height:370px}.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy{padding:65px 17px 16px}.science-news .sn-side{grid-template-columns:1fr}.science-news .sn-side .news-card{grid-template-columns:112px 1fr}.science-news .sn-side .news-cover{width:112px;height:96px}.science-news .sn-latest{grid-template-columns:1fr}.science-news .sn-filters{gap:7px}.science-news .sn-topic{padding:7px 11px;font-size:.8rem}}
 </style>
 <section class="science-news" aria-labelledby="news-title">
-  <header class="sn-heading">
-    <p class="sn-eyebrow">{{ ui('Conhecimento aberto') }} / {{ ui('Actualidade científica') }}</p>
-    <h1 id="news-title">{{ ui('Notícias de Ciência') }}</h1>
-    <p>{{ self.meta_description() }}</p>
-  </header>
+  <h1 id="news-title" class="sn-visually-hidden">{{ ui('Notícias de Ciência') }}</h1>
   <form method="get" action="{{ url_for('news.index') }}" class="sn-filters news-filters">
     <label for="news-topic">{{ ui('Tema') }}</label>
     <select id="news-topic" name="tema">
