@@ -12,24 +12,27 @@
 .science-news .sn-heading h1{font:700 clamp(2.3rem,5vw,4rem)/1.12 Georgia,serif;letter-spacing:-.04em;margin:0 0 10px}
 .science-news .sn-heading p:last-child{font-size:1.03rem;color:var(--sn-muted);margin:0}
 .science-news .sn-filters{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:19px 0 22px;margin:0 0 24px;border-bottom:1px solid var(--sn-line)}
-.science-news .sn-filters>span{font-size:.84rem;font-weight:800;margin-right:5px}
+.science-news .sn-filters label{font-size:.84rem;font-weight:800;margin:0 5px 0 0}
+.science-news .sn-filters select{max-width:min(100%,290px);width:auto;min-height:42px;background:#fff;color:#14263e;border:1px solid #d7e0e9;border-radius:999px;padding:8px 14px;font-size:.85rem}
+.science-news .sn-filter-submit{background:#184a82;color:white;border:1px solid #184a82;border-radius:999px;padding:9px 18px;min-height:42px;font-size:.85rem;font-weight:750;cursor:pointer}
+.science-news .sn-filter-submit:hover{background:#103862}
 .science-news .sn-topic{border:1px solid #d7e0e9;border-radius:999px;padding:8px 14px;text-decoration:none;color:#27384d;background:#fff;font-size:.85rem;font-weight:650;transition:background .15s}
 .science-news .sn-topic:hover{background:#edf4fc}
 .science-news .sn-topic[aria-current="true"]{background:var(--sn-blue);color:#fff;border-color:var(--sn-blue)}
 .science-news .sn-lead-heading,.science-news .sn-section-heading{font:700 clamp(1.45rem,2.5vw,2rem)/1.2 Georgia,serif;margin:0 0 18px;padding-left:13px;border-left:4px solid #236bb0}
 .science-news .sn-feature-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:25px;align-items:start;margin-bottom:40px}
 .science-news .news-card{min-width:0;overflow:hidden}
-.science-news .sn-feature-layout>.news-card{position:relative;border-radius:12px;background:#0c2038;min-height:400px}
-.science-news .sn-feature-layout>.news-card .news-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.science-news .sn-feature-layout>.news-card .news-card-copy{position:absolute;inset:auto 0 0;padding:75px 27px 24px;color:#fff;background:linear-gradient(transparent,rgba(4,14,30,.95));width:100%}
-.science-news .sn-feature-layout>.news-card .news-card-copy h2{font:700 clamp(1.6rem,3vw,2.45rem)/1.12 Georgia,serif;margin:9px 0}
-.science-news .sn-feature-layout>.news-card .news-card-copy a{color:#fff;text-decoration:none}
-.science-news .sn-feature-layout>.news-card .news-card-copy .eyebrow{color:#a8d7ff;font-weight:800;font-size:.75rem}
-.science-news .sn-feature-layout>.news-card .news-card-copy>p:not(.eyebrow){color:#f0f4fa;font-size:.88rem;line-height:1.5}
-.science-news .sn-feature-layout>.news-card .article-meta{opacity:.83}
+.science-news .sn-feature-layout>.news-lead{min-width:0}\n.science-news .sn-feature-layout>.news-lead>.news-card{position:relative;display:block;border:0;border-radius:12px;background:#0c2038;min-height:400px}
+.science-news .sn-feature-layout>.news-lead>.news-card .news-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0}
+.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy{position:absolute;inset:auto 0 0;padding:75px 27px 24px;color:#fff;background:linear-gradient(transparent,rgba(4,14,30,.95));width:100%}
+.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy h2{font:700 clamp(1.6rem,3vw,2.45rem)/1.12 Georgia,serif;margin:9px 0}
+.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy a{color:#fff;text-decoration:none}
+.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy .eyebrow{color:#a8d7ff;font-weight:800;font-size:.75rem}
+.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy>p:not(.eyebrow){color:#f0f4fa;font-size:.88rem;line-height:1.5}
+.science-news .sn-feature-layout>.news-lead>.news-card .article-meta{opacity:.83}
 .science-news .sn-feature-layout>.news-card:not(:has(.news-cover)){background:#183e67}
 .science-news .sn-side{display:grid;gap:0}
-.science-news .sn-side .news-card{display:grid;grid-template-columns:128px minmax(0,1fr);gap:14px;padding:0 0 15px;margin-bottom:15px;border-bottom:1px solid var(--sn-line)}
+.science-news .sn-side .news-card{display:grid;grid-template-columns:128px minmax(0,1fr);gap:14px;padding:0 0 15px;margin-bottom:15px;border:0;border-bottom:1px solid var(--sn-line);border-radius:0}
 .science-news .sn-side .news-cover{width:128px;height:110px;object-fit:cover;border-radius:8px}
 .science-news .sn-side .news-card-copy h2{font:700 1.08rem/1.3 Georgia,serif;margin:5px 0}
 .science-news .sn-side .news-card-copy h2 a,.science-news .sn-latest .news-card-copy h2 a{color:var(--sn-ink);text-decoration:none}
@@ -50,7 +53,7 @@
 .science-news .news-pagination a{border:1px solid #cad9e9;border-radius:9px;padding:9px 15px;text-decoration:none;color:#184a82;font-weight:750}
 .science-news .empty-state{padding:40px 0;color:var(--sn-muted)}
 @media(max-width:950px){.science-news .sn-feature-layout{grid-template-columns:1fr}.science-news .sn-side{grid-template-columns:1fr 1fr;column-gap:20px}.science-news .sn-latest{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.science-news{padding:24px 15px 45px}.science-news .sn-feature-layout>.news-card{min-height:370px}.science-news .sn-feature-layout>.news-card .news-card-copy{padding:65px 17px 16px}.science-news .sn-side{grid-template-columns:1fr}.science-news .sn-side .news-card{grid-template-columns:112px 1fr}.science-news .sn-side .news-cover{width:112px;height:96px}.science-news .sn-latest{grid-template-columns:1fr}.science-news .sn-filters{gap:7px}.science-news .sn-topic{padding:7px 11px;font-size:.8rem}}
+@media(max-width:600px){.science-news{padding:24px 15px 45px}.science-news .sn-feature-layout>.news-lead>.news-card{min-height:370px}.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy{padding:65px 17px 16px}.science-news .sn-side{grid-template-columns:1fr}.science-news .sn-side .news-card{grid-template-columns:112px 1fr}.science-news .sn-side .news-cover{width:112px;height:96px}.science-news .sn-latest{grid-template-columns:1fr}.science-news .sn-filters{gap:7px}.science-news .sn-topic{padding:7px 11px;font-size:.8rem}}
 </style>
 <section class="science-news" aria-labelledby="news-title">
   <header class="sn-heading">
@@ -58,22 +61,24 @@
     <h1 id="news-title">{{ ui('Notícias de Ciência') }}</h1>
     <p>{{ self.meta_description() }}</p>
   </header>
-  <nav class="sn-filters" aria-label="{{ ui('Tema') }}">
-    <label for="news-topic" class="sr-only">{{ ui('Tema') }}</label>
-    <select id="news-topic" name="tema" aria-label="{{ ui('Tema') }}" hidden><option value="">{{ ui('Todos os temas') }}</option>{% for theme in news_themes %}<option value="{{ theme.slug }}" {% if active_theme == theme.slug %}selected{% endif %}>{{ ui(theme.name) }}</option>{% endfor %}</select>
-    <span>{{ ui('Tema') }}:</span>
-    <a class="sn-topic" href="{{ url_for('news.index') }}" {% if not active_theme %}aria-current="true"{% endif %}>{{ ui('Todos os temas') }}</a>
-    {% for theme in news_themes %}
-    <a class="sn-topic" href="{{ url_for('news.index', tema=theme.slug) }}" {% if active_theme == theme.slug %}aria-current="true"{% endif %}>{{ ui(theme.name) }}</a>
-    {% endfor %}
-  </nav>
+  <form method="get" action="{{ url_for('news.index') }}" class="sn-filters news-filters">
+    <label for="news-topic">{{ ui('Tema') }}</label>
+    <select id="news-topic" name="tema">
+      <option value="">{{ ui('Todos os temas') }}</option>
+      {% for theme in news_themes %}
+      <option value="{{ theme.slug }}" {% if active_theme == theme.slug %}selected{% endif %}>{{ ui(theme.name) }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="sn-filter-submit">{{ ui('Filtrar') }}</button>
+    {% if active_theme %}<a class="sn-topic" href="{{ url_for('news.index') }}">{{ ui('Limpar filtro') }}</a>{% endif %}
+  </form>
   {% set back = dict(tema=active_theme) if active_theme else {} %}
   {% if news_page.page > 1 %}{% set back = dict(back, page=news_page.page) %}{% endif %}
   {% if lead_news and news_page.page == 1 %}
-  <section class="news-lead" aria-labelledby="sn-feature-title">
+  <section aria-labelledby="sn-feature-title">
     <h2 class="sn-lead-heading" id="sn-feature-title">{{ ui('Notícia em destaque') }}</h2>
     <div class="sn-feature-layout">
-      {{ card(lead_news, back, 'h2') }}
+      <div class="news-lead">{{ card(lead_news, back, 'h2') }}</div>
       {% if news_items %}<div class="sn-side news-grid" aria-label="{{ ui('Últimas notícias') }}">{% for item in news_items[:4] %}{{ card(item, back, 'h2') }}{% endfor %}</div>{% endif %}
     </div>
   </section>
