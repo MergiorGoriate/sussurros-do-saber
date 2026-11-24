@@ -143,8 +143,8 @@ def parse_news_source(line):
 
     def link_or_doi(value):
         value = value.strip()
-        if re.fullmatch(r'(?:doi:\\s*)?10\\.\\d{4,9}/[^\\s<>|]+', value, flags=re.IGNORECASE):
-            doi = re.sub(r'^doi:\\s*', '', value, flags=re.IGNORECASE)
+        if re.fullmatch(r'(?:doi:\s*)?10\.\d{4,9}/[^\s<>|]+', value, flags=re.IGNORECASE):
+            doi = re.sub(r'^doi:\s*', '', value, flags=re.IGNORECASE)
             return 'https://doi.org/' + doi
         if value.lower().startswith(('http:', 'https:', 'www.', 'doi:')):
             return validate_link(value)
