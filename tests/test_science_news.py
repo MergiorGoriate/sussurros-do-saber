@@ -98,6 +98,8 @@ class ScienceNewsTests(unittest.TestCase):
             else:
                 self.assertIsNone(cover)
         index = self.soup('/noticias')
+        self.assertIsNone(index.select_one('.sn-africa'))
+        self.assertIsNone(self.soup('/en/news').select_one('.sn-africa'))
         lead_cover = index.select_one('.news-lead a.news-cover-link')
         self.assertIsNotNone(lead_cover)
         self.assertEqual(lead_cover['href'], index.select_one('.news-lead h2 a')['href'])
