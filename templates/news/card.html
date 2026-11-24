@@ -1,9 +1,11 @@
 {% macro card(item, query={}, heading='h3') %}
 <article class="news-card">
   {% if item.image %}
-  <img class="news-cover" src="{{ item.image|image_variant(768) }}" srcset="{{ item.image|image_srcset([480, 768, 1200]) }}"
-       sizes="(max-width: 700px) 100vw, (max-width: 1000px) 50vw, 400px" width="768" height="432"
-       alt="{{ item.image_alt }}" loading="lazy" decoding="async">
+  <a class="news-cover-link" href="{{ url_for('news.detail', slug=item.slug, **query) }}" aria-label="{{ ui('Ler notícia') }}: {{ item.title }}">
+    <img class="news-cover" src="{{ item.image|image_variant(768) }}" srcset="{{ item.image|image_srcset([480, 768, 1200]) }}"
+         sizes="(max-width: 700px) 100vw, (max-width: 1000px) 50vw, 400px" width="768" height="432"
+         alt="{{ item.image_alt }}" loading="lazy" decoding="async">
+  </a>
   {% endif %}
   <div class="news-card-copy">
     <p class="eyebrow">{{ ui(item.category.name) }}{% if item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
