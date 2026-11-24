@@ -75,8 +75,6 @@
           <select id="news-evidence" name="evidence"><option value="">Não se aplica</option>
             {% for code, label in evidence_labels.items() %}<option value="{{ code }}" {% if request.form.get('evidence', item.evidence if item else '') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
           </select>
-          <label for="news-evidence-note">Limitações ou aspectos por verificar</label>
-          <textarea id="news-evidence-note" name="evidence_note" maxlength="4000" rows="3">{{ request.form.get('evidence_note', item.evidence_note if item else '') }}</textarea>
         </div>
       </section>
       {% endif %}
