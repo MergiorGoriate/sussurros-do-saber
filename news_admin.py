@@ -217,6 +217,8 @@ def news_form(story_id=None, ident=None):
         can_review=item and assigned_reviewer(item, member), can_add=bool(story_id and can_edit(None, member)),
         authors=Author.query.order_by(Author.name).all(), themes=Category.query.order_by(Category.name).all(),
         evidence_labels=EVIDENCE_LABELS,
+        publication_missing=publication_missing_fields(item) if error and item
+                            and request.form.get('action') in {'publish', 'approve'} else [],
     ), 400 if error else 200
 
 
