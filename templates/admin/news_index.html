@@ -91,7 +91,7 @@
       <tr data-title="{{ (item.title or item.slug)|lower|e }}" data-language="{{ item.language|upper|e }}" data-status="{{ item.status|e }}">
         <td><a class="news-title-link" href="{{ url_for('admin.news_form', ident=item.id) }}">{{ item.title or item.slug }}</a><span class="news-id">#{{ item.id }}</span></td>
         <td><span class="news-pill">{{ item.language|upper }}</span></td>
-        <td><span class="news-pill {% if item.status == 'published' %}is-published{% elif item.status == 'draft' %}is-draft{% elif item.status == 'scheduled' %}is-scheduled{% endif %}">{{ statuses.get(item.status, item.status) }}</span>{% if item.featured %}<span class="news-featured">★ Em destaque</span>{% endif %}</td>
+        <td><span class="news-pill {% if is_scheduled(item) %}is-scheduled{% elif item.status == 'published' %}is-published{% elif item.status == 'draft' %}is-draft{% endif %}">{{ 'Programada' if is_scheduled(item) else statuses.get(item.status, item.status) }}</span>{% if item.featured %}<span class="news-featured">★ Em destaque</span>{% endif %}</td>
         <td>{{ item.category.name if item.category else '—' }}</td>
         <td><a class="news-edit" href="{{ url_for('admin.news_form', ident=item.id) }}" aria-label="Editar {{ item.title or item.slug }}">Editar</a></td>
       </tr>
