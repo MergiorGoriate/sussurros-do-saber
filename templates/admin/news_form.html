@@ -101,8 +101,8 @@
         <h2 id="news-sources">Fontes e evidência</h2>
         <div class="news-editor-fields">
           <label for="news-sources-text">Fontes</label>
-          <textarea id="news-sources-text" name="sources_text" maxlength="24000" rows="5" aria-describedby="news-sources-help" placeholder="Estudo original | https://…">{% if 'sources_text' in request.form %}{{ request.form['sources_text'] }}{% elif item %}{% for source in item.sources %}{% if source.label %}{{ source.label }} | {% endif %}{{ source.url }}{{ '\n' if not loop.last }}{% endfor %}{% endif %}</textarea>
-          <small id="news-sources-help">Um URL HTTPS por linha. Pode indicar «Título | URL».</small>
+          <textarea id="news-sources-text" name="sources_text" maxlength="24000" rows="5" aria-describedby="news-sources-help" placeholder="Autor, A. (2025). Título. Revista, 12(2), 34–48.&#10;Autor, B. (2026). Estudo original | https://doi.org/10.xxxx/xxxxx">{% if 'sources_text' in request.form %}{{ request.form['sources_text'] }}{% elif item %}{% for source in item.sources %}{% if source.label %}{{ source.label }}{% endif %}{% if source.url %}{% if source.label %} | {% endif %}{{ source.url }}{% endif %}{{ '\n' if not loop.last }}{% endfor %}{% endif %}</textarea>
+          <small id="news-sources-help">Uma referência por linha. Aceita citações bibliográficas completas, DOI, URL HTTPS ou «Referência | DOI/URL». Não é obrigatório apresentar uma ligação.</small>
           <label for="news-evidence">Estado da evidência</label>
           <select id="news-evidence" name="evidence"><option value="">Não se aplica</option>
             {% for code, label in evidence_labels.items() %}<option value="{{ code }}" {% if request.form.get('evidence', item.evidence if item else '') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
@@ -120,7 +120,7 @@
           <div class="article-markdown">{{ item.body|article_markdown }}</div>
           {% if item.evidence %}<p>{{ evidence_labels[item.evidence] }}{% if item.evidence_note %} · {{ item.evidence_note }}{% endif %}</p>{% endif %}
           {% if item.sources %}
-          <ul>{% for source in item.sources %}<li><a rel="external noopener" href="{{ source.url }}">{{ source.label or source.url }}</a></li>{% endfor %}</ul>
+          <ol>{% for source in item.sources %}<li>{% if source.label %}{{ source.label }}{% endif %}{% if source.url %}{% if source.label %} · {% endif %}<a rel="external noopener" href="{{ source.url }}">{{ 'Consultar fonte' if source.label else source.url }}</a>{% endif %}</li>{% endfor %}</ol>
           {% endif %}
         </div>
       </details>
