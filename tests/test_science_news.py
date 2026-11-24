@@ -482,7 +482,7 @@ class ScienceNewsTests(unittest.TestCase):
 
     def test_independent_english_publication_and_version_conflicts(self):
         self.auth()
-        response = self.post('/admin/noticias/nova', **self.form('en', title='English first', sources_text=''))
+        response = self.post('/admin/noticias/nova', **self.form('en', title='English first', summary=''))
         self.assertEqual(response.status_code, 303)
         en = NewsVersion.query.filter_by(title='English first').one()
         self.assertEqual(self.action(en, 'publish').status_code, 400)
