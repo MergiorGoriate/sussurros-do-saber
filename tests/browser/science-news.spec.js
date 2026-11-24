@@ -21,11 +21,14 @@ test('mobile news menu, topic filter, original source and return to the filtered
   await expect(source).toHaveAttribute('href', 'https://example.org/primary-source');
   await expect(source).toHaveAttribute('target', '_blank');
   await expect(page.locator('.news-detail')).toBeVisible();
+  await page.context().route('https://example.org/primary-source', route =>
+    route.fulfill({ contentType: 'text/html', body: '<h1>Original source fixture</h1>' }));
   const [sourcePage] = await Promise.all([
     page.waitForEvent('popup'),
     source.click(),
   ]);
   await expect(sourcePage).toHaveURL('https://example.org/primary-source');
+  await expect(sourcePage.getByRole('heading', { name: 'Original source fixture' })).toBeVisible();
   await sourcePage.close();
   await expect(page.getByRole('heading', { name: fixture.title, exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
