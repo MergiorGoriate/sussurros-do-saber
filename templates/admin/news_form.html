@@ -3,6 +3,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-news-editor.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}">
+<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-news-markdown.js', v='20261124-v1') }}"></script>
 {% endblock %}
 {% block content %}
 {% set headline = (item.title or item.slug) if item else 'Nova notícia' %}
@@ -61,7 +62,24 @@
           <label for="news-summary">Resumo</label>
           <textarea id="news-summary" name="summary" maxlength="2000" rows="3" placeholder="Identifique o acontecimento e explique a sua relevância.">{{ request.form.get('summary', item.summary if item else '') }}</textarea>
           <div class="news-editor-field-heading"><label for="news-body">Texto da notícia</label><span>Markdown</span></div>
-          <textarea id="news-body" name="body" maxlength="400000" rows="14" placeholder="Comece a escrever…">{{ request.form.get('body', item.body if item else '') }}</textarea>
+          <div class="news-markdown-toolbar" role="toolbar" aria-label="Ferramentas de formatação da notícia">
+            {% for level in (2, 3, 4, 5, 6) %}<button type="button" data-news-md="h{{ level }}" aria-label="Título de nível {{ level }}">H{{ level }}</button>{% endfor %}
+            <button type="button" data-news-md="bold"><strong>Negrito</strong></button>
+            <button type="button" data-news-md="italic"><em>Itálico</em></button>
+            <button type="button" data-news-md="quote">Citação</button>
+            <button type="button" data-news-md="list">Lista</button>
+            <button type="button" data-news-md="reference">Referência</button>
+            <button type="button" data-news-md="footnote">Nota de rodapé</button>
+            <button type="button" data-news-md="dropcap">Capitular</button>
+            <button type="button" data-news-md="explainer">Caixa explicativa</button>
+            <button type="button" data-news-md="pullquote">Citação em destaque</button>
+            <button type="button" data-news-md="image">Imagem</button>
+            <button type="button" data-news-md="video">Vídeo</button>
+            <button type="button" data-news-md="table">Tabela</button>
+            <button type="button" data-news-md="chart">Gráfico</button>
+          </div>
+          <textarea id="news-body" name="body" maxlength="400000" rows="14" aria-describedby="news-markdown-help" placeholder="Comece a escrever…">{{ request.form.get('body', item.body if item else '') }}</textarea>
+          <small id="news-markdown-help">Use as ferramentas para inserir Markdown no ponto do cursor. O título da notícia é definido acima.</small>
         </div>
       </section>
 
