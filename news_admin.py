@@ -269,6 +269,8 @@ def news_form(story_id=None, ident=None):
                 if not editable:
                     abort(403)
                 item = save_version(item, story_id, member)
+            elif item and action == 'translate_en':
+                item = generate_english_draft(item, member)
             elif item:
                 transition(item, member, action)
             else:
@@ -339,6 +341,48 @@ def save_version(item, story_id, member):
         item.edited_by = session.get('admin_id')
     db.session.flush()
     return item
+
+
+
+def generate_english_draft(item, member):
+    """Translate a saved Portuguese news version into a separate, unpublished English draft."""
+    from dissemination_ai import GenerationError
+    from translation_service import translate, configured
+
+    if item.language != 'pt' or not can_edit(item, member):
+        abort(403)
+    if NewsVersion.query.filter_by(story_id=item.story_id, language='en').first():
+        raise ValueError('Já existe uma versão inglesa. Abra-a para a editar; não será substituída.')
+    if not item.title.strip() or not item.body.strip():
+        raise ValueError('Guarde primeiro o título e o texto da notícia em português.')
+    if not configured():
+        raise ValueError('O serviço de tradução dos artigos ainda não está configurado.')
+    original = {
+        'title': item.title, 'summary': item.summary or '',
+        'body': item.body, 'image_alt': item.image_alt or '',
+    }
+    try:
+        translated, report = translate(original)
+    except GenerationError as exc:
+        raise ValueError(str(exc)) from exc
+    if not report.get('ready'):
+        raise ValueError('A revisão automática detectou problemas na tradução. Corrija o original e tente novamente.')
+    english_slug = slugify(translated['title'])[:145].strip('-') or ('news-' + str(item.story_id))
+    if NewsVersion.query.filter_by(language='en', slug=english_slug).first():
+        english_slug = (english_slug[:140].rstrip('-') + '-' + str(item.story_id))[:160]
+    english = NewsVersion(
+        story_id=item.story_id, language='en', status='draft',
+        slug=english_slug, title=translated['title'], summary=translated['summary'],
+        body=translated['body'], image_alt=translated['image_alt'],
+        author_id=item.author_id, category_id=item.category_id,
+        image=item.image, image_credit=item.image_credit,
+        sources=item.sources, evidence=item.evidence, evidence_note=item.evidence_note,
+        africa_focus=item.africa_focus, related_article_id=item.related_article_id,
+        edited_by=session.get('admin_id'),
+    )
+    db.session.add(english)
+    db.session.flush()
+    return english
 
 
 def transition(item, member, action):
