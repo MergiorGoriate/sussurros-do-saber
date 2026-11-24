@@ -44,3 +44,87 @@
   .news-lead .news-card:has(> img) { grid-template-columns: 3fr 2fr; }
   .news-lead .news-cover { border-radius: .69rem 0 0 .69rem; }
 }
+
+
+/* Página inicial: composição editorial das últimas notícias.
+   Isolada para não alterar a listagem pública nem os restantes cartões. */
+.home-science-news { gap: 1rem; }
+.home-science-news .news-home-heading { gap: 1rem; align-items: end; }
+.home-science-news .news-home-heading h2 { min-width: 0; font-size: clamp(1.3rem, 2.2vw, 1.75rem); }
+.home-science-news .news-home-heading > a { color: #1e4e8c; font-size: .85rem; font-weight: 700; white-space: nowrap; }
+.home-science-news .home-news-grid,
+.home-science-news .home-news-grid:has(> :first-child:nth-last-child(n+4)) {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+.home-science-news .home-news-grid.home-news-double { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+.home-science-news .home-news-grid.home-news-single { grid-template-columns: minmax(0, 480px); }
+.home-science-news .news-card {
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(30, 78, 140, .19);
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
+}
+.home-science-news .news-cover {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 7px !important;
+}
+.home-science-news .news-card-copy { padding: 11px 0 14px; }
+.home-science-news .news-card-copy .eyebrow {
+  margin: 0 0 5px;
+  font-size: .69rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #1e4e8c;
+}
+.home-science-news .news-card-copy h3 {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.5vw, 1.36rem);
+  line-height: 1.25;
+  font-weight: 700;
+}
+.home-science-news .news-card-copy h3 a { text-decoration: none; }
+.home-science-news .news-card-copy h3 a:hover { text-decoration: underline; }
+.home-science-news .news-card-copy > p:not(.eyebrow):not(.article-meta) {
+  margin-top: 8px;
+  color: #536375;
+  line-height: 1.45;
+  font-size: .86rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.home-science-news .news-card-copy .article-meta {
+  margin-top: 10px;
+  color: #69778a;
+  font-size: .73rem;
+}
+.dark .home-science-news .news-card { border-color: #3e5469; }
+.dark .home-science-news .news-card-copy > p:not(.eyebrow):not(.article-meta),
+.dark .home-science-news .news-card-copy .article-meta { color: #b3c1ce; }
+.dark .home-science-news .news-home-heading > a,
+.dark .home-science-news .news-card-copy .eyebrow { color: #a2caff; }
+@media (max-width: 900px) {
+  .home-science-news .home-news-grid,
+  .home-science-news .home-news-grid:has(> :first-child:nth-last-child(n+4)),
+  .home-science-news .home-news-grid.home-news-double { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-science-news .home-news-grid.home-news-single { grid-template-columns: minmax(0, 480px); }
+}
+@media (max-width: 600px) {
+  .home-science-news .home-news-grid,
+  .home-science-news .home-news-grid:has(> :first-child:nth-last-child(n+4)),
+  .home-science-news .home-news-grid.home-news-double,
+  .home-science-news .home-news-grid.home-news-single { grid-template-columns: minmax(0, 1fr); }
+  .home-science-news .news-home-heading h2 { flex: 1 1 100%; }
+  .home-science-news .news-card-copy h3 { font-size: 1.15rem; }
+  .home-science-news .news-cover { aspect-ratio: 16 / 9; }
+}
