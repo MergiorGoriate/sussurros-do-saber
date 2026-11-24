@@ -74,7 +74,7 @@
         <a href="{{ url_for('news.detail', slug=suggestion.slug) }}" class="news-more-image-link">
           {% if suggestion.image %}<img src="{{ suggestion.image|image_variant(480) }}" alt="{{ suggestion.image_alt or suggestion.title }}" loading="lazy" decoding="async" width="480" height="270">{% else %}<span class="news-more-no-image" aria-hidden="true"></span>{% endif %}
         </a>
-        <p class="news-more-kicker">{{ ui(suggestion.category.name) }} · <time datetime="{{ suggestion.published_date.isoformat() }}">{{ suggestion.published_date.strftime('%d/%m/%Y') }}</time></p>
+        <p class="news-more-kicker">{{ ui(suggestion.category.name) if suggestion.category else ui('Ciência') }} · <time datetime="{{ suggestion.published_date.isoformat() }}">{{ suggestion.published_date.strftime('%d/%m/%Y') }}</time></p>
         <h3><a href="{{ url_for('news.detail', slug=suggestion.slug) }}">{{ suggestion.title }}</a></h3>
         <p class="news-more-author">{{ suggestion.author.name }}</p>
       </article>
