@@ -1,4 +1,6 @@
 """Editorial workflow for each language of a science news story."""
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from flask import abort, flash, redirect, render_template, request, session, url_for
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
@@ -26,6 +28,41 @@ TEXT_LIMITS = {
     'image_alt': 300, 'image_credit': 300, 'evidence_note': 4000,
     'evidence': 24, 'related_slug': 260, 'sources_text': 24000,
 }
+
+
+SCHEDULE_ZONES = {'Africa/Maputo': 'Moçambique (UTC+02:00)', 'UTC': 'UTC'}
+
+
+def is_scheduled(item):
+    """A future publication is private until published_at, without a background job."""
+    return bool(item and item.status == 'published' and item.published_at
+                and item.published_at > utcnow())
+
+
+def scheduling_form_values(item):
+    zone = request.form.get('schedule_timezone', 'Africa/Maputo')
+    if zone not in SCHEDULE_ZONES:
+        zone = 'Africa/Maputo'
+    local_time = ''
+    if item and is_scheduled(item):
+        local_time = item.published_at.replace(tzinfo=timezone.utc).astimezone(
+            ZoneInfo(zone)).strftime('%Y-%m-%dT%H:%M')
+    return zone, request.form.get('scheduled_at', local_time)
+
+
+def parse_schedule():
+    zone = request.form.get('schedule_timezone', 'Africa/Maputo')
+    if zone not in SCHEDULE_ZONES:
+        raise ValueError('Seleccione um fuso horário válido para programar a notícia.')
+    raw = request.form.get('scheduled_at', '')
+    try:
+        local_date = datetime.strptime(raw, '%Y-%m-%dT%H:%M')
+    except (ValueError, TypeError):
+        raise ValueError('Indique uma data e hora válidas para a publicação programada.')
+    scheduled_utc = local_date.replace(tzinfo=ZoneInfo(zone)).astimezone(timezone.utc)
+    if scheduled_utc <= datetime.now(timezone.utc):
+        raise ValueError('A publicação programada deve ter uma data e hora futuras.')
+    return scheduled_utc.replace(tzinfo=None)
 
 
 def assigned_reviewer(item, member):
@@ -158,7 +195,7 @@ def news_index():
         page=pagination_page(), per_page=30, error_out=False,
     )
     return render_template('admin/news_index.html', rows=page, statuses=STATUSES,
-                           can_create=can_edit(None, member))
+                           can_create=can_edit(None, member), is_scheduled=is_scheduled)
 
 
 @admin_bp.route('/noticias/nova', methods=['GET', 'POST'])
@@ -216,7 +253,8 @@ def news_form(story_id=None, ident=None):
         versions=versions, statuses=STATUSES, reviewers=reviewers,
         can_review=item and assigned_reviewer(item, member), can_add=bool(story_id and can_edit(None, member)),
         authors=Author.query.order_by(Author.name).all(), themes=Category.query.order_by(Category.name).all(),
-        evidence_labels=EVIDENCE_LABELS,
+        evidence_labels=EVIDENCE_LABELS, is_scheduled=is_scheduled,
+        schedule_zones=SCHEDULE_ZONES, schedule_form=scheduling_form_values(item),
         publication_missing=publication_missing_fields(item) if error and item
                             and request.form.get('action') in {'publish', 'approve'} else [],
     ), 400 if error else 200
@@ -298,12 +336,29 @@ def transition(item, member, action):
         return
 
     require(PUBLISH)
-    if action == 'publish' and (item.status == 'approved' or (
+    if action in {'schedule', 'cancel_schedule'}:
+        if action == 'cancel_schedule':
+            if not is_scheduled(item):
+                abort(409)
+            item.status = 'draft'
+            item.featured = False
+            item.published_at = None
+            return
+        if not (item.status == 'approved' or is_scheduled(item)
+                or (session.get('admin_superuser') and item.status in {'draft', 'reviewed', 'withdrawn'})):
+            abort(409)
+        validate_publication(item)
+        item.published_at = parse_schedule()
+        item.status = 'published'
+        item.featured = False
+        return
+    if action == 'publish' and (item.status == 'approved' or is_scheduled(item) or (
         session.get('admin_superuser') and item.status in {'draft', 'reviewed', 'withdrawn'}
     )):
         validate_publication(item)
+        was_public = item.published_at and item.published_at <= utcnow()
         item.status = 'published'
-        if item.published_at:
+        if was_public:
             item.revised_at = utcnow()
         else:
             item.published_at = utcnow()
