@@ -415,17 +415,6 @@ def transition(item, member, action):
         item.featured = action == 'feature'
     else:
         abort(409)
-, line, flags=re.IGNORECASE)
-    if embedded and embedded.start() > 0:
-        label = line[:embedded.start()].strip()
-        if label and len(label) <= 1500 and '://' not in label:
-            return {'label': label, 'url': validate_link(embedded.group(0))}
-
-    if len(line) > 1500:
-        raise ValueError('Uma referência excede 1 500 caracteres.')
-    if line.startswith(('http://', 'https://')) or '://' in line:
-        raise ValueError('Utilize uma ligação HTTPS válida, um DOI ou uma referência bibliográfica.')
-    return {'label': line, 'url': ''}
 
 
 def validate_link(url):
