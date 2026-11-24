@@ -268,6 +268,26 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertEqual(self.headings(self.soup('/noticias'), '.news-lead'), [other.title])
         self.assertTrue(GovernanceAudit.query.filter_by(action='news.withdraw', entity_id=item.id).count())
 
+    def test_news_editor_markdown_toolbar_is_available_for_new_and_saved_news(self):
+        self.auth()
+        new_page = self.soup('/admin/noticias/nova')
+        toolbar = new_page.select_one('.news-markdown-toolbar')
+        self.assertIsNotNone(toolbar)
+        expected = {'h2', 'h3', 'h4', 'h5', 'h6', 'bold', 'italic',
+                    'quote', 'list', 'reference', 'footnote', 'dropcap',
+                    'explainer', 'pullquote', 'image', 'video', 'table', 'chart'}
+        self.assertEqual({button['data-news-md'] for button in toolbar.select('button[data-news-md]')},
+                         expected)
+        self.assertTrue(all(button.get('type') == 'button' for button in toolbar.select('button')))
+        self.assertIsNotNone(new_page.select_one('textarea#news-body[name="body"]'))
+        self.assertTrue(new_page.select_one('script[src*="admin-news-markdown.js"]'))
+
+        self.assertEqual(self.post('/admin/noticias/nova', **self.form()).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        saved_page = self.soup('/admin/noticias/' + str(item.id))
+        self.assertIsNotNone(saved_page.select_one('.news-markdown-toolbar'))
+        self.assertEqual(saved_page.select_one('#news-body').text, item.body)
+
     def test_evidence_note_removed_from_editor_but_existing_note_is_preserved(self):
         self.auth()
         self.assertEqual(self.post('/admin/noticias/nova', **self.form()).status_code, 303)
