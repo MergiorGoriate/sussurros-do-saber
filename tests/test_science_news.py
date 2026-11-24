@@ -291,6 +291,55 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertEqual(item.revision, before_revision)
         self.assertEqual(item.title, form['title'])
 
+    def test_scheduled_news_uses_local_time_and_remains_private_until_due(self):
+        from datetime import datetime, timezone
+        from news_admin import is_scheduled
+        self.auth()
+        self.assertEqual(self.post('/admin/noticias/nova', **self.form()).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        target = (datetime.now(timezone.utc) + timedelta(days=2)).replace(
+            second=0, microsecond=0)
+        local_value = (target + timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M')
+        self.assertEqual(self.action(
+            item, 'schedule', schedule_timezone='Africa/Maputo',
+            scheduled_at=local_value).status_code, 303)
+        db.session.refresh(item)
+        self.assertTrue(is_scheduled(item))
+        self.assertEqual(item.published_at, target.replace(tzinfo=None))
+        edit = self.soup('/admin/noticias/' + str(item.id))
+        self.assertEqual(edit.select_one('.news-editor-status').text.strip(), 'Programada')
+        self.assertEqual(edit.select_one('#news-scheduled-at')['value'], local_value)
+        self.assertEqual(self.client.get('/noticias/' + item.slug).status_code, 404)
+        self.assertNotIn(item.title, self.soup('/noticias').text)
+        self.assertNotIn('/noticias/' + item.slug, self.client.get('/sitemap.xml').text)
+
+        self.assertEqual(self.action(item, 'cancel_schedule').status_code, 303)
+        db.session.refresh(item)
+        self.assertEqual(item.status, 'draft')
+        self.assertIsNone(item.published_at)
+        self.assertEqual(self.client.get('/noticias/' + item.slug).status_code, 404)
+
+        self.assertEqual(self.action(item, 'schedule', schedule_timezone='UTC',
+                                     scheduled_at=target.strftime('%Y-%m-%dT%H:%M')).status_code, 303)
+        item.published_at = utcnow() - timedelta(minutes=1)
+        db.session.commit()
+        self.assertEqual(self.client.get('/noticias/' + item.slug).status_code, 200)
+        self.assertIn(item.title, self.soup('/noticias').text)
+
+    def test_schedule_requires_future_valid_time_and_permission(self):
+        self.auth()
+        self.assertEqual(self.post('/admin/noticias/nova', **self.form()).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        for zone, value in [('Africa/Maputo', ''), ('Invalid/Zone', '2030-01-01T10:00'),
+                            ('UTC', '2000-01-01T10:00')]:
+            response = self.action(item, 'schedule', schedule_timezone=zone, scheduled_at=value)
+            self.assertEqual(response.status_code, 400)
+            db.session.refresh(item)
+            self.assertEqual(item.status, 'draft')
+        self.auth('portal_editor')
+        self.assertEqual(self.action(item, 'schedule', schedule_timezone='UTC',
+                                     scheduled_at='2030-01-01T10:00').status_code, 403)
+
     def test_news_editor_markdown_toolbar_is_available_for_new_and_saved_news(self):
         self.auth()
         new_page = self.soup('/admin/noticias/nova')
