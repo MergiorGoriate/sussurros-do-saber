@@ -345,6 +345,45 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertEqual(self.action(item, 'schedule', schedule_timezone='UTC',
                                      scheduled_at='2030-01-01T10:00').status_code, 403)
 
+    def test_bibliographic_references_without_urls_and_dois(self):
+        self.auth()
+        references = (
+            'Silva, A. (2024). A ciência em Moçambique. Revista Académica, 12(2), 15–28.\\n'
+            'Santos, B. (2025). Investigação científica. | 10.1234/estudo.2025\\n'
+            'Relatório institucional (2026). | https://example.org/relatorio\\n'
+            'https://example.org/documento'
+        )
+        self.assertEqual(self.post('/admin/noticias/nova',
+                                   **self.form(sources_text=references)).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        self.assertEqual(len(item.sources), 4)
+        self.assertEqual(item.sources[0]['url'], '')
+        self.assertTrue(item.sources[0]['label'].startswith('Silva'))
+        self.assertEqual(item.sources[1]['url'], 'https://doi.org/10.1234/estudo.2025')
+        self.assertEqual(item.sources[2]['url'], 'https://example.org/relatorio')
+        self.assertEqual(self.action(item, 'publish').status_code, 303)
+        page = self.soup('/noticias/' + item.slug)
+        entries = page.select('.news-reference-list > li')
+        self.assertEqual(len(entries), 4)
+        self.assertIn('Silva', entries[0].get_text())
+        self.assertIsNone(entries[0].select_one('a'))
+        self.assertEqual(entries[1].select_one('a')['href'],
+                         'https://doi.org/10.1234/estudo.2025')
+        self.assertEqual(entries[3].select_one('a')['href'], 'https://example.org/documento')
+        editor = self.soup('/admin/noticias/' + str(item.id))
+        self.assertIn('Silva', editor.select_one('#news-sources-text').text)
+        self.assertIn('10.1234/estudo.2025',
+                      editor.select_one('#news-sources-text').text)
+
+    def test_insecure_reference_urls_still_rejected(self):
+        self.auth()
+        for unsafe in ('http://example.org/source',
+                       'Estudo | http://example.org/source',
+                       'Estudo | javascript:alert(1)'):
+            response = self.post('/admin/noticias/nova',
+                                 **self.form(sources_text=unsafe))
+            self.assertEqual(response.status_code, 400)
+
     def test_news_without_topic_can_be_published_and_read(self):
         self.auth()
         form = self.form(category_id='')
