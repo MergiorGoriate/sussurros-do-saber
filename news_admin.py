@@ -108,11 +108,33 @@ def validate_link(url):
     return safe_url(url)
 
 
-def validate_publication(item):
-    if not all((item.title, item.slug, item.summary, item.body, item.author_id, item.category_id, item.sources)):
-        raise ValueError('Para publicar, preencha título, resumo, texto, autoria, tema e pelo menos uma fonte.')
+PUBLICATION_REQUIRED_FIELDS = (
+    ('title', 'Título', 'news-title'),
+    ('summary', 'Resumo', 'news-summary'),
+    ('body', 'Texto da notícia', 'news-body'),
+    ('author_id', 'Autoria', 'news-author'),
+    ('category_id', 'Tema', 'news-category'),
+    ('sources', 'Fontes', 'news-sources-text'),
+)
+
+
+def publication_missing_fields(item):
+    """Return the missing public fields without altering the draft or its metadata."""
+    missing = [(label, field_id) for name, label, field_id in PUBLICATION_REQUIRED_FIELDS
+               if not getattr(item, name)]
+    if not item.slug:
+        missing.append(('Identificador da rota', 'news-slug'))
     if item.image and not item.image_alt:
-        raise ValueError('Acrescente texto alternativo à imagem de capa.')
+        missing.append(('Texto alternativo da capa', 'news-image-alt'))
+    return missing
+
+
+def validate_publication(item):
+    missing = publication_missing_fields(item)
+    if missing:
+        labels = ', '.join(label for label, _ in missing)
+        raise ValueError('Antes de publicar, preencha: ' + labels + '.')
+
     # As reservas científicas são apresentadas no corpo editorial da notícia;
     # a nota separada deixou de ser exigida no formulário.
     if item.language == 'en':
