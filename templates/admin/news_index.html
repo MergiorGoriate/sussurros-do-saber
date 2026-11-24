@@ -70,7 +70,7 @@
   {% set page_items = rows.items %}
   <section class="news-metrics" aria-label="Resumo das notícias nesta página">
     <article class="news-metric"><span class="news-metric-label">Nesta página</span><strong class="news-metric-value">{{ page_items|length }}</strong><span class="news-metric-note">Registos apresentados</span></article>
-    <article class="news-metric"><span class="news-metric-label">Publicadas</span><strong class="news-metric-value">{{ page_items|selectattr('status','equalto','published')|list|length }}</strong><span class="news-metric-note">Nesta página</span></article>
+    <article class="news-metric"><span class="news-metric-label">Publicadas</span><strong class="news-metric-value">{{ news_page_published }}</strong><span class="news-metric-note">Nesta página · {{ news_page_scheduled }} programada(s)</span></article>
     <article class="news-metric"><span class="news-metric-label">Em rascunho</span><strong class="news-metric-value">{{ page_items|selectattr('status','equalto','draft')|list|length }}</strong><span class="news-metric-note">Nesta página</span></article>
     <article class="news-metric"><span class="news-metric-label">Em destaque</span><strong class="news-metric-value">{{ page_items|selectattr('featured')|list|length }}</strong><span class="news-metric-note">Nesta página</span></article>
   </section>
