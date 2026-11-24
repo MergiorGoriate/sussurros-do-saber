@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block meta_description %}{{ ui("Explore artigos de ciência, educação e investigação no Sussurros do Saber, com recursos de aprendizagem e atenção à produção científica em Moçambique e África.") }}{% endblock %}
 
-{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home-publications.css', v='20261104-featured-cover-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/newsletter-signup.css', v='20261124-editorial-v2') }}">{% if articles and articles[0].cover_format == 'video_animated' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css') }}"><script defer src="{{ url_for('static', filename='js/article-cover-player.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home-publications.css', v='20261104-featured-cover-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/newsletter-signup.css', v='20261020-v1') }}">{% if articles and articles[0].cover_format == 'video_animated' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css') }}"><script defer src="{{ url_for('static', filename='js/article-cover-player.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}{% endblock %}
 {% block resource_hints %}{% if articles %}{% set preload_article = articles[0] %}<link rel="preload" as="image" href="{{ preload_article.cover_poster|image_variant(768) }}" imagesrcset="{{ preload_article.cover_poster|image_srcset([480, 768, 1200]) }}" imagesizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1279px) 64vw, 800px" fetchpriority="high">{% endif %}{% endblock %}{% block content %}
 <section class="max-w-7xl mx-auto px-4 py-10 lg:py-14">
   <div class="section-rule"><span>Em destaque</span></div>
@@ -76,21 +76,6 @@
   </div>
 </section>
 {% endif %}
-<section class="newsletter-signup" aria-labelledby="newsletter-title">
-  <div class="newsletter-signup-inner max-w-5xl mx-auto px-4 text-center">
-    <p class="newsletter-kicker">Boletim científico</p>
-    <h2 id="newsletter-title" class="font-serif">A ciência mais perto de si</h2>
-    <p class="newsletter-description">{% if newsletter_available %}Receba uma selecção das notícias e descobertas científicas mais relevantes directamente no seu e-mail.{% else %}Subscreva o boletim científico. O envio de e-mails aguarda activação no servidor.{% endif %}</p>
-    <form id="newsletterForm" class="newsletter-form" aria-label="Subscrição do boletim científico">
-      <label class="newsletter-email-field" for="newsletter-email">
-        <span class="sr-only">Endereço de e-mail</span>
-        <input id="newsletter-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="Endereço de e-mail" aria-describedby="newsletterMessage">
-      </label>
-      <button type="submit">Subscrever <span aria-hidden="true">→</span></button>
-    </form>
-    <p class="newsletter-privacy">Inscrição gratuita. Pode cancelar a qualquer momento.</p>
-    <p id="newsletterMessage" class="newsletter-message" role="status" aria-live="polite"></p>
-  </div>
-</section>
+<section class="bg-science text-white newsletter-signup" aria-labelledby="newsletter-title"><div class="max-w-5xl mx-auto px-4 py-14 text-center"><p class="text-xs uppercase tracking-[.25em] text-white/70">Boletim científico</p><h2 id="newsletter-title" class="font-serif text-4xl mt-3">A ciência mais perto de si</h2><p class="mt-3 text-white/75">{% if newsletter_available %}Subscreva para receber uma selecção de artigos científicos por e-mail. Pode cancelar a qualquer momento.{% else %}Subscreva o boletim científico. O envio de e-mails aguarda activação no servidor.{% endif %}</p><form id="newsletterForm" class="mt-7 max-w-xl mx-auto flex flex-col sm:flex-row gap-2"><label class="newsletter-email-field" for="newsletter-email"><span>Endereço de e-mail</span><input id="newsletter-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="seuemail@exemplo.com" aria-describedby="newsletterMessage"></label><button type="submit" class="bg-signal px-6 py-3 font-bold">Subscrever</button></form><p id="newsletterMessage" class="mt-3 text-sm min-h-5" role="status" aria-live="polite"></p></div></section>
 {% endblock %}
 
