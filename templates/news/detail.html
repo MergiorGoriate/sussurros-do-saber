@@ -48,7 +48,17 @@
 
   <section class="news-sources" aria-labelledby="news-sources-heading">
     <h2 id="news-sources-heading">{{ ui('Fontes') }}</h2>
-    <ul>{% for source in news_item.sources %}<li><a href="{{ source.url }}" rel="external noopener">{{ source.label or source.url }}</a></li>{% endfor %}</ul>
+    <ol class="news-reference-list">
+      {% for source in news_item.sources %}
+      <li>
+        {% if source.label %}<span class="news-reference-text">{{ source.label }}</span>{% endif %}
+        {% if source.url %}
+          {% if source.label %}<span class="news-reference-links"><a href="{{ source.url }}" rel="external noopener" target="_blank">{{ ui('Consultar fonte') }}</a></span>
+          {% else %}<a href="{{ source.url }}" rel="external noopener" target="_blank">{{ source.url }}</a>{% endif %}
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
   </section>
   {% if news_related %}
   <p class="news-related"><a href="{{ url_for('article', slug=news_related.slug) }}">{{ ui('Ler artigo relacionado') }}</a></p>
