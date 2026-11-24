@@ -113,8 +113,8 @@ def validate_publication(item):
         raise ValueError('Para publicar, preencha título, resumo, texto, autoria, tema e pelo menos uma fonte.')
     if item.image and not item.image_alt:
         raise ValueError('Acrescente texto alternativo à imagem de capa.')
-    if item.evidence in {'preprint', 'preliminary', 'unconfirmed'} and not item.evidence_note:
-        raise ValueError('Explique o que continua por verificar ou quais são as limitações da evidência.')
+    # As reservas científicas são apresentadas no corpo editorial da notícia;
+    # a nota separada deixou de ser exigida no formulário.
     if item.language == 'en':
         from internationalization import interface_translation
 
@@ -200,6 +200,9 @@ def news_form(story_id=None, ident=None):
 
 def save_version(item, story_id, member):
     values = read_fields(member)
+    # Campo retirado do editor: conservar qualquer nota já guardada.
+    if item is not None and 'evidence_note' not in request.form:
+        values['evidence_note'] = item.evidence_note or ''
     if item is None:
         locale = request.form.get('language')
         if locale not in {'pt', 'en'}:
