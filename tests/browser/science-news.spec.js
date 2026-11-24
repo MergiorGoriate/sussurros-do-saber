@@ -36,3 +36,20 @@ test('mobile news menu, topic filter, original source and return to the filtered
   await expect(page.getByLabel('Tema', { exact: true })).toHaveValue(fixture.theme);
   await expect(page).toHaveURL(new RegExp('/noticias\\?tema=' + fixture.theme + '$'));
 });
+
+test('science news headings and secondary links have readable colours in dark mode', async ({ page }) => {
+  execFileSync('python', ['tests/browser/science_news_fixture.py'], { encoding: 'utf8' });
+  await page.goto('/noticias');
+  await page.evaluate(() => {
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('dark');
+  });
+  const heading = page.locator('.sn-lead-heading');
+  await expect(heading).toBeVisible();
+  await expect(heading).toHaveCSS('color', 'rgb(241, 245, 252)');
+  await expect(page.locator('.sn-filters label')).toHaveCSS('color', 'rgb(241, 245, 252)');
+  const secondary = page.locator('.sn-side .news-card-copy h2 a').first();
+  await expect(secondary).toBeVisible();
+  await expect(secondary).toHaveCSS('color', 'rgb(241, 245, 252)');
+  await expect(page.locator('.sn-side .eyebrow').first()).toHaveCSS('color', 'rgb(157, 204, 255)');
+});
