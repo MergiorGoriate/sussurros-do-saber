@@ -83,7 +83,14 @@ class ScienceNewsTests(unittest.TestCase):
         home = self.soup('/')
         self.assertEqual(self.headings(home, '[aria-labelledby="home-news-title"]'),
                          ['Notícia mais recente', 'Notícia intermédia', 'Notícia de outro tema'])
+        for card in home.select('[aria-labelledby="home-news-title"] .news-card'):
+            cover = card.select_one('a.news-cover-link')
+            self.assertIsNotNone(cover)
+            self.assertEqual(cover['href'], card.select_one('.news-card-copy h3 a')['href'])
         index = self.soup('/noticias')
+        lead_cover = index.select_one('.news-lead a.news-cover-link')
+        self.assertIsNotNone(lead_cover)
+        self.assertEqual(lead_cover['href'], index.select_one('.news-lead h2 a')['href'])
         self.assertEqual(self.headings(index, '.news-lead'), ['Notícia escolhida'])
         self.assertEqual(self.headings(index, '.news-grid'),
                          ['Notícia mais recente', 'Notícia intermédia', 'Notícia de outro tema'])
