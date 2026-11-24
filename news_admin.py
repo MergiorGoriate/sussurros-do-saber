@@ -259,7 +259,7 @@ def news_form(story_id=None, ident=None):
         evidence_labels=EVIDENCE_LABELS, is_scheduled=is_scheduled,
         schedule_zones=SCHEDULE_ZONES, schedule_form=scheduling_form_values(item),
         publication_missing=publication_missing_fields(item) if error and item
-                            and request.form.get('action') in {'publish', 'approve'} else [],
+                            and request.form.get('action') in {'publish', 'approve', 'schedule'} else [],
     ), 400 if error else 200
 
 
