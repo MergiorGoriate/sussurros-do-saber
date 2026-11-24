@@ -286,11 +286,11 @@ class ScienceNewsTests(unittest.TestCase):
         error = page.select_one('.news-editor-error')
         self.assertIsNotNone(error)
         self.assertNotIn('Antes de publicar, preencha: Tema', error.get_text(' ', strip=True))
-        self.assertIn('Fontes', error.get_text(' ', strip=True))
+        self.assertNotIn('Fontes', error.get_text(' ', strip=True))
         self.assertNotIn('Resumo,', error.get_text(' ', strip=True))
         links = {link['href'] for link in error.select('.news-editor-missing-list a')}
         self.assertNotIn('#news-category', links)
-        self.assertIn('#news-sources-text', links)
+        self.assertNotIn('#news-sources-text', links)
         db.session.refresh(item)
         self.assertEqual(item.status, 'draft')
         self.assertEqual(item.revision, before_revision)
@@ -344,6 +344,15 @@ class ScienceNewsTests(unittest.TestCase):
         self.auth('portal_editor')
         self.assertEqual(self.action(item, 'schedule', schedule_timezone='UTC',
                                      scheduled_at='2030-01-01T10:00').status_code, 403)
+
+    def test_news_can_publish_without_sources(self):
+        self.auth()
+        form = self.form(sources_text='')
+        self.assertEqual(self.post('/admin/noticias/nova', **form).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        self.assertFalse(item.sources)
+        self.assertEqual(self.action(item, 'publish').status_code, 303)
+        self.assertIsNone(self.soup('/noticias/' + item.slug).select_one('.news-sources'))
 
     def test_bibliographic_references_without_urls_and_dois(self):
         self.auth()
