@@ -385,6 +385,25 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertIn('10.1234/estudo.2025',
                       editor.select_one('#news-sources-text').text)
 
+    def test_bibliographic_reference_with_attached_url(self):
+        self.auth()
+        line = ('Bloomberg (19 November 2026). Apple Is Working on AI Agent for '
+                'Device Control, Apps, Browsing and Coding.'
+                'https://bloomberg.com/news/articles/2026-11-19/'
+                'apple-is-working-on-ai-agent-for-device-control-apps-browsing-and-coding')
+        self.assertEqual(self.post('/admin/noticias/nova',
+                                   **self.form(sources_text=line)).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        self.assertEqual(len(item.sources), 1)
+        self.assertTrue(item.sources[0]['label'].startswith('Bloomberg (19 November 2026)'))
+        self.assertEqual(item.sources[0]['url'],
+                         'https://bloomberg.com/news/articles/2026-11-19/'
+                         'apple-is-working-on-ai-agent-for-device-control-apps-browsing-and-coding')
+        self.assertEqual(self.action(item, 'publish').status_code, 303)
+        entry = self.soup('/noticias/' + item.slug).select_one('.news-reference-list li')
+        self.assertIn('Bloomberg', entry.text)
+        self.assertEqual(entry.select_one('a')['href'], item.sources[0]['url'])
+
     def test_insecure_reference_urls_still_rejected(self):
         self.auth()
         for unsafe in ('http://example.org/source',
