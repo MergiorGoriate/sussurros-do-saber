@@ -183,7 +183,6 @@ PUBLICATION_REQUIRED_FIELDS = (
     ('summary', 'Resumo', 'news-summary'),
     ('body', 'Texto da notícia', 'news-body'),
     ('author_id', 'Autoria', 'news-author'),
-    ('sources', 'Fontes', 'news-sources-text'),
 )
 
 
