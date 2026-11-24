@@ -259,7 +259,7 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertEqual(article.select_one('.news-figure img')['alt'], 'Descrição da capa')
         self.assertEqual(article.select_one('.news-author-credit a').text.strip(), item.author.name)
         self.assertEqual(article.select_one('.news-author-credit a')['href'],
-                         '/autores/' + item.author.slug)
+                         '/autor/' + item.author.slug)
         self.assertEqual(article.select_one('.news-publication-details time')['datetime'],
                          item.published_date.isoformat())
         self.assertIsNone(article.select_one('.news-evidence'))
