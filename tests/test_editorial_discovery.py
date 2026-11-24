@@ -91,5 +91,9 @@ class EditorialDiscoveryTests(unittest.TestCase):
         self.assertNotIn('Boletim semanal', soup.get_text())
         self.assertIn('Boletim científico', soup.get_text())
         self.assertIsNotNone(soup.select_one('#newsletterForm input[type="email"]'))
-        self.assertEqual(soup.select_one('#newsletterForm button').get_text(), 'Subscrever')
+        self.assertEqual(soup.select_one('#newsletterForm button').get_text(' ', strip=True), 'Subscrever →')
+        self.assertIsNotNone(soup.select_one('#newsletter-title'))
+        self.assertIsNotNone(soup.select_one('label[for="newsletter-email"]'))
+        self.assertEqual(soup.select_one('#newsletter-email')['name'], 'email')
+        self.assertEqual(soup.select_one('#newsletterMessage')['role'], 'status')
 
