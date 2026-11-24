@@ -245,7 +245,7 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertIn('Actualizado em', article.text)
         self.assertIn('Arquivo de ensaio', article.select_one('.news-figure figcaption').text)
         self.assertEqual(article.select_one('.news-figure img')['alt'], 'Descrição da capa')
-        self.assertIn('A revisão por pares está pendente.', article.select_one('.news-evidence').text)
+        self.assertIsNone(article.select_one('.news-evidence'))
         self.assertEqual(self.action(item, 'withdraw').status_code, 303)
         self.assertEqual(self.client.get('/noticias/' + item.slug).status_code, 404)
         self.assertEqual(self.headings(self.soup('/noticias'), '.news-lead'), [other.title])
@@ -268,7 +268,8 @@ class ScienceNewsTests(unittest.TestCase):
 
         self.assertEqual(self.action(item, 'publish').status_code, 303)
         article = self.soup('/noticias/' + item.slug)
-        self.assertIn(original_note, article.select_one('.news-evidence').text)
+        self.assertIsNone(article.select_one('.news-evidence'))
+        self.assertNotIn(original_note, article.select_one('.news-reading-main').get_text())
 
     def test_new_preliminary_news_does_not_require_removed_note(self):
         self.auth()
