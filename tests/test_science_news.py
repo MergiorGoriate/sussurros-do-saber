@@ -85,6 +85,11 @@ class ScienceNewsTests(unittest.TestCase):
         home = self.soup('/')
         self.assertEqual(self.headings(home, '[aria-labelledby="home-news-title"]'),
                          ['Notícia mais recente', 'Notícia intermédia', 'Notícia de outro tema'])
+        self.assertEqual(len(home.select('.home-news-feature .news-card')), 1)
+        self.assertEqual(len(home.select('.home-news-rail .news-card')), 2)
+        self.assertEqual(home.select_one('.home-news-feature h3').text.strip(), 'Notícia mais recente')
+        self.assertEqual([x.text.strip() for x in home.select('.home-news-rail h3')],
+                         ['Notícia intermédia', 'Notícia de outro tema'])
         for card in home.select('[aria-labelledby="home-news-title"] .news-card'):
             cover = card.select_one('a.news-cover-link')
             if card.select_one('img.news-cover'):
