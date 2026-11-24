@@ -195,7 +195,10 @@ def news_index():
         page=pagination_page(), per_page=30, error_out=False,
     )
     return render_template('admin/news_index.html', rows=page, statuses=STATUSES,
-                           can_create=can_edit(None, member), is_scheduled=is_scheduled)
+                           can_create=can_edit(None, member), is_scheduled=is_scheduled,
+                           news_page_published=sum(item.status == 'published' and not is_scheduled(item)
+                                                   for item in page.items),
+                           news_page_scheduled=sum(is_scheduled(item) for item in page.items))
 
 
 @admin_bp.route('/noticias/nova', methods=['GET', 'POST'])
