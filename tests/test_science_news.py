@@ -39,7 +39,7 @@ class ScienceNewsTests(unittest.TestCase):
         NewsStory.query.delete()
         db.session.commit()
 
-    def story(self, title, *, locale='pt', story=None, offset=0, status='published', featured=False, topic=None):
+    def story(self, title, *, locale='pt', story=None, offset=0, status='published', featured=False, topic=None, with_image=False):
         if story is None:
             story = NewsStory()
             db.session.add(story)
@@ -48,6 +48,8 @@ class ScienceNewsTests(unittest.TestCase):
             story_id=story.id, language=locale, title=title, slug='news-' + secrets.token_hex(5),
             summary='Test summary' if locale == 'en' else 'Resumo de ensaio',
             body='Text for the test story' if locale == 'en' else 'Texto da notícia de ensaio',
+            image='https://example.org/news-cover.jpg' if with_image else '',
+            image_alt='Imagem de ensaio' if with_image else '',
             author=self.author, category=topic or self.topic, status=status, featured=featured,
             sources=[{'label': 'Primary source', 'url': 'https://example.org/research'}],
             published_at=utcnow() + timedelta(days=offset) if status == 'published' else None,
@@ -72,8 +74,8 @@ class ScienceNewsTests(unittest.TestCase):
 
     def test_feature_home_visibility_order_and_theme_navigation(self):
         self.assertIsNone(self.soup('/').select_one('#home-news-title'))
-        self.story('Notícia escolhida', offset=-4, featured=True)
-        _, current = self.story('Notícia mais recente', offset=-1)
+        self.story('Notícia escolhida', offset=-4, featured=True, with_image=True)
+        _, current = self.story('Notícia mais recente', offset=-1, with_image=True)
         self.story('Notícia intermédia', offset=-2)
         self.story('Notícia de outro tema', offset=-3, topic=self.other_topic)
         self.story('Notícia futura', offset=1)
@@ -85,8 +87,11 @@ class ScienceNewsTests(unittest.TestCase):
                          ['Notícia mais recente', 'Notícia intermédia', 'Notícia de outro tema'])
         for card in home.select('[aria-labelledby="home-news-title"] .news-card'):
             cover = card.select_one('a.news-cover-link')
-            self.assertIsNotNone(cover)
-            self.assertEqual(cover['href'], card.select_one('.news-card-copy h3 a')['href'])
+            if card.select_one('img.news-cover'):
+                self.assertIsNotNone(cover)
+                self.assertEqual(cover['href'], card.select_one('.news-card-copy h3 a')['href'])
+            else:
+                self.assertIsNone(cover)
         index = self.soup('/noticias')
         lead_cover = index.select_one('.news-lead a.news-cover-link')
         self.assertIsNotNone(lead_cover)
