@@ -15,15 +15,19 @@ test('mobile news menu, topic filter, original source and return to the filtered
   await expect(page).toHaveURL(new RegExp('/noticias\\?tema=' + fixture.theme + '$'));
   await page.getByRole('link', { name: fixture.title, exact: true }).click();
   await expect(page.getByRole('heading', { name: fixture.title, exact: true })).toBeVisible();
-  const source = page.getByRole('link', { name: 'Publicação primária de ensaio' });
+  const reference = page.locator('.news-reference-list li').filter({ hasText: 'Publicação primária de ensaio' });
+  await expect(reference).toHaveCount(1);
+  const source = reference.getByRole('link', { name: 'Consultar fonte' });
   await expect(source).toHaveAttribute('href', 'https://example.org/primary-source');
+  await expect(source).toHaveAttribute('target', '_blank');
   await expect(page.locator('.news-detail')).toBeVisible();
-  await page.route('https://example.org/primary-source', route =>
-    route.fulfill({ contentType: 'text/html', body: '<h1>Original source fixture</h1>' }));
-  await source.click();
-  await expect(page).toHaveURL('https://example.org/primary-source');
-  await expect(page.getByRole('heading', { name: 'Original source fixture' })).toBeVisible();
-  await page.goBack();
+  const [sourcePage] = await Promise.all([
+    page.waitForEvent('popup'),
+    source.click(),
+  ]);
+  await expect(sourcePage).toHaveURL('https://example.org/primary-source');
+  await sourcePage.close();
+  await expect(page.getByRole('heading', { name: fixture.title, exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   await page.getByRole('link', { name: 'Voltar às Notícias de Ciência' }).click();
   await expect(page.getByLabel('Tema', { exact: true })).toHaveValue(fixture.theme);
