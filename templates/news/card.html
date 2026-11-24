@@ -8,7 +8,7 @@
   </a>
   {% endif %}
   <div class="news-card-copy">
-    <p class="eyebrow">{{ ui(item.category.name) }}{% if item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
+    <p class="eyebrow">{% if item.category %}{{ ui(item.category.name) }}{% else %}{{ ui('Ciência') }}{% endif %}{% if item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
     <{{ heading }} class="font-serif"><a href="{{ url_for('news.detail', slug=item.slug, **query) }}">{{ item.title }}</a></{{ heading }}>
     <p>{{ item.summary }}</p>
     <p class="article-meta">{{ item.author.name }} · <time datetime="{{ item.published_date.isoformat() }}">{{ item.published_date.strftime('%d/%m/%Y') }}</time></p>
