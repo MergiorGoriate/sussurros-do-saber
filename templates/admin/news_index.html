@@ -80,7 +80,7 @@
       <div class="news-filters" role="search" aria-label="Filtrar notícias nesta página">
         <input id="news-search" type="search" placeholder="Pesquisar notícia..." aria-label="Pesquisar pelo título" autocomplete="off">
         <select id="news-language" aria-label="Filtrar por idioma"><option value="">Todos os idiomas</option><option value="PT">Português</option><option value="EN">Inglês</option></select>
-        <select id="news-status" aria-label="Filtrar por estado"><option value="">Todos os estados</option>{% for code, label in statuses.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+        <select id="news-status" aria-label="Filtrar por estado"><option value="">Todos os estados</option>{% for code, label in statuses.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}<option value="scheduled">Programada</option></select>
       </div>
     </div>
     {% if page_items %}
@@ -88,7 +88,7 @@
       <thead><tr><th scope="col">Notícia</th><th scope="col">Idioma</th><th scope="col">Estado</th><th scope="col">Tema</th><th scope="col">Acções</th></tr></thead>
       <tbody id="news-rows">
       {% for item in page_items %}
-      <tr data-title="{{ (item.title or item.slug)|lower|e }}" data-language="{{ item.language|upper|e }}" data-status="{{ item.status|e }}">
+      <tr data-title="{{ (item.title or item.slug)|lower|e }}" data-language="{{ item.language|upper|e }}" data-status="{{ 'scheduled' if is_scheduled(item) else item.status|e }}">
         <td><a class="news-title-link" href="{{ url_for('admin.news_form', ident=item.id) }}">{{ item.title or item.slug }}</a><span class="news-id">#{{ item.id }}</span></td>
         <td><span class="news-pill">{{ item.language|upper }}</span></td>
         <td><span class="news-pill {% if is_scheduled(item) %}is-scheduled{% elif item.status == 'published' %}is-published{% elif item.status == 'draft' %}is-draft{% endif %}">{{ 'Programada' if is_scheduled(item) else statuses.get(item.status, item.status) }}</span>{% if item.featured %}<span class="news-featured">★ Em destaque</span>{% endif %}</td>
