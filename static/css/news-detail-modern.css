@@ -272,3 +272,27 @@
   .news-detail-modern .news-publication-details { gap:5px 12px; font-size:.73rem; }
   .news-detail-modern .news-publication-details > span + span::before { display:none; }
 }
+
+/* Referências científicas: citação legível e ligações complementares. */
+.news-detail-modern .news-reference-list {
+  list-style:decimal;
+  padding:0 0 0 2.25rem;
+  margin:20px 0 0;
+  font-family:Georgia,'Times New Roman',serif;
+}
+.news-detail-modern .news-reference-list li {
+  padding:0 0 20px 5px;
+  margin:0 0 22px;
+  border-bottom:1px solid var(--news-border);
+  font-size:clamp(1rem,1.35vw,1.13rem);
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+.news-detail-modern .news-reference-list li::marker { font-weight:700; }
+.news-detail-modern .news-reference-links {
+  display:block;
+  margin-top:9px;
+  font:700 .85rem/1.5 Arial,sans-serif;
+}
+.news-detail-modern .news-reference-list a { color:#1e4e8c;text-underline-offset:3px; }
+.dark .news-detail-modern .news-reference-list a { color:#a8d0ff; }
