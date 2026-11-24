@@ -37,12 +37,6 @@
     <div class="news-reading-main">
       <div class="article-markdown news-body">{{ news_item.body|article_markdown }}</div>
 
-  {% if news_item.evidence or news_item.evidence_note %}
-  <aside class="news-evidence">
-    {% if news_item.evidence %}<h2>{{ ui(evidence_labels[news_item.evidence]) }}</h2>{% endif %}
-    {% if news_item.evidence_note %}<p>{{ news_item.evidence_note }}</p>{% endif %}
-  </aside>
-  {% endif %}
   <section class="news-sources" aria-labelledby="news-sources-heading">
     <h2 id="news-sources-heading">{{ ui('Fontes') }}</h2>
     <ul>{% for source in news_item.sources %}<li><a href="{{ source.url }}" rel="external noopener">{{ source.label or source.url }}</a></li>{% endfor %}</ul>
