@@ -102,7 +102,15 @@ def detail(slug):
     missing = request.args.get('idioma_indisponivel')
     if missing not in {'pt', 'en'} or missing == locale or missing in translation_routes(slug):
         missing = None
+    # Apenas notícias públicas do mesmo idioma, sem expor rascunhos ou versões futuras.
+    related_news = ordered_news(
+        NewsVersion.public(locale).filter(NewsVersion.id != item.id).options(
+            db.defer(NewsVersion.body), db.defer(NewsVersion.sources),
+            db.defer(NewsVersion.evidence_note),
+        )
+    ).limit(3).all()
     return render_template('news/detail.html', news_item=item, news_related=related,
+                           news_suggestions=related_news,
                            news_missing_locale=missing, news_missing_copy=MISSING_COPY.get(missing),
                            news_listing=listing_values(),
                            evidence_labels=EVIDENCE_LABELS)
