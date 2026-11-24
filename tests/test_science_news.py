@@ -280,11 +280,11 @@ class ScienceNewsTests(unittest.TestCase):
         page = BeautifulSoup(response.text, 'html.parser')
         error = page.select_one('.news-editor-error')
         self.assertIsNotNone(error)
-        self.assertIn('Tema', error.get_text(' ', strip=True))
+        self.assertNotIn('Antes de publicar, preencha: Tema', error.get_text(' ', strip=True))
         self.assertIn('Fontes', error.get_text(' ', strip=True))
         self.assertNotIn('Resumo,', error.get_text(' ', strip=True))
         links = {link['href'] for link in error.select('.news-editor-missing-list a')}
-        self.assertIn('#news-category', links)
+        self.assertNotIn('#news-category', links)
         self.assertIn('#news-sources-text', links)
         db.session.refresh(item)
         self.assertEqual(item.status, 'draft')
@@ -339,6 +339,24 @@ class ScienceNewsTests(unittest.TestCase):
         self.auth('portal_editor')
         self.assertEqual(self.action(item, 'schedule', schedule_timezone='UTC',
                                      scheduled_at='2030-01-01T10:00').status_code, 403)
+
+    def test_news_without_topic_can_be_published_and_read(self):
+        self.auth()
+        form = self.form(category_id='')
+        self.assertEqual(self.post('/admin/noticias/nova', **form).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        self.assertIsNone(item.category_id)
+        self.assertEqual(self.action(item, 'publish').status_code, 303)
+        db.session.refresh(item)
+        self.assertEqual(item.status, 'published')
+        article = self.soup('/noticias/' + item.slug)
+        self.assertIn('Ciência', article.select_one('.article-header .eyebrow').text)
+        listing = self.soup('/noticias')
+        self.assertIn(item.title, listing.get_text(' ', strip=True))
+        self.assertTrue(listing.select_one('.news-card .eyebrow'))
+        new_page = self.soup('/admin/noticias/nova')
+        self.assertEqual(new_page.select_one('#news-category option')['value'], '')
+        self.assertIn('admin-news-topic.js', str(new_page))
 
     def test_news_editor_markdown_toolbar_is_available_for_new_and_saved_news(self):
         self.auth()
