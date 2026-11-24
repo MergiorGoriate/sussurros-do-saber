@@ -252,6 +252,11 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertIn('Actualizado em', article.text)
         self.assertIn('Arquivo de ensaio', article.select_one('.news-figure figcaption').text)
         self.assertEqual(article.select_one('.news-figure img')['alt'], 'Descrição da capa')
+        self.assertEqual(article.select_one('.news-author-credit a').text.strip(), item.author.name)
+        self.assertEqual(article.select_one('.news-author-credit a')['href'],
+                         '/autores/' + item.author.slug)
+        self.assertEqual(article.select_one('.news-publication-details time')['datetime'],
+                         item.published_date.isoformat())
         self.assertIsNone(article.select_one('.news-evidence'))
         self.assertEqual(self.action(item, 'withdraw').status_code, 303)
         self.assertEqual(self.client.get('/noticias/' + item.slug).status_code, 404)
