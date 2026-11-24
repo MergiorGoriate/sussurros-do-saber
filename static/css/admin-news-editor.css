@@ -263,3 +263,29 @@
   .news-editor .news-markdown-toolbar { padding:8px; gap:5px; }
   .news-editor .news-markdown-toolbar button { padding:7px 8px; min-height:38px; font-size:.78rem; }
 }
+
+/* Mensagens accionáveis quando uma notícia ainda não reúne os requisitos editoriais. */
+.news-editor .news-editor-error strong { display:block; font-weight:750; }
+.news-editor .news-editor-error p { margin:.55rem 0; line-height:1.55; }
+.news-editor .news-editor-missing-list {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+  margin:.75rem 0 0;
+  padding:0;
+  list-style:none;
+}
+.news-editor .news-editor-missing-list a {
+  display:inline-flex;
+  align-items:center;
+  min-height:35px;
+  padding:.4rem .75rem;
+  border:1px solid currentColor;
+  border-radius:999px;
+  color:var(--news-danger);
+  font-size:.85rem;
+  font-weight:700;
+  text-decoration:none;
+}
+.news-editor .news-editor-missing-list a:hover { text-decoration:underline; }
+.news-editor :is(#news-category,#news-author,#news-title,#news-summary,#news-body,#news-sources-text,#news-image-alt) { scroll-margin-top:105px; }
