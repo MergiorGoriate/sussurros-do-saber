@@ -22,7 +22,19 @@
     </div>
   </header>
 
-  {% if error %}<p class="news-editor-error" role="alert">{{ error }}</p>{% endif %}
+  {% if error %}
+  <div class="news-editor-error" role="alert" aria-live="assertive">
+    <strong>{{ error }}</strong>
+    {% if publication_missing %}
+    <p>Corrija os campos indicados e volte a publicar. O rascunho permanece guardado.</p>
+    <ul class="news-editor-missing-list">
+      {% for label, field_id in publication_missing %}
+      <li><a href="#{{ field_id }}">{{ label }}</a></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
 
   {% if editable %}
   <div class="news-editor-bar">
