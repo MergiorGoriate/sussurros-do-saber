@@ -177,6 +177,10 @@
       {% if versions %}
       <section class="news-editor-card" aria-labelledby="news-versions-heading">
         <h2 id="news-versions-heading">Versões linguísticas</h2>
+        {% if item and item.language == 'pt' and can_add and not (versions|selectattr('language', 'equalto', 'en')|list) %}
+        <p class="news-editor-muted">Traduza a versão portuguesa guardada. A versão inglesa será criada como rascunho, para revisão antes da publicação.</p>
+        <button type="submit" form="news-workflow-form" name="action" value="translate_en" class="admin-primary">Gerar versão em inglês</button>
+        {% endif %}
         <div class="news-editor-versions">
           {% for code, label in [('pt','Português'), ('en','Inglês')] %}
             {% set version = versions|selectattr('language', 'equalto', code)|first %}
