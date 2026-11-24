@@ -5,6 +5,13 @@
     <a href="{{ url_for('news.index') }}">{{ ui('Ver todas as notícias') }} <span aria-hidden="true">→</span></a>
   </header>
   <div class="news-grid home-news-grid{% if home_news|length == 1 %} home-news-single{% elif home_news|length == 2 %} home-news-double{% endif %}">
-    {% for item in home_news %}{{ card(item) }}{% endfor %}
+    {% if home_news %}
+      <div class="home-news-feature">{{ card(home_news[0]) }}</div>
+      {% if home_news|length > 1 %}
+      <div class="home-news-rail" aria-label="{{ ui('Outras notícias recentes') }}">
+        {% for item in home_news[1:] %}{{ card(item) }}{% endfor %}
+      </div>
+      {% endif %}
+    {% endif %}
   </div>
 </section>
