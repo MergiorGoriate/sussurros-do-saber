@@ -50,10 +50,6 @@
 .science-news .sn-latest .news-cover{width:100%;aspect-ratio:16/10;height:auto;object-fit:cover;border-radius:9px;margin-bottom:13px}
 .science-news .sn-latest .news-card-copy h2{font:700 1.25rem/1.28 Georgia,serif;margin:7px 0}
 .science-news .sn-latest .news-card-copy>p:not(.eyebrow):not(.article-meta){font-size:.88rem;line-height:1.55;color:var(--sn-muted);margin:9px 0}
-.science-news .sn-africa{margin-top:36px;padding:24px;border:1px solid #cbddec;background:#f3f8fd;border-radius:14px}
-.science-news .sn-africa h2{font:700 1.5rem Georgia,serif;margin:0 0 9px}
-.science-news .sn-africa p{color:#52677c;margin:0 0 14px}
-.science-news .sn-africa a{color:#184a82;font-weight:750}
 .science-news .news-pagination{display:flex;gap:15px;align-items:center;justify-content:center;margin-top:35px}
 .science-news .news-pagination a{border:1px solid #cad9e9;border-radius:9px;padding:9px 15px;text-decoration:none;color:#184a82;font-weight:750}
 .science-news .empty-state{padding:40px 0;color:var(--sn-muted)}
@@ -68,7 +64,6 @@
 .dark .science-news .sn-filters label,
 .dark .science-news .sn-lead-heading,
 .dark .science-news .sn-section-heading,
-.dark .science-news .sn-africa h2,
 .dark .science-news .empty-state,
 .dark .science-news .news-pagination span{color:var(--sn-ink)}
 .dark .science-news .sn-side .news-card-copy h2 a,
@@ -87,9 +82,6 @@
 .dark .science-news .sn-topic{background:#182a3d;color:#f1f5fc;border-color:#53677d}
 .dark .science-news .sn-topic:hover{background:#29425e}
 .dark .science-news .sn-topic[aria-current="true"]{background:#3476b9;color:#fff;border-color:#3476b9}
-.dark .science-news .sn-africa{background:#142635;border-color:#436078}
-.dark .science-news .sn-africa p{color:#c4d1df}
-.dark .science-news .sn-africa a{color:#a9d4ff}
 .dark .science-news .news-pagination a{color:#a9d4ff;border-color:#53677d}
 .dark .science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy h2 a{color:#fff}
 @media(max-width:950px){.science-news .sn-feature-layout{grid-template-columns:1fr}.science-news .sn-side{grid-template-columns:1fr 1fr;column-gap:20px}.science-news .sn-latest{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -127,13 +119,6 @@
   </section>
   {% elif not lead_news or news_page.page > 1 %}
   <p class="empty-state" role="status">{{ ui('Não há notícias para esta selecção.') }}</p>
-  {% endif %}
-  {% if not active_theme and news_page.page == 1 %}
-  <aside class="sn-africa">
-    <h2>{{ ui('Investigação em África') }}</h2>
-    <p>{{ ui('Acompanhe a investigação científica desenvolvida no continente africano.') }}</p>
-    <a href="{{ url_for('news.index', tema='africa') }}">{{ ui('Explorar notícias') }} →</a>
-  </aside>
   {% endif %}
   {% if news_page.pages > 1 or news_page.page > 1 %}
   <nav class="news-pagination" aria-label="{{ ui('Paginação das notícias') }}">
