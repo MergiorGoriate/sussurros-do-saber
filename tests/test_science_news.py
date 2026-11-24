@@ -275,7 +275,7 @@ class ScienceNewsTests(unittest.TestCase):
 
     def test_publish_missing_fields_are_named_and_linked_without_losing_draft(self):
         self.auth()
-        form = self.form(category_id='', sources_text='')
+        form = self.form(category_id='', sources_text='', summary='')
         self.assertEqual(self.post('/admin/noticias/nova', **form).status_code, 303)
         item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
         self.assertEqual(item.status, 'draft')
@@ -287,10 +287,11 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertIsNotNone(error)
         self.assertNotIn('Antes de publicar, preencha: Tema', error.get_text(' ', strip=True))
         self.assertNotIn('Fontes', error.get_text(' ', strip=True))
-        self.assertNotIn('Resumo,', error.get_text(' ', strip=True))
+        self.assertIn('Resumo', error.get_text(' ', strip=True))
         links = {link['href'] for link in error.select('.news-editor-missing-list a')}
         self.assertNotIn('#news-category', links)
         self.assertNotIn('#news-sources-text', links)
+        self.assertIn('#news-summary', links)
         db.session.refresh(item)
         self.assertEqual(item.status, 'draft')
         self.assertEqual(item.revision, before_revision)
