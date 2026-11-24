@@ -251,6 +251,34 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertEqual(self.headings(self.soup('/noticias'), '.news-lead'), [other.title])
         self.assertTrue(GovernanceAudit.query.filter_by(action='news.withdraw', entity_id=item.id).count())
 
+    def test_evidence_note_removed_from_editor_but_existing_note_is_preserved(self):
+        self.auth()
+        self.assertEqual(self.post('/admin/noticias/nova', **self.form()).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        page = self.soup('/admin/noticias/' + str(item.id))
+        self.assertIsNone(page.select_one('#news-evidence-note'))
+
+        original_note = item.evidence_note
+        form = self.form()
+        form.pop('evidence_note')
+        self.assertEqual(self.post('/admin/noticias/' + str(item.id),
+                                   revision=item.revision, **form).status_code, 303)
+        db.session.refresh(item)
+        self.assertEqual(item.evidence_note, original_note)
+
+        self.assertEqual(self.action(item, 'publish').status_code, 303)
+        article = self.soup('/noticias/' + item.slug)
+        self.assertIn(original_note, article.select_one('.news-evidence').text)
+
+    def test_new_preliminary_news_does_not_require_removed_note(self):
+        self.auth()
+        form = self.form(evidence='preliminary')
+        form.pop('evidence_note')
+        self.assertEqual(self.post('/admin/noticias/nova', **form).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        self.assertFalse(item.evidence_note)
+        self.assertEqual(self.action(item, 'publish').status_code, 303)
+
     def test_independent_english_publication_and_version_conflicts(self):
         self.auth()
         response = self.post('/admin/noticias/nova', **self.form('en', title='English first', sources_text=''))
