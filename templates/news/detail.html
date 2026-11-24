@@ -46,6 +46,7 @@
     <div class="news-reading-main">
       <div class="article-markdown news-body">{{ news_item.body|article_markdown }}</div>
 
+  {% if news_item.sources %}
   <section class="news-sources" aria-labelledby="news-sources-heading">
     <h2 id="news-sources-heading">{{ ui('Fontes') }}</h2>
     <ol class="news-reference-list">
@@ -60,6 +61,7 @@
       {% endfor %}
     </ol>
   </section>
+  {% endif %}
   {% if news_related %}
   <p class="news-related"><a href="{{ url_for('article', slug=news_related.slug) }}">{{ ui('Ler artigo relacionado') }}</a></p>
   {% endif %}
