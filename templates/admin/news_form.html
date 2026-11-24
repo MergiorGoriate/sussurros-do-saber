@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}">
 <script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-news-markdown.js', v='20261124-v1') }}"></script>
 <script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-news-scheduling.js', v='20261124-v1') }}"></script>
+<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-news-topic.js', v='20261124-v1') }}"></script>
 {% endblock %}
 {% block content %}
 {% set headline = (item.title or item.slug) if item else 'Nova notícia' %}
@@ -143,10 +144,11 @@
           <select id="news-author" name="author_id"><option value="">Seleccionar</option>
             {% for author in authors %}<option value="{{ author.id }}" {% if request.form.get('author_id', (item.author_id if item else staff_member.author_id)|string) == author.id|string %}selected{% endif %}>{{ author.name }}</option>{% endfor %}
           </select>
-          <label for="news-category">Tema</label>
-          <select id="news-category" name="category_id"><option value="">Seleccionar</option>
+          <label for="news-category">Tema (opcional)</label>
+          <select id="news-category" name="category_id" aria-describedby="news-category-help"><option value="">Sem tema</option>
             {% for theme in themes %}<option value="{{ theme.id }}" {% if request.form.get('category_id', (item.category_id if item else '')|string) == theme.id|string %}selected{% endif %}>{{ theme.name }}</option>{% endfor %}
           </select>
+          <small id="news-category-help" role="status" aria-live="polite">O sistema pode sugerir um tema a partir do título. Pode alterá-lo ou deixar «Sem tema».</small>
           <label class="news-editor-check"><input name="africa_focus" type="checkbox" value="yes" {% if request.form.get('africa_focus') == 'yes' or (request.form.get('action') != 'save' and item and item.africa_focus) %}checked{% endif %}> Investigação feita em África</label>
           <label for="news-slug">Identificador da rota</label>
           <input id="news-slug" name="slug" value="{{ request.form.get('slug', item.slug if item else '') }}" maxlength="160" aria-describedby="news-slug-help">
