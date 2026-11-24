@@ -17,7 +17,7 @@
 <article class="article-page news-detail news-detail-modern max-w-4xl mx-auto px-4 py-10">
   <a class="news-back" href="{{ url_for('news.index', **news_listing) }}">{{ ui('Voltar às Notícias de Ciência') }}</a>
   <header class="article-header">
-    <p class="eyebrow"><a href="{{ url_for('news.index', tema=news_item.category.slug) }}">{{ ui(news_item.category.name) }}</a>{% if news_item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
+    <p class="eyebrow">{% if news_item.category %}<a href="{{ url_for('news.index', tema=news_item.category.slug) }}">{{ ui(news_item.category.name) }}</a>{% else %}{{ ui('Ciência') }}{% endif %}{% if news_item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
     <h1 class="article-title font-serif">{{ news_item.title }}</h1>
     <p class="article-summary mt-5">{{ news_item.summary }}</p>
     <div class="news-author-line">
