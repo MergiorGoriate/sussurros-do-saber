@@ -120,16 +120,9 @@ def read_fields(member):
         raise ValueError('Seleccione um estado de evidência válido.')
     values['africa_focus'] = request.form.get('africa_focus') == 'yes'
     lines = [line.strip() for line in values.pop('sources_text').splitlines() if line.strip()]
-    if len(lines) > 20:
-        raise ValueError('Adicione até 20 fontes.')
-    values['sources'] = []
-    for line in lines:
-        label, separator, url = line.rpartition('|')
-        url = validate_link(url.strip())
-        label = label.strip() if separator else ''
-        if len(label) > 240:
-            raise ValueError('O título da fonte excede 240 caracteres.')
-        values['sources'].append({'label': label, 'url': url})
+    if len(lines) > 40:
+        raise ValueError('Adicione até 40 referências, uma por linha.')
+    values['sources'] = [parse_news_source(line) for line in lines]
 
     related_slug = values.pop('related_slug')
     related = Article.query.filter_by(slug=related_slug).first() if related_slug else None
@@ -137,6 +130,46 @@ def read_fields(member):
         raise ValueError('O identificador do artigo relacionado não existe.')
     values['related_article_id'] = related.id if related else None
     return values
+
+
+
+def parse_news_source(line):
+    """Accept a bibliographic reference, optionally with a verified HTTPS link or DOI.
+
+    Retain the existing JSON representation for previously saved URL-only sources.
+    Never turn untrusted free text into a hyperlink.
+    """
+    import re
+
+    def link_or_doi(value):
+        value = value.strip()
+        if re.fullmatch(r'(?:doi:\\s*)?10\\.\\d{4,9}/[^\\s<>|]+', value, flags=re.IGNORECASE):
+            doi = re.sub(r'^doi:\\s*', '', value, flags=re.IGNORECASE)
+            return 'https://doi.org/' + doi
+        if value.lower().startswith(('http:', 'https:', 'www.', 'doi:')):
+            return validate_link(value)
+        return None
+
+    label, separator, suffix = line.rpartition('|')
+    if separator:
+        target = link_or_doi(suffix)
+        if target is None:
+            raise ValueError('Depois de «|» indique um DOI ou ligação HTTPS válida.')
+        text = label.strip()
+        if not text:
+            raise ValueError('Escreva a referência antes de «|».')
+        if len(text) > 1500:
+            raise ValueError('Uma referência excede 1 500 caracteres.')
+        return {'label': text, 'url': target}
+
+    target = link_or_doi(line)
+    if target:
+        return {'label': '', 'url': target}
+    if len(line) > 1500:
+        raise ValueError('Uma referência excede 1 500 caracteres.')
+    if line.startswith(('http://', 'https://')) or '://' in line:
+        raise ValueError('Utilize uma ligação HTTPS válida, um DOI ou uma referência bibliográfica.')
+    return {'label': line, 'url': ''}
 
 
 def validate_link(url):
