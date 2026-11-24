@@ -1,10 +1,10 @@
 {% from 'news/card.html' import card with context %}
-<section class="news-section max-w-7xl mx-auto px-4 py-10" aria-labelledby="home-news-title">
-  <div class="news-home-heading">
+<section class="news-section home-science-news max-w-7xl mx-auto px-4 py-10" aria-labelledby="home-news-title">
+  <header class="news-home-heading">
     <h2 id="home-news-title" class="section-rule"><span>{{ ui('Últimas notícias') }}</span></h2>
-    <a href="{{ url_for('news.index') }}">{{ ui('Ver todas as notícias') }}</a>
-  </div>
-  <div class="news-grid">
+    <a href="{{ url_for('news.index') }}">{{ ui('Ver todas as notícias') }} <span aria-hidden="true">→</span></a>
+  </header>
+  <div class="news-grid home-news-grid{% if home_news|length == 1 %} home-news-single{% elif home_news|length == 2 %} home-news-double{% endif %}">
     {% for item in home_news %}{{ card(item) }}{% endfor %}
   </div>
 </section>
