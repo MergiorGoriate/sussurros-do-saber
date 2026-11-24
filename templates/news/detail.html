@@ -20,10 +20,19 @@
     <p class="eyebrow"><a href="{{ url_for('news.index', tema=news_item.category.slug) }}">{{ ui(news_item.category.name) }}</a>{% if news_item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
     <h1 class="article-title font-serif">{{ news_item.title }}</h1>
     <p class="article-summary mt-5">{{ news_item.summary }}</p>
-    <p class="article-meta">
-      <a href="{{ url_for('author_detail', slug=news_item.author.slug) }}">{{ news_item.author.name }}</a> ·
-      {{ ui('Publicado em') }} <time datetime="{{ news_item.published_date.isoformat() }}">{{ news_item.published_date.strftime('%d/%m/%Y') }}</time>
-      {% if news_item.revised_at %} · {{ ui('Actualizado em') }} <time datetime="{{ news_item.revised_date.isoformat() }}">{{ news_item.revised_date.strftime('%d/%m/%Y') }}</time>{% endif %}
+    <div class="news-author-line">
+      <a class="news-author-avatar-link" href="{{ url_for('author_detail', slug=news_item.author.slug) }}" aria-label="{{ news_item.author.name }}">
+        {% if news_item.author.photo %}
+        <img class="news-author-avatar" src="{{ news_item.author.photo|safe_image_url }}" alt="" width="48" height="48" loading="lazy" decoding="async">
+        {% else %}
+        <span class="news-author-avatar news-author-fallback" aria-hidden="true">{{ news_item.author.name[:2]|upper }}</span>
+        {% endif %}
+      </a>
+      <span class="news-author-credit">{{ ui('Por') }} <a href="{{ url_for('author_detail', slug=news_item.author.slug) }}">{{ news_item.author.name }}</a></span>
+    </div>
+    <p class="article-meta news-publication-details">
+      <span>{{ ui('Publicado em') }} <time datetime="{{ news_item.published_date.isoformat() }}">{{ news_item.published_date.strftime('%d/%m/%Y') }}</time></span>
+      {% if news_item.revised_at %}<span>{{ ui('Actualizado em') }} <time datetime="{{ news_item.revised_date.isoformat() }}">{{ news_item.revised_date.strftime('%d/%m/%Y') }}</time></span>{% endif %}
     </p>
   </header>
   {% if news_item.image %}
