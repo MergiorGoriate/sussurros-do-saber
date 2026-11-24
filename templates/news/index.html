@@ -3,6 +3,9 @@
 {% block title %}{{ ui('Notícias de Ciência') }} — Sussurros do Saber{% endblock %}
 {% block meta_description %}{{ ui('Actualidade científica internacional, com atenção à investigação feita em África.') }}{% endblock %}
 {% block robots %}{% if active_theme %}noindex,follow{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/news-page-newsletter.css', v='20261124-v1') }}">
+{% endblock %}
 {% block content %}
 <style>
 .science-news{--sn-blue:#184a82;--sn-ink:#10213a;--sn-muted:#627085;--sn-line:#e1e6ed;max-width:1320px;margin:auto;padding:18px 22px 70px;color:var(--sn-ink)}
@@ -127,5 +130,23 @@
     {% if news_page.has_next %}<a rel="next" href="{{ url_for('news.index', **dict(back, page=news_page.next_num)) }}">{{ ui('Seguinte') }}</a>{% endif %}
   </nav>
   {% endif %}
+</section>
+<section class="news-page-newsletter" aria-labelledby="newsletter-title">
+  <div class="news-page-newsletter-inner">
+    <p class="news-page-newsletter-kicker">{{ ui('Boletim científico') }}</p>
+    <h2 id="newsletter-title">{{ ui('A ciência mais perto de si') }}</h2>
+    <p class="news-page-newsletter-description">
+      {% if newsletter_available %}{{ ui('Subscreva para receber uma selecção de artigos científicos por e-mail. Pode cancelar a qualquer momento.') }}{% else %}{{ ui('Subscreva o boletim científico. O envio de e-mails aguarda activação no servidor.') }}{% endif %}
+    </p>
+    <form id="newsletterForm" aria-label="{{ ui('Boletim científico') }}">
+      <label for="newsletter-email" class="news-page-newsletter-field">
+        <span class="sn-visually-hidden">{{ ui('Endereço de e-mail') }}</span>
+        <input id="newsletter-email" name="email" type="email" autocomplete="email" inputmode="email" required
+               placeholder="{{ ui('Endereço de e-mail') }}" aria-describedby="newsletterMessage">
+      </label>
+      <button type="submit">{{ ui('Subscrever') }} <span aria-hidden="true">→</span></button>
+    </form>
+    <p id="newsletterMessage" class="news-page-newsletter-feedback" role="status" aria-live="polite"></p>
+  </div>
 </section>
 {% endblock %}
