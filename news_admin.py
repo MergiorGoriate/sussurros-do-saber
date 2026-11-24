@@ -150,7 +150,6 @@ PUBLICATION_REQUIRED_FIELDS = (
     ('summary', 'Resumo', 'news-summary'),
     ('body', 'Texto da notícia', 'news-body'),
     ('author_id', 'Autoria', 'news-author'),
-    ('category_id', 'Tema', 'news-category'),
     ('sources', 'Fontes', 'news-sources-text'),
 )
 
@@ -178,7 +177,7 @@ def validate_publication(item):
         from internationalization import interface_translation
 
         theme = db.session.get(Category, item.category_id)
-        if not interface_translation(theme.name):
+        if theme is not None and not interface_translation(theme.name):
             raise ValueError('Publique a tradução inglesa do nome do tema em Internacionalização antes de publicar esta versão.')
 
 
