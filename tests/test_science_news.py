@@ -268,6 +268,29 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertEqual(self.headings(self.soup('/noticias'), '.news-lead'), [other.title])
         self.assertTrue(GovernanceAudit.query.filter_by(action='news.withdraw', entity_id=item.id).count())
 
+    def test_publish_missing_fields_are_named_and_linked_without_losing_draft(self):
+        self.auth()
+        form = self.form(category_id='', sources_text='')
+        self.assertEqual(self.post('/admin/noticias/nova', **form).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        self.assertEqual(item.status, 'draft')
+        before_revision = item.revision
+        response = self.action(item, 'publish')
+        self.assertEqual(response.status_code, 400)
+        page = BeautifulSoup(response.text, 'html.parser')
+        error = page.select_one('.news-editor-error')
+        self.assertIsNotNone(error)
+        self.assertIn('Tema', error.get_text(' ', strip=True))
+        self.assertIn('Fontes', error.get_text(' ', strip=True))
+        self.assertNotIn('Resumo,', error.get_text(' ', strip=True))
+        links = {link['href'] for link in error.select('.news-editor-missing-list a')}
+        self.assertIn('#news-category', links)
+        self.assertIn('#news-sources-text', links)
+        db.session.refresh(item)
+        self.assertEqual(item.status, 'draft')
+        self.assertEqual(item.revision, before_revision)
+        self.assertEqual(item.title, form['title'])
+
     def test_news_editor_markdown_toolbar_is_available_for_new_and_saved_news(self):
         self.auth()
         new_page = self.soup('/admin/noticias/nova')
