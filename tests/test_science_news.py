@@ -348,9 +348,9 @@ class ScienceNewsTests(unittest.TestCase):
     def test_bibliographic_references_without_urls_and_dois(self):
         self.auth()
         references = (
-            'Silva, A. (2024). A ciência em Moçambique. Revista Académica, 12(2), 15–28.\\n'
-            'Santos, B. (2025). Investigação científica. | 10.1234/estudo.2025\\n'
-            'Relatório institucional (2026). | https://example.org/relatorio\\n'
+            'Silva, A. (2024). A ciência em Moçambique. Revista Académica, 12(2), 15–28.\n'
+            'Santos, B. (2025). Investigação científica. | 10.1234/estudo.2025\n'
+            'Relatório institucional (2026). | https://example.org/relatorio\n'
             'https://example.org/documento'
         )
         self.assertEqual(self.post('/admin/noticias/nova',
