@@ -30,4 +30,24 @@ with app.app_context():
         )
         db.session.add(item)
         db.session.commit()
-    print(json.dumps({'title': item.title, 'theme': item.category.slug}))
+    # A listagem editorial precisa de uma segunda notícia para testar
+    # os cartões laterais e o respectivo contraste no modo escuro.
+    secondary = NewsVersion.query.filter_by(language='pt', slug='ensaio-noticia-secundaria').first()
+    if secondary is None:
+        from datetime import timedelta
+        story = NewsStory()
+        db.session.add(story)
+        db.session.flush()
+        secondary = NewsVersion(
+            story_id=story.id, language='pt', slug='ensaio-noticia-secundaria',
+            title='Notícia secundária de ensaio',
+            summary='Resumo sintético para verificar os cartões laterais.',
+            body='Texto de ensaio para a notícia secundária.',
+            author=item.author, category=item.category,
+            sources=[{'label': 'Fonte secundária de ensaio', 'url': 'https://example.org/secondary-source'}],
+            status='published', published_at=item.published_at - timedelta(minutes=5),
+        )
+        db.session.add(secondary)
+        db.session.commit()
+    print(json.dumps({'title': item.title, 'theme': item.category.slug,
+                      'secondary_title': secondary.title}))
