@@ -10,11 +10,11 @@
 {% block twitter_title %}{{ news_item.title }}{% endblock %}
 {% block twitter_image %}{{ news_item.image|social_image }}{% endblock %}
 {% block twitter_image_alt %}{{ news_item.image_alt or super() }}{% endblock %}
-{% block head_extra %}<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/social-share.js') }}"></script><link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}">{% endblock %}
+{% block head_extra %}<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/social-share.js') }}"></script><link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/news-detail-modern.css', v='20261124-v1') }}">{% endblock %}
 {% block content %}
 {% set structured = {'@context':'https://schema.org','@type':'NewsArticle','headline':news_item.title,'description':news_item.summary,'inLanguage':'en' if language == 'en' else 'pt-MZ','datePublished':news_item.published_date.isoformat(),'dateModified':(news_item.revised_date or news_item.published_date).isoformat(),'image':news_item.image|social_image,'author':{'@type':'Person','name':news_item.author.name},'publisher':{'@type':'Organization','name':'Sussurros do Saber'},'mainEntityOfPage':site_url ~ seo_canonical_path} %}
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{{ structured|tojson }}</script>
-<article class="article-page news-detail max-w-4xl mx-auto px-4 py-10">
+<article class="article-page news-detail news-detail-modern max-w-4xl mx-auto px-4 py-10">
   <a class="news-back" href="{{ url_for('news.index', **news_listing) }}">{{ ui('Voltar às Notícias de Ciência') }}</a>
   <header class="article-header">
     <p class="eyebrow"><a href="{{ url_for('news.index', tema=news_item.category.slug) }}">{{ ui(news_item.category.name) }}</a>{% if news_item.africa_focus %} · {{ ui('Investigação em África') }}{% endif %}</p>
@@ -33,7 +33,9 @@
     {% if news_item.image_credit %}<figcaption>{{ ui('Crédito da imagem') }} · {{ news_item.image_credit }}</figcaption>{% endif %}
   </figure>
   {% endif %}
-  <div class="article-markdown news-body">{{ news_item.body|article_markdown }}</div>
+  <div class="news-reading-layout">
+    <div class="news-reading-main">
+      <div class="article-markdown news-body">{{ news_item.body|article_markdown }}</div>
 
   {% if news_item.evidence or news_item.evidence_note %}
   <aside class="news-evidence">
@@ -48,8 +50,9 @@
   {% if news_related %}
   <p class="news-related"><a href="{{ url_for('article', slug=news_related.slug) }}">{{ ui('Ler artigo relacionado') }}</a></p>
   {% endif %}
+    </div>
   {% set share_url = site_url ~ seo_canonical_path %}
-  <aside class="share-panel" data-title="{{ news_item.title }}" data-url="{{ share_url }}">
+  <aside class="share-panel news-share-aside" data-title="{{ news_item.title }}" data-url="{{ share_url }}">
     <div><h2>{{ ui('Partilhar notícia') }}</h2></div>
     <div class="social-share">
       <a data-network="whatsapp" href="https://wa.me/?text={{ (news_item.title ~ ' ' ~ share_url)|urlencode }}" aria-label="{{ ui('Compartilhar no WhatsApp') }}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>WhatsApp</span></a>
@@ -58,5 +61,23 @@
     </div>
     <p id="shareStatus" class="share-status" aria-live="polite"></p>
   </aside>
+  </div>
+  {% if news_suggestions %}
+  <section class="news-more-features" aria-labelledby="news-more-title">
+    <div class="news-more-heading"><h2 id="news-more-title">{{ ui('Mais notícias de ciência') }}</h2><a href="{{ url_for('news.index') }}">{{ ui('Ver mais notícias') }} <span aria-hidden="true">→</span></a></div>
+    <div class="news-more-grid">
+      {% for suggestion in news_suggestions %}
+      <article class="news-more-card">
+        <a href="{{ url_for('news.detail', slug=suggestion.slug) }}" class="news-more-image-link">
+          {% if suggestion.image %}<img src="{{ suggestion.image|image_variant(480) }}" alt="{{ suggestion.image_alt or suggestion.title }}" loading="lazy" decoding="async" width="480" height="270">{% else %}<span class="news-more-no-image" aria-hidden="true"></span>{% endif %}
+        </a>
+        <p class="news-more-kicker">{{ ui(suggestion.category.name) }} · <time datetime="{{ suggestion.published_date.isoformat() }}">{{ suggestion.published_date.strftime('%d/%m/%Y') }}</time></p>
+        <h3><a href="{{ url_for('news.detail', slug=suggestion.slug) }}">{{ suggestion.title }}</a></h3>
+        <p class="news-more-author">{{ suggestion.author.name }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 </article>
 {% endblock %}
