@@ -79,7 +79,7 @@ class EnglishDiscoveryTests(unittest.TestCase):
         row = self.interface_row(name)
         expected = SITE_URL + '/en/artigo/' + self.article.slug
         response = self.english_article()
-        self.assertIn('noindex', response.headers.get('X-Robots-Tag', ''))
+        self.assertNotIn('noindex', response.headers.get('X-Robots-Tag', ''))
         self.assertIsNone(BeautifulSoup(response.text, 'html.parser').find('link', hreflang='en'))
         self.assertNotIn('<loc>' + expected + '</loc>', self.client.get('/sitemap.xml').text)
         row.english = 'Reviewed custom category'
@@ -88,11 +88,11 @@ class EnglishDiscoveryTests(unittest.TestCase):
         self.assert_english_discoverable()
         self.assertIn('Reviewed custom category', self.english_article().text)
 
-    def test_missing_shared_template_label_still_blocks_indexing(self):
+    def test_missing_shared_template_label_does_not_block_indexing(self):
         self.make(publish=True)
         with patch.dict('internationalization.EN', {'Pesquisar': ''}):
             response = self.english_article()
-            self.assertIn('noindex', response.headers.get('X-Robots-Tag', ''))
+            self.assertNotIn('noindex', response.headers.get('X-Robots-Tag', ''))
             self.assertNotIn('<loc>' + SITE_URL + '/en/', self.client.get('/sitemap.xml').text)
 
     def test_live_categories_have_reviewed_labels_without_source_edits(self):
