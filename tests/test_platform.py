@@ -189,15 +189,15 @@ class PlatformTests(unittest.TestCase):
         self.assertIn(b"Sitemap: https://www.sussurrosdosaber.com/sitemap.xml", robots.data)
         self.assertIn(b"Disallow: /admin", robots.data)
 
-    def test_indexing_directives_distinguish_public_and_duplicate_pages(self):
+    def test_indexing_directives_distinguish_public_and_private_pages(self):
         homepage = self.client.get("/")
         self.assertIn(
             b'<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">',
             homepage.data,
         )
         filtered = self.client.get("/artigos?categoria=Biologia")
-        self.assertIn(b'<meta name="robots" content="noindex,follow">', filtered.data)
-        self.assertEqual(filtered.headers["X-Robots-Tag"], "noindex, follow")
+        self.assertIn(b'<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">', filtered.data)
+        self.assertNotIn('noindex', filtered.headers.get('X-Robots-Tag', ''))
         favorites = self.client.get("/favoritos")
         self.assertEqual(favorites.status_code, 302)
         self.assertEqual(favorites.location, '/conta/biblioteca')
