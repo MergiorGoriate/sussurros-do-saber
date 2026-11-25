@@ -198,11 +198,12 @@ def video_sitemap():
         video = XML.SubElement(entry, 'video:video')
         fields = {
             'thumbnail_loc': item.thumbnail, 'title': item.title,
-            'description': item.description, 'publication_date': published_timestamp(item),
+            'description': item.description,
         }
         fields['player_loc' if item.embed_url else 'content_loc'] = item.embed_url or cover_delivery_url(item.url)
         if item.duration and item.duration <= 28800:
             fields['duration'] = str(item.duration)
+        fields['publication_date'] = published_timestamp(item)
         for key, value in fields.items():
             XML.SubElement(video, f'video:{key}').text = value
     return Response(XML.tostring(root, encoding='utf-8', xml_declaration=True),

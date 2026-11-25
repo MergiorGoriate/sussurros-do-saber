@@ -165,8 +165,9 @@ def publication_fields(item, action):
         scheduled = parse_schedule(request.form.get('scheduled_at'), 'Africa/Maputo')
         if not scheduled or scheduled <= utcnow():
             raise ValueError('Indique uma data futura. / Enter a future date.')
-    if not item.published_at or item.status != 'published' or action == 'schedule' or item.published_at > utcnow():
-        item.published_at = scheduled or utcnow()
+    now = utcnow()
+    if not item.published_at or item.published_at > now:
+        item.published_at = scheduled or now
     item.status, item.scheduled_at = 'published', scheduled
 
 

@@ -50,8 +50,13 @@ class ScienceVideo(db.Model):
 
     @classmethod
     def public(cls, locale=None):
-        query = cls.query.filter(cls.status == 'published', cls.published_at <= utcnow(),
-                                 db.or_(cls.article_id.is_(None), cls.article.has(Article.status == 'published')))
+        now = utcnow()
+        query = cls.query.filter(
+            cls.status == 'published',
+            cls.published_at <= now,
+            db.or_(cls.scheduled_at.is_(None), cls.scheduled_at <= now),
+            db.or_(cls.article_id.is_(None), cls.article.has(Article.status == 'published')),
+        )
         return query.filter(cls.language == locale) if locale else query
 
     @property

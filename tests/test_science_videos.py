@@ -133,6 +133,24 @@ class ScienceVideoTests(unittest.TestCase):
         self.assertEqual(self.client.post(route, data=self.form(action='delete', revision=video.revision, confirm_delete='yes')).status_code, 302)
         self.assertEqual(ScienceVideo.query.count(), 0)
 
+    def test_republication_preserves_first_publication_date(self):
+        video = self.make_video()
+        first_publication = video.published_at
+        self.sign_in()
+        route = f'/admin/videos/{video.id}'
+        fields = self.form(slug=video.slug)
+        scheduled = (utcnow() + timedelta(days=1, hours=2)).strftime('%Y-%m-%dT%H:%M')
+        for action in ('withdraw', 'schedule'):
+            response = self.client.post(route, data={**fields, 'action': action, 'scheduled_at': scheduled,
+                                                    'revision': video.revision})
+            self.assertEqual(response.status_code, 302)
+        self.assertEqual(video.published_at, first_publication)
+        self.assertEqual(self.client.get(f'/videos/{video.slug}').status_code, 404)
+        response = self.client.post(route, data={**fields, 'action': 'publish', 'revision': video.revision})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(video.published_at, first_publication)
+        self.assertEqual(self.client.get(f'/videos/{video.slug}').status_code, 200)
+
     def test_bilingual_seo_visibility_and_search(self):
         article = self.article()
         pt = self.make_video(article_id=article.id)
