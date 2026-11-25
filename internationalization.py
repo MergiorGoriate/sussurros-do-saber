@@ -470,8 +470,6 @@ def install(app):
             response.vary.add('Accept-Language')
             if os.getenv('TRUST_CLOUDFLARE_COUNTRY')=='true':
                 response.vary.add('CF-IPCountry')
-        if language()=='en' and getattr(g,'i18n_missing',False):
-            response.headers['X-Robots-Tag']='noindex, follow'
         if language()=='en' and request.path.startswith('/api/') and response.is_json:
             value=response.get_json(silent=True)
             if isinstance(value,dict):
