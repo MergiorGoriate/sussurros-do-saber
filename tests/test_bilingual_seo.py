@@ -57,14 +57,14 @@ class BilingualSEOTests(unittest.TestCase):
                 self.assertNotIn('noindex', response.headers.get('X-Robots-Tag', ''))
                 self.assertIn('2', soup.title.text)
 
-    def test_search_and_category_are_noindex_in_both_locales(self):
+    def test_search_and_category_are_indexable_in_both_locales(self):
         for prefix in ('', '/en'):
             for query in ('q=SEO', 'categoria=Biologia', 'original=missing'):
                 response = self.client.get(prefix + '/artigos?' + query)
                 soup = BeautifulSoup(response.text, 'html.parser')
                 self.assertEqual(response.status_code, 200)
-                self.assertIn('noindex', soup.find('meta', attrs={'name': 'robots'})['content'])
-                self.assertEqual(response.headers['X-Robots-Tag'], 'noindex, follow')
+                self.assertNotIn('noindex', soup.find('meta', attrs={'name': 'robots'})['content'])
+                self.assertNotIn('noindex', response.headers.get('X-Robots-Tag', ''))
 
     def test_empty_filters_tracking_and_invalid_page_do_not_create_canonicals(self):
         for query in ('page=1', 'q=&categoria=&utm_source=x', 'page=invalid', 'page=0'):
