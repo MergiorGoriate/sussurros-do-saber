@@ -493,7 +493,6 @@ def render_article_markdown(value, prefix="sec"):
 
 @app.after_request
 def security_headers(response):
-    from internationalization import listing_noindex
     clarity_connect = ' https://*.clarity.ms https://c.bing.com' if clarity_project_id() else ''
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -540,7 +539,7 @@ def security_headers(response):
             response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
     if request.path.startswith("/admin") or response.status_code >= 400:
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
-    elif request.path == "/favoritos" or listing_noindex():
+    elif request.path in {"/favoritos", "/en/favoritos"} or request.endpoint == "favorites":
         response.headers.setdefault("X-Robots-Tag", "noindex, follow")
 
     compressible = {
