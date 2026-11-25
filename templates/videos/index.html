@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% from 'videos/cards.html' import cards %}
+{% set en = language == 'en' %}
+{% block title %}{{ 'Science Videos' if en else 'Vídeos de Ciência' }} — Sussurros do Saber{% endblock %}
+{% block meta_description %}{{ 'Explore science videos from Sussurros do Saber.' if en else 'Explore os vídeos de ciência do Sussurros do Saber.' }}{% endblock %}
+{% block robots %}{{ 'noindex,follow' if video_filters else 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1' }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/science-videos.css') }}">{% endblock %}
+{% block content %}
+<section class="max-w-7xl mx-auto px-4 py-12 science-videos" aria-labelledby="science-videos-title">
+  <h1 id="science-videos-title">{{ 'Science Videos' if en else 'Vídeos de Ciência' }}</h1>
+  <form class="science-video-filters" method="get" action="{{ url_for('videos.index') }}">
+    <label>{{ 'Search videos' if en else 'Pesquisar vídeos' }}<input type="search" name="q" value="{{ video_filters.q or '' }}" maxlength="100"></label>
+    <label>{{ 'Category' if en else 'Categoria' }}<select name="tema"><option value="">{{ 'All categories' if en else 'Todas as categorias' }}</option>{% for category in video_categories %}<option value="{{ category.slug }}" {% if video_filters.tema == category.slug %}selected{% endif %}>{{ ui(category.name) }}</option>{% endfor %}</select></label>
+    <label>{{ 'Sort by' if en else 'Ordenar por' }}<select name="ordem"><option value="">{{ 'Most recent' if en else 'Mais recentes' }}</option><option value="popular" {% if video_filters.ordem %}selected{% endif %}>{{ 'Most viewed' if en else 'Mais visualizados' }}</option></select></label>
+    <button class="primary-btn">{{ 'Apply' if en else 'Aplicar' }}</button>
+    {% if video_filters %}<a href="{{ url_for('videos.index') }}">{{ 'Clear filters' if en else 'Limpar filtros' }}</a>{% endif %}
+  </form>
+  {% if videos.items %}{{ cards(videos.items, language) }}{% else %}<p class="science-video-empty">{{ 'No videos found.' if en else 'Nenhum vídeo encontrado.' }}</p>{% endif %}
+  {% if videos.has_prev or videos.has_next %}
+  <nav class="article-pagination" aria-label="{{ 'Video pages' if en else 'Páginas de vídeos' }}">
+    {% if videos.has_prev %}<a rel="prev" href="{{ url_for('videos.index', page=videos.prev_num, **video_filters) }}">{{ 'Previous' if en else 'Anterior' }}</a>{% endif %}
+    {% if videos.has_next %}<a rel="next" href="{{ url_for('videos.index', page=videos.next_num, **video_filters) }}">{{ 'Next' if en else 'Seguinte' }}</a>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endblock %}

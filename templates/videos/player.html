@@ -1,0 +1,9 @@
+{% if video.embed_url %}
+<iframe class="science-player" src="{{ video.embed_url }}" title="{{ video.title }}" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen {% if video_playback %}data-video-playback="{{ video_playback }}" data-playback-url="{{ url_for('videos.playback') }}"{% endif %}></iframe>
+{% else %}
+<video class="science-player" controls playsinline preload="metadata" poster="{{ video.thumbnail }}" aria-label="{{ video.title }}"{% if video.captions %} crossorigin="anonymous"{% endif %} {% if video_playback %}data-video-playback="{{ video_playback }}" data-playback-url="{{ url_for('videos.playback') }}" data-max-seconds="{{ [video.duration or 21600, 21600]|min }}"{% endif %}>
+  <source src="{{ video.url|cover_delivery_url }}">
+  {% if video.captions %}<track src="{{ video.captions }}" kind="captions" srclang="{{ video.language }}" label="{{ 'English' if video.language == 'en' else 'Português' }}">{% endif %}
+  <a href="{{ video.url }}">{{ 'Open video file' if video.language == 'en' else 'Abrir ficheiro de vídeo' }}</a>
+</video>
+{% endif %}

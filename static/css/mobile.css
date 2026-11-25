@@ -104,3 +104,8 @@
 @media (min-width: 1024px) {
   .public-site #mainNav .nav-secondary-start { margin-inline-start: auto; }
 }
+
+/* Let the full navigation wrap at intermediate desktop widths. */
+@media (min-width: 768px) {
+  .public-site #mainNav { flex-wrap: wrap; min-height: 3rem; height: auto; row-gap: 0; }
+}

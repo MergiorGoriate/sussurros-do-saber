@@ -1,0 +1,54 @@
+{% extends 'admin/base.html' %}
+{% set en = request.args.get('ui') == 'en' %}
+{% set editable = staff_can('article.publish') or (staff_can('article.edit') and video.status != 'published') %}
+{% set saved_language = request.form.get('language', video.language) %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-science-videos.css') }}">{% endblock %}
+{% block content %}
+<a href="{{ video_admin_url('video_index') }}">{{ 'Science Videos' if en else 'Vídeos de Ciência' }}</a>
+<h1>{{ video.title if video.id else ('New video' if en else 'Novo vídeo') }}</h1>
+<p>{{ video_states[video.state][1 if en else 0] }}
+{% if video.id %} · <a href="{{ video_admin_url('video_preview', ident=video.id) }}">{{ 'Preview video' if en else 'Pré-visualizar vídeo' }}</a>{% endif %}
+{% if video.state == 'published' and video.id %} · <a href="{{ watch_path(video) }}">{{ 'View public page' if en else 'Ver página pública' }}</a>{% endif %}</p>
+<form method="post" enctype="multipart/form-data" class="editor-form video-admin-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% if video.id %}<input type="hidden" name="revision" value="{{ video.revision }}">{% endif %}
+<fieldset class="admin-panel video-admin-fields" {% if not editable %}disabled{% endif %}>
+<legend>{{ 'Editorial content' if en else 'Conteúdo editorial' }}</legend>
+<label>{{ 'Language' if en else 'Idioma' }}<select name="language"><option value="pt" {{ 'selected' if saved_language == 'pt' }}>Português</option><option value="en" {{ 'selected' if saved_language == 'en' }}>English</option></select></label>
+<label>{{ 'Category' if en else 'Categoria' }}<select name="category_id"><option value=""></option>{% for category in video_categories %}<option value="{{ category.id }}" {{ 'selected' if request.form.get('category_id', video.category_id)|string == category.id|string }}>{{ category.name }}</option>{% endfor %}</select></label>
+{% for key, pt, english, limit in [('title','Título','Title',240),('slug','Identificador da rota','URL slug',160),('author','Autoria','Author',240),('credits','Créditos','Credits',500),('license','Licença','Licence',240),('keywords','Palavras-chave','Keywords',500)] %}
+<label>{{ english if en else pt }}<input name="{{ key }}" maxlength="{{ limit }}" value="{{ request.form.get(key, video|attr(key) or '') }}" {% if key == 'title' %}required{% endif %}></label>
+{% endfor %}
+<label class="video-admin-wide">{{ 'Description' if en else 'Descrição' }}<textarea name="description" maxlength="2048" rows="4">{{ request.form.get('description', video.description or '') }}</textarea></label>
+<label class="video-admin-wide">{{ 'Transcript' if en else 'Transcrição' }}<textarea name="transcript" maxlength="50000" rows="5">{{ request.form.get('transcript', video.transcript or '') }}</textarea></label>
+<label>{{ 'Linked article (slug)' if en else 'Artigo associado (identificador)' }}<input name="article_slug" maxlength="260" value="{{ request.form.get('article_slug', video.article.slug if video.article else '') }}"></label>
+<label>{{ 'Translation of video (ID)' if en else 'Tradução do vídeo (ID)' }}<input name="translation_of" type="number" min="1" value="{{ request.form.get('translation_of', video_sibling.id if video_sibling else '') }}"></label>
+{% if video_sibling %}<a href="{{ video_admin_url('video_form', ident=video_sibling.id) }}">{{ video_sibling.title }} · {{ video_sibling.language|upper }}</a>{% endif %}
+{% if video.id %}<p>{{ 'Video ID' if en else 'ID do vídeo' }} · {{ video.id }}</p>{% endif %}
+</fieldset>
+<fieldset class="admin-panel video-admin-fields" {% if not editable %}disabled{% endif %}>
+<legend>{{ 'Media' if en else 'Ficheiros multimédia' }}</legend>
+<label class="video-admin-wide">{{ 'Video URL' if en else 'Endereço do vídeo' }}<input name="url" type="url" maxlength="1000" value="{{ request.form.get('url', video.url or '') }}" required></label>
+<label>{{ 'Thumbnail URL' if en else 'Endereço da miniatura' }}<input name="thumbnail" type="url" maxlength="1000" value="{{ request.form.get('thumbnail', video.thumbnail or '') }}"></label>
+<label>{{ 'Upload thumbnail' if en else 'Carregar miniatura' }}<input type="file" name="thumbnail_file" accept="image/jpeg,image/png,image/webp"></label>
+<label>{{ 'Captions (WebVTT URL)' if en else 'Legendas (endereço WebVTT)' }}<input name="captions" type="url" maxlength="1000" value="{{ request.form.get('captions', video.captions or '') }}"></label>
+{% for key, pt, english, maximum in [('duration','Duração em segundos','Duration in seconds',86400),('width','Largura','Width',16384),('height','Altura','Height',16384)] %}
+<label>{{ english if en else pt }}<input name="{{ key }}" type="number" min="1" max="{{ maximum }}" value="{{ video_metadata.get(key, request.form.get(key, video|attr(key) or '')) }}"></label>
+{% endfor %}
+{% if staff_can('article.edit') or video.status == 'published' %}<button type="submit" class="admin-btn" name="action" value="metadata" formnovalidate>{{ 'Fill from Cloudinary' if en else 'Preencher a partir da Cloudinary' }}</button>{% endif %}
+{% if video.format %}<p>{{ 'Format' if en else 'Formato' }} · {{ video.format }}</p>{% endif %}
+{% if video.cloudinary_id %}<p>Cloudinary · {{ video.cloudinary_id }}</p>{% endif %}
+</fieldset>
+<div class="admin-panel video-admin-actions">
+{% if staff_can('article.edit') and video.status != 'published' %}<button class="admin-btn" name="action" value="save">{{ 'Save draft' if en else 'Guardar rascunho' }}</button>{% endif %}
+{% if staff_can('article.publish') %}
+<button class="admin-btn" name="action" value="publish">{{ ('Update video' if en else 'Actualizar vídeo') if video.state == 'published' else ('Publish video' if en else 'Publicar vídeo') }}</button>
+<label>{{ 'Publication date and time (Maputo)' if en else 'Data e hora de publicação (Maputo)' }}<input type="datetime-local" name="scheduled_at" value="{{ request.form.get('scheduled_at', video_schedule_local(video.scheduled_at)) }}"></label>
+<button class="admin-btn" name="action" value="schedule">{{ 'Schedule publication' if en else 'Agendar publicação' }}</button>
+{% if video.id and video.status == 'published' %}<button class="admin-btn" name="action" value="withdraw" formnovalidate>{{ 'Withdraw' if en else 'Retirar da publicação' }}</button>{% endif %}
+{% if video.id and video.status != 'archived' %}<button class="admin-btn" name="action" value="archive" formnovalidate>{{ 'Archive' if en else 'Arquivar' }}</button>{% endif %}
+{% if video.id and video.status == 'archived' %}<label><input type="checkbox" name="confirm_delete" value="yes"> {{ 'Confirm deletion of this record and its statistics' if en else 'Confirmar a eliminação do registo e das estatísticas' }}</label><button class="admin-btn" name="action" value="delete" formnovalidate>{{ 'Delete record' if en else 'Eliminar registo' }}</button>{% endif %}
+{% endif %}
+</div>
+</form>
+{% endblock %}

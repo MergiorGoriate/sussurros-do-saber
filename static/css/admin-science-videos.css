@@ -1,0 +1,11 @@
+.video-admin-stats, .video-admin-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.video-admin-stats { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.video-admin-stats dd { margin: .2rem 0; font-size: 1.55rem; font-weight: 650; }
+.video-admin-wide { grid-column: 1 / -1; }
+.video-admin-fields input { min-width: 0; }
+.video-admin-actions { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; }
+@media (max-width: 640px) { .video-admin-fields { grid-template-columns: 1fr; } }
+.editor-form.video-admin-form { grid-template-columns: minmax(0, 1fr); margin-block: 1rem; }
+.video-admin-form fieldset { min-inline-size: 0; }
+.admin-btn { display: inline-flex; align-items: center; width: fit-content; min-height: 42px; padding: .5rem .9rem; border: 1px solid #1e4e8c; border-radius: .45rem; background: #1e4e8c; color: white; text-decoration: none; cursor: pointer; }
+.admin-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }

@@ -52,6 +52,7 @@
   </figure>
   {% if article.cover_poster|image_variant(960) is string and "e-coli-niaid-960.jpg" in article.cover_poster|image_variant(960) %}<p class="max-w-6xl mx-auto px-4 mt-2 text-xs text-slate-600 dark:text-slate-300">Imagem: <a href="https://commons.wikimedia.org/wiki/File:E._coli_Bacteria_(7316101966).jpg" rel="external noopener" class="underline">NIAID, via Wikimedia Commons</a> (domínio público).</p>{% endif %}
   {% endif %}
+  {% if article_video %}<p class="max-w-6xl mx-auto px-4 mt-3"><a class="underline" href="{{ url_for('videos.detail', slug=article_video.slug) }}">{{ ui('Ver vídeo') }}</a></p>{% endif %}
   <div class="prose-article">
     <div class="article-markdown article-headings">{{ article.body|article_markdown }}</div>
     {% if article.keywords or article.doi %}<div class="article-identifiers">

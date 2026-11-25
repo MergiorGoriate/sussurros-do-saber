@@ -53,7 +53,7 @@ def expression(text):
 
 class PublicTranslationExtension(Extension):
     def preprocess(self,source,name,filename=None):
-        if not name or name.startswith(('admin/','emails/','i18n/')):
+        if not name or name.startswith(('admin/','emails/','i18n/','videos/')):
             return source
         output=[]
         for chunk in PARTS.split(source):

@@ -121,6 +121,7 @@
       <button type="button" id="removeCoverVideoButton" class="cover-remove">Remover vídeo da capa</button>
       <p id="coverEditorStatus" role="status" aria-live="polite"></p>
     </fieldset>
+    {% if staff_can('article.edit') %}{% include 'admin/videos/article_fields.html' %}{% endif %}
     <label>Carregar imagem (JPG, PNG ou WebP; máximo 8 MB)<input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp"></label>
     <label>Ou endereço externo da imagem de capa / reserva<input id="imageUrl" name="image" type="url" value="{{ request.form.get('image', article.image or '')|safe_image_url }}" placeholder="https://..."></label>
     <div id="coverPreview" class="editor-cover-preview article-video-cover" data-fallback="{{ url_for('static',filename='img/image-fallback.svg') }}" data-cloud="{{ cover_cloud_name() }}"><img id="imagePreview" class="image-preview cover-poster" src="{{ request.form.get('image', article.image or '')|safe_image_url }}" alt="Pré-visualização da imagem" {% if not article.image %}hidden{% endif %}></div>

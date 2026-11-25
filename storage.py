@@ -94,7 +94,7 @@ class VideoUploadError(ValueError):
     pass
 
 
-def upload_article_video(file, *, cover=False):
+def upload_article_video(file, *, cover=False, include_metadata=False):
     if not file or not file.filename:
         raise VideoUploadError("Seleccione um vídeo para carregar.")
     extension = os.path.splitext(file.filename)[1].lower()
@@ -139,4 +139,9 @@ def upload_article_video(file, *, cover=False):
             decoded_video = False
         if not decoded_video or not owned_cloudinary_video(result['secure_url']):
             raise VideoUploadError("O armazenamento não confirmou um vídeo válido. Use um ficheiro de vídeo completo, com imagem em movimento.")
+    if include_metadata:
+        return result["secure_url"], {
+            "duration": max(1, round(float(result["duration"]))),
+            "width": int(result["width"]), "height": int(result["height"]),
+        }
     return result["secure_url"]

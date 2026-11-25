@@ -1,0 +1,38 @@
+{% extends 'admin/base.html' %}
+{% set en = request.args.get('ui') == 'en' %}
+{% block title %}{{ 'Science Videos' if en else 'Vídeos de Ciência' }}{% endblock %}
+{% block content %}
+<div class="admin-heading"><h1>{{ 'Science Videos' if en else 'Vídeos de Ciência' }}</h1>
+<a href="{{ url_for('admin.video_index', ui=none if en else 'en') }}" lang="{{ 'pt-MZ' if en else 'en' }}">{{ 'Português' if en else 'English' }}</a></div>
+{% if staff_can('article.edit') %}
+<p><a class="admin-btn" href="{{ video_admin_url('video_form') }}">{{ 'New video' if en else 'Novo vídeo' }}</a>
+<a class="admin-btn" href="{{ video_admin_url('video_import') }}">{{ 'Import videos from articles' if en else 'Importar vídeos de artigos' }}</a></p>
+{% endif %}
+<section class="admin-panel" aria-labelledby="video-statistics">
+<h2 id="video-statistics">{{ 'Statistics' if en else 'Estatísticas' }}</h2>
+<dl class="video-admin-stats">
+{% for key, pt, english in [('total','Total','Total'), ('published','Publicados','Published'), ('draft','Rascunhos','Drafts'), ('scheduled','Agendados','Scheduled'), ('views','Visualizações','Views'), ('plays','Reproduções','Plays'), ('average','Média vista (s)','Average watched (s)'), ('completion','Conclusão (%)','Completion (%)')] %}
+<div><dt>{{ english if en else pt }}</dt><dd>{{ stats[key] if stats[key] is not none else '—' }}</dd></div>
+{% endfor %}
+</dl>
+<p>{{ 'Playback, watch time and completion are measured in the native player. Embedded videos count page views.' if en else 'As reproduções, o tempo de visualização e a conclusão são medidos no leitor nativo. Nos vídeos incorporados contam-se as visualizações da página.' }}</p>
+{% if top %}<h3>{{ 'Most viewed' if en else 'Mais visualizados' }}</h3><ol>{% for video, views in top %}<li><a href="{{ video_admin_url('video_form', ident=video.id) }}">{{ video.title }}</a> · {{ views }}</li>{% endfor %}</ol>{% endif %}
+</section>
+<form class="admin-panel editor-form video-admin-form" method="get">
+{% if en %}<input type="hidden" name="ui" value="en">{% endif %}
+<label>{{ 'Search' if en else 'Pesquisar' }}<input type="search" name="q" value="{{ q }}"></label>
+<label>{{ 'Language' if en else 'Idioma' }}<select name="language"><option value="">{{ 'All' if en else 'Todos' }}</option><option value="pt" {{ 'selected' if filters.language == 'pt' }}>Português</option><option value="en" {{ 'selected' if filters.language == 'en' }}>English</option></select></label>
+<label>{{ 'Status' if en else 'Estado' }}<select name="status"><option value="">{{ 'All' if en else 'Todos' }}</option>{% for key, label in video_states.items() if key != 'blocked' %}<option value="{{ key }}" {{ 'selected' if filters.status == key }}>{{ label[1 if en else 0] }}</option>{% endfor %}</select></label>
+<button class="admin-btn">{{ 'Apply' if en else 'Aplicar' }}</button>
+</form>
+<section class="admin-panel">
+{% if rows.items %}<ul>
+{% for video in rows.items %}<li><a href="{{ video_admin_url('video_form', ident=video.id) }}">{{ video.title }}</a> · {{ video.language|upper }} · {{ video_states[video.state][1 if en else 0] }}</li>{% endfor %}
+</ul>{% else %}<p>{{ 'No videos found.' if en else 'Nenhum vídeo encontrado.' }}</p>{% endif %}
+{% if rows.has_prev or rows.has_next %}<nav aria-label="{{ 'Pages' if en else 'Páginas' }}">
+{% if rows.has_prev %}<a rel="prev" href="{{ video_admin_url('video_index', page=rows.prev_num, **filters) }}">{{ 'Previous' if en else 'Anterior' }}</a>{% endif %}
+{% if rows.has_next %}<a rel="next" href="{{ video_admin_url('video_index', page=rows.next_num, **filters) }}">{{ 'Next' if en else 'Seguinte' }}</a>{% endif %}
+</nav>{% endif %}
+</section>
+{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-science-videos.css') }}">{% endblock %}
