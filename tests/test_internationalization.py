@@ -314,13 +314,13 @@ class InternationalizationTests(unittest.TestCase):
         self.assertNotIn('MANUSCRITO IMUTÁVEL',str(source))
         self.assertEqual(journal.content_markdown,'MANUSCRITO IMUTÁVEL')
 
-    def test_interface_catalogue_is_escaped_and_incomplete_pages_are_noindex(self):
+    def test_interface_catalogue_is_escaped_and_incomplete_public_pages_are_indexable(self):
         row=InterfaceTranslation(key='a'*64,source='Pesquisar',english='<script>alert(1)</script>',published=True)
         db.session.add(row);db.session.commit()
         with patch.dict('internationalization.EN',{'Todos os artigos':''}):
             page=self.client.get('/en/artigos')
         self.assertIn('&lt;script&gt;',page.text);self.assertNotIn('<script>alert(1)</script>',page.text)
-        self.assertIn('noindex',page.headers.get('X-Robots-Tag',''))
+        self.assertNotIn('noindex',page.headers.get('X-Robots-Tag',''))
 
     def test_article_listing_translates_headings_categories_and_search_labels(self):
         from bs4 import BeautifulSoup
