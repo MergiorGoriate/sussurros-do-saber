@@ -1,5 +1,6 @@
 """Catalogue, editorial workflows and playback accounting."""
 from datetime import timedelta
+import io
 import json
 import secrets
 import time
@@ -195,6 +196,23 @@ class ScienceVideoTests(unittest.TestCase):
             upload.assert_not_called()
         item = ScienceVideo.query.one()
         self.assertEqual((item.url, item.status), (self.url, 'draft'))
+
+    def test_independent_upload_and_metadata_use_the_existing_storage(self):
+        self.sign_in()
+        metadata = dict(duration=30, width=1280, height=720)
+        with patch('video_admin.upload_article_video', return_value=(self.url, metadata)) as upload:
+            response = self.client.post('/admin/videos/novo', data=self.form(
+                url='', video_file=(io.BytesIO(b'synthetic media'), 'video.mp4')))
+            self.assertEqual(response.status_code, 302)
+            upload.assert_called_once()
+            self.assertTrue(upload.call_args.kwargs['include_metadata'])
+        item = ScienceVideo.query.one()
+        self.assertEqual((item.url, item.duration, item.width, item.height), (self.url, 30, 1280, 720))
+        with patch('video_admin.cloudinary_details', return_value=dict(duration=50, width=1920, height=1080)):
+            response = self.client.post(f'/admin/videos/{item.id}', data=self.form(action='metadata', revision=item.revision))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(BeautifulSoup(response.text, 'html.parser').select_one('input[name=duration]')['value'], '50')
+        self.assertEqual(item.duration, 30)
 
     def test_real_playback_counts_and_validation(self):
         from videos import playback_signer

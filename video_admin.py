@@ -8,7 +8,7 @@ from article_scheduling import parse_schedule, schedule_local
 from governance import audit, has_permission, require
 from models import Article, Category, db, utcnow
 from request_values import database_id, pagination_page
-from storage import ImageUploadError, upload_article_image
+from storage import ImageUploadError, VideoUploadError, upload_article_image, upload_article_video
 from video_media import article_defaults, cloudinary_details, https_url, media_fields
 from video_models import ScienceVideo, VideoPlayback
 from videos import asset_counts, watch_path
@@ -153,6 +153,11 @@ def video_index():
 def publication_fields(item, action):
     if not all((item.title, item.description, item.thumbnail, item.author, item.category_id)):
         raise ValueError('Preencha título, descrição, miniatura, autoria e categoria. / Complete title, description, thumbnail, author and category.')
+    if item.language == 'en':
+        from internationalization import interface_translation
+
+        if not interface_translation(db.session.get(Category, item.category_id).name):
+            raise ValueError('Publique primeiro o nome da categoria em inglês. / Publish the English category label first.')
     if item.article and item.article.status != 'published':
         raise ValueError('Publique primeiro o artigo associado. / Publish the linked article first.')
     scheduled = None
@@ -177,8 +182,6 @@ def save_fields(item):
     if category_id and not db.session.get(Category, category_id):
         raise ValueError('Categoria desconhecida. / Unknown category.')
     source = request.form.get('url', '').strip()
-    fields = media_fields(source, legacy=bool(
-        (article and source == article.cover_video) or (item.id and source == item.url)))
     values = field_values()
     slug = slugify((request.form.get('slug') or values['title'])[:240])[:160].strip('-')
     if not values['title'] or not slug:
@@ -198,6 +201,13 @@ def save_fields(item):
     metadata = {name: number(name, maximum) for name, maximum in (
         ('duration', 86400), ('width', 16384), ('height', 16384),
     )}
+    video_file = request.files.get('video_file')
+    if video_file and video_file.filename:
+        if article:
+            raise ValueError('Use o ficheiro da capa para vídeos associados. / Use the cover file for linked videos.')
+        source, metadata = upload_article_video(video_file, cover=True, include_metadata=True)
+    fields = media_fields(source, legacy=bool(
+        (article and source == article.cover_video) or (item.id and source == item.url)))
     for key, value in {**fields, **values, **metadata}.items():
         setattr(item, key, value)
     if not item.thumbnail and item.cloudinary_id:
@@ -253,7 +263,7 @@ def video_form(ident=None):
             persist()
             flash('Alteração guardada. / Changes saved.', 'success')
             return redirect(admin_url('video_index') if action == 'delete' else admin_url('video_form', ident=item.id))
-        except (ValueError, ImageUploadError) as error:
+        except (ValueError, ImageUploadError, VideoUploadError) as error:
             db.session.rollback()
             flash(str(error), 'error')
             return render_form(item, 400)

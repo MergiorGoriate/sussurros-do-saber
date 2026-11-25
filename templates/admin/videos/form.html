@@ -28,7 +28,8 @@
 </fieldset>
 <fieldset class="admin-panel video-admin-fields" {% if not editable %}disabled{% endif %}>
 <legend>{{ 'Media' if en else 'Ficheiros multimédia' }}</legend>
-<label class="video-admin-wide">{{ 'Video URL' if en else 'Endereço do vídeo' }}<input name="url" type="url" maxlength="1000" value="{{ request.form.get('url', video.url or '') }}" required></label>
+<label class="video-admin-wide">{{ 'Video URL' if en else 'Endereço do vídeo' }}<input name="url" type="url" maxlength="1000" value="{{ request.form.get('url', video.url or '') }}"></label>
+<label class="video-admin-wide">{{ 'Upload stand-alone video (MP4, WebM or OGG, up to 50 MB)' if en else 'Carregar vídeo independente (MP4, WebM ou OGG, até 50 MB)' }}<input name="video_file" type="file" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"></label>
 <label>{{ 'Thumbnail URL' if en else 'Endereço da miniatura' }}<input name="thumbnail" type="url" maxlength="1000" value="{{ request.form.get('thumbnail', video.thumbnail or '') }}"></label>
 <label>{{ 'Upload thumbnail' if en else 'Carregar miniatura' }}<input type="file" name="thumbnail_file" accept="image/jpeg,image/png,image/webp"></label>
 <label>{{ 'Captions (WebVTT URL)' if en else 'Legendas (endereço WebVTT)' }}<input name="captions" type="url" maxlength="1000" value="{{ request.form.get('captions', video.captions or '') }}"></label>
