@@ -134,6 +134,7 @@ window.dataLayer.push({event:'default_consent'});
 <nav id="mainNav" aria-label="Navegação principal" class="hidden md:flex border-t border-black/10 dark:border-white/10 items-center gap-5 h-12 text-sm font-semibold">
 <a href="/artigos">Últimos</a>
 <a href="{{ url_for('news.index') }}" {% if request.endpoint in ('news.index', 'news.detail') %}aria-current="page"{% endif %}>{{ ui('Notícias') }}</a>
+<a href="{{ url_for('videos.index') }}" {% if request.endpoint in ('videos.index', 'videos.detail') %}aria-current="page"{% endif %}>{{ ui('Vídeos de Ciência') }}</a>
 <a href="{{ url_for('articles', categoria='Biologia') }}">Biologia</a>
 <a href="{{ url_for('articles', categoria='Saúde') }}">Saúde</a>
 <a href="{{ url_for('articles', categoria='Ambiente') }}">Ambiente</a>
@@ -243,7 +244,7 @@ window.dataLayer.push({event:'default_consent'});
   </div>
 </section>
 <button id="backToTop" class="back-to-top" type="button" aria-label="Voltar ao topo" title="Voltar ao topo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 13 6-6 6 6"/><path d="M12 7v11"/></svg></button>
-<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261114-consent-v25') }}" defer></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/main.js',v='20261125-video-consent') }}" defer></script>
 {% if request.endpoint == 'contact' %}<script nonce="{{ csp_nonce }}" src="{{ url_for('static',filename='js/pages.js',v='20260930-contact') }}" defer></script>{% endif %}
 <script nonce="{{ csp_nonce }}">
 (()=>{let assistantLoaded=false,animationsLoaded=false;

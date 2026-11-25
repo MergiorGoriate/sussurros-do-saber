@@ -18,6 +18,7 @@ from flask import Blueprint, Response, abort, current_app, flash, jsonify, redir
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.exceptions import BadRequest
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from extensions import limiter
 from journal_article import ARTICLE_FIELD_LIMITS
 from journal_metadata import EDITORIAL_FIELDS, journal_authors, legacy_author_lines, submitted_author_rows, validate_authors
@@ -849,10 +850,18 @@ def article_form(article_id=None):
                 return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
             if request.form.get("remove_cover_video") == "yes":
                 cover_video, cover_mode = "", "image"
+            video_opt_in = request.form.get("science_video_opt_in") == "yes"
+            video_metadata = None
+            if video_opt_in:
+                from governance import require
+                require('article.edit')
             video_file = request.files.get("cover_video_file")
             if video_file and video_file.filename and request.form.get("remove_cover_video") != "yes":
                 try:
-                    cover_video = upload_article_video(video_file, cover=True)
+                    if video_opt_in:
+                        cover_video, video_metadata = upload_article_video(video_file, cover=True, include_metadata=True)
+                    else:
+                        cover_video = upload_article_video(video_file, cover=True)
                 except VideoUploadError as error:
                     flash(str(error), "error")
                     return render_template("admin/article_form.html", article=article, authors=article_form_authors(article), categories=Category.query.order_by(Category.name).all())
@@ -907,7 +916,20 @@ def article_form(article_id=None):
                 record_revision(article, content=previous_content, baseline=True,
                                 reason='Conteúdo anterior ao primeiro registo', created_at=previous_updated_at)
             record_revision(article)
+            science_video = None
+            if video_opt_in:
+                from video_admin import stage_article_video
+                try:
+                    science_video = stage_article_video(article, video_metadata)
+                except (ValueError, IntegrityError) as error:
+                    db.session.rollback()
+                    flash(str(error) if isinstance(error, ValueError) else "Já existe um vídeo com este endereço ou ficheiro.", "error")
+                    return render_template("admin/article_form.html", article=article, authors=article_form_authors(article),
+                                           categories=Category.query.order_by(Category.name).all()), 400
             db.session.commit()
+            if science_video:
+                flash("Artigo guardado. Reveja o registo de vídeo no painel antes de o publicar.", "success")
+                return redirect(url_for("admin.video_form", ident=science_video.id))
             flash("Artigo guardado com sucesso.", "success")
             if request.form.get("save_mode") == "continue":
                 return redirect(url_for("admin.article_form", article_id=article.id))

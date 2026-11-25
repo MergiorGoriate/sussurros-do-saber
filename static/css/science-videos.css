@@ -1,0 +1,27 @@
+.science-videos { overflow-wrap: anywhere; }
+.science-videos h1 { font-family: var(--font-serif, Georgia, serif); font-size: clamp(2rem, 5vw, 3.35rem); line-height: 1.12; margin-block: .75rem 1.5rem; }
+.science-videos a:focus-visible, .science-videos input:focus-visible, .science-videos select:focus-visible, .science-videos button:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
+.science-video-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto; gap: 1rem; align-items: end; margin-block: 1.25rem 2rem; }
+.science-video-filters label { display: grid; gap: .35rem; font-weight: 600; }
+.science-video-filters input, .science-video-filters select { min-width: 0; padding: .55rem .7rem; border: 1px solid currentColor; border-radius: .4rem; background: transparent; color: inherit; }
+.science-video-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.3rem; margin-block: 1.25rem; }
+.science-video-card { border-radius: .85rem; overflow: hidden; }
+.science-video-card a { display: block; height: 100%; }
+.science-video-card a:focus-visible { outline-offset: -4px; }
+.science-video-card a > div + div { padding: 1rem; }
+.science-video-card h2 { font-size: 1.25rem; font-weight: 700; margin-block: .3rem .65rem; }
+.science-video-thumb { aspect-ratio: 16 / 9; background: #132c48; position: relative; }
+.science-video-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.science-video-thumb span { position: absolute; inset: auto .6rem .6rem auto; padding: .15rem .4rem; border-radius: .25rem; background: #102338; color: #fff; }
+.science-player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: .85rem; background: #101c2b; }
+.science-video-summary { display: grid; gap: .9rem; margin-top: 1.6rem; }
+.science-video-meta { display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; }
+.science-video-description { white-space: pre-wrap; line-height: 1.65; }
+.science-video-summary a, .science-video-empty + a { text-decoration: underline; text-underline-offset: .2em; }
+.science-video-empty { padding-block: 2rem; }
+@media (max-width: 800px) {
+  .science-video-grid, .science-video-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .science-video-grid, .science-video-filters { grid-template-columns: 1fr; }
+}

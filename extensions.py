@@ -6,7 +6,7 @@ from flask_limiter.util import get_remote_address
 
 UNLIMITED_GET_ENDPOINTS = frozenset({
     'home', 'articles', 'article', 'journals', 'journal_detail',
-    'authors', 'author_detail', 'language.choose',
+    'authors', 'author_detail', 'language.choose', 'videos.index', 'videos.detail', 'videos.video_sitemap',
 })
 
 

@@ -1,0 +1,19 @@
+{% macro cards(items, locale) %}
+<div class="science-video-grid">
+{% for item in items %}
+  <article class="story-card science-video-card">
+    <a href="{{ url_for('videos.detail', slug=item.slug) }}">
+      <div class="science-video-thumb">
+        <img src="{{ item.thumbnail|image_variant(640) }}" width="640" height="360" alt="" loading="lazy" decoding="async">
+        {% if item.duration_label %}<span>{{ item.duration_label }}</span>{% endif %}
+      </div>
+      <div>
+        <p class="eyebrow">{{ ui(item.category.name) if item.category else '' }}</p>
+        <h2>{{ item.title }}</h2>
+        <time datetime="{{ item.published_at.date().isoformat() }}">{{ item.published_at.strftime('%d/%m/%Y') if locale == 'pt' else item.published_at.strftime('%Y-%m-%d') }}</time>
+      </div>
+    </a>
+  </article>
+{% endfor %}
+</div>
+{% endmacro %}

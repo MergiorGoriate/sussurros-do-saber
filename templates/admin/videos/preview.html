@@ -1,0 +1,10 @@
+{% extends 'admin/base.html' %}
+{% set en = request.args.get('ui') == 'en' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/science-videos.css') }}">{% endblock %}
+{% block content %}
+<a href="{{ video_admin_url('video_form', ident=video.id) }}">{{ 'Back to editor' if en else 'Voltar ao editor' }}</a>
+<p>{{ 'Editorial preview' if en else 'Pré-visualização editorial' }}</p>
+<h1>{{ video.title }}</h1>
+{% include 'videos/player.html' %}
+<p class="science-video-description">{{ video.description }}</p>
+{% endblock %}

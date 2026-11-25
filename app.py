@@ -127,8 +127,12 @@ app.register_blueprint(public_team_bp)
 install_staff_cli(app)
 from news import news_bp
 import news_admin  # Register the news routes on the existing admin blueprint.
+from videos import videos_bp
+import video_admin  # Register editorial routes on the existing admin blueprint.
 app.register_blueprint(admin_bp)
 app.register_blueprint(news_bp)
+app.config["SCIENCE_VIDEO_SITE_URL"] = SITE_URL
+app.register_blueprint(videos_bp)
 from article_history import history_bp
 app.register_blueprint(history_bp)
 app.register_blueprint(submissions_bp)
@@ -525,7 +529,7 @@ def security_headers(response):
             request.method != "GET"
             or getattr(g, 'language', 'pt') == 'en'
             or request.path in {'/', '/idioma/pt', '/idioma/en'}
-            or request.endpoint in {"news.index", "news.detail"}
+            or request.endpoint in {"news.index", "news.detail", "videos.index", "videos.detail"}
             or bool(response.headers.get('Set-Cookie'))
             or request.path.startswith(("/admin", "/api/", "/artigo/", "/submissoes"))
             or response.status_code >= 400
@@ -837,6 +841,13 @@ def article(slug):
         )
         .limit(3).all()
     )
+    from videos import public_article_video
+    from cover_media import effective_cover_mode
+    science_video_for_article = (
+        public_article_video(selected, getattr(g, 'language', 'pt'))
+        if effective_cover_mode(selected.cover_mode, selected.cover_video) != 'image' and selected.cover_video
+        else None
+    )
     comments = Comment.query.filter_by(article_id=selected.id, approved=True).order_by(Comment.created_at.desc()).limit(100).all()
     return render_template(
         "article.html",
@@ -844,6 +855,7 @@ def article(slug):
         related=related,
         comments=comments,
         comment_csrf_token=comment_csrf_token(),
+        article_video=science_video_for_article,
     )
 
 
@@ -1226,6 +1238,7 @@ def feed():
 def sitemap():
     from internationalization import alternate_links, path_alternates, sitemap_content_alternates, sitemap_extras
     from news import sitemap_entries
+    from videos import sitemap_entries as video_sitemap_entries
     public_articles = Article.public_card_query().order_by(Article.updated_at.desc()).all()
     public_journals = (
         Journal.query.filter_by(published=True)
@@ -1237,7 +1250,7 @@ def sitemap():
     static_paths = [
         url_for("home"), url_for("articles"), url_for("resources"), url_for("learn"),
         url_for("osmosis_lab"), url_for("about"), url_for("authors"), url_for("contact"),
-        url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("news.index"),
+        url_for("terms"), url_for("privacy"), url_for("editorial_policy"), url_for("news.index"), url_for("videos.index"),
         url_for("corrections_policy"), url_for("accessibility"), url_for("services"),
         url_for("scientific_editing"), url_for("journals"), url_for("author_guidelines"),
     ]
@@ -1277,7 +1290,8 @@ def sitemap():
         'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" '
         'xmlns:xhtml="http://www.w3.org/1999/xhtml">'
         + static_urls + journal_urls + author_urls + "".join(article_entries)
-        + sitemap_extras(static_paths + author_paths, localized_content) + sitemap_entries(SITE_URL) + "</urlset>",
+        + sitemap_extras(static_paths + author_paths, localized_content) + sitemap_entries(SITE_URL)
+        + video_sitemap_entries(SITE_URL) + "</urlset>",
         mimetype="application/xml",
     )
     response.headers["Cache-Control"] = "public, max-age=3600"
@@ -1285,7 +1299,7 @@ def sitemap():
 
 @app.get("/robots.txt")
 def robots():
-    return Response(f"User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: {SITE_URL}/sitemap.xml\n", mimetype="text/plain")
+    return Response(f"User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: {SITE_URL}/sitemap.xml\nSitemap: {SITE_URL}/video-sitemap.xml\n", mimetype="text/plain")
 
 
 @app.get("/healthz")

@@ -182,6 +182,8 @@ EN["Declaração de Privacidade da Microsoft"] = "Microsoft Privacy Statement"
 # Science News interface. Editorial content is published separately by language.
 EN.update({
     'Notícias': 'News',
+    'Vídeos de Ciência': 'Science Videos',
+    'Ver vídeo': 'Watch video',
     'Notícias de Ciência': 'Science News',
     'Actualidade científica internacional, com atenção à investigação feita em África.':
         'International science news with a focus on research conducted in Africa.',

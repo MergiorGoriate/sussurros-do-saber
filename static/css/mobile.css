@@ -100,7 +100,8 @@
   .public-site .site-footer .social-links a { width: 44px; height: 44px; }
 }
 
-/* Keep the secondary links together at the right edge on desktop. */
+/* Let the desktop links wrap without changing the mobile menu's single column. */
 @media (min-width: 1024px) {
+  .public-site #mainNav { flex-wrap: wrap; min-height: 3rem; height: auto; row-gap: 0; }
   .public-site #mainNav .nav-secondary-start { margin-inline-start: auto; }
 }

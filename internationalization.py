@@ -13,6 +13,8 @@ from i18n_templates import PublicTranslationExtension, TEMPLATE_SOURCES as INTER
 from i18n_client import KEYS as CLIENT_KEYS
 from news import EN_ROUTES as NEWS_EN_ROUTES, listing_values as news_listing_values, translation_routes as news_translation_routes
 
+from videos import EN_ROUTES as VIDEO_EN_ROUTES, listing_values as video_listing_values, localized_slug as video_localized_slug
+
 ENGLISH_TEXT = frozenset(' '.join(value.split()) for value in EN.values() if isinstance(value, str))
 
 language_bp=Blueprint('language',__name__)
@@ -48,6 +50,8 @@ def listing_parameters():
         return {'pagina': page} if page > 1 else {}
     if request.endpoint == 'news.index':
         return news_listing_values()
+    if request.endpoint == 'videos.index':
+        return video_listing_values()
     if request.endpoint != 'articles':
         return {}
     from request_values import pagination_page
@@ -222,6 +226,9 @@ def ui(text):
 
 def equivalent(endpoint,args,target):
     values={k:v for k,v in args.items() if k!='_language'}
+    if endpoint == 'videos.detail':
+        slug = video_localized_slug(values['slug'], args.get('_language') or language(), target)
+        return url_for(endpoint, slug=slug, _language='en' if target == 'en' else None) if slug else None
     if endpoint == 'news.detail':
         slug = news_translation_routes(values['slug'], args.get('_language')).get(target)
         return url_for(endpoint, slug=slug, _language='en' if target == 'en' else None) if slug else None
@@ -292,6 +299,8 @@ def choose(locale):
                 return redirect(parts.path + '?' + urlencode(params), 302)
             if params:
                 target += '?' + urlencode(params)
+        elif endpoint == 'videos.detail' and target is None:
+            target = url_for('videos.index', _language='en' if locale == 'en' else None)
         elif parts.query and '?' not in target:
             target+='?'+parts.query
         if parts.fragment:
@@ -308,7 +317,7 @@ def install(app):
     app.register_blueprint(language_bp)
     app.jinja_env.add_extension(PublicTranslationExtension)
     app.jinja_env.globals.update(ui=ui,localized_path=localized_path,site_language=language)
-    excluded={'favicon','static','feed','sitemap','robots','healthcheck','journal_download_pdf','journal_preview_pdf','article_legacy'}
+    excluded={'favicon','static','feed','sitemap','robots','healthcheck','journal_download_pdf','journal_preview_pdf','article_legacy','videos.video_sitemap'}
     allowed=set()
     for rule in list(app.url_map.iter_rules()):
         if (rule.endpoint in excluded or rule.rule.startswith(('/admin','/api','/static','/idioma','/divulgacao'))
@@ -316,7 +325,7 @@ def install(app):
             or any(x in rule.rule for x in ('.pdf','ficheiros','figuras','webhook','callback','/sessao'))):
             continue
         allowed.add(rule.endpoint)
-        localized_rule = NEWS_EN_ROUTES.get(rule.endpoint, rule.rule)
+        localized_rule = VIDEO_EN_ROUTES.get(rule.endpoint, NEWS_EN_ROUTES.get(rule.endpoint, rule.rule))
         app.add_url_rule('/<any(en):_language>'+localized_rule,endpoint=rule.endpoint,
             view_func=app.view_functions[rule.endpoint],methods=rule.methods,defaults=rule.defaults)
     app.extensions['localized_endpoints']=allowed

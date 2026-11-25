@@ -56,6 +56,7 @@ const pushAnalyticsEvent=(event,parameters={})=>{
   window.dataLayer.push({event,...parameters});
 };
 window.sdsTrack=pushAnalyticsEvent;
+window.sdsHasAnalyticsConsent=()=>readSiteConsent()?.analytics===true;
 
 (()=>{
   const banner=document.querySelector('#cookieConsent');

@@ -1,0 +1,15 @@
+<fieldset>
+  <legend>Vídeos de Ciência</legend>
+  <label><input id="articleScienceVideo" type="checkbox" name="science_video_opt_in" value="yes" {{ 'checked' if request.form.get('science_video_opt_in') }}> Publicar também em Vídeos de Ciência</label>
+  <fieldset id="articleScienceVideoFields">
+    <legend>Rascunho para revisão editorial</legend>
+    <p>Ao guardar o artigo, abre o editor do vídeo. O ficheiro da capa é reutilizado.</p>
+    <label>Idioma<select name="science_video_language"><option value="pt">Português</option><option value="en" {{ 'selected' if request.form.get('science_video_language') == 'en' }}>English</option></select></label>
+    <label>Categoria<select name="science_video_category"><option value="">Herdar do artigo</option>{% for category in categories %}<option value="{{ category.id }}" {{ 'selected' if request.form.get('science_video_category') == category.id|string }}>{{ category.name }}</option>{% endfor %}</select></label>
+    {% for key, label, limit in [('title','Título',240),('thumbnail','Endereço da miniatura',1000),('author','Autoria',240),('credits','Créditos',500),('license','Licença',240),('keywords','Palavras-chave',500)] %}
+    <label>{{ label }}<input name="science_video_{{ key }}" maxlength="{{ limit }}" type="{{ 'url' if key == 'thumbnail' else 'text' }}" value="{{ request.form.get('science_video_' ~ key, '') }}"></label>
+    {% endfor %}
+    <label>Descrição<textarea name="science_video_description" rows="3" maxlength="2048">{{ request.form.get('science_video_description', '') }}</textarea></label>
+  </fieldset>
+</fieldset>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-science-video.js') }}" defer></script>

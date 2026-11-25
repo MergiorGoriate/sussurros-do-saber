@@ -1,0 +1,21 @@
+{% extends 'admin/base.html' %}
+{% set en = request.args.get('ui') == 'en' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-science-videos.css') }}">{% endblock %}
+{% block content %}
+<a href="{{ video_admin_url('video_index') }}">{{ 'Science Videos' if en else 'Vídeos de Ciência' }}</a>
+<h1>{{ 'Import videos from articles' if en else 'Importar vídeos de artigos' }}</h1>
+<p>{{ 'Selected covers are imported as drafts for editorial review.' if en else 'As capas seleccionadas são importadas como rascunhos para revisão editorial.' }}</p>
+{% if rows.items %}
+<form method="post" class="admin-panel editor-form video-admin-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<label><input type="checkbox" data-video-import-all> {{ 'Select all on this page' if en else 'Seleccionar todos nesta página' }}</label>
+{% for item in rows.items %}<label><input type="checkbox" name="articles" value="{{ item.id }}"> {{ item.title }}</label>{% endfor %}
+<button class="admin-btn">{{ 'Import drafts' if en else 'Importar rascunhos' }}</button>
+</form>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/admin-video-import.js') }}" defer></script>
+{% else %}<p>{{ 'No article covers available.' if en else 'Nenhuma capa de artigo disponível.' }}</p>{% endif %}
+<nav aria-label="{{ 'Pages' if en else 'Páginas' }}">
+{% if rows.has_prev %}<a rel="prev" href="{{ video_admin_url('video_import', page=rows.prev_num) }}">{{ 'Previous' if en else 'Anterior' }}</a>{% endif %}
+{% if rows.has_next %}<a rel="next" href="{{ video_admin_url('video_import', page=rows.next_num) }}">{{ 'Next' if en else 'Seguinte' }}</a>{% endif %}
+</nav>
+{% endblock %}

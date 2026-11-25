@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% from 'videos/cards.html' import cards %}
+{% set en = language == 'en' %}
+{% block title %}{{ video.title }} — Sussurros do Saber{% endblock %}
+{% block meta_description %}{{ video.description|truncate(170) }}{% endblock %}
+{% block og_type %}video.other{% endblock %}
+{% block og_title %}{{ video.title }}{% endblock %}
+{% block og_description %}{{ video.description|truncate(170) }}{% endblock %}
+{% block og_image %}{{ video.thumbnail }}{% endblock %}
+{% block og_image_url %}{{ video.thumbnail }}{% endblock %}
+{% block og_image_secure %}{{ video.thumbnail }}{% endblock %}
+{% block twitter_title %}{{ video.title }}{% endblock %}
+{% block twitter_description %}{{ video.description|truncate(170) }}{% endblock %}
+{% block twitter_image %}{{ video.thumbnail }}{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/science-videos.css') }}">
+<script nonce="{{ csp_nonce }}" type="application/ld+json">{{ video_schema|tojson }}</script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/science-video-player.js') }}" defer></script>
+{% endblock %}
+{% block content %}
+<article class="max-w-5xl mx-auto px-4 py-8 science-videos">
+  <a href="{{ url_for('videos.index') }}">{{ 'All science videos' if en else 'Todos os vídeos de ciência' }}</a>
+  <h1>{{ video.title }}</h1>
+  {% include 'videos/player.html' %}
+  <div class="science-video-summary">
+    <p class="eyebrow"><a href="{{ url_for('videos.index', tema=video.category.slug) }}">{{ ui(video.category.name) }}</a></p>
+    <div class="science-video-meta">
+      <span>{{ video.author }}</span>
+      <time datetime="{{ video_schema.uploadDate }}">{{ video.published_at.strftime('%Y-%m-%d') if en else video.published_at.strftime('%d/%m/%Y') }}</time>
+      {% if video.duration_label %}<span>{{ video.duration_label }}</span>{% endif %}
+    </div>
+    <p class="science-video-description">{{ video.description }}</p>
+    {% if video.credits %}<p><strong>{{ 'Credits' if en else 'Créditos' }}</strong> · {{ video.credits }}</p>{% endif %}
+    {% if video.license %}<p><strong>{{ 'Licence' if en else 'Licença' }}</strong> · {{ video.license }}</p>{% endif %}
+    {% if video.transcript %}<details><summary>{{ 'Transcript' if en else 'Transcrição' }}</summary><p class="science-video-description">{{ video.transcript }}</p></details>{% endif %}
+    {% set share_url = site_url ~ seo_canonical_path %}
+    <nav class="science-video-meta" aria-label="{{ 'Share video' if en else 'Partilhar vídeo' }}">
+      <a href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" rel="noopener noreferrer">{{ 'Share on Facebook' if en else 'Partilhar no Facebook' }}</a>
+      <a href="https://wa.me/?text={{ share_url|urlencode }}" rel="noopener noreferrer">{{ 'Share on WhatsApp' if en else 'Partilhar no WhatsApp' }}</a>
+      {% if video_article %}<a href="{{ url_for('article', slug=video_article.slug) }}">{{ 'Read the full article' if en else 'Ler artigo completo' }}</a>{% endif %}
+    </nav>
+  </div>
+</article>
+{% if video_related %}<section class="max-w-5xl mx-auto px-4 py-8 science-videos" aria-labelledby="related-videos"><h2 id="related-videos">{{ 'Related science videos' if en else 'Mais vídeos de ciência' }}</h2>{{ cards(video_related, language) }}</section>{% endif %}
+{% endblock %}
