@@ -54,3 +54,33 @@ test('science news headings and secondary links have readable colours in dark mo
   await expect(secondary).toHaveCSS('color', 'rgb(241, 245, 252)');
   await expect(page.locator('.sn-side .eyebrow').first()).toHaveCSS('color', 'rgb(157, 204, 255)');
 });
+
+for (const reducedMotion of ['no-preference', 'reduce']) {
+  test(`homepage news entrance respects ${reducedMotion}`, async ({ page }) => {
+    execFileSync('python', ['tests/browser/science_news_fixture.py']);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion });
+    await page.addInitScript(() => {
+      window.newsEntrances = [];
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function (...args) {
+        if (this.matches('.home-science-news .news-card')) window.newsEntrances.push(this.className);
+        return animate.apply(this, args);
+      };
+    });
+    await page.goto('/');
+    const cards = page.locator('.home-science-news .news-card');
+    await expect(cards.first()).toBeAttached();
+    await cards.first().scrollIntoViewIfNeeded();
+    await expect(cards.first()).toBeVisible();
+    if (reducedMotion === 'no-preference') {
+      await expect.poll(() => page.evaluate(() => window.newsEntrances.length)).toBeGreaterThan(0);
+    } else {
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      expect(await page.evaluate(() => window.newsEntrances.length)).toBe(0);
+      await expect(cards.first()).toHaveCSS('opacity', '1');
+    }
+    await expect(cards.first().getByRole('link').first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
+  });
+}
