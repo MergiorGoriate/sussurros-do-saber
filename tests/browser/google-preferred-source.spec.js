@@ -25,6 +25,8 @@ test('preferred source stays visible beside the author when the Google script is
     await expect(button).toHaveAttribute('href', preferenceLink);
     const authorBox = await identity.boundingBox();
     const buttonBox = await button.boundingBox();
+    expect(buttonBox.height).toBeGreaterThanOrEqual(30);
+    expect(buttonBox.height).toBeLessThanOrEqual(34);
     expect(buttonBox.x).toBeGreaterThan(authorBox.x + authorBox.width);
     expect(Math.abs((buttonBox.y + buttonBox.height / 2) - (authorBox.y + authorBox.height / 2))).toBeLessThan(3);
 
@@ -54,6 +56,9 @@ test('the direct-link alternative disappears after the official widget renders',
     else render();`,
   }));
   await page.goto('/noticias/ensaio-noticia-movel');
-  await expect(page.getByRole('button', { name: 'Google widget test' })).toBeVisible();
+  const widget = page.getByRole('button', { name: 'Google widget test' });
+  await expect(widget).toBeVisible();
+  const bounds = await widget.boundingBox();
+  expect(bounds.height).toBeCloseTo(32, 0);
   await expect(page.locator('.google-preferred-source-fallback')).toBeHidden();
 });
