@@ -215,9 +215,12 @@ class ScienceNewsTests(unittest.TestCase):
                 buttons = page.select('[google-add-preferred-source-btn]')
                 self.assertEqual(len(buttons), 1)
                 self.assertEqual(buttons[0]['data-lang'], locale)
-                fallback = page.select_one('.google-preferred-source noscript a')
+                fallback = page.select_one('.google-preferred-source .google-preferred-source-fallback')
                 self.assertEqual(fallback['href'], fallback_url)
-                self.assertEqual(fallback.text, 'Add as preferred source' if locale == 'en' else 'Adicionar como fonte preferida')
+                self.assertEqual(fallback.get_text(strip=True), 'Add as preferred source' if locale == 'en' else 'Adicionar como fonte preferida')
+                self.assertFalse(fallback.has_attr('hidden'))
+                if path.startswith(('/artigo/', '/noticias/', '/en/news/')):
+                    self.assertIsNotNone(page.select_one('.author-preferred-row .google-preferred-source'))
         for path in ['/contacto', '/admin/login', '/artigo/nao-existe-preferred-source']:
             with self.subTest(path=path):
                 page = BeautifulSoup(app.test_client().get(path).text, 'html.parser')

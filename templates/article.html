@@ -9,13 +9,16 @@
       {{ article.title }}
     </h1>
     <p class="article-summary mt-5">{{ article.summary }}</p>
-    <div class="article-author-line">
-      {% if article.author_rel.photo %}
-      <img src="{{ article.author_rel.photo|safe_image_url }}" alt="" class="article-author-avatar" loading="lazy" decoding="async">
-      {% else %}
-      <span class="article-author-avatar article-author-fallback" aria-hidden="true">{{ article.author[:2]|upper }}</span>
-      {% endif %}
-      <a class="article-author-link" href="{{ url_for('author_detail', slug=article.author_rel.slug) }}">Por {{ article.author }}</a>
+    <div class="article-author-line author-preferred-row">
+      <div class="author-preferred-identity">
+        {% if article.author_rel.photo %}
+        <img src="{{ article.author_rel.photo|safe_image_url }}" alt="" class="article-author-avatar" loading="lazy" decoding="async">
+        {% else %}
+        <span class="article-author-avatar article-author-fallback" aria-hidden="true">{{ article.author[:2]|upper }}</span>
+        {% endif %}
+        <a class="article-author-link" href="{{ url_for('author_detail', slug=article.author_rel.slug) }}">Por {{ article.author }}</a>
+      </div>
+      {% include 'partials/google_preferred_source.html' %}
     </div>
     <div class="article-meta-row">
     <p class="article-meta article-byline">
@@ -32,7 +35,6 @@
     </p>
 
     </div>
-    {% include 'partials/google_preferred_source.html' %}
   </header>
   {% set main_video = article.cover_video|article_cover_video(article.title) if article.cover_format!='image' else '' %}
   {% if main_video %}
