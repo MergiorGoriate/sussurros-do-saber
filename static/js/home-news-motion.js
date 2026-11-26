@@ -1,11 +1,12 @@
 (() => {
-  const section = document.querySelector('.home-science-news');
+  const section = document.querySelector('.home-science-news, .science-news');
   if (!section || !window.IntersectionObserver || !window.matchMedia) return;
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   if (reducedMotion.matches) return;
 
-  const items = [...section.querySelectorAll('.home-news-feature .news-card, .home-news-rail .news-card')];
+  const items = [...section.querySelectorAll('.home-news-feature .news-card, .home-news-rail .news-card, .sn-feature-layout .news-card, .sn-latest .news-card')];
+  const desktop = section.matches('.science-news') ? '(min-width: 951px)' : '(min-width: 761px)';
   const animations = new Map();
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {
@@ -14,8 +15,8 @@
       observer.unobserve(card);
       if (reducedMotion.matches || card.contains(document.activeElement) || !card.animate) continue;
 
-      const featured = Boolean(card.closest('.home-news-feature'));
-      const slide = featured && window.matchMedia('(min-width: 761px)').matches
+      const featured = Boolean(card.closest('.home-news-feature, .news-lead'));
+      const slide = featured && window.matchMedia(desktop).matches
         ? 'translateX(18px)' : 'translateY(14px)';
       const animation = card.animate([
         { opacity: 0.35, transform: slide },
