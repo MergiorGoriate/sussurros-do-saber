@@ -62,3 +62,54 @@ test('the direct-link alternative disappears after the official widget renders',
   expect(bounds.height).toBeCloseTo(32, 0);
   await expect(page.locator('.google-preferred-source-fallback')).toBeHidden();
 });
+
+test('information icon shows the preferred-source explanation on hover and keyboard focus', async ({ page }) => {
+  execFileSync('python', ['tests/browser/science_news_fixture.py']);
+  await page.route(publisherScript, route => route.abort());
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/noticias/ensaio-noticia-movel');
+  const info = page.getByRole('button', {name: 'Sobre as fontes preferidas da Google'});
+  const tooltip = page.locator('#google-preferred-source-tooltip');
+  const fallback = page.locator('.google-preferred-source-fallback');
+  await expect(info).toBeVisible();
+  await expect(tooltip).toBeHidden();
+  const buttonBounds = await fallback.boundingBox();
+  const infoBounds = await info.boundingBox();
+  expect(infoBounds.x).toBeGreaterThanOrEqual(buttonBounds.x + buttonBounds.width);
+
+  await info.hover();
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText('Ao adicionar a Sussurros do Saber');
+  await expect(info).toHaveAttribute('aria-expanded', 'true');
+  await tooltip.hover();
+  await expect(tooltip).toBeVisible();
+  await page.mouse.move(10, 10);
+  await expect(tooltip).toBeHidden();
+
+  await page.keyboard.press('Tab');
+  await info.focus();
+  await expect(tooltip).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(tooltip).toBeHidden();
+  await expect(info).toHaveAttribute('aria-expanded', 'false');
+});
+
+test.describe('preferred-source explanation on touchscreens', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('tapping the information icon opens and closes its explanation without overflow', async ({ page }) => {
+    execFileSync('python', ['tests/browser/science_news_fixture.py']);
+    await page.route(publisherScript, route => route.abort());
+    await page.goto('/noticias/ensaio-noticia-movel');
+    const info = page.getByRole('button', {name: 'Sobre as fontes preferidas da Google'});
+    const tooltip = page.locator('#google-preferred-source-tooltip');
+    await expect(tooltip).toBeHidden();
+    await info.tap();
+    await expect(tooltip).toBeVisible();
+    const bounds = await tooltip.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+    await info.tap();
+    await expect(tooltip).toBeHidden();
+  });
+});

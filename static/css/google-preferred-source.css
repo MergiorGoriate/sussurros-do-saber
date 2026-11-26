@@ -1,9 +1,85 @@
 .google-preferred-source {
-  display: grid;
-  justify-items: start;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
   max-width: 100%;
   min-width: 0;
   margin: 1rem 0;
+}
+/* The information control is separate from Google's interactive widget. */
+.google-preferred-source-action {
+  display: grid;
+  justify-items: start;
+  min-width: 0;
+  max-width: 100%;
+}
+.google-preferred-source-info {
+  position: relative;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.google-preferred-source-info-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #536476;
+  cursor: pointer;
+}
+.google-preferred-source-info-button span {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font: 600 12px/1 Arial, sans-serif;
+}
+.google-preferred-source-info-button span::before { content: "i"; }
+.google-preferred-source-info-button:hover,
+.google-preferred-source-info-button:focus-visible { color: #1e4e8c; }
+.google-preferred-source-info-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+  border-radius: 50%;
+}
+.google-preferred-source-tooltip {
+  position: absolute;
+  z-index: 60;
+  top: 0;
+  left: 100%;
+  box-sizing: border-box;
+  width: min(290px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border: 1px solid #d8dfe7;
+  border-radius: 8px;
+  background: #fff;
+  color: #253549;
+  box-shadow: 0 5px 18px rgba(19, 33, 52, .14);
+  font: 400 .8125rem/1.5 var(--public-ui-font, Arial, sans-serif);
+  text-align: left;
+  white-space: normal;
+}
+.google-preferred-source-tooltip[hidden] { display: none; }
+.google-preferred-source-tooltip[data-placement="below"] {
+  top: 100%;
+  left: var(--preferred-tooltip-offset, 0px);
+}
+.google-preferred-source-tooltip[data-placement="above"] {
+  top: auto;
+  bottom: 100%;
+  left: var(--preferred-tooltip-offset, 0px);
+}
+.dark .google-preferred-source-info-button { color: #c2d0df; }
+.dark .google-preferred-source-info-button:hover,
+.dark .google-preferred-source-info-button:focus-visible { color: #9dccff; }
+.dark .google-preferred-source-tooltip {
+  background: #213245;
+  color: #eff5fc;
+  border-color: #52667d;
 }
 .google-preferred-source [google-add-preferred-source-btn] {
   max-width: 100%;
