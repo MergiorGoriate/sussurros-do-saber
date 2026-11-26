@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync('static/js/home-news-motion.js', 'utf8');
 
-function harness({ reduced = false, desktop = true, supported = true } = {}) {
+function harness({ reduced = false, desktop = true, supported = true, listing = false, width = desktop ? 1280 : 390 } = {}) {
   const observed = new Set();
   const played = [];
   const listeners = {};
@@ -19,7 +19,7 @@ function harness({ reduced = false, desktop = true, supported = true } = {}) {
       return animation;
     }
   }));
-  document.querySelector = () => ({ querySelectorAll: () => cards });
+  document.querySelector = () => ({ querySelectorAll: () => cards, matches: () => listing });
   let intersection;
   class Observer {
     constructor(callback) { intersection = callback; }
@@ -33,7 +33,7 @@ function harness({ reduced = false, desktop = true, supported = true } = {}) {
   };
   const window = {
     IntersectionObserver: supported ? Observer : undefined,
-    matchMedia: query => query.includes('reduced-motion') ? preference : { matches: desktop }
+    matchMedia: query => query.includes('reduced-motion') ? preference : { matches: width >= Number(query.match(/\d+/)[0]) }
   };
   vm.runInNewContext(source, { document, window, IntersectionObserver: window.IntersectionObserver });
   return {
@@ -82,4 +82,14 @@ test('reduced motion and unavailable observation leave the original content visi
   h.reduce();
   assert.equal(h.played[0].animation.cancelled, true);
   assert.equal(h.observed.size, 0);
+});
+
+test('listing follows its own tablet breakpoint and uses vertical movement for stacked cards', () => {
+  const tablet = harness({ listing: true, width: 850 });
+  tablet.enter(0);
+  assert.equal(tablet.played[0].frames[0].transform, 'translateY(14px)');
+  const wide = harness({ listing: true, width: 1280 });
+  wide.enter(0); wide.enter(1);
+  assert.equal(wide.played[0].frames[0].transform, 'translateX(18px)');
+  assert.equal(wide.played[1].frames[0].transform, 'translateY(14px)');
 });

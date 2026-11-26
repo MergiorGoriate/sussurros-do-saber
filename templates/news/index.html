@@ -4,6 +4,7 @@
 {% block meta_description %}{{ ui('Actualidade científica internacional, com atenção à investigação feita em África.') }}{% endblock %}
 {% block robots %}{% if active_theme %}noindex,follow{% else %}{{ super() }}{% endif %}{% endblock %}
 {% block head_extra %}
+{% if lead_news or news_items %}<script defer src="{{ url_for('static', filename='js/home-news-motion.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/news-page-newsletter.css', v='20261124-v1') }}">
 {% endblock %}
 {% block content %}
