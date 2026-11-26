@@ -10,7 +10,7 @@
 {% block twitter_title %}{{ news_item.title }}{% endblock %}
 {% block twitter_image %}{{ news_item.image|social_image }}{% endblock %}
 {% block twitter_image_alt %}{{ news_item.image_alt or super() }}{% endblock %}
-{% block head_extra %}<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/social-share.js') }}"></script><link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/news-detail-modern.css', v='20261124-v1') }}">{% endblock %}
+{% block head_extra %}{% include 'partials/google_preferred_source_head.html' %}<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/social-share.js') }}"></script><link rel="stylesheet" href="{{ url_for('static', filename='css/article-content.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/editorial-typography.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/news-detail-modern.css', v='20261124-v1') }}">{% endblock %}
 {% block content %}
 {% set structured = {'@context':'https://schema.org','@type':'NewsArticle','headline':news_item.title,'description':news_item.summary,'inLanguage':'en' if language == 'en' else 'pt-MZ','datePublished':news_item.published_date.isoformat(),'dateModified':(news_item.revised_date or news_item.published_date).isoformat(),'image':news_item.image|social_image,'author':{'@type':'Person','name':news_item.author.name},'publisher':{'@type':'Organization','name':'Sussurros do Saber'},'mainEntityOfPage':site_url ~ seo_canonical_path} %}
 <script nonce="{{ csp_nonce }}" type="application/ld+json">{{ structured|tojson }}</script>
@@ -34,6 +34,7 @@
       <span>{{ ui('Publicado em') }} <time datetime="{{ news_item.published_date.isoformat() }}">{{ news_item.published_date.strftime('%d/%m/%Y') }}</time></span>
       {% if news_item.revised_at %}<span>{{ ui('Actualizado em') }} <time datetime="{{ news_item.revised_date.isoformat() }}">{{ news_item.revised_date.strftime('%d/%m/%Y') }}</time></span>{% endif %}
     </p>
+    {% include 'partials/google_preferred_source.html' %}
   </header>
   {% if news_item.image %}
   <figure class="news-figure">
