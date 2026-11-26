@@ -241,7 +241,7 @@ class InternationalizationTests(unittest.TestCase):
         self.assertEqual(page.status_code,200);self.assertIn('Plants and sunlight',page.text)
         self.assertIn('lang="en"',page.text);self.assertIn('/en/artigo/'+self.article.slug,page.text)
         from bs4 import BeautifulSoup
-        preferred = BeautifulSoup(page.text, 'html.parser').select_one('[google-add-preferred-source-btn]')
+        preferred = BeautifulSoup(page.text, 'html.parser').select_one('.article-author-line [google-add-preferred-source-btn]')
         self.assertIsNotNone(preferred)
         self.assertEqual(preferred['data-lang'], 'en')
         self.assertEqual(page.headers['Content-Language'],'en');self.assertIn('no-store',page.headers['Cache-Control'])

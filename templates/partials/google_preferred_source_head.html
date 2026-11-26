@@ -1,1 +1,3 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/google-preferred-source.css') }}">
 <script async nonce="{{ csp_nonce }}" src="https://news.google.com/swg/js/v1/publisher.js"></script>
+<script defer nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/google-preferred-source.js') }}"></script>
