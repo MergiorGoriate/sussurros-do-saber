@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
 {% block meta_description %}{{ ui("Explore artigos de ciência, educação e investigação no Sussurros do Saber, com recursos de aprendizagem e atenção à produção científica em Moçambique e África.") }}{% endblock %}
 
-{% block head_extra %}{% include 'partials/google_preferred_source_head.html' %}{% if home_news %}<script defer src="{{ url_for('static', filename='js/home-news-motion.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home-publications.css', v='20261104-featured-cover-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/newsletter-signup.css', v='20261020-v1') }}">{% if articles and articles[0].cover_format == 'video_animated' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css') }}"><script defer src="{{ url_for('static', filename='js/article-cover-player.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}{% endblock %}
+{% block head_extra %}{% if home_news %}<script defer src="{{ url_for('static', filename='js/home-news-motion.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}<link rel="stylesheet" href="{{ url_for('static', filename='css/home-publications.css', v='20261104-featured-cover-v1') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/newsletter-signup.css', v='20261020-v1') }}">{% if articles and articles[0].cover_format == 'video_animated' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/article-covers.css') }}"><script defer src="{{ url_for('static', filename='js/article-cover-player.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}{% endblock %}
 {% block resource_hints %}{% if articles %}{% set preload_article = articles[0] %}<link rel="preload" as="image" href="{{ preload_article.cover_poster|image_variant(768) }}" imagesrcset="{{ preload_article.cover_poster|image_srcset([480, 768, 1200]) }}" imagesizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1279px) 64vw, 800px" fetchpriority="high">{% endif %}{% endblock %}{% block content %}
 <section class="max-w-7xl mx-auto px-4 py-10 lg:py-14">
   <div class="section-rule"><span>Em destaque</span></div>
-    {% include 'partials/google_preferred_source.html' %}
   {% if articles %}
   {% set hero = articles[0] %}
   <div class="grid lg:grid-cols-12 gap-7 mt-7">
