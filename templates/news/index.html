@@ -3,7 +3,7 @@
 {% block title %}{{ ui('Notícias de Ciência') }} — Sussurros do Saber{% endblock %}
 {% block meta_description %}{{ ui('Actualidade científica internacional, com atenção à investigação feita em África.') }}{% endblock %}
 {% block robots %}{% if active_theme %}noindex,follow{% else %}{{ super() }}{% endif %}{% endblock %}
-{% block head_extra %}{% include 'partials/google_preferred_source_head.html' %}
+{% block head_extra %}
 {% if lead_news or news_items %}<script defer src="{{ url_for('static', filename='js/home-news-motion.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/news-page-newsletter.css', v='20261124-v1') }}">
 {% endblock %}
@@ -93,7 +93,6 @@
 </style>
 <section class="science-news" aria-labelledby="news-title">
   <h1 id="news-title" class="sn-visually-hidden">{{ ui('Notícias de Ciência') }}</h1>
-    {% include 'partials/google_preferred_source.html' %}
   <form method="get" action="{{ url_for('news.index') }}" class="sn-filters news-filters">
     <label for="news-topic">{{ ui('Tema') }}</label>
     <select id="news-topic" name="tema">
