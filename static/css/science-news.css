@@ -207,3 +207,16 @@
   .home-science-news .home-news-rail .news-card-copy h3 { font-size:.98rem; }
   .home-science-news .home-news-rail .news-card-copy > p:not(.eyebrow):not(.article-meta) { display:none; }
 }
+
+/* Microinteracções exclusivas do bloco de notícias da página inicial. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .home-science-news .news-cover-link {
+    border-radius: 7px;
+  }
+  .home-science-news .news-cover {
+    transition: transform 360ms cubic-bezier(.2,.7,.3,1), filter 220ms ease;
+  }
+  .home-science-news .news-cover-link:hover .news-cover {
+    transform: scale(1.035);
+  }
+}
