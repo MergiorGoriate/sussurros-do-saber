@@ -59,6 +59,8 @@ EN = {
  'A minha aprendizagem':'My learning','A minha assinatura':'My subscription','Consultar condições':'View terms',
  'Plano mensal':'Monthly plan','Plano anual':'Annual plan','Mensal':'Monthly','Anual':'Annual',
  'Adicionar como fonte preferida':'Add as preferred source',
+ 'Sobre as fontes preferidas da Google':'About Google preferred sources',
+ 'Ao adicionar a Sussurros do Saber como fonte preferida, poderá encontrar mais frequentemente as nossas publicações nas principais notícias da Pesquisa Google e ver o nosso conteúdo destacado nos resultados de IA, quando relevante. Pode alterar esta preferência na Google.':'By adding Sussurros do Saber as a preferred source, you may see our publications more often in Google Search Top Stories and our content highlighted in AI results when relevant. You can change this preference on Google.',
  'Subscrever':'Subscribe','Subscreva o boletim':'Subscribe to the newsletter','Boletim científico':'Science newsletter',
  'Newsletter':'Newsletter','Receba o nosso boletim':'Get our newsletter','Subscrição':'Subscription',
  'Política de privacidade':'Privacy policy','Privacidade':'Privacy','Termos de utilização':'Terms of use',

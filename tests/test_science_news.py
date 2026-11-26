@@ -219,6 +219,14 @@ class ScienceNewsTests(unittest.TestCase):
                 self.assertEqual(fallback.get_text(strip=True), 'Add as preferred source' if locale == 'en' else 'Adicionar como fonte preferida')
                 self.assertFalse(fallback.has_attr('hidden'))
                 self.assertIsNotNone(page.select_one('.author-preferred-row .google-preferred-source'))
+                info = page.select_one('.google-preferred-source-info-button')
+                tooltip = page.select_one('#google-preferred-source-tooltip')
+                self.assertEqual(info['aria-describedby'], tooltip['id'])
+                self.assertEqual(info['aria-expanded'], 'false')
+                self.assertEqual(tooltip['role'], 'tooltip')
+                self.assertTrue(tooltip.has_attr('hidden'))
+                self.assertEqual(info['aria-label'], 'About Google preferred sources' if locale == 'en' else 'Sobre as fontes preferidas da Google')
+                self.assertIn('By adding Sussurros do Saber' if locale == 'en' else 'Ao adicionar a Sussurros do Saber', tooltip.get_text(strip=True))
         for path in ['/', '/en/', '/artigos', '/en/artigos', '/noticias', '/en/news',
                      '/contacto', '/admin/login', '/artigo/nao-existe-preferred-source']:
             with self.subTest(path=path):

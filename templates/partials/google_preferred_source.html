@@ -1,7 +1,19 @@
 <div class="google-preferred-source">
-  <div google-add-preferred-source-btn data-lang="{{ 'en' if language == 'en' else 'pt' }}"></div>
-  <a class="google-preferred-source-fallback" href="https://www.google.com/preferences/source?q=www.sussurrosdosaber.com">
-    <i class="fa-brands fa-google" aria-hidden="true"></i>
-    <span>{{ ui('Adicionar como fonte preferida') }}</span>
-  </a>
+  <div class="google-preferred-source-action">
+    <div google-add-preferred-source-btn data-lang="{{ 'en' if language == 'en' else 'pt' }}"></div>
+    <a class="google-preferred-source-fallback" href="https://www.google.com/preferences/source?q=www.sussurrosdosaber.com">
+      <i class="fa-brands fa-google" aria-hidden="true"></i>
+      <span>{{ ui('Adicionar como fonte preferida') }}</span>
+    </a>
+  </div>
+  <div class="google-preferred-source-info">
+    <button type="button" class="google-preferred-source-info-button"
+            aria-label="{{ ui('Sobre as fontes preferidas da Google') }}"
+            aria-describedby="google-preferred-source-tooltip" aria-expanded="false">
+      <span aria-hidden="true"></span>
+    </button>
+    <div id="google-preferred-source-tooltip" class="google-preferred-source-tooltip" role="tooltip" hidden>
+      {{ ui('Ao adicionar a Sussurros do Saber como fonte preferida, poderá encontrar mais frequentemente as nossas publicações nas principais notícias da Pesquisa Google e ver o nosso conteúdo destacado nos resultados de IA, quando relevante. Pode alterar esta preferência na Google.') }}
+    </div>
+  </div>
 </div>
