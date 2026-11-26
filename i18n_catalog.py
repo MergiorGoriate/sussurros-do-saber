@@ -58,6 +58,7 @@ EN = {
  'Biblioteca exclusiva':'Exclusive library','Artigos gratuitos':'Free articles','O meu Prémio':'My Premium',
  'A minha aprendizagem':'My learning','A minha assinatura':'My subscription','Consultar condições':'View terms',
  'Plano mensal':'Monthly plan','Plano anual':'Annual plan','Mensal':'Monthly','Anual':'Annual',
+ 'Adicionar como fonte preferida':'Add as preferred source',
  'Subscrever':'Subscribe','Subscreva o boletim':'Subscribe to the newsletter','Boletim científico':'Science newsletter',
  'Newsletter':'Newsletter','Receba o nosso boletim':'Get our newsletter','Subscrição':'Subscription',
  'Política de privacidade':'Privacy policy','Privacidade':'Privacy','Termos de utilização':'Terms of use',

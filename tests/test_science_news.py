@@ -193,6 +193,37 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertEqual(self.client.get(pt_path).status_code, 404)
         self.assertNotIn(pt_path, self.client.get('/sitemap.xml').text)
 
+    def test_google_preferred_source_button_on_public_editorial_pages(self):
+        story, pt = self.story('Notícia de ensaio')
+        _, en = self.story('Test story', locale='en', story=story)
+        article = Article.public_query().first()
+        script_url = 'https://news.google.com/swg/js/v1/publisher.js'
+        fallback_url = 'https://www.google.com/preferences/source?q=www.sussurrosdosaber.com'
+        for path, locale in [
+            ('/', 'pt'), ('/en/', 'en'), ('/noticias', 'pt'), ('/en/news', 'en'),
+            ('/noticias/' + pt.slug, 'pt'), ('/en/news/' + en.slug, 'en'),
+            ('/artigo/' + article.slug, 'pt'),
+        ]:
+            with self.subTest(path=path):
+                response = app.test_client().get(path)
+                self.assertEqual(response.status_code, 200)
+                page = BeautifulSoup(response.text, 'html.parser')
+                scripts = page.select(f'script[src="{script_url}"]')
+                self.assertEqual(len(scripts), 1)
+                self.assertTrue(scripts[0].has_attr('async'))
+                self.assertIn("'nonce-" + scripts[0]['nonce'] + "'", response.headers['Content-Security-Policy'])
+                buttons = page.select('[google-add-preferred-source-btn]')
+                self.assertEqual(len(buttons), 1)
+                self.assertEqual(buttons[0]['data-lang'], locale)
+                fallback = page.select_one('.google-preferred-source noscript a')
+                self.assertEqual(fallback['href'], fallback_url)
+                self.assertEqual(fallback.text, 'Add as preferred source' if locale == 'en' else 'Adicionar como fonte preferida')
+        for path in ['/contacto', '/admin/login', '/artigo/nao-existe-preferred-source']:
+            with self.subTest(path=path):
+                page = BeautifulSoup(app.test_client().get(path).text, 'html.parser')
+                self.assertIsNone(page.select_one('[google-add-preferred-source-btn]'))
+                self.assertIsNone(page.select_one(f'script[src="{script_url}"]'))
+
     def test_related_article_requires_public_content_in_the_requested_language(self):
         story, pt = self.story('Notícia de ensaio')
         _, en = self.story('Test story', locale='en', story=story)
