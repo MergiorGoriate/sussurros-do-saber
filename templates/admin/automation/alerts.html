@@ -1,11 +1,12 @@
 {% extends 'admin/automation/layout.html' %}
+{% from 'admin/automation/_ui.html' import severity_badge %}
 {% block automation_content %}
-<h1>Alertas da automação</h1>
-<nav class="automation-nav"><a href="{{ url_for('admin.automation_alerts') }}">Activos</a><a href="{{ url_for('admin.automation_alerts', estado='resolvidos') }}">Resolvidos</a></nav>
+<header class="automation-heading"><h1>Alertas da automação</h1><p>Consulte as ocorrências detectadas e acompanhe a sua resolução.</p></header>
+<nav class="automation-nav automation-tabs" aria-label="Estado dos alertas"><a href="{{ url_for('admin.automation_alerts') }}"{% if not resolved %} aria-current="page"{% endif %}>Activos</a><a href="{{ url_for('admin.automation_alerts', estado='resolvidos') }}"{% if resolved %} aria-current="page"{% endif %}>Resolvidos</a></nav>
 <div class="admin-panel automation-table"><table><thead><tr><th>Gravidade</th><th>Origem</th><th>Última detecção (UTC)</th><th>Observação</th><th>Acção</th></tr></thead><tbody>
-{% for alert in page.items %}<tr><td class="automation-severity">{{ alert.severity }}</td><td>{{ registry[alert.operator_code].name }} · {{ alert.subject }}</td><td>{{ alert.last_seen }} · {{ alert.occurrences }} ocorrências</td><td>{{ alert.description }}<p>{{ alert.recommendation }}</p></td>
+{% for alert in page.items %}<tr><td class="automation-severity">{{ severity_badge(alert.severity) }}</td><td>{{ registry[alert.operator_code].name }} · {{ alert.subject }}</td><td>{{ alert.last_seen }} · {{ alert.occurrences }} ocorrências</td><td>{{ alert.description }}<p>{{ alert.recommendation }}</p></td>
 <td>{% if can_manage and not alert.resolved_at %}<form method="post" action="{{ url_for('admin.automation_resolve', ident=alert.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="automation-button">Marcar resolvido</button></form>{% else %}{{ 'Resolvido' if alert.resolved_at else 'Activo' }}{% endif %}</td></tr>
-{% else %}<tr><td colspan="5">Nenhum alerta nesta vista.</td></tr>{% endfor %}
+{% else %}<tr><td class="automation-empty" colspan="5">Nenhum alerta nesta vista.</td></tr>{% endfor %}
 </tbody></table></div>
 <nav class="automation-nav">{% if page.has_prev %}<a href="{{ url_for('admin.automation_alerts', estado='resolvidos' if resolved else 'activos', page=page.prev_num) }}">Anterior</a>{% endif %}{% if page.has_next %}<a href="{{ url_for('admin.automation_alerts', estado='resolvidos' if resolved else 'activos', page=page.next_num) }}">Seguinte</a>{% endif %}</nav>
 {% endblock %}

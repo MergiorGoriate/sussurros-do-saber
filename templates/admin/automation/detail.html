@@ -1,6 +1,7 @@
 {% extends 'admin/automation/layout.html' %}
+{% from 'admin/automation/_ui.html' import run_status, severity_badge %}
 {% block automation_content %}
-<h1>{{ registry[run.operator_code].name }} · Execução #{{ run.id }}</h1>
+<header class="automation-heading"><h1>{{ registry[run.operator_code].name }} · Execução #{{ run.id }}</h1><p>{{ run_status(run.status) }}</p></header>
 <section class="admin-panel"><dl class="automation-details">
 {% for label, value in [('Estado',run.status),('Versão',run.version),('Origem',run.trigger),('Solicitada (UTC)',run.queued_at),('Início (UTC)',run.started_at),('Conclusão (UTC)',run.finished_at),('Duração (ms)',run.duration_ms)] %}
 <dt>{{ label }}</dt><dd>{{ value if value is not none else '—' }}</dd>{% endfor %}
@@ -13,7 +14,7 @@
 </dl></section>
 <h2>Problemas e recomendações</h2>
 <section class="admin-panel automation-table"><table><thead><tr><th>Gravidade</th><th>Referência</th><th>Problema</th><th>Recomendação</th></tr></thead><tbody>
-{% for issue in run.result.findings or [] %}<tr><td class="automation-severity">{{ issue.severity }}</td><td>{{ issue.subject }}</td><td>{{ issue.description }}</td><td>{{ issue.recommendation }}</td></tr>{% else %}<tr><td colspan="4">Nenhuma observação registada.</td></tr>{% endfor %}</tbody></table></section>
+{% for issue in run.result.findings or [] %}<tr><td class="automation-severity">{{ severity_badge(issue.severity) }}</td><td>{{ issue.subject }}</td><td>{{ issue.description }}</td><td>{{ issue.recommendation }}</td></tr>{% else %}<tr><td colspan="4">Nenhuma observação registada.</td></tr>{% endfor %}</tbody></table></section>
 {% if run.operator_code == 'research' %}<h2>Publicações encontradas</h2><section class="admin-panel"><p>Metadados da Crossref para revisão humana. A lista não comprova a validade científica dos estudos.</p>
 {% for record in run.result.records or [] %}<article class="automation-record"><h3><a href="{{ record.url }}" target="_blank" rel="noopener noreferrer">{{ record.title }}</a></h3><p>{{ record.authors|join(', ') }} · {{ record.published or 'Data indisponível' }}</p><p>{{ record.doi }} · {{ record.source }} · Tema sugerido: {{ record.topic }}</p></article>{% else %}<p>Nenhuma publicação nova nesta execução.</p>{% endfor %}</section>{% endif %}
 {% endblock %}

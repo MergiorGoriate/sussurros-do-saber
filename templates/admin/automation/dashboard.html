@@ -1,29 +1,68 @@
 {% extends 'admin/automation/layout.html' %}
+{% from 'admin/automation/_ui.html' import icon, run_status %}
 {% block automation_content %}
-  <header><h1>Sussurros Automation Engine</h1><p>Relatórios de qualidade editorial, pesquisa científica e operações técnicas.</p></header>
-  <dl class="automation-metrics">
-    {% for key, label in [('active','Operadores activos'),('inactive','Inactivos'),('successes','Execuções bem-sucedidas'),('warnings','Com observações'),('failures','Falhadas'),('queued','Em espera'),('running','Em execução'),('alerts','Alertas activos'),('critical','Críticos')] %}
-    <div class="admin-panel"><dt>{{ label }}</dt><dd>{{ stats[key] }}</dd></div>
-    {% endfor %}
-  </dl>
-  {% if recent %}<p>Último registo de execução: {{ recent[0].queued_at.strftime('%d/%m/%Y %H:%M') }} UTC.</p>{% else %}<p>Sem execuções registadas. A actividade do worker ainda não foi confirmada.</p>{% endif %}
-  <h2>Operadores</h2>
+  <header class="automation-hero">
+    <div>
+      <span class="automation-eyebrow">{{ icon('operators') }} Centro de operações</span>
+      <h1>Sussurros Automation Engine</h1>
+      <p>Relatórios de qualidade editorial, investigação científica e operações técnicas.</p>
+    </div>
+    <div class="automation-hero-activity">
+      {{ icon('clock') }}
+      <div><strong>Último registo de execução</strong>
+      {% if recent %}<time datetime="{{ recent[0].queued_at.isoformat() }}Z">{{ recent[0].queued_at.strftime('%d/%m/%Y · %H:%M') }} UTC</time>
+      {% else %}<span>Sem execuções registadas</span><small>Actividade do worker ainda não confirmada.</small>{% endif %}</div>
+    </div>
+  </header>
+  <div class="automation-metrics" aria-label="Indicadores da automação">
+    <section class="admin-panel automation-metric">
+      <h2>{{ icon('operators') }} Operadores</h2>
+      <dl><div class="automation-metric-primary"><dt>Activos</dt><dd>{{ stats.active }} <span>/ {{ stats.active + stats.inactive }}</span></dd></div>
+      <div><dt><span class="automation-dot"></span> Inactivos</dt><dd>{{ stats.inactive }}</dd></div></dl>
+    </section>
+    <section class="admin-panel automation-metric">
+      <h2>{{ icon('running') }} Execuções</h2>
+      <dl><div class="automation-metric-primary"><dt>Bem-sucedidas</dt><dd>{{ stats.successes }}</dd></div>
+      <div><dt><span class="automation-dot is-warning"></span> Com observações</dt><dd>{{ stats.warnings }}</dd></div>
+      <div><dt><span class="automation-dot is-danger"></span> Falhadas</dt><dd>{{ stats.failures }}</dd></div></dl>
+    </section>
+    <section class="admin-panel automation-metric">
+      <h2>{{ icon('clock') }} Fila de tarefas</h2>
+      <dl><div class="automation-metric-primary"><dt>Em execução</dt><dd>{{ stats.running }}</dd></div>
+      <div><dt><span class="automation-dot is-warning"></span> Em espera</dt><dd>{{ stats.queued }}</dd></div></dl>
+    </section>
+    <section class="admin-panel automation-metric">
+      <h2>{{ icon('alert') }} Alertas</h2>
+      <dl><div class="automation-metric-primary"><dt>Alertas activos</dt><dd>{{ stats.alerts }}</dd></div>
+      <div><dt><span class="automation-dot is-danger"></span> Críticos</dt><dd>{{ stats.critical }}</dd></div></dl>
+      <a class="automation-text-link" href="{{ url_for('admin.automation_alerts') }}">Consultar alertas {{ icon('arrow') }}</a>
+    </section>
+  </div>
+  <div class="automation-section-head">
+    <div><h2>Operadores <span class="automation-count">{{ operators|length }}</span></h2><p>Consulte o estado e configure as tarefas de cada operador.</p></div>
+  </div>
   <div class="automation-grid">
     {% for operator in operators %}{% set spec = registry[operator.code] %}{% set last = last_runs[operator.code] %}
-    <section class="admin-panel">
-      <h3>{{ spec.name }}</h3><p>{{ spec.description }}</p>
-      <p><strong>{{ 'Activo' if operator.enabled else 'Inactivo' }}</strong> · v{{ spec.version }}</p>
-      <dl><dt>Última execução</dt><dd>{% if last %}<a href="{{ url_for('admin.automation_run_detail', ident=last.id) }}">{{ last.status }} · {{ last.queued_at.strftime('%d/%m/%Y %H:%M') }} UTC</a>{% else %}Sem execuções{% endif %}</dd>
-      <dt>Próxima execução (UTC)</dt><dd>{{ operator.next_run_at.strftime('%d/%m/%Y %H:%M') if operator.next_run_at else '—' }}</dd>
-      {% if last and last.duration_ms is not none %}<dt>Duração</dt><dd>{{ last.duration_ms }} ms</dd>{% endif %}</dl>
-      <div class="automation-actions">
-        <a href="{{ url_for('admin.automation_operator', code=operator.code) }}">Configuração</a>
-        <a href="{{ url_for('admin.automation_runs', operador=operator.code) }}">Histórico</a>
-        {% if can_manage and operator.enabled %}<form method="post" action="{{ url_for('admin.automation_execute', code=operator.code) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="automation-button">Executar</button></form>{% endif %}
+    <section class="admin-panel automation-operator">
+      <div class="automation-card-top"><span class="automation-card-icon">{{ icon(operator.code) }}</span><span class="automation-badge" data-state="{{ 'success' if operator.enabled else 'inactive' }}">{{ 'Activo' if operator.enabled else 'Inactivo' }}</span></div>
+      <div class="automation-card-title"><h3>{{ spec.name }}</h3><p>{{ spec.description }}</p></div>
+      <dl class="automation-card-data">
+        <div><dt>Última execução</dt><dd>{% if last %}<a class="automation-text-link" href="{{ url_for('admin.automation_run_detail', ident=last.id) }}">{{ run_status(last.status) }} {{ last.queued_at.strftime('%d/%m/%Y %H:%M') }} UTC</a>{% else %}Sem execuções{% endif %}</dd></div>
+        <div><dt>Próxima execução (UTC)</dt><dd>{{ operator.next_run_at.strftime('%d/%m/%Y %H:%M') if operator.next_run_at else '—' }}</dd></div>
+        <div><dt>Intervalo</dt><dd>{{ operator.interval_minutes }} min</dd></div>
+        {% if last and last.duration_ms is not none %}<div><dt>Duração</dt><dd>{{ last.duration_ms }} ms</dd></div>{% endif %}
+      </dl>
+      <div class="automation-card-footer">
+        <div class="automation-actions">
+          <a class="automation-action" href="{{ url_for('admin.automation_operator', code=operator.code) }}">{{ icon('settings') }} Configuração</a>
+          <a class="automation-action" href="{{ url_for('admin.automation_runs', operador=operator.code) }}">{{ icon('clock') }} Histórico</a>
+          {% if can_manage and operator.enabled %}<form method="post" action="{{ url_for('admin.automation_execute', code=operator.code) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="automation-button">{{ icon('play') }} Executar</button></form>{% endif %}
+        </div>
+        <small>v{{ spec.version }}</small>
       </div>
     </section>
     {% endfor %}
   </div>
-  <h2>Actividade recente</h2>
+  <div class="automation-section-head"><div><h2>Actividade recente</h2><p>Últimas execuções registadas no sistema.</p></div><a class="automation-text-link" href="{{ url_for('admin.automation_runs') }}">Ver histórico completo {{ icon('arrow') }}</a></div>
   <div class="admin-panel automation-table">{% include 'admin/automation/run_rows.html' %}</div>
 {% endblock %}

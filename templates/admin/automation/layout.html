@@ -1,11 +1,15 @@
 {% extends 'admin/base.html' %}
-{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-automation.css') }}">{% endblock %}
+{% from 'admin/automation/_ui.html' import icon %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-automation.css', v='20261127-layout') }}">{% endblock %}
 {% block content %}
 <div class="automation-page">
-  <nav class="automation-nav" aria-label="Navegação da automação">
-    <a href="{{ url_for('admin.automation_dashboard') }}">Visão geral e operadores</a>
-    <a href="{{ url_for('admin.automation_runs') }}">Execuções</a>
-    <a href="{{ url_for('admin.automation_alerts') }}">Alertas</a>
+  <nav class="automation-nav automation-tabs" aria-label="Navegação da automação">
+    {% for endpoint, label, symbol, active in [
+      ('admin.automation_dashboard','Visão geral e operadores','overview', request.endpoint in ['admin.automation_dashboard','admin.automation_operator']),
+      ('admin.automation_runs','Execuções','running', request.endpoint in ['admin.automation_runs','admin.automation_run_detail']),
+      ('admin.automation_alerts','Alertas','alert',request.endpoint == 'admin.automation_alerts')] %}
+      <a href="{{ url_for(endpoint) }}"{% if active %} aria-current="{{ 'page' if request.endpoint == endpoint else 'location' }}"{% endif %}>{{ icon(symbol) }}<span>{{ label }}</span></a>
+    {% endfor %}
   </nav>
   {% block automation_content %}{% endblock %}
 </div>

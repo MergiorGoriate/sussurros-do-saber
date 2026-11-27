@@ -1,6 +1,6 @@
 {% extends 'admin/automation/layout.html' %}
 {% block automation_content %}
-<h1>{{ registry[operator.code].name }}</h1><p>{{ registry[operator.code].description }}</p>
+<header class="automation-heading"><h1>{{ registry[operator.code].name }}</h1><p>{{ registry[operator.code].description }}</p></header>
 <form method="post" class="admin-panel automation-config">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <fieldset {% if not can_manage %}disabled{% endif %}>
