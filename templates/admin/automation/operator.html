@@ -1,20 +1,54 @@
 {% extends 'admin/automation/layout.html' %}
+{% from 'admin/automation/_ui.html' import icon, datetime_utc %}
 {% block automation_content %}
-<header class="automation-heading"><h1>{{ registry[operator.code].name }}</h1><p>{{ registry[operator.code].description }}</p></header>
-<form method="post" class="admin-panel automation-config">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<fieldset {% if not can_manage %}disabled{% endif %}>
-<label><input type="checkbox" name="enabled" value="yes" {{ 'checked' if operator.enabled }}> Operador activo</label>
-<label><input type="checkbox" name="notify" value="yes" {{ 'checked' if operator.notify }}> Notificar administradores principais (crítico e alto)</label>
-<label>Intervalo (minutos)<input name="interval" type="number" min="15" max="10080" required value="{{ operator.interval_minutes }}"></label>
-<label>Retenção do histórico (dias)<input name="retention" type="number" min="7" max="365" required value="{{ operator.retention_days }}"></label>
-{% for key, value in operator.settings.items() %}
-{% if key == 'paths' %}<fieldset><legend>Páginas públicas seleccionadas (até 6)</legend>{% for path in seo_paths %}<label><input type="checkbox" name="paths" value="{{ path }}" {{ 'checked' if path in value }}> {{ path }}</label>{% endfor %}</fieldset>
-{% elif key == 'topics' %}<fieldset><legend>Áreas e palavras-chave científicas (até 4)</legend>{% for topic, terms in research_topics.items() %}<label><input type="checkbox" name="topics" value="{{ topic }}" {{ 'checked' if topic in value }}> {{ topic }} · {{ terms }}</label>{% endfor %}</fieldset>
-{% else %}{% set limits = {'batch':(1,40,'Registos por tipo'),'timeout':(2,8,'Timeout HTTP (segundos)'),'days':(1,30,'Período de publicações (dias)'),'age_days':(1,60,'Prazo editorial (dias)'),'backup_age_days':(1,60,'Idade máxima do relatório de restauro (dias)')} %}
-{% set limit = limits[key] %}<label>{{ limit[2] }}<input name="{{ key }}" type="number" min="{{ limit[0] }}" max="{{ limit[1] }}" required value="{{ value }}"></label>
-{% endif %}{% endfor %}
-{% if can_manage %}<button class="automation-button">Guardar configuração</button>{% endif %}
-</fieldset></form>
-<p>As execuções já em curso terminam normalmente após desactivação. Os relatórios são de leitura.</p>
+<header class="automation-subhero">
+  <div class="automation-subhero-title"><span class="automation-card-icon">{{ icon(operator.code) }}</span><div><span class="automation-kicker">Operadores / Configuração</span><h1>{{ registry[operator.code].name }}</h1><p>{{ registry[operator.code].description }}</p></div></div>
+  <a class="automation-action" href="{{ url_for('admin.automation_dashboard') }}">{{ icon('back') }} Operadores</a>
+</header>
+<div class="automation-workspace">
+  <form method="post" class="admin-panel automation-config">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset class="automation-config-fields" {% if not can_manage %}disabled{% endif %}>
+      <section class="automation-config-section">
+        <div class="automation-section-head"><div><h2>{{ icon('settings') }} Preferências operacionais</h2><p>Defina a activação e as notificações do operador.</p></div></div>
+        <label class="automation-switch-row"><span><strong>Operador activo</strong><small>Permite o agendamento de novas execuções.</small></span><input type="checkbox" name="enabled" value="yes"{% if operator.enabled %} checked{% endif %}></label>
+        <label class="automation-switch-row"><span><strong>Notificar administradores principais (crítico e alto)</strong><small>Envia notificações para alertas de maior gravidade.</small></span><input type="checkbox" name="notify" value="yes"{% if operator.notify %} checked{% endif %}></label>
+      </section>
+      <section class="automation-config-section">
+        <div class="automation-section-head"><div><h2>{{ icon('clock') }} Agendamento e retenção</h2><p>Defina a frequência e o tempo de conservação dos registos.</p></div></div>
+        <div class="automation-field-grid">
+          <label>Intervalo (minutos)<input name="interval" type="number" min="15" max="10080" required value="{{ operator.interval_minutes }}"><small>Entre 15 e 10 080 minutos.</small></label>
+          <label>Retenção do histórico (dias)<input name="retention" type="number" min="7" max="365" required value="{{ operator.retention_days }}"><small>Entre 7 e 365 dias.</small></label>
+        </div>
+      </section>
+      <section class="automation-config-section">
+        <div class="automation-section-head"><div><h2>{{ icon(operator.code) }} Parâmetros do operador</h2><p>Ajuste os limites e o âmbito da tarefa.</p></div></div>
+        {% for key, value in operator.settings.items() %}
+          {% if key == 'paths' %}<fieldset class="automation-choice-field"><legend>Páginas públicas seleccionadas (até 6)</legend><div class="automation-choice-grid">{% for path in seo_paths %}<label class="automation-choice"><input type="checkbox" name="paths" value="{{ path }}"{% if path in value %} checked{% endif %}><span>{{ path }}</span></label>{% endfor %}</div></fieldset>
+          {% elif key == 'topics' %}<fieldset class="automation-choice-field"><legend>Áreas e palavras-chave científicas (até 4)</legend><div class="automation-choice-grid">{% for topic, terms in research_topics.items() %}<label class="automation-choice"><input type="checkbox" name="topics" value="{{ topic }}"{% if topic in value %} checked{% endif %}><span>{{ topic }}<small>{{ terms }}</small></span></label>{% endfor %}</div></fieldset>
+          {% endif %}
+        {% endfor %}
+        <div class="automation-field-grid">
+        {% set limits = {'batch':(1,40,'Registos por tipo'),'timeout':(2,8,'Timeout HTTP (segundos)'),'days':(1,30,'Período de publicações (dias)'),'age_days':(1,60,'Prazo editorial (dias)'),'backup_age_days':(1,60,'Idade máxima do relatório de restauro (dias)')} %}
+        {% for key,value in operator.settings.items() if key in limits %}{% set limit = limits[key] %}<label>{{ limit[2] }}<input name="{{ key }}" type="number" min="{{ limit[0] }}" max="{{ limit[1] }}" required value="{{ value }}"><small>Entre {{ limit[0] }} e {{ limit[1] }}.</small></label>{% endfor %}
+        </div>
+      </section>
+      {% if can_manage %}<div class="automation-form-footer"><a class="automation-action" href="{{ url_for('admin.automation_dashboard') }}">Voltar</a><button class="automation-button">{{ icon('check') }} Guardar configuração</button></div>{% endif %}
+    </fieldset>
+  </form>
+  <aside class="automation-aside">
+    <section class="admin-panel automation-side-panel">
+      <h2>Estado actual</h2>
+      <span class="automation-badge" data-state="{{ 'success' if operator.enabled else 'inactive' }}">{{ 'Activo' if operator.enabled else 'Inactivo' }}</span>
+      <dl class="automation-side-data">
+        <div><dt>Versão do operador</dt><dd>{{ registry[operator.code].version }}</dd></div>
+        <div><dt>Próxima execução (UTC)</dt><dd>{{ datetime_utc(operator.next_run_at) }}</dd></div>
+        <div><dt>Intervalo guardado</dt><dd>{{ operator.interval_minutes }} min</dd></div>
+        <div><dt>Retenção guardada</dt><dd>{{ operator.retention_days }} dias</dd></div>
+      </dl>
+      <a class="automation-action" href="{{ url_for('admin.automation_runs', operador=operator.code) }}">{{ icon('clock') }} Ver histórico {{ icon('arrow') }}</a>
+    </section>
+    <section class="admin-panel automation-side-panel"><h2>Informação operacional</h2><p>As execuções já em curso terminam normalmente após desactivação. Os relatórios são de leitura.</p>{% if not can_manage %}<p>O seu perfil tem acesso de leitura. Apenas utilizadores autorizados podem alterar a configuração.</p>{% endif %}</section>
+  </aside>
+</div>
 {% endblock %}

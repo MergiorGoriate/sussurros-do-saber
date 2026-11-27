@@ -1,3 +1,9 @@
-{% from 'admin/automation/_ui.html' import run_status %}
-<table><thead><tr><th>Execução</th><th>Operador</th><th>Estado</th><th>Solicitada (UTC)</th><th>Duração</th></tr></thead>
-<tbody>{% for run in recent %}<tr><td><a class="automation-text-link" href="{{ url_for('admin.automation_run_detail', ident=run.id) }}">#{{ run.id }}</a></td><td>{{ registry[run.operator_code].name }}</td><td>{{ run_status(run.status) }}</td><td>{{ run.queued_at.strftime('%d/%m/%Y %H:%M') }}</td><td>{{ (run.duration_ms|string ~ ' ms') if run.duration_ms is not none else '—' }}</td></tr>{% else %}<tr><td class="automation-empty" colspan="5">Ainda não existem execuções.</td></tr>{% endfor %}</tbody></table>
+{% from 'admin/automation/_ui.html' import icon, run_status, empty_state, datetime_utc %}
+<table class="automation-run-table" role="table"><thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Execução</th><th scope="col" role="columnheader">Operador</th><th scope="col" role="columnheader">Estado</th><th scope="col" role="columnheader">Solicitada (UTC)</th><th scope="col" role="columnheader">Duração</th></tr></thead>
+<tbody role="rowgroup">{% for run in recent %}<tr role="row">
+  <td role="cell" data-label="Execução"><a class="automation-text-link" href="{{ url_for('admin.automation_run_detail', ident=run.id) }}">#{{ run.id }} {{ icon('arrow') }}</a></td>
+  <td role="cell" data-label="Operador"><span class="automation-run-operator"><span class="automation-card-icon">{{ icon(run.operator_code) }}</span>{{ registry[run.operator_code].name }}</span></td>
+  <td role="cell" data-label="Estado">{{ run_status(run.status) }}</td>
+  <td role="cell" data-label="Solicitada (UTC)">{{ datetime_utc(run.queued_at) }}</td>
+  <td role="cell" data-label="Duração">{{ (run.duration_ms|string ~ ' ms') if run.duration_ms is not none else '—' }}</td>
+</tr>{% else %}<tr role="row"><td role="cell" class="automation-empty" colspan="5">{{ empty_state('running','Ainda não existem execuções.','Os registos aparecem aqui quando forem solicitadas tarefas.') }}</td></tr>{% endfor %}</tbody></table>

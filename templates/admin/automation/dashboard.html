@@ -64,5 +64,5 @@
     {% endfor %}
   </div>
   <div class="automation-section-head"><div><h2>Actividade recente</h2><p>Últimas execuções registadas no sistema.</p></div><a class="automation-text-link" href="{{ url_for('admin.automation_runs') }}">Ver histórico completo {{ icon('arrow') }}</a></div>
-  <div class="admin-panel automation-table">{% include 'admin/automation/run_rows.html' %}</div>
+  <div class="admin-panel automation-table" role="region" aria-label="Tabela de actividade recente" tabindex="0">{% include 'admin/automation/run_rows.html' %}</div>
 {% endblock %}

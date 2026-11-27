@@ -12,13 +12,42 @@
   {% elif name == 'seo' %}<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M8 10.5l2 2 3-4"/>
   {% elif name == 'settings' %}<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.5" fill="var(--auto-surface, white)"/><circle cx="15" cy="17" r="2.5" fill="var(--auto-surface, white)"/>
   {% elif name == 'play' %}<path d="m8 4 13 8-13 8z"/>
+  {% elif name == 'back' %}<path d="M19 12H5m6-6-6 6 6 6"/>
+  {% elif name == 'check' %}<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>
+  {% elif name == 'filter' %}<path d="M3 5h18l-7 8v6l-4 2v-8z"/>
+  {% elif name == 'refresh' %}<path d="M20 7v5h-5M4 17v-5h5M5 9a8 8 0 0 1 13-4l2 3M19 15a8 8 0 0 1-13 4l-2-3"/>
   {% elif name == 'arrow' %}<path d="M5 12h14m-6-6 6 6-6 6"/>
   {% endif %}
 </svg>
 {%- endmacro %}
 {% macro run_status(status) -%}
-<span class="automation-badge" data-state="{{ status }}">{{ {'success':'Bem-sucedida','warning':'Com observações','failed':'Falhada','queued':'Em espera','running':'Em execução'}.get(status, status) }}</span>
+<span class="automation-badge" data-state="{{ status }}">{{ {'success':'Bem-sucedida','warning':'Com observações','failed':'Falhada','queued':'Em espera','running':'Em execução','cancelled':'Cancelada'}.get(status, status) }}</span>
 {%- endmacro %}
 {% macro severity_badge(severity) -%}
 <span class="automation-badge" data-state="{{ severity|lower }}">{{ {'CRITICAL':'Crítico','HIGH':'Alto','MEDIUM':'Moderado','LOW':'Baixo','INFO':'Informativo'}.get(severity, severity) }}</span>
+{%- endmacro %}
+
+{% macro empty_state(symbol, title, description) -%}
+<div class="automation-empty-state">{{ icon(symbol) }}<strong>{{ title }}</strong><p>{{ description }}</p></div>
+{%- endmacro %}
+{% macro pagination(page, prev_url, next_url) -%}
+{% if page.pages > 1 or page.has_prev %}
+<nav class="automation-pagination" aria-label="Paginação">
+  <span>Página {{ page.page }} de {{ page.pages or 1 }}</span>
+  <div class="automation-actions">
+    {% if page.has_prev %}<a class="automation-action" href="{{ prev_url }}">{{ icon('back') }} Anterior</a>{% endif %}
+    {% if page.has_next %}<a class="automation-action" href="{{ next_url }}">Seguinte {{ icon('arrow') }}</a>{% endif %}
+  </div>
+</nav>
+{% endif %}
+{%- endmacro %}
+{% macro datetime_utc(value) -%}
+{% if value %}<time datetime="{{ value.isoformat() }}Z">{{ value.strftime('%d/%m/%Y · %H:%M') }}</time>{% else %}—{% endif %}
+{%- endmacro %}
+{% macro result_value(value) -%}
+{% if value is mapping %}
+  {% if value %}<dl class="automation-result-nested">{% for key,item in value.items() %}<div><dt>{{ key|replace('_',' ') }}</dt><dd>{{ result_value(item) }}</dd></div>{% endfor %}</dl>{% else %}—{% endif %}
+{% elif value is sequence and value is not string %}
+  {% if value %}<ul class="automation-result-list">{% for item in value %}<li>{{ result_value(item) }}</li>{% endfor %}</ul>{% else %}—{% endif %}
+{% elif value is sameas true %}Sim{% elif value is sameas false %}Não{% elif value is none %}—{% else %}{{ value }}{% endif %}
 {%- endmacro %}

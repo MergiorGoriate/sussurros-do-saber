@@ -1,20 +1,46 @@
 {% extends 'admin/automation/layout.html' %}
-{% from 'admin/automation/_ui.html' import run_status, severity_badge %}
+{% from 'admin/automation/_ui.html' import icon, run_status, severity_badge, datetime_utc, result_value, empty_state %}
 {% block automation_content %}
-<header class="automation-heading"><h1>{{ registry[run.operator_code].name }} · Execução #{{ run.id }}</h1><p>{{ run_status(run.status) }}</p></header>
-<section class="admin-panel"><dl class="automation-details">
-{% for label, value in [('Estado',run.status),('Versão',run.version),('Origem',run.trigger),('Solicitada (UTC)',run.queued_at),('Início (UTC)',run.started_at),('Conclusão (UTC)',run.finished_at),('Duração (ms)',run.duration_ms)] %}
-<dt>{{ label }}</dt><dd>{{ value if value is not none else '—' }}</dd>{% endfor %}
-</dl>
-{% if run.status == 'queued' %}<p>A execução aguarda o próximo comando de tarefas do worker no servidor. Actualize a página para consultar o estado.</p>{% endif %}
-{% if run.error %}<p role="alert">{{ run.error }}</p>{% endif %}
-{% if run.result.truncated %}<p>O relatório atingiu um limite de processamento. Os resultados podem ser parciais.</p>{% endif %}
-<h2>Indicadores</h2><dl class="automation-details">
-{% for key, value in run.result.items() if key not in ['findings','records','next_cursor','truncated'] %}<dt>{{ key|replace('_',' ') }}</dt><dd>{{ value }}</dd>{% else %}<dt>Relatório</dt><dd>Sem indicadores disponíveis.</dd>{% endfor %}
-</dl></section>
-<h2>Problemas e recomendações</h2>
-<section class="admin-panel automation-table"><table><thead><tr><th>Gravidade</th><th>Referência</th><th>Problema</th><th>Recomendação</th></tr></thead><tbody>
-{% for issue in run.result.findings or [] %}<tr><td class="automation-severity">{{ severity_badge(issue.severity) }}</td><td>{{ issue.subject }}</td><td>{{ issue.description }}</td><td>{{ issue.recommendation }}</td></tr>{% else %}<tr><td colspan="4">Nenhuma observação registada.</td></tr>{% endfor %}</tbody></table></section>
-{% if run.operator_code == 'research' %}<h2>Publicações encontradas</h2><section class="admin-panel"><p>Metadados da Crossref para revisão humana. A lista não comprova a validade científica dos estudos.</p>
-{% for record in run.result.records or [] %}<article class="automation-record"><h3><a href="{{ record.url }}" target="_blank" rel="noopener noreferrer">{{ record.title }}</a></h3><p>{{ record.authors|join(', ') }} · {{ record.published or 'Data indisponível' }}</p><p>{{ record.doi }} · {{ record.source }} · Tema sugerido: {{ record.topic }}</p></article>{% else %}<p>Nenhuma publicação nova nesta execução.</p>{% endfor %}</section>{% endif %}
+<header class="automation-subhero">
+  <div class="automation-subhero-title"><span class="automation-card-icon">{{ icon(run.operator_code) }}</span><div><span class="automation-kicker">Execuções / Relatório #{{ run.id }}</span><h1>{{ registry[run.operator_code].name }} · Execução #{{ run.id }}</h1><div class="automation-report-status">{{ run_status(run.status) }} <span>Versão {{ run.version }}</span></div></div></div>
+  <div class="automation-actions"><a class="automation-action" href="{{ url_for('admin.automation_runs', operador=run.operator_code) }}">{{ icon('back') }} Histórico</a><a class="automation-action" href="{{ url_for('admin.automation_run_detail', ident=run.id) }}">{{ icon('refresh') }} Actualizar</a></div>
+</header>
+{% if run.status == 'queued' %}<div class="automation-callout">{{ icon('clock') }}<p>A execução aguarda o próximo comando de tarefas do worker no servidor. Actualize a página para consultar o estado.</p></div>{% endif %}
+{% if run.error %}<div class="automation-callout is-danger" role="alert">{{ icon('alert') }}<p>{{ run.error }}</p></div>{% endif %}
+{% if run.result.truncated %}<div class="automation-callout is-warning">{{ icon('alert') }}<p>O relatório atingiu um limite de processamento. Os resultados podem ser parciais.</p></div>{% endif %}
+<div class="automation-report-split">
+  <section class="admin-panel automation-side-panel">
+    <h2>{{ icon('clock') }} Cronologia da execução</h2>
+    <ol class="automation-timeline">
+    {% for label,value in [('Solicitada',run.queued_at),('Início',run.started_at),('Conclusão',run.finished_at)] %}
+      <li{% if value %} class="is-recorded"{% endif %}><span>{{ label }} (UTC)</span><strong>{{ datetime_utc(value) }}</strong></li>
+    {% endfor %}
+    </ol>
+    <dl class="automation-side-data"><div><dt>Origem</dt><dd>{{ {'manual':'Manual','scheduled':'Agendada','schedule':'Agendada'}.get(run.trigger,run.trigger) }}</dd></div><div><dt>Duração</dt><dd>{{ (run.duration_ms|string ~ ' ms') if run.duration_ms is not none else '—' }}</dd></div></dl>
+  </section>
+  <section class="admin-panel automation-side-panel">
+    <h2>{{ icon('running') }} Indicadores do relatório</h2>
+    <dl class="automation-result-grid">
+      {% for key,value in run.result.items() if key not in ['findings','records','next_cursor','truncated'] %}<div><dt>{{ key|replace('_',' ') }}</dt><dd>{{ result_value(value) }}</dd></div>{% else %}<div class="automation-result-empty"><dt>Relatório</dt><dd>Sem indicadores disponíveis.</dd></div>{% endfor %}
+    </dl>
+  </section>
+</div>
+<section class="admin-panel automation-list-panel">
+  <div class="automation-list-toolbar"><div><h2>Problemas e recomendações <span class="automation-count">{{ (run.result.findings or [])|length }}</span></h2><p>Observações registadas nesta execução.</p></div></div>
+  <div class="automation-findings">
+  {% for issue in run.result.findings or [] %}
+    <article class="automation-finding"><div class="automation-alert-meta">{{ severity_badge(issue.severity) }}<span>{{ issue.subject }}</span></div><h3>{{ issue.description }}</h3>{% if issue.recommendation %}<div class="automation-recommendation"><strong>Recomendação</strong><p>{{ issue.recommendation }}</p></div>{% endif %}</article>
+  {% else %}{% if run.status in ['queued','running','cancelled','failed'] %}{{ empty_state('running','Nenhuma observação disponível.','A ausência de observações não confirma que as verificações foram concluídas.') }}{% else %}{{ empty_state('check','Nenhuma observação registada.','O relatório não contém problemas ou recomendações neste momento.') }}{% endif %}{% endfor %}
+  </div>
+</section>
+{% if run.operator_code == 'research' %}
+<section class="admin-panel automation-list-panel">
+  <div class="automation-list-toolbar"><div><h2>Publicações encontradas <span class="automation-count">{{ (run.result.records or [])|length }}</span></h2><p>Metadados da Crossref para revisão humana. A lista não comprova a validade científica dos estudos.</p></div></div>
+  <div class="automation-findings">
+  {% for record in run.result.records or [] %}
+    <article class="automation-finding"><div class="automation-alert-meta"><span>{{ record.topic }}</span><span>·</span><span>{{ record.published or 'Data indisponível' }}</span></div><h3><a class="automation-text-link" href="{{ record.url }}" target="_blank" rel="noopener noreferrer">{{ record.title }} {{ icon('arrow') }}</a></h3><p>{{ record.authors|join(', ') }}</p><p>{{ record.doi }} · {{ record.source }}</p></article>
+  {% else %}{{ empty_state('research','Nenhuma publicação nova nesta execução.','Os resultados bibliográficos aparecem aqui após a recolha.') }}{% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}
