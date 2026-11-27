@@ -60,6 +60,9 @@
           {% if source.label %}<span class="news-reference-links"><a href="{{ source.url }}" rel="external noopener" target="_blank">{{ ui('Consultar fonte') }}</a></span>
           {% else %}<a href="{{ source.url }}" rel="external noopener" target="_blank">{{ source.url }}</a>{% endif %}
         {% endif %}
+        {% for link in source.links or [] %}
+          <span class="news-reference-links"><a href="{{ link.url }}" rel="external noopener" target="_blank">{{ link.label or link.url }}</a></span>
+        {% endfor %}
       </li>
       {% endfor %}
     </ol>

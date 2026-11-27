@@ -460,6 +460,62 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertIn('Bloomberg', entry.text)
         self.assertEqual(entry.select_one('a')['href'], item.sources[0]['url'])
 
+    def test_markdown_bibliography_with_anchors_multiple_links_and_credits(self):
+        from news_admin import parse_news_sources, format_news_sources
+        self.auth()
+        sources = """## Referências
+<a id="ref-1"></a>
+
+1. Autor de teste (2026). *Revista de teste*. [https://doi.org/10.1234/teste](https://doi.org/10.1234/teste).
+
+<a id="ref-2"></a>
+2. Outro autor (2026). *Revista de teste*. [DOI](https://doi.org/10.1234/outro). [Texto integral](https://example.org/texto).
+
+## Créditos e licenças das imagens
+As imagens remetem para a origem.
+
+<a id="imagem-1"></a>
+- **Figura 1:** Autor. *Fotografia de ensaio*. [Wikimedia Commons](https://example.org/image). [Licença](https://example.org/license).
+"""
+        self.assertEqual(self.post('/admin/noticias/nova', **self.form(sources_text=sources)).status_code, 303)
+        item = NewsVersion.query.filter_by(title='Ensaio ' + self.token).one()
+        self.assertEqual(len(item.sources), 3)
+        self.assertEqual(item.sources[0]['url'], 'https://doi.org/10.1234/teste')
+        self.assertIn('Revista de teste', item.sources[0]['label'])
+        self.assertEqual(item.sources[1]['links'], [{'label':'Texto integral','url':'https://example.org/texto'}])
+        self.assertEqual(item.sources[2]['links'], [{'label':'Licença','url':'https://example.org/license'}])
+        self.assertIn('Figura 1:', item.sources[2]['label'])
+        editor = self.soup('/admin/noticias/' + str(item.id))
+        self.assertEqual(parse_news_sources(editor.select_one('#news-sources-text').text), item.sources)
+        self.assertEqual(parse_news_sources(format_news_sources(item.sources)), item.sources)
+        self.assertEqual(self.action(item, 'publish').status_code, 303)
+        entries = self.soup('/noticias/' + item.slug).select('.news-reference-list > li')
+        self.assertEqual(len(entries), 3)
+        self.assertEqual([a['href'] for a in entries[1].select('a')],
+                         ['https://doi.org/10.1234/outro', 'https://example.org/texto'])
+        self.assertEqual([a['href'] for a in entries[2].select('a')],
+                         ['https://example.org/image', 'https://example.org/license'])
+
+    def test_escaped_markdown_bibliography_and_line_specific_errors(self):
+        from news_admin import parse_news_sources
+        escaped = r"""\<a id="ref-1">\</a>
+\
+1\. Autor (2026). \*Revista\*. [https\://doi.org/10.1234/teste]\(https\://doi.org/10.1234/teste).
+"""
+        self.assertEqual(parse_news_sources(escaped)[0]['url'], 'https://doi.org/10.1234/teste')
+        self.auth()
+        response = self.post('/admin/noticias/nova', **self.form(sources_text='## Referências\n1. Fonte [Texto](http://example.org/teste)'))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Fontes, linha 2', response.get_data(as_text=True))
+        response = self.post('/admin/noticias/nova', **self.form(
+            sources_text='Ensaio [Fonte](https://example.org/teste) [Complemento](http://example.org/outro)'))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Fontes, linha 1', response.get_data(as_text=True))
+        self.assertEqual(len(parse_news_sources('\n'.join(
+            f'<a id="ref-{i}"></a>\n{i}. Referência de teste {i}' for i in range(1,41)))), 40)
+        with self.assertRaisesRegex(ValueError, '40 referências'):
+            parse_news_sources('\n'.join(f'{i}. Referência de teste {i}' for i in range(1,42)))
+
     def test_insecure_reference_urls_still_rejected(self):
         self.auth()
         for unsafe in ('http://example.org/source',
