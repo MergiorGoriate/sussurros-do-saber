@@ -68,6 +68,36 @@ class AutomationTests(unittest.TestCase):
             self.assertEqual(self.post(f'/admin/automacao/alertas/{ident}/resolver').status_code, 303)
             self.assertIsNotNone(db.session.get(AutomationAlert, ident).resolved_at)
 
+    def test_admin_report_and_alert_layout_with_synthetic_results(self):
+        self.signin(self.primary)
+        run = AutomationRun(operator_code='research', trigger='manual', version='1.0',
+                            status='warning', queued_at=utcnow(), result={
+            'pending': {'artigos': 2}, 'topics_checked': ['astronomia'], 'duplicates': 0,
+            'findings': [{'severity': 'HIGH', 'subject': 'Ensaio', 'description': 'Observação de teste',
+                          'recommendation': 'Revisão humana de teste'}],
+            'records': [{'title': 'Publicação de teste', 'url': 'https://example.org/fixture',
+                         'authors': ['Autor de teste'], 'doi': '10.1234/fixture', 'source': 'Crossref',
+                         'topic': 'astronomia', 'published': '2026-11-26'}],
+        })
+        alert = AutomationAlert(operator_code='research', fingerprint='fixture-layout',
+                                severity='HIGH', description='Alerta de teste',
+                                subject='Ensaio', recommendation='Rever o registo')
+        db.session.add_all([run, alert])
+        db.session.commit()
+        ident = alert.id
+        response = self.client.get(f'/admin/automacao/execucoes/{run.id}')
+        self.assertEqual(response.status_code, 200)
+        for label in ['Cronologia da execução', 'artigos', 'Observação de teste',
+                      'Publicação de teste', 'https://example.org/fixture']:
+            self.assertIn(label, response.get_data(as_text=True))
+        response = self.client.get('/admin/automacao/alertas')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Alerta de teste', response.get_data(as_text=True))
+        self.assertIn('Marcar resolvido', response.get_data(as_text=True))
+        self.assertEqual(self.post(f'/admin/automacao/alertas/{ident}/resolver').status_code, 303)
+        self.assertNotIn('Alerta de teste', self.client.get('/admin/automacao/alertas').get_data(as_text=True))
+        self.assertIn('Alerta de teste', self.client.get('/admin/automacao/alertas?estado=resolvidos').get_data(as_text=True))
+
     def test_one_active_run_schedule_timeout_and_retention(self):
         operator = self.enable('workflow')
         operator.next_run_at = utcnow() - timedelta(minutes=1)

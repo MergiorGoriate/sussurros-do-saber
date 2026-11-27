@@ -1,11 +1,32 @@
 {% extends 'admin/automation/layout.html' %}
+{% from 'admin/automation/_ui.html' import icon, severity_badge, empty_state, pagination, datetime_utc %}
 {% block automation_content %}
-<h1>Alertas da automação</h1>
-<nav class="automation-nav"><a href="{{ url_for('admin.automation_alerts') }}">Activos</a><a href="{{ url_for('admin.automation_alerts', estado='resolvidos') }}">Resolvidos</a></nav>
-<div class="admin-panel automation-table"><table><thead><tr><th>Gravidade</th><th>Origem</th><th>Última detecção (UTC)</th><th>Observação</th><th>Acção</th></tr></thead><tbody>
-{% for alert in page.items %}<tr><td class="automation-severity">{{ alert.severity }}</td><td>{{ registry[alert.operator_code].name }} · {{ alert.subject }}</td><td>{{ alert.last_seen }} · {{ alert.occurrences }} ocorrências</td><td>{{ alert.description }}<p>{{ alert.recommendation }}</p></td>
-<td>{% if can_manage and not alert.resolved_at %}<form method="post" action="{{ url_for('admin.automation_resolve', ident=alert.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="automation-button">Marcar resolvido</button></form>{% else %}{{ 'Resolvido' if alert.resolved_at else 'Activo' }}{% endif %}</td></tr>
-{% else %}<tr><td colspan="5">Nenhum alerta nesta vista.</td></tr>{% endfor %}
-</tbody></table></div>
-<nav class="automation-nav">{% if page.has_prev %}<a href="{{ url_for('admin.automation_alerts', estado='resolvidos' if resolved else 'activos', page=page.prev_num) }}">Anterior</a>{% endif %}{% if page.has_next %}<a href="{{ url_for('admin.automation_alerts', estado='resolvidos' if resolved else 'activos', page=page.next_num) }}">Seguinte</a>{% endif %}</nav>
+<header class="automation-subhero">
+  <div class="automation-subhero-title"><span class="automation-card-icon">{{ icon('alert') }}</span><div><span class="automation-kicker">Centro de operações / Alertas</span><h1>Alertas da automação</h1><p>Consulte as ocorrências detectadas e acompanhe a sua resolução.</p></div></div>
+  <a class="automation-action" href="{{ url_for('admin.automation_alerts', estado='resolvidos' if resolved else 'activos', page=page.page) }}">{{ icon('refresh') }} Actualizar</a>
+</header>
+<section class="admin-panel automation-list-panel">
+  <div class="automation-list-toolbar">
+    <div><h2>{{ 'Alertas resolvidos' if resolved else 'Alertas activos' }} <span class="automation-count">{{ page.total }}</span></h2><p>{{ 'Histórico das ocorrências resolvidas.' if resolved else 'Ocorrências que aguardam acompanhamento.' }}</p></div>
+    <nav class="automation-nav automation-tabs" aria-label="Estado dos alertas"><a href="{{ url_for('admin.automation_alerts') }}"{% if not resolved %} aria-current="page"{% endif %}>{{ icon('alert') }} Activos</a><a href="{{ url_for('admin.automation_alerts', estado='resolvidos') }}"{% if resolved %} aria-current="page"{% endif %}>{{ icon('check') }} Resolvidos</a></nav>
+  </div>
+  <div class="automation-alert-list">
+  {% for alert in page.items %}
+    <article class="automation-alert-item" data-severity="{{ alert.severity|lower }}">
+      <div class="automation-alert-main">
+        <div class="automation-alert-meta">{{ severity_badge(alert.severity) }} <span>{{ registry[alert.operator_code].name }}</span><span>·</span><span>{{ alert.occurrences }} ocorrência{{ 's' if alert.occurrences != 1 else '' }}</span></div>
+        <h3>{{ alert.description }}</h3><p class="automation-alert-subject">{{ alert.subject }}</p>
+        {% if alert.recommendation %}<div class="automation-recommendation"><strong>Recomendação</strong><p>{{ alert.recommendation }}</p></div>{% endif %}
+      </div>
+      <div class="automation-alert-side"><dl><dt>Última detecção (UTC)</dt><dd>{{ datetime_utc(alert.last_seen) }}</dd>
+        {% if alert.resolved_at %}<dt>Resolução (UTC)</dt><dd>{{ datetime_utc(alert.resolved_at) }}</dd>{% endif %}</dl>
+        {% if can_manage and not alert.resolved_at %}<form method="post" action="{{ url_for('admin.automation_resolve', ident=alert.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="automation-button">{{ icon('check') }} Marcar resolvido</button></form>{% else %}<span class="automation-badge" data-state="{{ 'success' if alert.resolved_at else 'inactive' }}">{{ 'Resolvido' if alert.resolved_at else 'Activo' }}</span>{% endif %}
+      </div>
+    </article>
+  {% else %}
+    {{ empty_state('alert','Nenhum alerta nesta vista.','Não existem ocorrências registadas com o estado seleccionado.') }}
+  {% endfor %}
+  </div>
+  {{ pagination(page, url_for('admin.automation_alerts', estado='resolvidos' if resolved else 'activos', page=page.prev_num or 1), url_for('admin.automation_alerts', estado='resolvidos' if resolved else 'activos', page=page.next_num or 1)) }}
+</section>
 {% endblock %}

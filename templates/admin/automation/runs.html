@@ -1,7 +1,20 @@
 {% extends 'admin/automation/layout.html' %}
+{% from 'admin/automation/_ui.html' import icon, pagination %}
 {% block automation_content %}
-<h1>Histórico de execuções</h1>
-<form method="get" class="automation-actions"><label>Operador<select name="operador"><option value="">Todos</option>{% for code, spec in registry.items() %}<option value="{{ code }}" {{ 'selected' if selected == code }}>{{ spec.name }}</option>{% endfor %}</select></label><button class="automation-button">Filtrar</button></form>
-<div class="admin-panel automation-table">{% set recent = page.items %}{% include 'admin/automation/run_rows.html' %}</div>
-<nav class="automation-nav">{% if page.has_prev %}<a href="{{ url_for('admin.automation_runs', operador=selected, page=page.prev_num) }}">Anterior</a>{% endif %}{% if page.has_next %}<a href="{{ url_for('admin.automation_runs', operador=selected, page=page.next_num) }}">Seguinte</a>{% endif %}</nav>
+<header class="automation-subhero">
+  <div class="automation-subhero-title"><span class="automation-card-icon">{{ icon('running') }}</span><div><span class="automation-kicker">Centro de operações / Execuções</span><h1>Histórico de execuções</h1><p>Consulte os resultados e o estado das tarefas dos operadores.</p></div></div>
+  <a class="automation-action" href="{{ url_for('admin.automation_runs', operador=selected, page=page.page) }}">{{ icon('refresh') }} Actualizar</a>
+</header>
+<section class="admin-panel automation-list-panel">
+  <div class="automation-list-toolbar">
+    <div><h2>Execuções registadas <span class="automation-count">{{ page.total }}</span></h2><p>{{ registry[selected].name if selected else 'Todos os operadores' }}</p></div>
+    <form method="get" class="automation-filter automation-actions">
+      <label>Operador<select name="operador"><option value="">Todos os operadores</option>{% for code, spec in registry.items() %}<option value="{{ code }}"{% if selected == code %} selected{% endif %}>{{ spec.name }}</option>{% endfor %}</select></label>
+      <button class="automation-button">{{ icon('filter') }} Filtrar</button>
+      {% if selected %}<a class="automation-action" href="{{ url_for('admin.automation_runs') }}">Limpar</a>{% endif %}
+    </form>
+  </div>
+  <div class="automation-table" role="region" aria-label="Tabela de execuções" tabindex="0">{% set recent = page.items %}{% include 'admin/automation/run_rows.html' %}</div>
+  {{ pagination(page, url_for('admin.automation_runs', operador=selected, page=page.prev_num or 1), url_for('admin.automation_runs', operador=selected, page=page.next_num or 1)) }}
+</section>
 {% endblock %}
