@@ -54,6 +54,32 @@ class HeadingRenderingTests(unittest.TestCase):
                          'ref-sec-introducao')
         self.assertIsNotNone(soup(first).find(id=soup(first).a['href'][1:]))
 
+    def test_numbered_bibliography_anchors_resolve_without_extra_headings(self):
+        calls = r'Texto \[[12](#ref-12), [13](#ref-13)\].'
+        references = ('<ol><li id="ref-12">Fonte A</li>'
+                      '<li id="ref-13">Fonte B</li></ol>')
+        for html in (render_article_markdown(calls + '\n\n' + references),
+                     str(render_article_markdown(calls)) +
+                     str(render_article_markdown(references, 'ref-sec'))):
+            result = soup(html)
+            for number in (12, 13):
+                link = result.select_one(f'a[href="#ref-{number}"]')
+                self.assertIsNotNone(link)
+                target = result.find(id=link['href'][1:])
+                self.assertIsNotNone(target)
+                self.assertEqual(target.name, 'li')
+                self.assertEqual(len(result.select(f'#ref-{number}')), 1)
+            self.assertFalse(result.select('h2, h3, h4, h5, h6'))
+
+    def test_bibliography_ids_are_restricted_to_numbered_article_list_items(self):
+        source = ('<ol><li id="ref-12" onclick="alert(1)">A</li>'
+                  '<li id="location">B</li><li id="ref-xyz">C</li>'
+                  '<li id="ref-0">D</li></ol><p id="ref-13">E</p>')
+        self.assertEqual([el['id'] for el in soup(render_article_markdown(source)).select('[id]')],
+                         ['ref-12'])
+        self.assertFalse(soup(render_article_markdown(source)).select('[onclick]'))
+        self.assertFalse(soup(render_markdown(source)).select('[id]'))
+
     def test_security_and_existing_content_features_survive(self):
         source = ('## <script>alert(1)</script>Título\n\n'
                   '<h3 id="location" onclick="alert(1)">HTML antigo</h3>\n\n'
