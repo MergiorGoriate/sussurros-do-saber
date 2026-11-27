@@ -28,7 +28,7 @@ def render_notes_markdown(source, *, strict_headings=False):
     rendered = renderer.convert(source)
     extension = next(item for item in renderer.registeredExtensions if isinstance(item,FootnoteExtension))
     info = dict(namespace=namespace, notes={extension.makeFootnoteId(label) for label in extension.footnotes},
-                refs=set(extension.used_refs))
+                refs=set(extension.used_refs), article=strict_headings)
     return rendered, info
 
 
@@ -38,6 +38,10 @@ def allowed_markdown_attribute(info, tag, name, value):
     if tag == 'img' and name in _IMAGE_ATTRIBUTES:
         return True
     if name == 'id':
+        # Preserve only numbered bibliography anchors in articles. Arbitrary
+        # author-supplied IDs remain disallowed, including on other elements.
+        if info.get('article') and tag == 'li' and re.fullmatch(r'ref-[1-9][0-9]{0,5}', value):
+            return True
         return (tag == 'li' and value in info['notes']) or (tag == 'sup' and value in info['refs'])
     if name == 'class':
         return (tag == 'div' and value == 'footnote' and bool(info['notes'])) or (
