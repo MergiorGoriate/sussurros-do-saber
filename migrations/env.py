@@ -14,6 +14,7 @@ import translation_models
 import indexnow_service
 import news_models
 import video_models
+import automation.models
 
 url = os.environ.get("DATABASE_URL", "")
 if not url:
