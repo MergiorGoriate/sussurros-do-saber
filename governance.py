@@ -16,6 +16,8 @@ public_team_bp = Blueprint('public_team', __name__)
 staff_bp.before_request(enforce_admin_authentication)
 staff_bp.after_request(protect_admin_responses)
 PERMISSIONS = {
+    'automation.read': 'Consultar relatórios e alertas da automação',
+    'automation.manage': 'Configurar e executar operadores de automação',
     'translations.manage': 'Gerir traduções, lotes e catálogo da interface',
     'translations.approve': 'Rever e aprovar traduções',
     'translations.publish': 'Publicar traduções previamente aprovadas',
@@ -100,7 +102,7 @@ def has_permission(permission, journal_id=None, *, member=None):
         # New accounts always receive an invited member record, with no automatic grants.
         if member is None:
             account=db.session.get(AdminUser,session.get('admin_id')) if session.get('admin_id') else None
-            return bool(account and account.active and not account.governance_managed) and not permission.startswith(('dissemination.','translations.')) and permission not in {'team.manage','manuscript.decide','manuscript.assign'}
+            return bool(account and account.active and not account.governance_managed) and not permission.startswith(('dissemination.','translations.','automation.')) and permission not in {'team.manage','manuscript.decide','manuscript.assign'}
     return any(permission in (a.role.permissions or []) and (a.journal_id is None or a.journal_id == journal_id)
                for a in mandates(member))
 

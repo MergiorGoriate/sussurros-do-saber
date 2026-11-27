@@ -1,0 +1,12 @@
+{% extends 'admin/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-automation.css') }}">{% endblock %}
+{% block content %}
+<div class="automation-page">
+  <nav class="automation-nav" aria-label="Navegação da automação">
+    <a href="{{ url_for('admin.automation_dashboard') }}">Visão geral e operadores</a>
+    <a href="{{ url_for('admin.automation_runs') }}">Execuções</a>
+    <a href="{{ url_for('admin.automation_alerts') }}">Alertas</a>
+  </nav>
+  {% block automation_content %}{% endblock %}
+</div>
+{% endblock %}

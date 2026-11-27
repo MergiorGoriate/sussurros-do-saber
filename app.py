@@ -129,6 +129,9 @@ from news import news_bp
 import news_admin  # Register the news routes on the existing admin blueprint.
 from videos import videos_bp
 import video_admin  # Register editorial routes on the existing admin blueprint.
+import automation.admin
+from automation.engine import install_cli as install_automation_cli
+install_automation_cli(app)
 app.register_blueprint(admin_bp)
 app.register_blueprint(news_bp)
 app.config["SCIENCE_VIDEO_SITE_URL"] = SITE_URL
@@ -1723,6 +1726,8 @@ def prepare_data_command():
 def prepare_initial_data():
     from governance import seed_roles
     seed_roles()
+    from automation.engine import seed_operators
+    seed_operators()
     # Keep the editorial category available on existing installations as well.
     if not Category.query.filter(db.or_(
         Category.name == "Biografia Científica",

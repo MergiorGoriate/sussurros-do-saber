@@ -1,0 +1,24 @@
+.automation-page { display:grid; gap:1.2rem; overflow-wrap:anywhere; }
+.automation-page h1 { margin-bottom:.4rem; font-size:clamp(1.6rem,3vw,2.3rem); }
+.automation-page h2 { margin:0; font-size:1.3rem; }
+.automation-nav,.automation-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.automation-nav a,.automation-actions a { text-decoration:underline; text-underline-offset:3px; }
+.automation-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:12px; }
+.automation-metrics dd { margin:6px 0 0; font-size:1.85rem; font-weight:700; }
+.automation-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:15px; }
+.automation-grid .admin-panel { display:grid; gap:10px; }
+.automation-grid dd { margin:2px 0 10px; }
+.automation-table { overflow-x:auto; }
+.automation-table table { width:100%; min-width:560px; }
+.automation-table td { vertical-align:top; }
+.automation-severity { font-weight:750; }
+.automation-button { background:#1e4e8c; color:white; border:0; border-radius:8px; padding:8px 15px; min-height:44px; cursor:pointer; }
+.automation-config fieldset { min-width:0; border:0; display:grid; gap:12px; }
+.automation-config fieldset fieldset { padding:12px; border:1px solid currentColor; border-radius:10px; }
+.automation-config label { display:block; }
+.automation-config input[type=checkbox] { width:auto; }
+.automation-config input[type=number] { display:block; max-width:180px; }
+.automation-details { display:grid; grid-template-columns:minmax(110px,1fr) minmax(0,2fr); gap:8px; }
+.automation-details dd { margin:0; }
+.automation-record { padding-block:12px; border-bottom:1px solid currentColor; }
+.automation-page :is(a,button,input,select):focus-visible { outline:2px solid currentColor; outline-offset:3px; }

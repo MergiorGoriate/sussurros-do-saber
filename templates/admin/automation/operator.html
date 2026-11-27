@@ -1,0 +1,20 @@
+{% extends 'admin/automation/layout.html' %}
+{% block automation_content %}
+<h1>{{ registry[operator.code].name }}</h1><p>{{ registry[operator.code].description }}</p>
+<form method="post" class="admin-panel automation-config">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<fieldset {% if not can_manage %}disabled{% endif %}>
+<label><input type="checkbox" name="enabled" value="yes" {{ 'checked' if operator.enabled }}> Operador activo</label>
+<label><input type="checkbox" name="notify" value="yes" {{ 'checked' if operator.notify }}> Notificar administradores principais (crítico e alto)</label>
+<label>Intervalo (minutos)<input name="interval" type="number" min="15" max="10080" required value="{{ operator.interval_minutes }}"></label>
+<label>Retenção do histórico (dias)<input name="retention" type="number" min="7" max="365" required value="{{ operator.retention_days }}"></label>
+{% for key, value in operator.settings.items() %}
+{% if key == 'paths' %}<fieldset><legend>Páginas públicas seleccionadas (até 6)</legend>{% for path in seo_paths %}<label><input type="checkbox" name="paths" value="{{ path }}" {{ 'checked' if path in value }}> {{ path }}</label>{% endfor %}</fieldset>
+{% elif key == 'topics' %}<fieldset><legend>Áreas e palavras-chave científicas (até 4)</legend>{% for topic, terms in research_topics.items() %}<label><input type="checkbox" name="topics" value="{{ topic }}" {{ 'checked' if topic in value }}> {{ topic }} · {{ terms }}</label>{% endfor %}</fieldset>
+{% else %}{% set limits = {'batch':(1,40,'Registos por tipo'),'timeout':(2,8,'Timeout HTTP (segundos)'),'days':(1,30,'Período de publicações (dias)'),'age_days':(1,60,'Prazo editorial (dias)'),'backup_age_days':(1,60,'Idade máxima do relatório de restauro (dias)')} %}
+{% set limit = limits[key] %}<label>{{ limit[2] }}<input name="{{ key }}" type="number" min="{{ limit[0] }}" max="{{ limit[1] }}" required value="{{ value }}"></label>
+{% endif %}{% endfor %}
+{% if can_manage %}<button class="automation-button">Guardar configuração</button>{% endif %}
+</fieldset></form>
+<p>As execuções já em curso terminam normalmente após desactivação. Os relatórios são de leitura.</p>
+{% endblock %}

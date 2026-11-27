@@ -67,6 +67,13 @@ class PermissionMatrixTests(unittest.TestCase):
         if permission=='tasks.manage':
             title='Tarefa '+secrets.token_hex(4)
             return '/admin/trabalho','/admin/trabalho',dict(title=title,assignee_id=member.id,due_on=str(date.today())),lambda: StaffTask.query.filter_by(title=title).count()==1
+        if permission == 'automation.read':
+            return '/admin/automacao', '/admin/automacao/execucoes', None, lambda: True
+        if permission == 'automation.manage':
+            from automation.models import AutomationOperator
+            operator = db.session.get(AutomationOperator, 'workflow')
+            return '/admin/automacao', '/admin/automacao/operadores/workflow', dict(
+                interval=180, retention=90, age_days=7), lambda: operator.interval_minutes == 180
         if permission=='reports.read':
             return '/admin/relatorios-equipa','/admin/relatorios-equipa',None,lambda: True
         if permission in {'authors.manage','categories.manage'}:

@@ -155,6 +155,11 @@ def resource_url(item, *, public=False):
         watching=ReaderJournal.query.filter_by(owner_id=session.get('researcher_id'),journal_id=ident,following=True).first()
         if journal and journal.published and watching:return url_for('journal_detail',slug=journal.slug)
     if public:return None
+    if kind == 'automation_run':
+        from automation.models import AutomationRun
+        if (has_permission('automation.read') or has_permission('automation.manage')) and db.session.get(AutomationRun, ident):
+            return url_for('admin.automation_run_detail', ident=ident)
+        return None
     if kind=='member':
         if ident:
             member=db.session.get(TeamMember,ident)

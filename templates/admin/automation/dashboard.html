@@ -1,0 +1,29 @@
+{% extends 'admin/automation/layout.html' %}
+{% block automation_content %}
+  <header><h1>Sussurros Automation Engine</h1><p>Relatórios de qualidade editorial, pesquisa científica e operações técnicas.</p></header>
+  <dl class="automation-metrics">
+    {% for key, label in [('active','Operadores activos'),('inactive','Inactivos'),('successes','Execuções bem-sucedidas'),('warnings','Com observações'),('failures','Falhadas'),('queued','Em espera'),('running','Em execução'),('alerts','Alertas activos'),('critical','Críticos')] %}
+    <div class="admin-panel"><dt>{{ label }}</dt><dd>{{ stats[key] }}</dd></div>
+    {% endfor %}
+  </dl>
+  {% if recent %}<p>Último registo de execução: {{ recent[0].queued_at.strftime('%d/%m/%Y %H:%M') }} UTC.</p>{% else %}<p>Sem execuções registadas. A actividade do worker ainda não foi confirmada.</p>{% endif %}
+  <h2>Operadores</h2>
+  <div class="automation-grid">
+    {% for operator in operators %}{% set spec = registry[operator.code] %}{% set last = last_runs[operator.code] %}
+    <section class="admin-panel">
+      <h3>{{ spec.name }}</h3><p>{{ spec.description }}</p>
+      <p><strong>{{ 'Activo' if operator.enabled else 'Inactivo' }}</strong> · v{{ spec.version }}</p>
+      <dl><dt>Última execução</dt><dd>{% if last %}<a href="{{ url_for('admin.automation_run_detail', ident=last.id) }}">{{ last.status }} · {{ last.queued_at.strftime('%d/%m/%Y %H:%M') }} UTC</a>{% else %}Sem execuções{% endif %}</dd>
+      <dt>Próxima execução (UTC)</dt><dd>{{ operator.next_run_at.strftime('%d/%m/%Y %H:%M') if operator.next_run_at else '—' }}</dd>
+      {% if last and last.duration_ms is not none %}<dt>Duração</dt><dd>{{ last.duration_ms }} ms</dd>{% endif %}</dl>
+      <div class="automation-actions">
+        <a href="{{ url_for('admin.automation_operator', code=operator.code) }}">Configuração</a>
+        <a href="{{ url_for('admin.automation_runs', operador=operator.code) }}">Histórico</a>
+        {% if can_manage and operator.enabled %}<form method="post" action="{{ url_for('admin.automation_execute', code=operator.code) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="automation-button">Executar</button></form>{% endif %}
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+  <h2>Actividade recente</h2>
+  <div class="admin-panel automation-table">{% include 'admin/automation/run_rows.html' %}</div>
+{% endblock %}
