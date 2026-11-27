@@ -1,0 +1,7 @@
+{% extends 'admin/automation/layout.html' %}
+{% block automation_content %}
+<h1>Histórico de execuções</h1>
+<form method="get" class="automation-actions"><label>Operador<select name="operador"><option value="">Todos</option>{% for code, spec in registry.items() %}<option value="{{ code }}" {{ 'selected' if selected == code }}>{{ spec.name }}</option>{% endfor %}</select></label><button class="automation-button">Filtrar</button></form>
+<div class="admin-panel automation-table">{% set recent = page.items %}{% include 'admin/automation/run_rows.html' %}</div>
+<nav class="automation-nav">{% if page.has_prev %}<a href="{{ url_for('admin.automation_runs', operador=selected, page=page.prev_num) }}">Anterior</a>{% endif %}{% if page.has_next %}<a href="{{ url_for('admin.automation_runs', operador=selected, page=page.next_num) }}">Seguinte</a>{% endif %}</nav>
+{% endblock %}

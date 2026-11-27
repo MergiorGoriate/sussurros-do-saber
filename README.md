@@ -533,7 +533,7 @@ SQLite é o padrão local (`sqlite:///sussurros.db`, normalmente na pasta `insta
 
 Com `BOOTSTRAP_ON_STARTUP=true` (valor por omissão), o arranque mantém a preparação de dados e, se `AUTO_SCHEMA_UPGRADE=true`, as actualizações de esquema legadas. Os exemplos de revistas e artigos são criados apenas fora do modo de produção. Em produção, pode preparar a base explicitamente e arrancar com `BOOTSTRAP_ON_STARTUP=false`.
 
-As revisões Alembic partem da baseline histórica e chegam a `20261125_22` (Vídeos de Ciência). A baseline valida o esquema histórico existente. Investigue incompatibilidades antes de prosseguir. O downgrade destrutivo é recusado.
+As revisões Alembic partem da baseline histórica e chegam a `20261127_23` (Automation Engine). A baseline valida o esquema histórico existente. Investigue incompatibilidades antes de prosseguir. O downgrade destrutivo é recusado.
 
 No **terminal do serviço da aplicação no Coolify**, com a versão nova disponível, o ambiente apontado à base correcta e backup previamente verificado, aplicar antes de iniciar os novos processos:
 
@@ -544,7 +544,9 @@ python -m alembic current
 FLASK_ENV=production BOOTSTRAP_ON_STARTUP=false python -m flask --app app preparar-dados
 ```
 
-O último `alembic current` deve apresentar `20261125_22 (head)`. Ensaiar primeiro numa cópia isolada. Executar `preparar-dados` uma vez por implantação, com o ambiente de produção configurado. O comando prepara as funções padrão, a categoria editorial e os slugs legados. Após validar estes passos, definir `BOOTSTRAP_ON_STARTUP=false` no serviço web do Coolify e verificar `/healthz`, a listagem pública e o acesso administrativo.
+O último `alembic current` deve apresentar `20261127_23 (head)`. Ensaiar primeiro numa cópia isolada. Executar `preparar-dados` uma vez por implantação, com o ambiente de produção configurado. O comando prepara as funções padrão, a categoria editorial e os slugs legados. Após validar estes passos, definir `BOOTSTRAP_ON_STARTUP=false` no serviço web do Coolify e verificar `/healthz`, a listagem pública e o acesso administrativo.
+
+O [Sussurros Automation Engine](docs/AUTOMATION_ENGINE.md) acrescenta cinco operadores, painel e comando de tarefas periódico; os operadores começam desactivados.
 
 Consulte [Vídeos de Ciência](docs/SCIENCE_VIDEOS.md) para o fluxo editorial, a implantação e a submissão do sitemap de vídeos.
 
