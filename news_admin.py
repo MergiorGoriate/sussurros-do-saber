@@ -1,5 +1,9 @@
 """Editorial workflow for each language of a science news story."""
 from datetime import datetime, timezone
+import re
+
+import markdown
+from bs4 import BeautifulSoup
 from zoneinfo import ZoneInfo
 from flask import abort, flash, redirect, render_template, request, session, url_for
 from sqlalchemy.exc import IntegrityError
@@ -119,10 +123,7 @@ def read_fields(member):
     if values['evidence'] and values['evidence'] not in EVIDENCE_LABELS:
         raise ValueError('Seleccione um estado de evidência válido.')
     values['africa_focus'] = request.form.get('africa_focus') == 'yes'
-    lines = [line.strip() for line in values.pop('sources_text').splitlines() if line.strip()]
-    if len(lines) > 40:
-        raise ValueError('Adicione até 40 referências, uma por linha.')
-    values['sources'] = [parse_news_source(line) for line in lines]
+    values['sources'] = parse_news_sources(values.pop('sources_text'))
 
     related_slug = values.pop('related_slug')
     related = Article.query.filter_by(slug=related_slug).first() if related_slug else None
@@ -133,26 +134,116 @@ def read_fields(member):
 
 
 
+def parse_news_sources(raw):
+    """Import a plain or Markdown bibliography without importing HTML anchors."""
+    sources = []
+    credits = False
+    # Some editors copy Markdown as escaped text rather than as raw Markdown.
+    escaped_paste = r'\<a id=' in raw or r'\]\(' in raw or r'\## ' in raw
+    if escaped_paste:
+        raw = re.sub(r"\\([\*_[\](){}<>#!.:-])", r"\1", raw)
+    for number, original in enumerate(raw.splitlines(), 1):
+        line = original.strip()
+        if escaped_paste and line.endswith('\\'):
+            line = line[:-1].rstrip()
+        if not line or re.fullmatch(r'<a\s+id=["\'][\w-]+["\']\s*>\s*</a>', line, re.IGNORECASE):
+            continue
+        heading = re.fullmatch(r'#{1,6}\s+(.+)', line)
+        if heading:
+            credits = 'créditos' in heading.group(1).casefold() or 'image credits' in heading.group(1).casefold()
+            continue
+        marker = re.match(r'^(?:[-*+]\s+|\d+[.)]\s+)', line)
+        # A credit section may have a prose introduction above its list.
+        if (credits and not marker and line.casefold().startswith(('as imagens ', 'the images '))
+                and not re.search(r'://|\]\(|\bdoi:|\b10\.\d{4,9}/', line, re.IGNORECASE)):
+            continue
+        if marker:
+            line = line[marker.end():].strip()
+        if not line:
+            continue
+        try:
+            sources.append(parse_markdown_news_source(line) if re.search(r'\]\(', line) else parse_news_source(line))
+            if credits:
+                credits = False
+            if len(sources) > 40:
+                raise ValueError('Adicione até 40 referências, uma por linha.')
+        except ValueError as error:
+            raise ValueError(f'Fontes, linha {number}: {error}') from error
+    return sources
+
+
+def parse_markdown_news_source(line):
+    """Keep the first link and any additional named links in one source entry."""
+    document = BeautifulSoup(markdown.markdown(line), 'html.parser')
+    anchors = document.find_all('a', href=True)
+    if not anchors:
+        raise ValueError('Utilize uma ligação Markdown válida: [texto](https://…).')
+    links = []
+    for anchor in anchors:
+        target = anchor['href']
+        # Reuse the same validation for every link, including supplementary ones.
+        url = source_link_or_doi(target)
+        if not url:
+            raise ValueError('Utilize uma ligação HTTPS válida ou um DOI em cada ligação Markdown.')
+        title = anchor.get_text(' ', strip=True)
+        links.append({'label': title if title and title != url else '', 'url': url})
+        anchor.decompose()
+    label = document.get_text(' ', strip=True)
+    # Drop separators left by removing link nodes, retaining bibliographic punctuation.
+    label = re.sub(r'\s+([.,;:])', r'\1', label).strip(' |')
+    label = re.sub(r'\.{2,}$', '.', label)
+    if links[0]['label'] and '://' not in links[0]['label']:
+        title = links[0]['label']
+        if not label:
+            label = title
+        elif title not in label:
+            label = f'{label.rstrip(".")}. {title}'
+    if '://' in label:
+        raise ValueError('Indique as ligações adicionais em Markdown: [texto](https://…).')
+    if len(label) > 1500 or any(len(link['label']) > 1500 for link in links):
+        raise ValueError('Uma referência excede 1 500 caracteres.')
+    result = {'label': label, 'url': links[0]['url']}
+    if len(links) > 1:
+        result['links'] = links[1:]
+    return result
+
+
+def format_news_sources(sources):
+    """Re-create editable plain text, retaining supplementary links on save."""
+    lines = []
+    for source in sources:
+        label, url = source.get('label', ''), source.get('url', '')
+        if source.get('links'):
+            # Markdown syntax is generated only as editor text, never as rendered HTML.
+            def escaped(text):
+                return re.sub(r'([\\*_[\]<>])', r'\\\1', text)
+            extras = ' '.join(f"[{escaped(link['label'] or link['url'])}](<{link['url']}>)"
+                              for link in source['links'])
+            lines.append(f'{escaped(label)} [{escaped(url)}](<{url}>) {extras}'.strip())
+        else:
+            lines.append(' | '.join(part for part in (label, url) if part))
+    return '\n'.join(lines)
+
+
+def source_link_or_doi(value):
+    value = value.strip()
+    if re.fullmatch(r'(?:doi:\s*)?10\.\d{4,9}/[^\s<>|]+', value, flags=re.IGNORECASE):
+        doi = re.sub(r'^doi:\s*', '', value, flags=re.IGNORECASE)
+        return validate_link('https://doi.org/' + doi)
+    if value.lower().startswith(('http:', 'https:', 'www.', 'doi:')):
+        return validate_link(value)
+    return None
+
+
 def parse_news_source(line):
-    """Accept a bibliographic reference, optionally with a verified HTTPS link or DOI.
+    """Accept a bibliographic reference, optionally with a validated HTTPS link or DOI.
 
     Retain the existing JSON representation for previously saved URL-only sources.
     Never turn untrusted free text into a hyperlink.
     """
-    import re
-
-    def link_or_doi(value):
-        value = value.strip()
-        if re.fullmatch(r'(?:doi:\s*)?10\.\d{4,9}/[^\s<>|]+', value, flags=re.IGNORECASE):
-            doi = re.sub(r'^doi:\s*', '', value, flags=re.IGNORECASE)
-            return 'https://doi.org/' + doi
-        if value.lower().startswith(('http:', 'https:', 'www.', 'doi:')):
-            return validate_link(value)
-        return None
-
     label, separator, suffix = line.rpartition('|')
     if separator:
-        target = link_or_doi(suffix)
+        target = source_link_or_doi(suffix)
         if target is None:
             raise ValueError('Depois de «|» indique um DOI ou ligação HTTPS válida.')
         text = label.strip()
@@ -162,7 +253,7 @@ def parse_news_source(line):
             raise ValueError('Uma referência excede 1 500 caracteres.')
         return {'label': text, 'url': target}
 
-    target = link_or_doi(line)
+    target = source_link_or_doi(line)
     if target:
         return {'label': '', 'url': target}
 
@@ -299,6 +390,7 @@ def news_form(story_id=None, ident=None):
         authors=Author.query.order_by(Author.name).all(), themes=Category.query.order_by(Category.name).all(),
         evidence_labels=EVIDENCE_LABELS, is_scheduled=is_scheduled,
         schedule_zones=SCHEDULE_ZONES, schedule_form=scheduling_form_values(item),
+        formatted_sources=format_news_sources(item.sources) if item else '',
         publication_missing=publication_missing_fields(item) if error and item
                             and request.form.get('action') in {'publish', 'approve', 'schedule'} else [],
     ), 400 if error else 200
