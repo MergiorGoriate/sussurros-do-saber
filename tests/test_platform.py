@@ -243,6 +243,31 @@ class PlatformTests(unittest.TestCase):
             else:
                 os.environ["GTM_CONTAINER_ID"] = previous
 
+    def test_footer_publication_family_links_in_both_languages(self):
+        from bs4 import BeautifulSoup
+        for path, expected, label in [
+            ('/', ['/', '/noticias', '/revistas'], 'Publicações da Sussurros do Saber'),
+            ('/en/', ['/en/', '/en/news', '/en/revistas'], 'Sussurros do Saber publications'),
+            ('/noticias', ['/', '/noticias', '/revistas'], 'Publicações da Sussurros do Saber'),
+            ('/en/news', ['/en/', '/en/news', '/en/revistas'], 'Sussurros do Saber publications'),
+        ]:
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            doc = BeautifulSoup(response.get_data(as_text=True), 'html.parser')
+            nav = doc.select_one('.site-footer .footer-editions')
+            self.assertEqual(nav['aria-label'], label)
+            self.assertEqual([a['href'] for a in nav.select('a')], expected)
+            self.assertEqual(len(nav.select('img[alt]')), 3)
+            for img in nav.select('img'):
+                with self.client.get(img['src']) as asset:
+                    self.assertEqual(asset.status_code, 200)
+                    self.assertEqual(asset.mimetype, 'image/webp')
+            self.assertIsNotNone(doc.select_one('.site-footer .footer-layout'))
+            self.assertIsNotNone(doc.select_one('.site-footer .footer-bottom'))
+            self.assertIsNotNone(doc.select_one('.site-footer-adjacent'))
+        doc = BeautifulSoup(self.client.get('/revistas').get_data(as_text=True), 'html.parser')
+        self.assertIn('mt-20', doc.select_one('.site-footer')['class'])
+
     def test_footer_contains_accessible_social_links(self):
         response = self.client.get("/")
         for network in ["Facebook", "Instagram", "YouTube", "X", "WhatsApp"]:
