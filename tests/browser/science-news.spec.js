@@ -55,6 +55,40 @@ test('science news headings and secondary links have readable colours in dark mo
   await expect(page.locator('.sn-side .eyebrow').first()).toHaveCSS('color', 'rgb(157, 204, 255)');
 });
 
+test('SS News masthead, editorial composition and topic tabs respond to screen width', async ({ page }) => {
+  const fixture = JSON.parse(execFileSync('python', ['tests/browser/science_news_fixture.py'], { encoding: 'utf8' }));
+  for (const width of [1440, 768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/noticias');
+    const logo = page.locator('.sn-brand-link img');
+    await expect(logo).toBeVisible();
+    await expect.poll(() => logo.evaluate(image => image.complete && image.naturalWidth > 0)).toBeTruthy();
+    await expect(page.locator('.sn-brand-copy p')).toHaveText('Notícias de ciência e investigação');
+    await expect(page.locator('.sn-read-link')).toBeVisible();
+    const image = page.locator('.news-lead .news-cover');
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate(img => img.complete && img.naturalWidth > 0)).toBeTruthy();
+    const picture = await image.boundingBox();
+    const headline = await page.locator('.news-lead h2').boundingBox();
+    if (width > 700) expect(headline.x).toBeGreaterThanOrEqual(picture.x + picture.width - 1);
+    else expect(headline.y).toBeGreaterThanOrEqual(picture.y + picture.height - 1);
+    await expect(page.locator('.sn-side .news-card')).toHaveCount(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+    if (width > 700) {
+      const tab = page.locator('.sn-topic-nav a').filter({hasText:'Saúde'});
+      await expect(tab).toBeVisible();
+      await tab.click();
+      await expect(page).toHaveURL(new RegExp('/noticias\\?tema=' + fixture.theme + '$'));
+      await expect(page.locator('.sn-topic-nav [aria-current="page"]')).toHaveText('Saúde');
+    } else {
+      await expect(page.getByLabel('Tema', {exact:true})).toBeVisible();
+    }
+  }
+  await page.goto('/en/news');
+  await expect(page.locator('.sn-brand-copy p')).toHaveText('Science and research news');
+  await expect(page.locator('.sn-brand-link')).toHaveAttribute('href', '/en/news');
+});
+
 for (const [path, selector] of [['/', '.home-science-news'], ['/noticias', '.science-news']]) {
   for (const reducedMotion of ['no-preference', 'reduce']) {
     test(`news entrance on ${path} respects ${reducedMotion}`, async ({ page }) => {
