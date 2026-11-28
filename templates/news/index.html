@@ -6,93 +6,31 @@
 {% block head_extra %}
 {% if lead_news or news_items %}<script defer src="{{ url_for('static', filename='js/home-news-motion.js') }}" nonce="{{ csp_nonce }}"></script>{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/news-page-newsletter.css', v='20261124-v1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ss-news.css', v='20261128') }}">
 {% endblock %}
 {% block content %}
-<style>
-.science-news{--sn-blue:#184a82;--sn-ink:#10213a;--sn-muted:#627085;--sn-line:#e1e6ed;max-width:1320px;margin:auto;padding:18px 22px 70px;color:var(--sn-ink)}
-.science-news *{box-sizing:border-box}
-.science-news .sn-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-.science-news .sn-eyebrow{color:#1d568d;text-transform:uppercase;font-size:.72rem;letter-spacing:.14em;font-weight:800;margin:0 0 12px}
-.science-news .sn-heading{border-bottom:1px solid var(--sn-line);padding-bottom:22px}
-.science-news .sn-heading h1{font:700 clamp(2.3rem,5vw,4rem)/1.12 Georgia,serif;letter-spacing:-.04em;margin:0 0 10px}
-.science-news .sn-heading p:last-child{font-size:1.03rem;color:var(--sn-muted);margin:0}
- .science-news .sn-filters{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:6px 0 22px;margin:0 0 24px;border-bottom:1px solid var(--sn-line)}
-.science-news .sn-filters label{font-size:.84rem;font-weight:800;margin:0 5px 0 0}
-.science-news .sn-filters select{max-width:min(100%,290px);width:auto;min-height:42px;background:#fff;color:#14263e;border:1px solid #d7e0e9;border-radius:999px;padding:8px 14px;font-size:.85rem}
-.science-news .sn-filter-submit{background:#184a82;color:white;border:1px solid #184a82;border-radius:999px;padding:9px 18px;min-height:42px;font-size:.85rem;font-weight:750;cursor:pointer}
-.science-news .sn-filter-submit:hover{background:#103862}
-.science-news .sn-topic{border:1px solid #d7e0e9;border-radius:999px;padding:8px 14px;text-decoration:none;color:#27384d;background:#fff;font-size:.85rem;font-weight:650;transition:background .15s}
-.science-news .sn-topic:hover{background:#edf4fc}
-.science-news .sn-topic[aria-current="true"]{background:var(--sn-blue);color:#fff;border-color:var(--sn-blue)}
-.science-news .sn-lead-heading,.science-news .sn-section-heading{font:700 clamp(1.45rem,2.5vw,2rem)/1.2 Georgia,serif;margin:0 0 18px;padding-left:13px;border-left:4px solid #236bb0}
-.science-news .sn-feature-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:25px;align-items:start;margin-bottom:40px}
-.science-news .news-card{min-width:0;overflow:hidden}
-.science-news .sn-feature-layout>.news-lead{min-width:0}
-.science-news .sn-feature-layout>.news-lead>.news-card{position:relative;display:block;isolation:isolate;width:100%;border:0;border-radius:12px;background:#0c2038;min-height:400px;overflow:hidden}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-cover-link{position:absolute;inset:0;display:block;z-index:1}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-cover{position:absolute;inset:0;width:100%;height:100%;max-width:100%;object-fit:cover;border-radius:0}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-cover-link:focus-visible{outline:3px solid #a8d7ff;outline-offset:-5px}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy{position:absolute;z-index:2;pointer-events:none;inset:auto 0 0;padding:75px 27px 24px;color:#fff;background:linear-gradient(transparent,rgba(4,14,30,.95));width:100%}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy a{pointer-events:auto}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy h2{font:700 clamp(1.6rem,3vw,2.45rem)/1.12 Georgia,serif;margin:9px 0}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy a{color:#fff;text-decoration:none}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy .eyebrow{color:#a8d7ff;font-weight:800;font-size:.75rem}
-.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy>p:not(.eyebrow){color:#f0f4fa;font-size:.88rem;line-height:1.5}
-.science-news .sn-feature-layout>.news-lead>.news-card .article-meta{opacity:.83}
-.science-news .sn-feature-layout>.news-lead>.news-card:not(:has(.news-cover)){background:#183e67}
-.science-news .sn-side{display:grid;gap:0}
-.science-news .sn-side .news-card{display:grid;grid-template-columns:128px minmax(0,1fr);gap:14px;padding:0 0 15px;margin-bottom:15px;border:0;border-bottom:1px solid var(--sn-line);border-radius:0}
-.science-news .sn-side .news-cover{width:128px;height:110px;object-fit:cover;border-radius:8px}
-.science-news .sn-side .news-card-copy h2{font:700 1.08rem/1.3 Georgia,serif;margin:5px 0}
-.science-news .sn-side .news-card-copy h2 a,.science-news .sn-latest .news-card-copy h2 a{color:var(--sn-ink);text-decoration:none}
-.science-news .sn-side .news-card-copy h2 a:hover,.science-news .sn-latest .news-card-copy h2 a:hover{text-decoration:underline;color:#1d568d}
-.science-news .sn-side .news-card-copy>p:not(.eyebrow):not(.article-meta){display:none}
-.science-news .sn-side .eyebrow,.science-news .sn-latest .eyebrow{font-size:.7rem;color:#1b5b97;text-transform:uppercase;font-weight:800;margin:0}
-.science-news .sn-side .article-meta,.science-news .sn-latest .article-meta{font-size:.73rem;color:var(--sn-muted);margin:7px 0 0}
-.science-news .sn-latest{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}
-.science-news .sn-latest .news-card{border-bottom:1px solid var(--sn-line);padding-bottom:22px}
-.science-news .sn-latest .news-cover{width:100%;aspect-ratio:16/10;height:auto;object-fit:cover;border-radius:9px;margin-bottom:13px}
-.science-news .sn-latest .news-card-copy h2{font:700 1.25rem/1.28 Georgia,serif;margin:7px 0}
-.science-news .sn-latest .news-card-copy>p:not(.eyebrow):not(.article-meta){font-size:.88rem;line-height:1.55;color:var(--sn-muted);margin:9px 0}
-.science-news .news-pagination{display:flex;gap:15px;align-items:center;justify-content:center;margin-top:35px}
-.science-news .news-pagination a{border:1px solid #cad9e9;border-radius:9px;padding:9px 15px;text-decoration:none;color:#184a82;font-weight:750}
-.science-news .empty-state{padding:40px 0;color:var(--sn-muted)}
-/* Contraste específico da listagem quando o modo escuro está activo. */
-.dark .science-news{
-  --sn-ink:#f1f5fc;
-  --sn-muted:#b2c4d7;
-  --sn-line:#344a5c;
-  --sn-blue:#a7d0ff;
-  color:var(--sn-ink);
-}
-.dark .science-news .sn-filters label,
-.dark .science-news .sn-lead-heading,
-.dark .science-news .sn-section-heading,
-.dark .science-news .empty-state,
-.dark .science-news .news-pagination span{color:var(--sn-ink)}
-.dark .science-news .sn-side .news-card-copy h2 a,
-.dark .science-news .sn-latest .news-card-copy h2 a{color:var(--sn-ink)}
-.dark .science-news .sn-side .news-card-copy h2 a:hover,
-.dark .science-news .sn-latest .news-card-copy h2 a:hover{color:#a9d4ff}
-.dark .science-news .sn-side .eyebrow,
-.dark .science-news .sn-latest .eyebrow,
-.dark .science-news .sn-eyebrow{color:#9dccff}
-.dark .science-news .sn-side .article-meta,
-.dark .science-news .sn-latest .article-meta,
-.dark .science-news .sn-latest .news-card-copy>p:not(.eyebrow):not(.article-meta){color:var(--sn-muted)}
-.dark .science-news .sn-filter-submit{background:#205b99;border-color:#3476b9;color:#fff}
-.dark .science-news .sn-filter-submit:hover{background:#2b70ae}
-.dark .science-news .sn-filters select{background:#172536;color:#f1f5fc;border-color:#53677d}
-.dark .science-news .sn-topic{background:#182a3d;color:#f1f5fc;border-color:#53677d}
-.dark .science-news .sn-topic:hover{background:#29425e}
-.dark .science-news .sn-topic[aria-current="true"]{background:#3476b9;color:#fff;border-color:#3476b9}
-.dark .science-news .news-pagination a{color:#a9d4ff;border-color:#53677d}
-.dark .science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy h2 a{color:#fff}
-@media(max-width:950px){.science-news .sn-feature-layout{grid-template-columns:1fr}.science-news .sn-side{grid-template-columns:1fr 1fr;column-gap:20px}.science-news .sn-latest{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.science-news{padding:24px 15px 45px}.science-news .sn-feature-layout>.news-lead>.news-card{min-height:370px}.science-news .sn-feature-layout>.news-lead>.news-card .news-card-copy{padding:65px 17px 16px}.science-news .sn-side{grid-template-columns:1fr}.science-news .sn-side .news-card{grid-template-columns:112px 1fr}.science-news .sn-side .news-cover{width:112px;height:96px}.science-news .sn-latest{grid-template-columns:1fr}.science-news .sn-filters{gap:7px}.science-news .sn-topic{padding:7px 11px;font-size:.8rem}}
-</style>
+
 <section class="science-news" aria-labelledby="news-title">
-  <h1 id="news-title" class="sn-visually-hidden">{{ ui('Notícias de Ciência') }}</h1>
+  <header class="sn-masthead">
+    <nav class="sn-breadcrumb" aria-label="{{ ui('Navegação') }}">
+      <a href="{{ url_for('home') }}">{{ ui('Início') }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ ui('Notícias') }}</span>
+    </nav>
+    <div class="sn-brand">
+      <a href="{{ url_for('news.index') }}" class="sn-brand-link" aria-label="{{ ui('Notícias de Ciência') }}">
+        <img src="{{ url_for('static', filename='img/ss-news-logo.webp') }}" width="768" height="256" alt="SS News" decoding="async">
+      </a>
+      <div class="sn-brand-copy">
+        <h1 id="news-title" class="sn-visually-hidden">{{ ui('Notícias de Ciência') }}</h1>
+        <p>{{ ui('Notícias de ciência e investigação') }}</p>
+      </div>
+    </div>
+  </header>
+  <nav class="sn-topic-nav" aria-label="{{ ui('Temas de notícias') }}">
+    <a class="sn-tab" href="{{ url_for('news.index') }}"{% if not active_theme %} aria-current="page"{% endif %}>{{ ui('Todos os temas') }}</a>
+    {% for theme in news_themes %}
+    <a class="sn-tab" href="{{ url_for('news.index', tema=theme.slug) }}"{% if active_theme == theme.slug %} aria-current="page"{% endif %}>{{ ui(theme.name) }}</a>
+    {% endfor %}
+  </nav>
   <form method="get" action="{{ url_for('news.index') }}" class="sn-filters news-filters">
     <label for="news-topic">{{ ui('Tema') }}</label>
     <select id="news-topic" name="tema">
@@ -110,7 +48,7 @@
   <section aria-labelledby="sn-feature-title">
     <h2 class="sn-lead-heading" id="sn-feature-title">{{ ui('Notícia em destaque') }}</h2>
     <div class="sn-feature-layout">
-      <div class="news-lead">{{ card(lead_news, back, 'h2') }}</div>
+      <div class="news-lead">{{ card(lead_news, back, 'h2', featured=true) }}</div>
       {% if news_items %}<div class="sn-side news-grid" aria-label="{{ ui('Últimas notícias') }}">{% for item in news_items[:4] %}{{ card(item, back, 'h2') }}{% endfor %}</div>{% endif %}
     </div>
   </section>

@@ -130,6 +130,31 @@ class ScienceNewsTests(unittest.TestCase):
         self.assertIsNotNone(self.soup('/noticias?tema=outro').select_one('.empty-state'))
         self.assertEqual(self.client.get('/noticias').headers['Cache-Control'], 'no-store')
 
+    def test_ss_news_masthead_and_hyperlinks_follow_locale_and_topics(self):
+        _, pt = self.story('Destaque de ensaio', featured=True, with_image=True)
+        _, en = self.story('Featured fixture', locale='en', featured=True, with_image=True)
+        self.story('Outra notícia de ensaio', topic=self.other_topic)
+        for route, item, tagline, home in [
+            ('/noticias', pt, 'Notícias de ciência e investigação', '/'),
+            ('/en/news', en, 'Science and research news', '/en/'),
+        ]:
+            listing = self.soup(route)
+            self.assertEqual(listing.select_one('.sn-brand-link')['href'], route)
+            self.assertEqual(listing.select_one('.sn-brand-link img')['alt'], 'SS News')
+            self.assertEqual(listing.select_one('.sn-brand-copy p').text, tagline)
+            self.assertEqual(listing.select_one('.sn-breadcrumb a')['href'], home)
+            self.assertEqual(listing.select_one('.sn-topic-nav [aria-current="page"]')['href'], route)
+            topic = listing.select_one(f'.sn-topic-nav [href="{route}?tema={self.topic.slug}"]')
+            self.assertIsNotNone(topic)
+            selected = self.soup(topic['href'])
+            self.assertEqual(selected.select_one('.sn-topic-nav [aria-current="page"]')['href'], topic['href'])
+            lead = listing.select_one('.news-lead .news-card')
+            self.assertEqual(lead.select_one('.sn-read-link')['href'], route + '/' + item.slug)
+            self.assertEqual(lead.select_one('.news-cover-link')['href'], route + '/' + item.slug)
+        self.assertIsNone(self.soup('/').select_one('.sn-masthead'))
+        with self.client.get('/static/img/ss-news-logo.webp') as logo:
+            self.assertEqual(logo.status_code, 200)
+
     def test_filter_and_page_survive_language_switch_and_detail_links(self):
         for i in range(13):
             self.story(f'Notícia {i:02d}', offset=-i - 1)

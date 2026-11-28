@@ -188,6 +188,10 @@ EN.update({
     'Vídeos de Ciência': 'Science Videos',
     'Ver vídeo': 'Watch video',
     'Notícias de Ciência': 'Science News',
+    'Notícias de ciência e investigação': 'Science and research news',
+    'Ler notícia': 'Read story',
+    'SS News': 'SS News',
+    'Temas de notícias': 'News topics',
     'Actualidade científica internacional, com atenção à investigação feita em África.':
         'International science news with a focus on research conducted in Africa.',
     'Investigação em África': 'Research in Africa',

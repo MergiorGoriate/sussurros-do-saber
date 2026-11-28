@@ -1,4 +1,4 @@
-{% macro card(item, query={}, heading='h3') %}
+{% macro card(item, query={}, heading='h3', featured=false) %}
 <article class="news-card">
   {% if item.image %}
   <a class="news-cover-link" href="{{ url_for('news.detail', slug=item.slug, **query) }}" aria-label="{{ ui('Ler notícia') }}: {{ item.title }}">
@@ -12,6 +12,9 @@
     <{{ heading }} class="font-serif"><a href="{{ url_for('news.detail', slug=item.slug, **query) }}">{{ item.title }}</a></{{ heading }}>
     <p>{{ item.summary }}</p>
     <p class="article-meta">{{ item.author.name }} · <time datetime="{{ item.published_date.isoformat() }}">{{ item.published_date.strftime('%d/%m/%Y') }}</time></p>
+    {% if featured %}
+    <a class="sn-read-link" href="{{ url_for('news.detail', slug=item.slug, **query) }}">{{ ui('Ler notícia') }} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h15m-6-6 6 6-6 6"/></svg><span class="sn-visually-hidden">: {{ item.title }}</span></a>
+    {% endif %}
   </div>
 </article>
 {% endmacro %}
