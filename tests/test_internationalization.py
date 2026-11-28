@@ -280,6 +280,44 @@ class InternationalizationTests(unittest.TestCase):
         self.assertEqual(service.restore(protected,tokens),source)
         with self.assertRaises(GenerationError):service.restore(protected+next(iter(tokens)),tokens)
 
+    def test_dropcap_marker_survives_translation_and_legacy_alias_is_valid(self):
+        source = {'body': '[capitular] Texto inicial.\n\nOutro parágrafo.'}
+        protected, tokens = service.protect(source['body'])
+        self.assertNotIn('[capitular]', protected)
+        self.assertIn('[capitular]', tokens.values())
+        self.assertEqual(service.restore(protected, tokens), source['body'])
+        def provider(model, instruction, data):
+            if 'original' in data:
+                return {'faithful': True, 'issues': []}
+            self.assertNotIn('[capitular]', data['body'])
+            return {'body': data['body'].replace('Texto inicial.', 'Opening paragraph.').replace('Outro parágrafo.', 'Second paragraph.')}
+        with patch('translation_service.call', side_effect=provider):
+            translated, report = service.translate(source)
+        self.assertTrue(report['ready'])
+        self.assertTrue(translated['body'].startswith('[capitular] Opening'))
+        service.validate(source, {'body': '[drop cap] Opening paragraph.\n\nSecond paragraph.'})
+        for invalid in ('Opening paragraph.', 'Opening paragraph. [capitular]', '[capitular] Opening.\n\n[capitular] Second.'):
+            with self.assertRaises(service.ProtectedContentError):
+                service.validate(source, {'body': invalid})
+
+    def test_published_legacy_english_dropcap_is_rendered_without_retranslation(self):
+        from bs4 import BeautifulSoup
+        self.article.body = '[capitular] As plantas utilizam luz.\n\nOutro parágrafo.'
+        db.session.commit()
+        item = self.make(publish=True)
+        row = service.version(item)
+        row.content = dict(row.content, body='[drop cap] Plants use light.\n\nSecond paragraph.')
+        db.session.commit()
+        for prefix, text in [('', 'As plantas utilizam luz.'), ('/en', 'Plants use light.')]:
+            response = self.client.get(prefix + '/artigo/' + self.article.slug)
+            self.assertEqual(response.status_code, 200)
+            doc = BeautifulSoup(response.text, 'html.parser')
+            paragraph = doc.select_one('.article-markdown p.article-dropcap')
+            self.assertIsNotNone(paragraph)
+            self.assertEqual(paragraph.get_text(), text)
+            self.assertEqual(len(doc.select('.article-markdown p.article-dropcap')), 1)
+        self.assertTrue(service.version(item).content['body'].startswith('[drop cap]'))
+
     def test_batch_is_async_prioritized_and_can_pause_cancel_pending(self):
         with patch('translation_service.translate') as translator:
             r=self.client.post('/admin/internacionalizacao/lote',data=dict(csrf_token='i18n-test',kind='article',source_ids=[self.article.id],priority='3'))

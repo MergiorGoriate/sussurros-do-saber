@@ -5,6 +5,10 @@ from bs4 import BeautifulSoup
 from markupsafe import Markup
 
 
+# Legacy English translations may contain translated spellings of this marker.
+DROP_CAP_MARKER = r"(?i:\[(?:capitular|drop[ -]?cap)\])"
+
+
 def prepare_guidelines(html):
     soup = BeautifulSoup(str(html), "html.parser")
     used = {"diretrizes-conteudo"}

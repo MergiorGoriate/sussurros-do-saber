@@ -72,7 +72,7 @@
       const to = next < 0 ? editor.value.length : next;
       const paragraph = editor.value.slice(from, to);
       if (!paragraph.trim()) return window.alert('Escreva primeiro o parágrafo.');
-      return insert(paragraph.startsWith('[capitular] ') ? paragraph.slice(12) : '[capitular] ' + paragraph, from, to);
+      return insert(/^\[(?:capitular|drop[ -]?cap)\][ \t]*/i.test(paragraph) ? paragraph.replace(/^\[(?:capitular|drop[ -]?cap)\][ \t]*/i, '') : '[capitular] ' + paragraph, from, to);
     }
     if (kind === 'explainer') {
       const title = ask('Título da caixa explicativa (opcional):', '');

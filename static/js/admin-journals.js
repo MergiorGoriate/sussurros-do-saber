@@ -40,7 +40,7 @@
      const to=next<0?area.value.length:next;
      const paragraph=area.value.slice(from,to);
      if(!paragraph.trim()){window.alert('Escreva primeiro o parágrafo.');return;}
-     const value=paragraph.startsWith('[capitular] ')?paragraph.slice(12):'[capitular] '+paragraph;
+     const value=/^\[(?:capitular|drop[ -]?cap)\][ \t]*/i.test(paragraph)?paragraph.replace(/^\[(?:capitular|drop[ -]?cap)\][ \t]*/i,''):'[capitular] '+paragraph;
      area.setRangeText(value,from,to,'end');area.focus();markDirty();schedule();return;
    }
    if(type==='link'){

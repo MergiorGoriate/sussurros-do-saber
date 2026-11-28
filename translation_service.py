@@ -15,6 +15,7 @@ from translation_models import (ContentTranslation as Translation, TranslationVe
     InterfaceBatch, InterfaceTranslation)
 from dissemination_ai import GenerationError
 from translation_limits import daily_limit
+from editorial_content import DROP_CAP_MARKER
 import requests
 
 STATES = {'pending':'Tradução pendente', 'processing':'Em processamento', 'review':'A aguardar revisão',
@@ -105,7 +106,8 @@ def queue(kind, ident, priority=50, mode='generate'):
     return item
 
 
-PROTECTED = re.compile(r'```[\s\S]*?```|~~~[\s\S]*?~~~|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|(?<!\\)\$(?:\\.|[^$\n])+\$|`[^`\n]+`|https?://[^\s<>"\)]+|\]\([^\n]*?\)|\[[0-9,; –-]+\]|\([^()\n]*\b(?:18|19|20)\d{2}[a-z]?[^()\n]*\)')
+DROP_CAP_LINE = r'(?m:^[ \t]{0,3}' + DROP_CAP_MARKER + r'(?=[ \t]|$))'
+PROTECTED = re.compile(r'```[\s\S]*?```|~~~[\s\S]*?~~~|\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|(?<!\\)\$(?:\\.|[^$\n])+\$|`[^`\n]+`|https?://[^\s<>"\)]+|\]\([^\n]*?\)|\[[0-9,; –-]+\]|\([^()\n]*\b(?:18|19|20)\d{2}[a-z]?[^()\n]*\)' + '|' + DROP_CAP_LINE)
 
 
 class ProtectedContentError(GenerationError):
@@ -134,6 +136,13 @@ def restore(value, tokens):
     return value
 
 
+def protected_fragments(text):
+    # Treat legacy translated aliases as equivalent only for standalone paragraph markers.
+    # The original spelling is still restored unchanged by the automatic translator.
+    return sorted('[capitular]' if re.fullmatch(r'[ \t]{0,3}' + DROP_CAP_MARKER, token) else token
+                  for token in PROTECTED.findall(text))
+
+
 def validate(original, translated):
     if not isinstance(translated, dict) or set(translated) != set(original):
         raise GenerationError('Campos de tradução incompletos ou inesperados.')
@@ -148,7 +157,7 @@ def validate(original, translated):
         raise GenerationError('As referências bibliográficas devem permanecer exactamente como no original.')
     for key, text in original.items():
         target = translated[key]
-        if sorted(PROTECTED.findall(text))!=sorted(PROTECTED.findall(target)):
+        if protected_fragments(text)!=protected_fragments(target):
             raise ProtectedContentError('Uma fórmula, citação, ligação ou bloco de código protegido foi alterado.')
         if re.findall(r'</?([A-Za-z][A-Za-z0-9]*)\b',text)!=re.findall(r'</?([A-Za-z][A-Za-z0-9]*)\b',target):
             raise GenerationError('A estrutura de elementos HTML foi alterada.')
@@ -194,6 +203,7 @@ Return a JSON object with exactly the provided field names, all string values. T
 Preserve meaning, uncertainty, Markdown heading levels, table rows, image alt descriptions and attributions.
 Translate image alt text. Do not add facts, conclusions, citations, references or numbers. Preserve every SDSPROTECT token
 exactly once, in the same field. Copy empty strings unchanged. Keep the punctuation next to each marker unchanged.
+Editorial markers such as the drop cap are protected syntax, not words to translate; keep them at the start of the same paragraph.
 Do not introduce new links, code formatting, math delimiters or parenthetical years. Keep dates in the same form as in the source.
 Never translate a complete scientific manuscript: the supplied journal fields contain metadata only.'''
 

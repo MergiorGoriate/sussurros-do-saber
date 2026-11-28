@@ -532,6 +532,19 @@ class PlatformTests(unittest.TestCase):
         self.assertIn("<p>Outro parágrafo.</p>", rendered)
         self.assertEqual(rendered.count('class="article-dropcap"'), 1)
 
+    def test_english_dropcap_aliases_render_only_at_paragraph_start(self):
+        for marker in ('[drop cap]', '[dropcap]', '[drop-cap]', '[DROP CAP]'):
+            rendered = str(render_markdown(
+                f'{marker} An **opening** paragraph.\n\nA literal {marker} mention.\n\n`{marker}`'))
+            self.assertIn('<p class="article-dropcap">An <strong>opening</strong> paragraph.</p>', rendered)
+            self.assertIn(f'A literal {marker} mention.', rendered)
+            self.assertIn(f'<code>{marker}</code>', rendered)
+            self.assertEqual(rendered.count('class="article-dropcap"'), 1)
+        self.assertIn('<a href="https://example.org">drop cap</a>',
+                      str(render_markdown('[drop cap](https://example.org)')))
+        code = str(render_markdown('```\n[drop cap] Literal code\n```'))
+        self.assertNotIn('class="article-dropcap"', code)
+
     def test_dropcap_does_not_bypass_sanitization_or_format_code(self):
         rendered = str(render_markdown('[capitular] Texto <img src="x" onerror="alert(1)">'))
         self.assertNotIn("onerror", rendered)

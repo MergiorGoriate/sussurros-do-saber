@@ -10,7 +10,13 @@ for(const width of [320,1440]){
     await page.goto(path);
     const editor=page.locator('#bodyEditor'), button=page.getByRole('button',{name:'Capitular',exact:true});
     const words=await page.locator('#editorWordCount').textContent();
+    await editor.fill('[drop cap] '+data.body);
     await editor.evaluate(el=>{el.focus();el.setSelectionRange(0,0);});
+    await expect(button).toHaveAttribute('aria-pressed','true');
+    await expect(page.locator('#editorWordCount')).toHaveText(words);
+    await expect(page.locator('#markdownPreview .article-dropcap')).toHaveCount(1);
+    await button.click();
+    await expect(editor).toHaveValue(data.body);
     await button.click();
     await expect(button).toHaveAttribute('aria-pressed','true');
     await expect(editor).toHaveValue('[capitular] '+data.body);
@@ -42,5 +48,11 @@ for(const width of [320,1440]){
     await page.screenshot({path:`/tmp/dropcap-previews/public-light-${width}.png`,fullPage:true,animations:'disabled'});
     await page.locator('#themeToggle').click();
     await page.screenshot({path:`/tmp/dropcap-previews/public-dark-${width}.png`,fullPage:true,animations:'disabled'});
+    await page.goto('/en/artigo/'+data.slug);
+    const english=page.locator('.article-markdown > p.article-dropcap');
+    await expect(english).toHaveText('An opening paragraph with emphasis.');
+    await expect(english.locator('strong')).toHaveText('emphasis');
+    expect(await english.evaluate(el=>getComputedStyle(el,'::first-letter').float)).toBe('left');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
