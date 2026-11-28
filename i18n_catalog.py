@@ -191,6 +191,7 @@ EN.update({
     'Notícias de ciência e investigação': 'Science and research news',
     'Ler notícia': 'Read story',
     'SS News': 'SS News',
+    'Publicações da Sussurros do Saber': 'Sussurros do Saber publications',
     'Temas de notícias': 'News topics',
     'Actualidade científica internacional, com atenção à investigação feita em África.':
         'International science news with a focus on research conducted in Africa.',
