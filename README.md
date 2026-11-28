@@ -12,7 +12,27 @@ Plataforma de divulgação científica e publicação editorial em português, c
 
 Este README descreve a implementação revista em **20 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
 
+## Capturas de ecrã
+
+Imagens do [portal Sussurros do Saber](https://www.sussurrosdosaber.com/), captadas em 28 de Novembro de 2026.
+
+### Página inicial
+
+[![Página inicial em português — modo claro](docs/screenshots/home-pt.jpg)](https://www.sussurrosdosaber.com/)
+
+| Versão em inglês | Modo escuro |
+| --- | --- |
+| [![Página inicial em inglês](docs/screenshots/home-en.jpg)](https://www.sussurrosdosaber.com/en/) | ![Página inicial em modo escuro](docs/screenshots/home-dark.jpg) |
+
+### Outras páginas do portal
+
+| SS News — Notícias de Ciência | Revistas científicas |
+| --- | --- |
+| [![Notícias de Ciência](docs/screenshots/news.jpg)](https://www.sussurrosdosaber.com/noticias) | [![Revistas científicas](docs/screenshots/journals.jpg)](https://www.sussurrosdosaber.com/revistas) |
+
 ## Índice
+
+- [Capturas de ecrã](#capturas-de-ecrã)
 
 - [Actualizações recentes](#actualizações-recentes)
 - [Visão geral e arquitectura](#visão-geral-e-arquitectura)
