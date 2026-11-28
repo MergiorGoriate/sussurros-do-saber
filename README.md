@@ -1,16 +1,72 @@
 # Sussurros do Saber
 
+<p align="center"><strong>Portal internacional de ciência, investigação e divulgação do conhecimento</strong><br>
+<em>International portal for science, research and scientific communication</em></p>
+
+<p align="center">
+  <a href="https://www.sussurrosdosaber.com/"><img alt="Portal oficial" src="https://img.shields.io/badge/Portal-oficial-184E77"></a>
+  <a href="https://www.sussurrosdosaber.com/noticias"><img alt="Notícias de Ciência" src="https://img.shields.io/badge/Not%C3%ADcias-Ci%C3%AAncia-184E77"></a>
+  <a href="SECURITY.md"><img alt="Política de segurança" src="https://img.shields.io/badge/Seguran%C3%A7a-Pol%C3%ADtica-555555"></a>
+  <img alt="Python 3.11" src="https://img.shields.io/badge/Python-3.11-3776AB">
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-Web-000000">
+</p>
+
+<p align="center"><a href="#sobre-o-projecto">Português</a> · <a href="#english-overview">English</a> · <a href="#índice">Documentação técnica</a></p>
+
+## Sobre o projecto
+
+A **Sussurros do Saber** é uma iniciativa científica fundada em Moçambique por Mergior Goriate, com alcance internacional. O portal procura aproximar a investigação científica dos leitores, estudantes, docentes e investigadores, promovendo a comunicação rigorosa do conhecimento em português e inglês.
+
+O repositório reúne o código da plataforma web, os recursos de publicação editorial, os testes e a documentação técnica.
+
+### Áreas do portal
+
+| Área | Finalidade |
+| --- | --- |
+| [Portal científico](https://www.sussurrosdosaber.com/) | Artigos de divulgação, investigação e comunicação científica |
+| [SS News — Notícias de Ciência](https://www.sussurrosdosaber.com/noticias) · [English](https://www.sussurrosdosaber.com/en/news) | Notícias e reportagens sobre investigação científica |
+| [Revistas e publicações científicas](https://www.sussurrosdosaber.com/revistas) | Publicações científicas, metadados bibliográficos e consulta de artigos |
+| [Recursos educativos](https://www.sussurrosdosaber.com/recursos) | Ferramentas e materiais de apoio à aprendizagem |
+
+### Princípios editoriais
+
+- Rigor científico, transparência das fontes e distinção entre evidência e interpretação.
+- Difusão internacional do conhecimento, com atenção à investigação realizada em África.
+- Acesso gratuito aos artigos científicos e de divulgação, distinto dos conteúdos adicionais Premium.
+- Respeito pela autoria, pela privacidade, pelos direitos de utilização de conteúdos e pela correcção de erros.
+
+## English overview
+
+**Sussurros do Saber** is a scientific initiative founded in Mozambique by Mergior Goriate, with an international outlook. It connects scientific research with readers, students, educators and researchers through science communication in Portuguese and English.
+
+The platform includes science articles, [science news](https://www.sussurrosdosaber.com/en/news), scientific journals and publications, educational resources, author profiles, reader accounts and editorial submission and review workflows.
+
+This repository contains the web application, tests and technical documentation. The application uses Python, Flask, SQLAlchemy, Jinja, Tailwind CSS and JavaScript. PostgreSQL, Redis and Docker support production deployment.
+
+For development, consult the [setup guide](#instalação-e-desenvolvimento), [configuration](#configuração) and [testing guide](#testes-e-validação). Contributions can be proposed through [GitHub Issues](https://github.com/mergior-goriate/sussurros-do-saber/issues) or pull requests. Potential security vulnerabilities should be reported privately in accordance with the [security policy](SECURITY.md).
+
+## Colaboração e segurança
+
+- Para sugerir uma melhoria ou comunicar um problema não sensível, utilizar as [Issues do GitHub](https://github.com/mergior-goriate/sussurros-do-saber/issues).
+- Para propor alterações ao código ou à documentação, preparar um pull request com a descrição da alteração e os testes realizados.
+- Para comunicar vulnerabilidades, seguir a [política de segurança bilingue](SECURITY.md); não publicar credenciais, dados pessoais ou detalhes sensíveis numa issue pública.
+- A visibilidade pública do repositório não constitui, por si só, uma licença de reutilização do código, dos logótipos ou dos conteúdos editoriais.
+
+## Documentação técnica
+
+As notas seguintes conservam o histórico técnico do projecto. As versões efectivas das dependências devem ser consultadas em [requirements.txt](requirements.txt), [package.json](package.json) e no ficheiro de lock correspondente. A situação dos serviços em produção depende da respectiva implantação e configuração.
+
 **Notícias de Ciência:** secção bilingue em `/noticias` e `/en/news`, publicações independentes por idioma e fluxo editorial no painel. [Operação e implantação](docs/SCIENCE_NEWS.md).
 
 **Métricas científicas:** recolha interna, painéis públicos/administrativos e adaptadores bibliográficos na migração `20261023_13`. [Implementação, operação, testes e limitações](docs/SCIENTIFIC_METRICS.md).
 
 **Premium — pagamentos:** a migração `20261023_11` acrescenta ClicPay (M-Pesa, e-Mola e checkout de cartões), Stripe recorrente condicionado à elegibilidade, histórico privado, cancelamento, reconciliação e diário financeiro. As cobranças ficam desactivadas por omissão; os artigos científicos e informativos continuam gratuitos. Configuração, limites, testes e operação: [Pagamentos Premium](docs/PREMIUM_PAYMENTS.md). Os registos de alterações anteriores abaixo descrevem fases históricas.
 
-Plataforma de divulgação científica e publicação editorial em português, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.
+Plataforma de divulgação científica e publicação editorial, com recursos bilingues, construída com Flask, SQLAlchemy, Jinja, Tailwind CSS e JavaScript. Reúne artigos, publicações científicas na área de revistas, perfis de autores, recursos educativos, contas de leitores e um fluxo privado de submissões.
 
 **Entrega SMTP:** a revisão de limites usa o head `20261021_08`, aprovação e autorização separadas e contadores globais persistentes. Parar os trabalhadores antigos antes de actualizar. O procedimento actual está em [Limites e entrega](docs/NEWSLETTER_DELIVERY.md); as secções históricas abaixo descrevem também as revisões anteriores.
 
-Este README descreve a implementação revista em **20 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
+A documentação técnica histórica abaixo descreve a implementação revista em **20 de outubro de 2026**, com base no código do repositório. Documentar uma integração não comprova que as suas credenciais, serviços externos ou tarefas agendadas estejam activos no servidor. O README deve ser actualizado junto com alterações às funcionalidades.
 
 ## Índice
 
@@ -38,7 +94,7 @@ Este README descreve a implementação revista em **20 de outubro de 2026**, com
 
 ## Actualizações recentes
 
-- **Premium — primeira fase:** página `/premium`, planos mensal/anual configuráveis, biblioteca de conteúdos adicionais e acessos de oferta com validade, geridos pelo administrador principal. Todos os artigos da revista e do portal continuam gratuitos. Pagamentos reais e renovação automática ainda não estão implementados. Migração `20261023_10`; [relatório, operação e plano de pagamentos](docs/PREMIUM.md).
+- **Premium — primeira fase (histórico):** página `/premium`, planos mensal/anual configuráveis, biblioteca de conteúdos adicionais e acessos de oferta com validade, geridos pelo administrador principal. Todos os artigos da revista e do portal continuam gratuitos. Pagamentos reais e renovação automática ainda não estão implementados. Migração `20261023_10`; [relatório, operação e plano de pagamentos](docs/PREMIUM.md).
 
 - **Pesquisa científica e DOI:** a pesquisa existente inclui identificadores e palavras-chave; o catálogo de revistas pesquisa também títulos científicos e autores, com formulário GET na mesma barra. As ligações DOI usam um normalizador comum, sem alterar dados nem comprovar registo externo. Ver [âmbito, testes e limitações](docs/SCIENTIFIC_SEARCH.md).
 
@@ -563,7 +619,7 @@ O comando deve ser executado no ambiente correcto e não substitui a estratégia
 ### Linux/macOS
 
 ```bash
-git clone https://github.com/MergiorGoriate/sussurros-do-saber.git
+git clone https://github.com/mergior-goriate/sussurros-do-saber.git
 cd sussurros-do-saber
 python3.11 -m venv .venv
 source .venv/bin/activate
